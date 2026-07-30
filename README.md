@@ -11,8 +11,8 @@ Built with SwiftUI. iOS 17+. No dependencies, no accounts, no data collection.
 2. `git clone` this repo, then `open Pawmodoro.xcodeproj`.
 3. Press **⌘R** to run in the iPhone simulator.
 
-Full walkthrough, including running on a real iPhone and pulling later changes:
-**[`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md)**.
+**New here? Read [`docs/START_HERE.md`](docs/START_HERE.md)** — every step from
+cloning this repo to the app being live, in order, with timings.
 
 > Heads up: this code has been syntax-checked but never compiled — there's no Mac
 > in the environment it was written in. The first real build is on your machine.
@@ -36,6 +36,7 @@ Full walkthrough, including running on a real iPhone and pulling later changes:
 
 | File | What's in it |
 |---|---|
+| [`docs/START_HERE.md`](docs/START_HERE.md) | **The whole path to launch, in order. Start here.** |
 | [`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md) | Clone, run, pull changes, run on your iPhone, fix build errors |
 | [`docs/APP_STORE_LAUNCH_GUIDE.md`](docs/APP_STORE_LAUNCH_GUIDE.md) | First-time App Store submission, start to finish |
 | [`docs/LIVE_ACTIVITY.md`](docs/LIVE_ACTIVITY.md) | Add the lock screen / Dynamic Island timer (needs an Xcode step) |

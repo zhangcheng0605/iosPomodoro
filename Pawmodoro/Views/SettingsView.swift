@@ -3,7 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("buddy") private var buddyRawValue = Buddy.cat.rawValue
 
     var body: some View {
         @Bindable var engine = engine
@@ -11,9 +10,9 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("Your buddy") {
-                    Picker("Buddy", selection: $buddyRawValue) {
+                    Picker("Buddy", selection: $engine.settings.buddy) {
                         ForEach(Buddy.allCases) { buddy in
-                            Text(buddy.pickerLabel).tag(buddy.rawValue)
+                            Text(buddy.pickerLabel).tag(buddy)
                         }
                     }
                     .pickerStyle(.inline)
@@ -21,20 +20,46 @@ struct SettingsView: View {
                 }
 
                 Section("Durations") {
-                    Stepper("Focus: \(engine.focusMinutes) min",
-                            value: $engine.focusMinutes, in: 5...90, step: 5)
-                    Stepper("Short break: \(engine.shortBreakMinutes) min",
-                            value: $engine.shortBreakMinutes, in: 1...30)
-                    Stepper("Long break: \(engine.longBreakMinutes) min",
-                            value: $engine.longBreakMinutes, in: 5...60, step: 5)
-                    Stepper("Long break every \(engine.sessionsPerLongBreak) sessions",
-                            value: $engine.sessionsPerLongBreak, in: 2...8)
+                    Stepper(
+                        "Focus: \(engine.settings.focusMinutes) min",
+                        value: $engine.settings.focusMinutes, in: 5...90, step: 5
+                    )
+                    Stepper(
+                        "Short break: \(engine.settings.shortBreakMinutes) min",
+                        value: $engine.settings.shortBreakMinutes, in: 1...30
+                    )
+                    Stepper(
+                        "Long break: \(engine.settings.longBreakMinutes) min",
+                        value: $engine.settings.longBreakMinutes, in: 5...60, step: 5
+                    )
+                    Stepper(
+                        "Long break every \(engine.settings.sessionsPerLongBreak) sessions",
+                        value: $engine.settings.sessionsPerLongBreak, in: 2...8
+                    )
                 }
 
                 Section {
-                    Toggle("Haptics", isOn: $engine.hapticsEnabled)
+                    Picker("Ambience", selection: $engine.settings.ambience) {
+                        ForEach(Ambience.allCases) { option in
+                            Label(option.label, systemImage: option.systemImage).tag(option)
+                        }
+                    }
                 } footer: {
-                    Text("Duration changes apply to the next session. Pawmodoro stores everything on your device — no accounts, no tracking.")
+                    Text("Ambient sound plays while the timer is running, and pauses when the app is closed.")
+                }
+
+                Section("Behaviour") {
+                    Toggle("Auto-start next phase", isOn: $engine.settings.autoStartNextPhase)
+                    Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)
+                }
+
+                Section {
+                    Button("Restart cycle", systemImage: "arrow.triangle.2.circlepath") {
+                        engine.resetCycle()
+                        dismiss()
+                    }
+                } footer: {
+                    Text("Duration changes take effect on the next session. Pawmodoro keeps everything on your device — no account, no tracking, version \(appVersion).")
                 }
             }
             .navigationTitle("Settings")
@@ -45,6 +70,10 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 }
 

@@ -12,9 +12,16 @@ struct PawmodoroApp: App {
                 .fontDesign(.rounded)
         }
         .onChange(of: scenePhase) { _, newPhase in
-            // Re-sync the countdown after the app was suspended in the background.
-            if newPhase == .active {
+            switch newPhase {
+            case .active:
+                // The app may have been suspended for hours; recompute from the
+                // stored end date and finish the phase if it already elapsed.
                 engine.syncAfterWake()
+                engine.refreshAmbience()
+            case .background, .inactive:
+                break
+            @unknown default:
+                break
             }
         }
     }

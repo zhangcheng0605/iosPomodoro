@@ -1,50 +1,37 @@
 import SwiftUI
 
-enum Buddy: String, CaseIterable, Identifiable {
-    case cat
-    case dog
-
-    var id: String { rawValue }
-
-    var name: String {
-        switch self {
-        case .cat: "Mochi"
-        case .dog: "Biscuit"
-        }
-    }
-
-    var pickerLabel: String {
-        switch self {
-        case .cat: "🐱 Mochi the cat"
-        case .dog: "🐶 Biscuit the dog"
-        }
-    }
-}
-
-/// Emoji placeholder for the buddy — swap for real sprite art in Phase 2.
-/// The buddy naps while you focus and plays during breaks.
+/// The companion beside the timer. Naps through focus, plays through breaks.
+/// Emoji are placeholders for illustrated sprites.
 struct BuddyView: View {
     @Environment(TimerEngine.self) private var engine
-    @AppStorage("buddy") private var buddyRawValue = Buddy.cat.rawValue
     @State private var bobbing = false
 
-    private var buddy: Buddy { Buddy(rawValue: buddyRawValue) ?? .cat }
+    private var buddy: Buddy { engine.settings.buddy }
+
+    private var isNapping: Bool {
+        engine.isRunning && !engine.phase.isBreak
+    }
+
+    private var isPlaying: Bool {
+        engine.isRunning && engine.phase.isBreak
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                Text(buddyEmoji)
-                    .font(.system(size: 72))
+                Text(emoji)
+                    .font(.system(size: 76))
                     .offset(y: bobbing ? -4 : 4)
                     .animation(
-                        .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                        .easeInOut(duration: isPlaying ? 0.7 : 1.8)
+                            .repeatForever(autoreverses: true),
                         value: bobbing
                     )
 
                 if isNapping {
                     Text("💤")
                         .font(.title3)
-                        .offset(x: 16, y: -8)
+                        .offset(x: 18, y: -6)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
@@ -53,37 +40,27 @@ struct BuddyView: View {
             Text(caption)
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.7))
+                .multilineTextAlignment(.center)
         }
         .onAppear { bobbing = true }
     }
 
-    private var isNapping: Bool {
-        engine.state == .running && engine.phase == .focus
-    }
-
-    private var buddyEmoji: String {
-        switch (buddy, engine.state, engine.phase) {
-        case (.cat, .running, .focus): "😴"
-        case (.cat, .running, _): "😸"
-        case (.cat, .paused, _): "🐱"
-        case (.cat, .idle, _): "🐱"
-        case (.dog, .running, .focus): "😴"
-        case (.dog, .running, _): "🐶"
-        case (.dog, .paused, _): "🐕"
-        case (.dog, .idle, _): "🐶"
-        }
+    private var emoji: String {
+        if isNapping { return buddy.nappingEmoji }
+        if isPlaying { return buddy.playingEmoji }
+        return buddy.idleEmoji
     }
 
     private var caption: String {
-        switch engine.state {
+        switch engine.runState {
         case .idle:
-            "\(buddy.name) is waiting for you"
+            return "\(buddy.name) is waiting for you"
         case .running:
-            engine.phase == .focus
-                ? "Don't wake \(buddy.name) — stay focused!"
-                : "\(buddy.name) is playing — enjoy your break"
+            return engine.phase.isBreak
+                ? "\(buddy.name) is playing — enjoy your break"
+                : "Don't wake \(buddy.name) — stay focused!"
         case .paused:
-            "\(buddy.name) wonders where you went…"
+            return "\(buddy.name) wonders where you went…"
         }
     }
 }

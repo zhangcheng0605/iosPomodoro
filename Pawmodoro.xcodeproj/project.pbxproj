@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		PA00000000000000000000A4 /* Pawmodoro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pawmodoro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000004 /* Pawmodoro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pawmodoro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		PA00000000000000000000A2 /* Pawmodoro */ = {
+		AA0000000000000000000002 /* Pawmodoro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Pawmodoro;
 			sourceTree = "<group>";
@@ -19,7 +19,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		PA00000000000000000000B2 /* Frameworks */ = {
+		BB0000000000000000000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -29,18 +29,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		PA00000000000000000000A1 = {
+		AA0000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				PA00000000000000000000A2 /* Pawmodoro */,
-				PA00000000000000000000A3 /* Products */,
+				AA0000000000000000000002 /* Pawmodoro */,
+				AA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		PA00000000000000000000A3 /* Products */ = {
+		AA0000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				PA00000000000000000000A4 /* Pawmodoro.app */,
+				AA0000000000000000000004 /* Pawmodoro.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,64 +48,64 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		PA00000000000000000000C1 /* Pawmodoro */ = {
+		CC0000000000000000000001 /* Pawmodoro */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = PA00000000000000000000D3 /* Build configuration list for PBXNativeTarget "Pawmodoro" */;
+			buildConfigurationList = DD0000000000000000000003 /* Build configuration list for PBXNativeTarget "Pawmodoro" */;
 			buildPhases = (
-				PA00000000000000000000B1 /* Sources */,
-				PA00000000000000000000B2 /* Frameworks */,
-				PA00000000000000000000B3 /* Resources */,
+				BB0000000000000000000001 /* Sources */,
+				BB0000000000000000000002 /* Frameworks */,
+				BB0000000000000000000003 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				PA00000000000000000000A2 /* Pawmodoro */,
+				AA0000000000000000000002 /* Pawmodoro */,
 			);
 			name = Pawmodoro;
 			packageProductDependencies = (
 			);
 			productName = Pawmodoro;
-			productReference = PA00000000000000000000A4 /* Pawmodoro.app */;
+			productReference = AA0000000000000000000004 /* Pawmodoro.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		PA00000000000000000000E1 /* Project object */ = {
+		EE0000000000000000000001 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
-					PA00000000000000000000C1 = {
+					CC0000000000000000000001 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
-			buildConfigurationList = PA00000000000000000000D0 /* Build configuration list for PBXProject "Pawmodoro" */;
+			buildConfigurationList = DD0000000000000000000000 /* Build configuration list for PBXProject "Pawmodoro" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = PA00000000000000000000A1;
+			mainGroup = AA0000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = PA00000000000000000000A3 /* Products */;
+			productRefGroup = AA0000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				PA00000000000000000000C1 /* Pawmodoro */,
+				CC0000000000000000000001 /* Pawmodoro */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		PA00000000000000000000B3 /* Resources */ = {
+		BB0000000000000000000003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +115,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		PA00000000000000000000B1 /* Sources */ = {
+		BB0000000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -125,7 +125,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		PA00000000000000000000D1 /* Debug */ = {
+		DD0000000000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -188,7 +188,7 @@
 			};
 			name = Debug;
 		};
-		PA00000000000000000000D2 /* Release */ = {
+		DD0000000000000000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -244,7 +244,7 @@
 			};
 			name = Release;
 		};
-		PA00000000000000000000D4 /* Debug */ = {
+		DD0000000000000000000004 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -272,7 +272,7 @@
 			};
 			name = Debug;
 		};
-		PA00000000000000000000D5 /* Release */ = {
+		DD0000000000000000000005 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -303,25 +303,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		PA00000000000000000000D0 /* Build configuration list for PBXProject "Pawmodoro" */ = {
+		DD0000000000000000000000 /* Build configuration list for PBXProject "Pawmodoro" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				PA00000000000000000000D1 /* Debug */,
-				PA00000000000000000000D2 /* Release */,
+				DD0000000000000000000001 /* Debug */,
+				DD0000000000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		PA00000000000000000000D3 /* Build configuration list for PBXNativeTarget "Pawmodoro" */ = {
+		DD0000000000000000000003 /* Build configuration list for PBXNativeTarget "Pawmodoro" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				PA00000000000000000000D4 /* Debug */,
-				PA00000000000000000000D5 /* Release */,
+				DD0000000000000000000004 /* Debug */,
+				DD0000000000000000000005 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = PA00000000000000000000E1 /* Project object */;
+	rootObject = EE0000000000000000000001 /* Project object */;
 }

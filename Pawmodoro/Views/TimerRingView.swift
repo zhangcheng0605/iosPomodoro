@@ -27,16 +27,24 @@ struct TimerRingView: View {
                 Text(statusLine)
                     .font(.subheadline)
                     .foregroundStyle(Theme.bark.opacity(0.6))
+                    .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 36)
         }
         .frame(width: 260, height: 260)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(engine.phase.title), \(engine.remainingText) remaining")
     }
 
     private var statusLine: String {
-        switch engine.state {
-        case .idle: "ready when you are"
-        case .running: engine.phase == .focus ? "shhh… buddy is napping" : "stretch those paws!"
-        case .paused: "paused"
+        let buddy = engine.settings.buddy.name
+        switch engine.runState {
+        case .idle:
+            return "ready when you are"
+        case .running:
+            return engine.phase.isBreak ? "stretch those paws!" : "shhh… \(buddy) is napping"
+        case .paused:
+            return "paused"
         }
     }
 }

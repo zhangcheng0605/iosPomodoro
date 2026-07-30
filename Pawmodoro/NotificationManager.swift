@@ -1,8 +1,8 @@
 import Foundation
 import UserNotifications
 
-/// Schedules the "your timer finished" local notification so phase endings
-/// reach the user even when the app is backgrounded or the phone is locked.
+/// Schedules the "your timer finished" local notification so phase endings reach
+/// the user even when the app is backgrounded or the phone is locked.
 final class NotificationManager {
     static let shared = NotificationManager()
     private init() {}
@@ -17,17 +17,16 @@ final class NotificationManager {
         }
     }
 
-    func schedulePhaseEnd(for phase: TimerEngine.Phase, at date: Date) {
+    func schedulePhaseEnd(for phase: TimerEngine.Phase, buddyName: String, at date: Date) {
         cancelPending()
 
         let content = UNMutableNotificationContent()
-        switch phase {
-        case .focus:
-            content.title = "Focus complete! 🐾"
-            content.body = "Great work — your buddy woke up and it's break time."
-        case .shortBreak, .longBreak:
+        if phase.isBreak {
             content.title = "Break's over 🐾"
-            content.body = "Your buddy is settling in for a nap. Time to focus!"
+            content.body = "\(buddyName) is settling in for a nap. Time to focus!"
+        } else {
+            content.title = "Focus complete! 🐾"
+            content.body = "Nice work — \(buddyName) woke up and it's break time."
         }
         content.sound = .default
 

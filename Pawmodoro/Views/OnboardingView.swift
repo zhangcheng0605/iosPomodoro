@@ -30,7 +30,7 @@ struct OnboardingView: View {
                     }
                 }
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.onAccent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Capsule().fill(Theme.blossom))
@@ -72,8 +72,7 @@ struct OnboardingView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 40)
 
-            Text(engine.settings.buddy.idleEmoji)
-                .font(.system(size: 96))
+            BuddySprite(buddy: engine.settings.buddy, sleeping: false, size: 132)
 
             Text("You can change your mind any time in Settings.")
                 .font(.footnote)

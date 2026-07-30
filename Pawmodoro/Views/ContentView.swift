@@ -78,7 +78,7 @@ struct ContentView: View {
     private var phaseChip: some View {
         Text(engine.phase.title)
             .font(.headline)
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.onAccent)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Capsule().fill(Theme.accent(for: engine.phase)))
@@ -116,9 +116,9 @@ struct ContentView: View {
                         .frame(width: 42, height: 34)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(selected ? Theme.accent(for: engine.phase) : .white.opacity(0.6))
+                                .fill(selected ? Theme.accent(for: engine.phase) : Theme.surface.opacity(0.6))
                         )
-                        .foregroundStyle(selected ? .white : Theme.bark.opacity(0.7))
+                        .foregroundStyle(selected ? Theme.onAccent : Theme.bark.opacity(0.7))
                 }
                 .accessibilityLabel("Ambience: \(option.label)")
             }
@@ -133,7 +133,7 @@ struct ContentView: View {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.title2)
                     .frame(width: 56, height: 56)
-                    .background(Circle().fill(.white.opacity(0.7)))
+                    .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
             }
             .accessibilityLabel("Restart phase")
@@ -145,7 +145,7 @@ struct ContentView: View {
                     .font(.largeTitle)
                     .frame(width: 84, height: 84)
                     .background(Circle().fill(Theme.accent(for: engine.phase)))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.onAccent)
                     .shadow(color: Theme.accent(for: engine.phase).opacity(0.4), radius: 10, y: 4)
             }
             .accessibilityLabel(engine.isRunning ? "Pause" : "Start")
@@ -156,7 +156,7 @@ struct ContentView: View {
                 Image(systemName: "forward.end.fill")
                     .font(.title2)
                     .frame(width: 56, height: 56)
-                    .background(Circle().fill(.white.opacity(0.7)))
+                    .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
             }
             .accessibilityLabel("Skip to next phase")

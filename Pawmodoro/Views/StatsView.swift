@@ -96,7 +96,7 @@ struct StatsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.white.opacity(0.75)))
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
     }
 
     private var weekChart: some View {
@@ -128,7 +128,7 @@ struct StatsView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.white.opacity(0.75)))
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
     }
 
     private func barHeight(count: Int, peak: Int) -> CGFloat {

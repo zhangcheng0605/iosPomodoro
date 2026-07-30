@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(TimerEngine.self) private var engine
+    @Environment(StoreManager.self) private var store
     @AppStorage("pawmodoro.hasOnboarded") private var hasOnboarded = false
     @State private var showSettings = false
     @State private var showStats = false
+    @State private var showPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -61,11 +63,17 @@ struct ContentView: View {
             .sheet(isPresented: $showStats) {
                 StatsView()
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
             .fullScreenCover(isPresented: onboardingPresented) {
                 OnboardingView()
             }
             .onChange(of: engine.settings) { _, _ in
                 engine.settingsDidChange()
+            }
+            .onChange(of: store.hasPlus) { _, hasPlus in
+                engine.applyEntitlement(hasPlus: hasPlus)
             }
         }
     }
@@ -104,25 +112,54 @@ struct ContentView: View {
     }
 
     private var ambienceRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(Ambience.allCases) { option in
-                let selected = engine.settings.ambience == option
-                Button {
-                    engine.settings.ambience = option
-                } label: {
-                    Label(option.label, systemImage: option.systemImage)
-                        .labelStyle(.iconOnly)
-                        .font(.footnote.weight(.semibold))
-                        .frame(width: 42, height: 34)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(selected ? Theme.accent(for: engine.phase) : Theme.surface.opacity(0.6))
-                        )
-                        .foregroundStyle(selected ? Theme.onAccent : Theme.bark.opacity(0.7))
-                }
-                .accessibilityLabel("Ambience: \(option.label)")
+                ambienceButton(for: option)
             }
         }
+    }
+
+    private func ambienceButton(for option: Ambience) -> some View {
+        let unlocked = store.isUnlocked(option)
+        let selected = engine.settings.ambience == option
+
+        return Button {
+            if unlocked {
+                engine.settings.ambience = option
+            } else {
+                showPaywall = true
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Label(option.label, systemImage: option.systemImage)
+                    .labelStyle(.iconOnly)
+                    .font(.footnote.weight(.semibold))
+                    .frame(width: 38, height: 32)
+                    .background(
+                        RoundedRectangle(cornerRadius: 11)
+                            .fill(selected ? Theme.accent(for: engine.phase) : Theme.surface.opacity(0.6))
+                    )
+                    .foregroundStyle(
+                        selected
+                            ? Theme.onAccent
+                            : Theme.bark.opacity(unlocked ? 0.7 : 0.35)
+                    )
+
+                if !unlocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Theme.onAccent)
+                        .padding(2)
+                        .background(Circle().fill(Theme.blossom))
+                        .offset(x: 3, y: -3)
+                }
+            }
+        }
+        .accessibilityLabel(
+            unlocked
+                ? "Ambience: \(option.label)"
+                : "Ambience: \(option.label), locked, requires Pawmodoro Plus"
+        )
     }
 
     private var controls: some View {
@@ -167,5 +204,6 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(TimerEngine())
+        .environment(StoreManager())
         .fontDesign(.rounded)
 }

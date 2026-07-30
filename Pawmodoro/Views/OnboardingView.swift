@@ -64,8 +64,10 @@ struct OnboardingView: View {
                 .font(.title.bold())
                 .foregroundStyle(Theme.bark)
 
+            // Only the buddies that ship with the app: a first launch is the
+            // wrong moment to put a padlock in front of someone.
             Picker("Buddy", selection: $engine.settings.buddy) {
-                ForEach(Buddy.allCases) { buddy in
+                ForEach(Buddy.allCases.filter { !$0.isPlus }) { buddy in
                     Text(buddy.name).tag(buddy)
                 }
             }

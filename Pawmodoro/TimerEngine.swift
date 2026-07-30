@@ -55,6 +55,7 @@ final class TimerEngine {
         self.settings = resolved
         self.log = log
         self.remaining = resolved.duration(for: .focus)
+        ThemeManager.shared.theme = resolved.theme
     }
 
     // MARK: Derived values
@@ -153,10 +154,34 @@ final class TimerEngine {
     /// Persist settings and apply anything that takes effect immediately.
     func settingsDidChange() {
         settings.save()
+        ThemeManager.shared.theme = settings.theme
         if runState == .idle {
             remaining = phaseDuration
         }
         refreshAmbience()
+    }
+
+    /// Falls back to the free content if Pawmodoro Plus isn't (or is no longer)
+    /// owned — a refund or a family-sharing change can revoke it after the fact,
+    /// and the app should never be left playing a sound the user can't pick again.
+    func applyEntitlement(hasPlus: Bool) {
+        guard !hasPlus else { return }
+        var changed = false
+        if settings.buddy.isPlus {
+            settings.buddy = .cat
+            changed = true
+        }
+        if settings.ambience.isPlus {
+            settings.ambience = .off
+            changed = true
+        }
+        if settings.theme.isPlus {
+            settings.theme = .sakura
+            changed = true
+        }
+        if changed {
+            settingsDidChange()
+        }
     }
 
     /// Ambience follows the timer: it plays while running and rests otherwise.

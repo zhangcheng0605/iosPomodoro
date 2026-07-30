@@ -11,12 +11,13 @@ struct PomodoroSettings: Codable, Equatable {
     var autoStartNextPhase: Bool = false
     var buddy: Buddy = .cat
     var ambience: Ambience = .off
+    var theme: AppTheme = .sakura
 
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
-        case hapticsEnabled, autoStartNextPhase, buddy, ambience
+        case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -41,6 +42,8 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.buddy
         ambience = try container.decodeIfPresent(Ambience.self, forKey: .ambience)
             ?? fallback.ambience
+        theme = try container.decodeIfPresent(AppTheme.self, forKey: .theme)
+            ?? fallback.theme
     }
 
     func duration(for phase: TimerEngine.Phase) -> TimeInterval {

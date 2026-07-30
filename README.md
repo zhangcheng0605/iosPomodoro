@@ -20,16 +20,17 @@ Full walkthrough, including running on a real iPhone and pulling later changes:
 ## Features
 
 - Classic Pomodoro loop: focus / short break / long break, all adjustable
-- Cat (Mochi) or dog (Biscuit) pixel-art buddy that naps while you focus and sits up on breaks
-- Cozy pastel theme in light mode, warm plum night theme in dark mode
+- A pixel-art buddy that naps while you focus and sits up on breaks — five to choose from
+- Four themes, each with its own light and dark look
 - Paw prints track your progress toward the next long break
 - Stats: today, last 7 days, current and best streak, 7-day chart
-- Ambient sound while you work — rain, purring, or a fireplace
+- Six ambient sounds while you work — rain, purring, fireplace, forest, café, ocean
 - Chime, haptics, and a local notification when a phase ends, even if the app is backgrounded
 - Accurate across backgrounding: the countdown is derived from an absolute end date, not ticks
 - Optional auto-start for the next phase
 - Accessible: labelled controls, Reduce Motion support, and every text/background pair
-  measured at 4.5:1 contrast or better
+  measured at 4.5:1 contrast or better, in every theme
+- Free, with an optional one-time "Pawmodoro Plus" unlock and a tip jar
 
 ## Docs
 
@@ -38,6 +39,7 @@ Full walkthrough, including running on a real iPhone and pulling later changes:
 | [`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md) | Clone, run, pull changes, run on your iPhone, fix build errors |
 | [`docs/APP_STORE_LAUNCH_GUIDE.md`](docs/APP_STORE_LAUNCH_GUIDE.md) | First-time App Store submission, start to finish |
 | [`docs/LIVE_ACTIVITY.md`](docs/LIVE_ACTIVITY.md) | Add the lock screen / Dynamic Island timer (needs an Xcode step) |
+| [`docs/MONETIZATION.md`](docs/MONETIZATION.md) | Setting up the in-app purchases, banking, and sandbox testing |
 | [`docs/PRIVACY.md`](docs/PRIVACY.md) | Privacy policy text + how to publish it |
 | [`docs/PLAN.md`](docs/PLAN.md) | Product plan, phases, what's left |
 
@@ -50,10 +52,15 @@ Pawmodoro/
 ├── NotificationManager.swift # local "timer done" notifications
 ├── Theme.swift               # palette, light + dark, contrast-checked
 ├── Model/
-│   ├── Buddy.swift           # cat / dog, their moods and sprite names
-│   ├── Ambience.swift        # rain / purr / fireplace
+│   ├── Buddy.swift           # the five buddies, their moods and sprite names
+│   ├── Ambience.swift        # the six ambient sounds
+│   ├── AppTheme.swift        # palettes and the four themes
+│   ├── PlusLockable.swift    # what "requires Plus" means
 │   ├── PomodoroSettings.swift# user settings, Codable + lenient decoding
 │   └── SessionLog.swift      # session history and stats
+├── Store/
+│   ├── StoreIDs.swift        # product identifiers, in one place
+│   └── StoreManager.swift    # StoreKit 2: buying, restoring, entitlements
 ├── Audio/SoundPlayer.swift   # ambience loops + phase-end chime
 ├── Resources/*.wav           # synthesized audio (see tools/generate_assets.py)
 ├── Assets.xcassets/          # app icon + buddy sprites
@@ -64,7 +71,10 @@ Pawmodoro/
     ├── BuddySprite.swift     # sprite image, with emoji fallback
     ├── SettingsView.swift    # durations, buddy, ambience, behaviour
     ├── StatsView.swift       # streaks and history
-    └── OnboardingView.swift  # first-launch pages
+    ├── OnboardingView.swift  # first-launch pages
+    ├── PaywallView.swift     # the Pawmodoro Plus unlock
+    ├── TipJarView.swift      # optional tips
+    └── PlusPickers.swift     # pickers that show locked content with a padlock
 ```
 
 ## Regenerating assets

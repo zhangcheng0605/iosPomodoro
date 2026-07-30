@@ -2,7 +2,11 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(TimerEngine.self) private var engine
+    @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
+
+    @State private var showPaywall = false
+    @State private var showTipJar = false
 
     var body: some View {
         @Bindable var engine = engine
@@ -10,13 +14,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("Your buddy") {
-                    Picker("Buddy", selection: $engine.settings.buddy) {
-                        ForEach(Buddy.allCases) { buddy in
-                            Text(buddy.pickerLabel).tag(buddy)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
+                    BuddyPicker { showPaywall = true }
                 }
 
                 Section("Durations") {
@@ -39,19 +37,23 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Picker("Ambience", selection: $engine.settings.ambience) {
-                        ForEach(Ambience.allCases) { option in
-                            Label(option.label, systemImage: option.systemImage).tag(option)
-                        }
-                    }
+                    AmbiencePicker { showPaywall = true }
+                } header: {
+                    Text("Ambience")
                 } footer: {
                     Text("Ambient sound plays while the timer is running, and pauses when the app is closed.")
+                }
+
+                Section("Theme") {
+                    ThemePicker { showPaywall = true }
                 }
 
                 Section("Behaviour") {
                     Toggle("Auto-start next phase", isOn: $engine.settings.autoStartNextPhase)
                     Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)
                 }
+
+                plusSection
 
                 Section {
                     Button("Restart cycle", systemImage: "arrow.triangle.2.circlepath") {
@@ -69,6 +71,49 @@ struct SettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var plusSection: some View {
+        Section("Pawmodoro Plus") {
+            if store.hasPlus {
+                HStack {
+                    Label("Unlocked", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(Theme.blossom)
+                    Spacer()
+                    Text("Thank you 💛")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.7))
+                }
+                Button("See what's included") { showPaywall = true }
+            } else {
+                Button {
+                    showPaywall = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Unlock Pawmodoro Plus", systemImage: "sparkles")
+                            .font(.body.weight(.semibold))
+                        Text("Three more buddies, sounds and themes — one payment.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.bark.opacity(0.7))
+                    }
+                }
+                Button("Restore purchase") {
+                    Task { await store.restore() }
+                }
+                .font(.footnote)
+            }
+
+            Button("Leave a tip", systemImage: "heart.fill") {
+                showTipJar = true
+            }
         }
     }
 
@@ -80,4 +125,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environment(TimerEngine())
+        .environment(StoreManager())
 }

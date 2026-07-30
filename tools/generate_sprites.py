@@ -15,7 +15,7 @@ UPSCALE = 10    # exported PNG is S * UPSCALE
 ASSETS = "/home/user/iosPomodoro/Pawmodoro/Assets.xcassets"
 
 # Palette indices used while drawing.
-T, OUTLINE, BODY, SHADE, CREAM, PINK, EYE, GLINT, NOSE = range(9)
+T, OUTLINE, BODY, SHADE, CREAM, PINK, EYE, GLINT, NOSE, ACCENT = range(10)
 
 CAT_PALETTE = {
     T: (0, 0, 0, 0),
@@ -27,12 +27,42 @@ CAT_PALETTE = {
     EYE: (58, 42, 34, 255),
     GLINT: (255, 255, 255, 255),
     NOSE: (216, 122, 138, 255),
+    ACCENT: (58, 42, 34, 255),
 }
 
 DOG_PALETTE = {
     **CAT_PALETTE,
     BODY: (216, 168, 112, 255),     # tan
     SHADE: (184, 134, 82, 255),
+}
+
+# --- Plus buddies -----------------------------------------------------------
+
+BUNNY_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (110, 84, 96, 255),
+    BODY: (250, 240, 240, 255),     # soft white
+    SHADE: (226, 208, 214, 255),
+    CREAM: (255, 252, 250, 255),
+    PINK: (244, 168, 184, 255),
+    NOSE: (226, 130, 152, 255),
+}
+
+HAMSTER_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (120, 84, 48, 255),
+    BODY: (240, 200, 130, 255),     # golden
+    SHADE: (214, 168, 96, 255),
+    CREAM: (255, 248, 232, 255),
+}
+
+FOX_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (104, 54, 40, 255),
+    BODY: (232, 126, 66, 255),      # deeper orange
+    SHADE: (204, 98, 48, 255),
+    CREAM: (255, 248, 240, 255),
+    ACCENT: (78, 52, 46, 255),      # dark ear tips and paws
 }
 
 
@@ -206,9 +236,142 @@ def dog_asleep():
     return outline_silhouette(g)
 
 
+def bunny_awake():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Tail puff, behind the body.
+    d.ellipse([29, 28, 36, 35], fill=SHADE)
+    # Tall ears first so the head overlaps their base.
+    d.ellipse([12, 1, 19, 19], fill=BODY)
+    d.ellipse([21, 1, 28, 19], fill=BODY)
+    d.ellipse([14, 4, 17, 16], fill=PINK)
+    d.ellipse([23, 4, 26, 16], fill=PINK)
+    # Sitting body.
+    d.ellipse([9, 23, 31, 37], fill=BODY)
+    d.ellipse([13, 27, 27, 37], fill=CREAM)
+    d.ellipse([12, 32, 18, 37], fill=CREAM)
+    d.ellipse([22, 32, 28, 37], fill=CREAM)
+    # Head and cheeks.
+    d.ellipse([9, 13, 31, 31], fill=BODY)
+    d.ellipse([12, 21, 28, 30], fill=CREAM)
+    eyes_open(d, 15, 25, 20)
+    d.polygon([(19, 24), (21, 24), (20, 26)], fill=NOSE)
+    d.line([(20, 26), (18, 27)], fill=OUTLINE)
+    d.line([(20, 26), (22, 27)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def bunny_asleep():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Ears laid back over the shoulder, drawn first so the body overlaps their
+    # base and they read as ears rather than a patch on the back.
+    d.ellipse([17, 9, 35, 16], fill=BODY)
+    d.ellipse([21, 10, 31, 14], fill=PINK)
+    d.ellipse([18, 14, 36, 21], fill=SHADE)
+    # Curled body.
+    d.ellipse([6, 20, 34, 36], fill=BODY)
+    d.ellipse([12, 26, 30, 36], fill=CREAM)
+    d.ellipse([28, 30, 34, 36], fill=SHADE)      # tail puff
+    # Head resting low on the left.
+    d.ellipse([6, 16, 24, 32], fill=BODY)
+    d.ellipse([9, 24, 21, 31], fill=CREAM)
+    eyes_closed(d, 12, 19, 22)
+    d.polygon([(14, 26), (16, 26), (15, 28)], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def hamster_awake():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Small round ears behind the head.
+    d.ellipse([10, 11, 18, 19], fill=SHADE)
+    d.ellipse([22, 11, 30, 19], fill=SHADE)
+    # One round body: hamsters have no visible neck.
+    d.ellipse([7, 14, 33, 37], fill=BODY)
+    # Chubby cheeks and muzzle.
+    d.ellipse([8, 21, 20, 33], fill=CREAM)
+    d.ellipse([20, 21, 32, 33], fill=CREAM)
+    d.ellipse([14, 20, 26, 32], fill=CREAM)
+    eyes_open(d, 14, 26, 21)
+    d.ellipse([19, 24, 21, 26], fill=EYE)
+    # Short mouth only: cream paws on cream cheeks left a stray outline artifact.
+    d.line([(20, 27), (18, 28)], fill=OUTLINE)
+    d.line([(20, 27), (22, 28)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def hamster_asleep():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([7, 10, 17, 20], fill=SHADE)       # ear, drawn first
+    d.ellipse([6, 19, 34, 37], fill=BODY)
+    d.ellipse([6, 16, 24, 33], fill=BODY)
+    d.ellipse([8, 23, 22, 32], fill=CREAM)       # cheek
+    eyes_closed(d, 12, 19, 22)
+    d.ellipse([11, 26, 13, 28], fill=EYE)        # nose at the edge of the cheek
+    return outline_silhouette(g)
+
+
+def fox_awake():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Bushy tail sweeping up the right, white at the tip.
+    for i, (x, y) in enumerate([(30, 34), (33, 31), (35, 27), (35, 23)]):
+        r = 3 if i < 2 else 4
+        d.ellipse([x - r, y - r, x + r, y + r], fill=CREAM if i == 3 else BODY)
+    # Sitting body.
+    d.ellipse([9, 22, 31, 37], fill=BODY)
+    d.ellipse([13, 26, 27, 37], fill=CREAM)
+    d.ellipse([12, 33, 17, 37], fill=ACCENT)     # dark socks
+    d.ellipse([23, 33, 28, 37], fill=ACCENT)
+    # Big pointed ears with dark tips.
+    d.polygon([(9, 14), (10, 1), (19, 11)], fill=BODY)
+    d.polygon([(31, 14), (30, 1), (21, 11)], fill=BODY)
+    d.polygon([(10, 1), (13, 6), (10, 7)], fill=ACCENT)
+    d.polygon([(30, 1), (27, 6), (30, 7)], fill=ACCENT)
+    d.polygon([(12, 11), (12, 6), (16, 10)], fill=PINK)
+    d.polygon([(28, 11), (28, 6), (24, 10)], fill=PINK)
+    # Head with a white muzzle and cheek ruff.
+    d.ellipse([8, 7, 32, 27], fill=BODY)
+    d.ellipse([12, 16, 28, 26], fill=CREAM)
+    eyes_open(d, 15, 25, 16)
+    d.ellipse([19, 19, 21, 21], fill=ACCENT)
+    d.line([(20, 21), (18, 23)], fill=OUTLINE)
+    d.line([(20, 21), (22, 23)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def fox_asleep():
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([6, 20, 34, 36], fill=BODY)
+    d.ellipse([12, 26, 30, 36], fill=CREAM)
+    # Tail curled around the front, white tip resting by the nose.
+    for i, (x, y) in enumerate([(31, 31), (27, 35), (22, 36), (17, 35)]):
+        r = 3
+        d.ellipse([x - r, y - r, x + r, y + r], fill=CREAM if i == 3 else BODY)
+    # Ears folded back.
+    d.polygon([(7, 21), (7, 9), (16, 18)], fill=BODY)
+    d.polygon([(24, 21), (23, 9), (17, 17)], fill=BODY)
+    d.polygon([(7, 9), (11, 12), (7, 14)], fill=ACCENT)
+    d.polygon([(23, 9), (20, 13), (23, 14)], fill=ACCENT)
+    d.ellipse([6, 15, 25, 32], fill=BODY)
+    d.ellipse([9, 23, 21, 31], fill=CREAM)
+    eyes_closed(d, 12, 19, 22)
+    d.ellipse([14, 26, 16, 28], fill=ACCENT)
+    return outline_silhouette(g)
+
+
 if __name__ == "__main__":
     print("Sprites:")
     to_png(cat_awake(), CAT_PALETTE, "buddy_cat_awake")
     to_png(cat_asleep(), CAT_PALETTE, "buddy_cat_asleep")
     to_png(dog_awake(), DOG_PALETTE, "buddy_dog_awake")
     to_png(dog_asleep(), DOG_PALETTE, "buddy_dog_asleep")
+    to_png(bunny_awake(), BUNNY_PALETTE, "buddy_bunny_awake")
+    to_png(bunny_asleep(), BUNNY_PALETTE, "buddy_bunny_asleep")
+    to_png(hamster_awake(), HAMSTER_PALETTE, "buddy_hamster_awake")
+    to_png(hamster_asleep(), HAMSTER_PALETTE, "buddy_hamster_asleep")
+    to_png(fox_awake(), FOX_PALETTE, "buddy_fox_awake")
+    to_png(fox_asleep(), FOX_PALETTE, "buddy_fox_asleep")

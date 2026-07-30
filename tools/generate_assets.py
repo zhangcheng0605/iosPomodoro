@@ -127,6 +127,98 @@ def make_fireplace(dur=12.0, fade=0.5):
     return seamless(normalize(roar * 0.9 + crackle, 0.40), fade_n)
 
 
+# ------------------------------------------------------------- forest (Plus)
+def make_forest(dur=14.0, fade=0.6):
+    rng = np.random.default_rng(31)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    # Wind through leaves: soft, slowly breathing.
+    wind = shaped_noise(n, rng, exponent=0.9, cutoff=3000)
+    wind *= 0.55 + 0.45 * np.sin(2 * np.pi * 0.07 * t + 0.6) ** 2
+    # Rustles: brief bright bursts, like a branch moving.
+    rustle = np.zeros(n)
+    for _ in range(int(dur * 3)):
+        start = rng.integers(0, n - 6000)
+        length = int(rng.integers(2000, 5000))
+        env = np.hanning(length)
+        rustle[start:start + length] += (
+            shaped_noise(length, rng, exponent=0.2, cutoff=8000) * env * rng.uniform(0.1, 0.3)
+        )
+    # Birdsong: short frequency-swept chirps in little phrases.
+    birds = np.zeros(n)
+    for _ in range(int(dur * 1.2)):
+        phrase_start = rng.integers(0, n - 20000)
+        for note in range(int(rng.integers(2, 5))):
+            start = phrase_start + note * int(rng.integers(1600, 3200))
+            length = int(rng.integers(700, 1500))
+            if start + length >= n:
+                break
+            local = np.arange(length) / SR
+            f0 = rng.uniform(2200.0, 3400.0)
+            f1 = f0 * rng.uniform(0.75, 1.35)
+            sweep = f0 + (f1 - f0) * (local / local[-1])
+            env = np.hanning(length) ** 1.5
+            birds[start:start + length] += (
+                np.sin(2 * np.pi * sweep * local) * env * rng.uniform(0.06, 0.16)
+            )
+    return seamless(normalize(wind * 0.8 + rustle + birds, 0.40), fade_n)
+
+
+# --------------------------------------------------------------- cafe (Plus)
+def make_cafe(dur=14.0, fade=0.6):
+    rng = np.random.default_rng(47)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    # Indistinct conversation: mid-band noise shaped by a slow, uneven envelope
+    # so it swells and dips the way a room full of talking does.
+    murmur = shaped_noise(n, rng, exponent=1.0, cutoff=1400, order=2)
+    envelope = shaped_noise(n, rng, exponent=2.4, cutoff=6)
+    envelope = 0.45 + 0.55 * (envelope - envelope.min()) / (np.ptp(envelope) + 1e-12)
+    murmur *= envelope
+    # Cups and spoons: short bright metallic taps.
+    clinks = np.zeros(n)
+    for _ in range(int(dur * 1.5)):
+        start = rng.integers(0, n - 3000)
+        length = int(rng.integers(500, 1400))
+        local = np.arange(length) / SR
+        env = np.exp(-local * rng.uniform(30, 60))
+        tone = np.zeros(length)
+        for freq, amp in ((rng.uniform(2300, 3100), 1.0), (rng.uniform(4200, 5400), 0.5)):
+            tone += amp * np.sin(2 * np.pi * freq * local)
+        clinks[start:start + length] += tone * env * rng.uniform(0.08, 0.22)
+    return seamless(normalize(murmur + clinks, 0.38), fade_n)
+
+
+# -------------------------------------------------------------- ocean (Plus)
+def make_ocean(dur=18.0, fade=1.0):
+    rng = np.random.default_rng(59)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    # Each wave rushes in quickly and drains away slowly.
+    envelope = np.zeros(n)
+    period = int(SR * 5.5)
+    for start in range(0, n, period):
+        rise = int(SR * rng.uniform(1.0, 1.5))
+        fall = int(SR * rng.uniform(2.6, 3.4))
+        end = min(start + rise + fall, n)
+        seg = end - start
+        if seg <= rise:
+            continue
+        shape = np.concatenate([
+            np.linspace(0, 1, rise) ** 1.6,
+            np.linspace(1, 0, seg - rise) ** 0.7,
+        ])
+        envelope[start:end] += shape * rng.uniform(0.75, 1.0)
+    envelope = np.clip(envelope, 0, 1.2)
+
+    body = shaped_noise(n, rng, exponent=1.2, cutoff=1200, order=2)
+    # Foam hiss rides on the crest of each wave, not the trough.
+    foam = shaped_noise(n, rng, exponent=0.3, cutoff=9000) * (envelope ** 3) * 0.5
+    swell = body * (0.18 + 0.82 * envelope)
+    return seamless(normalize(swell + foam, 0.42), fade_n)
+
+
 # ------------------------------------------------------------------- chime
 def make_chime(dur=1.8):
     n = int(SR * dur)
@@ -214,6 +306,11 @@ if __name__ == "__main__":
     write_wav("rain.wav", make_rain())
     write_wav("purr.wav", make_purr())
     write_wav("fireplace.wav", make_fireplace())
+    print("Ambience loops (Pawmodoro Plus):")
+    write_wav("forest.wav", make_forest())
+    write_wav("cafe.wav", make_cafe())
+    write_wav("ocean.wav", make_ocean())
+    print("Chime:")
     write_wav("chime.wav", make_chime())
     print("Icon:")
     make_icon()

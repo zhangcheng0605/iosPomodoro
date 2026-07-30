@@ -53,19 +53,23 @@ cozy pixel-art games.
 - [ ] Submit for review
 
 ### Phase 4 — Post-launch ideas
-- [ ] More buddies (bunny, hamster) — new sprites are ~20 lines in `tools/generate_sprites.py`;
-      possible cosmetic in-app purchase
+- [x] More buddies — bunny, hamster and fox shipped as part of Pawmodoro Plus
 - [ ] Buddy levels up / unlocks accessories with completed sessions
 - [ ] Home screen widget showing today's paw prints (reuses the Widget Extension from
       the Live Activity work)
 - [ ] Apple Watch companion
-- [ ] More ambience: café, forest, lo-fi (real recordings once there's a budget)
+- [ ] More ambience: lo-fi, night rain (real recordings once there's a budget)
 - [ ] Hand-drawn or animated buddy sprites to replace the generated ones
 
-## Monetization (decide before Phase 3)
-- **Free** — simplest first launch; build reviews and downloads
-- **Free + one-time "tip jar" or cosmetic IAP** — good fit for the cozy audience
-- Avoid subscriptions for v1; not worth the extra review scrutiny and setup
+## Monetization ✅ built
+- **Free app + one-time "Pawmodoro Plus" unlock** (~$3.99, non-consumable) bundling
+  3 buddies, 3 ambient sounds and 3 themes
+- **Tip jar** (3 consumable tiers) that unlocks nothing
+- No subscription, deliberately: hard to justify for a timer, high churn, more review scrutiny
+- Code is done and testable locally via `Pawmodoro.storekit`. Creating the products in
+  App Store Connect is the remaining step — see [`MONETIZATION.md`](MONETIZATION.md)
+- You can still launch free simply by not creating the products; the paywall degrades
+  to an "unavailable" state rather than breaking
 
 ## Tech decisions
 - **SwiftUI**, iOS 17+, zero third-party dependencies
@@ -76,14 +80,17 @@ cozy pixel-art games.
   approach on iOS, since apps get suspended in the background
 - Audio uses the `.ambient` session category, deliberately avoiding the background-audio
   capability that App Review scrutinises
-- Emoji buddy art as a placeholder so the app is fully functional before any art spend
+- Emoji buddy art survives only as a runtime fallback if a sprite fails to load
+- StoreKit 2 for purchases, with entitlement re-derived from `Transaction.currentEntitlements`
+- Themes resolve through an `@Observable` `ThemeManager`, so `Theme.bark` still works at
+  every call site while switching theme redraws the whole app
 
 ## Rough total timeline
 | Step | Time |
 |---|---|
 | MVP + polish | done — needs a first compile on your Mac |
-| Real buddy art | 1–2 weeks (mostly waiting on an artist) |
+| Buddy art | done — generated, no artist needed |
 | Developer account approval | 1–2 days (have your ID ready) |
-| App Store Connect setup + screenshots | 1–2 days |
+| App Store Connect setup, IAP products + screenshots | 1–2 days |
 | App review | 1–2 days (expect one rejection cycle as a first-timer; it's normal) |
 | **Total to launch** | **~3–4 weeks, casual pace** |

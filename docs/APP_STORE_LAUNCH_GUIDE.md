@@ -17,7 +17,10 @@ You've never shipped an app before — this is everything, in order. Total cost:
 > cheapest real option.
 
 ## Step 1 — Run the app (today, free)
-1. Install **Xcode** from the Mac App Store.
+Full instructions with exact commands are in **[`XCODE_WORKFLOW.md`](XCODE_WORKFLOW.md)**.
+The short version:
+
+1. Install **Xcode 16+** from the Mac App Store.
 2. Clone this repo and open `Pawmodoro.xcodeproj`.
 3. Press **⌘R** — the app launches in the iPhone simulator. That's it, no account needed.
 4. To run on your own iPhone: plug it in, select it as the run target, and sign in
@@ -44,14 +47,17 @@ You've never shipped an app before — this is everything, in order. Total cost:
 
 ## Step 5 — Prepare the listing (do this while polishing the app)
 You'll need:
-- **App icon**: 1024×1024 PNG, no transparency, no rounded corners (Apple rounds it).
+- **App icon**: already done — `Pawmodoro/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
+  is a 1024×1024 opaque PNG with no rounded corners (Apple rounds it for you).
+  Regenerate or restyle it with `python3 tools/generate_assets.py`.
 - **Screenshots**: required for 6.9" iPhone (1320×2868). Take them in the simulator
   (**⌘S** saves a screenshot) — one set is enough; Apple scales for smaller phones.
   Tools like AppMockUp let you add cute captions/device frames for free.
 - **Description** (up to 4000 chars) + **subtitle** (30 chars, e.g. "Cozy focus timer with pets").
 - **Keywords** (100 chars): `pomodoro,focus,timer,study,cozy,cute,cat,dog,productivity,adhd`
-- **Privacy policy URL**: required even if you collect nothing. Free options: a GitHub Pages
-  page in this repo. Since this app collects zero data, the policy is two sentences.
+- **Privacy policy URL**: required even if you collect nothing. The text is written for you
+  in [`PRIVACY.md`](PRIVACY.md) — that file also explains how to publish it free via
+  GitHub Pages to get the URL App Store Connect asks for.
 - **Privacy "nutrition label"**: in App Store Connect, declare **"Data Not Collected"**
   (true for this app — everything stays on device).
 - **Age rating** questionnaire: all "No" → rated 4+.
@@ -73,7 +79,10 @@ You'll need:
 ### Common first-timer rejections (and how this app avoids them)
 - **Guideline 2.1 (crashes/bugs)**: test on a real device, background/foreground the timer.
 - **Guideline 4.2 (minimum functionality)**: a bare timer can be flagged as "too simple."
-  The buddy system, stats, and settings help — ship Phase 2 polish, not the bare MVP.
+  The buddy, paw prints, stats, streaks, ambience, and onboarding are what lift Pawmodoro
+  above that bar — don't strip them back to just a countdown.
+- **Placeholder identifiers**: the repo ships `com.example.pawmodoro` and an empty
+  `DEVELOPMENT_TEAM`. Both must be yours before you archive (see Step 3).
 - **Missing privacy policy URL**: see Step 5.
 - **Screenshots that don't match the app**: keep captions honest.
 

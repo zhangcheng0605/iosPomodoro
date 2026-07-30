@@ -22,9 +22,11 @@ struct BuddyView: View {
                 Text(emoji)
                     .font(.system(size: 76))
                     .offset(y: bobbing ? -4 : 4)
+                    // A single constant duration on purpose: `.animation(_:value:)`
+                    // only installs a new animation when `value` changes, so making
+                    // the duration depend on the phase would silently do nothing.
                     .animation(
-                        .easeInOut(duration: isPlaying ? 0.7 : 1.8)
-                            .repeatForever(autoreverses: true),
+                        .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
                         value: bobbing
                     )
 

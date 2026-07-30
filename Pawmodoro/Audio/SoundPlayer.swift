@@ -46,11 +46,11 @@ final class SoundPlayer {
     }
 
     private func makePlayer(named fileName: String) -> AVAudioPlayer? {
-        guard let url = Bundle.main.url(forResource: fileName, withExtension: "wav"),
-              let player = try? AVAudioPlayer(contentsOf: url)
-        else {
-            return nil
-        }
+        // Synchronized groups normally copy resources to the bundle root, but fall
+        // back to the subdirectory in case Xcode preserves the folder structure.
+        let url = Bundle.main.url(forResource: fileName, withExtension: "wav")
+            ?? Bundle.main.url(forResource: fileName, withExtension: "wav", subdirectory: "Resources")
+        guard let url, let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
         player.prepareToPlay()
         return player
     }

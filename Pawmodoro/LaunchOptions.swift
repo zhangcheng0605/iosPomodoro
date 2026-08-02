@@ -108,6 +108,15 @@ enum LaunchOptions {
 
     /// Mark every species as already seen, for looking at the journal.
     static let fillJournal = isSet("-PawmodoroFillJournal")
+
+    /// Every mixtape available, without Plus and without travelling.
+    static let unlockMusic = isSet("-PawmodoroUnlockMusic")
+
+    /// Start with a track selected, e.g. `-PawmodoroTrack kettle_song`.
+    static let forcedTrack: String? = {
+        guard arguments.contains("-PawmodoroTrack") else { return nil }
+        return UserDefaults.standard.string(forKey: "PawmodoroTrack")
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -122,6 +131,8 @@ enum LaunchOptions {
     static let forcedBuddy: Buddy? = nil
     static let forcedSighting: Species? = nil
     static let fillJournal = false
+    static let unlockMusic = false
+    static let forcedTrack: String? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

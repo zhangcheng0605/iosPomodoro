@@ -83,6 +83,9 @@ final class TimerEngine {
         if LaunchOptions.fillJournal {
             journal.fillForDebug()
         }
+        if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
+            self.settings.music = forced
+        }
     }
 
     // MARK: Derived values
@@ -220,6 +223,12 @@ final class TimerEngine {
             settings.theme = .sakura
             changed = true
         }
+        if let track = currentTrack, track.gate.requiresPlus {
+            // A Plus track falls back to the opener rather than to silence:
+            // losing Plus shouldn't leave the app quieter than a fresh install.
+            settings.music = MusicCatalog.opener.id
+            changed = true
+        }
         if settings.place.isPlus {
             // Back to the furthest free place already earned, not all the way
             // home: losing Plus shouldn't undo the journey.
@@ -229,6 +238,35 @@ final class TimerEngine {
         if changed {
             settingsDidChange()
         }
+    }
+
+    // MARK: Music
+
+    /// Whether a mixtape (or a single track) has been earned. Arrival gates ask
+    /// the journey, which is already tracked — the almanac adds no new state.
+    func isUnlocked(_ gate: MusicGate, hasPlus: Bool) -> Bool {
+        if LaunchOptions.unlockMusic { return true }
+        switch gate {
+        case .free: return true
+        case .arrival(let place): return hasReached(place)
+        case .plus: return hasPlus
+        }
+    }
+
+    /// The track currently chosen, if it still exists in the catalogue.
+    var currentTrack: MusicTrack? {
+        settings.music.flatMap { MusicCatalog.track(id: $0) }
+    }
+
+    /// Music follows the timer the same way ambience does: it plays while a
+    /// phase is running and rests otherwise, so a forgotten app is silent.
+    func refreshMusic() {
+        MusicPlayer.shared.volume = Float(settings.musicVolume)
+        guard runState == .running, let track = currentTrack else {
+            MusicPlayer.shared.stop()
+            return
+        }
+        MusicPlayer.shared.play(track)
     }
 
     // MARK: Sightings
@@ -301,6 +339,8 @@ final class TimerEngine {
     /// Ambience follows the timer: it plays while running and rests otherwise.
     func refreshAmbience() {
         SoundPlayer.shared.setAmbience(runState == .running ? settings.ambience : .off)
+        SoundPlayer.shared.ambienceVolume = Float(settings.ambienceVolume)
+        refreshMusic()
     }
 
     // MARK: Ticking

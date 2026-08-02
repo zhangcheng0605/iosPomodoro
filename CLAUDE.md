@@ -56,6 +56,8 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroBuddy <id>` | Start with one buddy, e.g. `-PawmodoroBuddy owl` |
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
 | `-PawmodoroFillJournal` | Mark every species as already seen |
+| `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
+| `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -96,6 +98,13 @@ There are no tests. A change is verified by building and looking at it:
   from it so windows light up after dark. It asserts that the rows behind the
   countdown contain sky only; if a composition drifts upward it fails loudly.
   Never suppress its stderr — an art bug looks exactly like success otherwise.
+- **Music is generated too, and it must loop exactly.**
+  `tools/generate_music.py` is a small composition engine; a track is a recipe.
+  Two invariants make a loop loop: notes ringing past the last bar are wrapped
+  onto the head (not cut), and the file is a whole number of bars in samples.
+  Both are asserted. The app then decodes the AAC once and schedules the buffer
+  with `.loops` — `AVAudioPlayer` cannot loop AAC without a tick. Never edit an
+  `.m4a` or `MusicCatalog.swift`; both are generated.
 - **A sighting is decided once, then it's pure maths.** `rollSighting()` runs
   at the start of a focus phase and stores two points on the progress bar;
   everything after is a function of `engine.progress`, so there is no timer,

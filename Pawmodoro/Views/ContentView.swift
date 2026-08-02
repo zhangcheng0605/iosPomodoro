@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showStats = false
     @State private var showPaywall = false
+    @State private var showStudio = false
 
     var body: some View {
         NavigationStack {
@@ -74,6 +75,17 @@ struct ContentView: View {
                     }
                     .accessibilityLabel("Stats")
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showStudio = true
+                    } label: {
+                        Image(systemName: engine.settings.music == nil
+                              ? "music.note" : "music.note.list")
+                            .foregroundStyle(engine.settings.music == nil
+                                             ? Theme.bark : Theme.blossom)
+                    }
+                    .accessibilityLabel("Sound Studio")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
@@ -92,6 +104,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showStudio) {
+                SoundStudioView()
             }
             .fullScreenCover(isPresented: onboardingPresented) {
                 OnboardingView()

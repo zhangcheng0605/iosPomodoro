@@ -17,6 +17,12 @@ final class SoundPlayer {
     private var currentAmbience: Ambience = .off
     private var sessionConfigured = false
 
+    /// Balance against the music channel. Applied live, so moving the slider
+    /// is audible immediately rather than at the next phase.
+    var ambienceVolume: Float = 0.8 {
+        didSet { ambiencePlayer?.volume = 0.55 * ambienceVolume }
+    }
+
     private init() {}
 
     /// A short purr when the buddy is petted.
@@ -59,7 +65,7 @@ final class SoundPlayer {
         ambiencePlayer?.stop()
         ambiencePlayer = makePlayer(named: fileName)
         ambiencePlayer?.numberOfLoops = -1
-        ambiencePlayer?.volume = 0.55
+        ambiencePlayer?.volume = 0.55 * ambienceVolume
         ambiencePlayer?.play()
     }
 

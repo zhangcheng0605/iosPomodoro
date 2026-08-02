@@ -19,6 +19,11 @@ struct PomodoroSettings: Codable, Equatable {
     /// Names the user has given their buddies, keyed by species. Empty means
     /// "use the name it came with".
     var buddyNames: [String: String] = [:]
+    /// The music track id, or nil for silence. Ambience and music are separate
+    /// channels; free plays one at a time, Plus layers them.
+    var music: String?
+    var musicVolume: Double = 0.7
+    var ambienceVolume: Double = 0.8
 
     init() {}
 
@@ -26,6 +31,7 @@ struct PomodoroSettings: Codable, Equatable {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
+        case music, musicVolume, ambienceVolume
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -58,6 +64,11 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.place
         buddyNames = try container.decodeIfPresent([String: String].self, forKey: .buddyNames)
             ?? fallback.buddyNames
+        music = try container.decodeIfPresent(String.self, forKey: .music)
+        musicVolume = try container.decodeIfPresent(Double.self, forKey: .musicVolume)
+            ?? fallback.musicVolume
+        ambienceVolume = try container.decodeIfPresent(Double.self, forKey: .ambienceVolume)
+            ?? fallback.ambienceVolume
     }
 
     // MARK: Naming
@@ -142,6 +153,8 @@ struct PomodoroSettings: Codable, Equatable {
         copy.shortBreakMinutes = min(max(shortBreakMinutes, 1), 30)
         copy.longBreakMinutes = min(max(longBreakMinutes, 5), 60)
         copy.sessionsPerLongBreak = min(max(sessionsPerLongBreak, 2), 8)
+        copy.musicVolume = min(max(musicVolume, 0), 1)
+        copy.ambienceVolume = min(max(ambienceVolume, 0), 1)
         return copy
     }
 }

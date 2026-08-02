@@ -32,8 +32,11 @@ struct PawmodoroApp: App {
                 // stored end date and finish the phase if it already elapsed.
                 engine.syncAfterWake()
                 engine.refreshAmbience()
+                MusicPlayer.shared.resumeIfNeeded()
             case .background, .inactive:
-                break
+                // iOS tears the audio engine down anyway; letting it idle in
+                // the background is what gets an app looked at twice.
+                MusicPlayer.shared.suspend()
             @unknown default:
                 break
             }

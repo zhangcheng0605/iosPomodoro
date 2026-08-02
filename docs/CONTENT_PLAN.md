@@ -308,7 +308,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 
 | # | Scope | Size | Note |
 |---|---|---|---|
-| 1 | Review-findings fixes + Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
+| 1 | [REVIEW_FINDINGS.md](REVIEW_FINDINGS.md) fixes + Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
 | 2 | F1 pipeline + Meadow Home + Whispering Woods + vignette | L | the pattern-setter — get the safe zone + contrast mode right here |
 | 3 | F2 remaining six scenes + journey unlocks + arrivals | L | mostly generator work once #2 lands |
 | 4 | H cast (four buddies + quirks + naming) | M | |

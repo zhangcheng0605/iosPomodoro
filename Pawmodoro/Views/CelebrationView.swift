@@ -100,7 +100,23 @@ struct CelebrationView: View {
 
     private var card: some View {
         VStack(spacing: 10) {
-            if let place = completion.arrivedAt {
+            if let seen = completion.saw {
+                // A sighting outranks the cycle card: it is the rarer thing,
+                // and the whole reason the journal exists.
+                Image(seen.sketchAsset)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 46)
+                Text("You saw a \(seen.name.lowercased())")
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                    .multilineTextAlignment(.center)
+                Text(seen.note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            } else if let place = completion.arrivedAt {
                 // Arriving somewhere outranks finishing a cycle: it's the rarer
                 // thing, and it's the reason the journey exists.
                 Image(systemName: place.isPlus ? "lock.fill" : "map.fill")
@@ -144,7 +160,8 @@ struct CelebrationView: View {
         .opacity(showCard ? 1 : 0)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            completion.arrivedAt.map { "You've reached \($0.name). \($0.blurb)" }
+            completion.saw.map { "You saw a \($0.name). \($0.note)" }
+                ?? completion.arrivedAt.map { "You've reached \($0.name). \($0.blurb)" }
                 ?? "Cycle complete. \(subtitle)"
         )
     }

@@ -13,11 +13,15 @@ struct PhaseCompletion: Identifiable, Equatable {
     let isCycleComplete: Bool
     /// Set when this session was the one that opened up somewhere new.
     var arrivedAt: Place?
+    /// Set when something turned up while you were focusing, and you stayed
+    /// long enough to keep it.
+    var saw: Species?
 
     /// Only finishing focus earns confetti; breaks get a quieter beat, so the
     /// big moment stays rare enough to keep meaning something.
     var deservesConfetti: Bool { finished == .focus }
 
-    /// Arriving somewhere is worth a card even mid-cycle.
-    var showsCard: Bool { isCycleComplete || arrivedAt != nil }
+    /// Arriving somewhere — or seeing something — is worth a card even
+    /// mid-cycle. A sighting nobody mentions may as well not have happened.
+    var showsCard: Bool { isCycleComplete || arrivedAt != nil || saw != nil }
 }

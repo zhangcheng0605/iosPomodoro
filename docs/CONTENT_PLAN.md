@@ -291,7 +291,7 @@ would voluntarily post, and every one carries the art style. Debug:
 
 ---
 
-## Phase L — The Field Journal (stillness attracts wildlife)
+## Phase L — The Field Journal (stillness attracts wildlife) — wave 1 ✅ built
 
 The app's core fiction is *be still, be quiet, don't wake the buddy*. Extend
 that outward and it becomes a thesis no other pomodoro app can copy:
@@ -309,7 +309,7 @@ matrix (8 places × 4 day-parts) suddenly has gameplay stretched across it:
 the journal's hint lines ("Seen at dawn, in the Woods…") are literal reasons
 to come back and focus at a different hour, in a different place.
 
-### L1. The sightings engine
+### L1. The sightings engine ✅ built
 
 - At `start()` of a focus phase, roll once against the pool of species
   eligible for (place, day-part, session length, moon). On a hit, schedule
@@ -328,7 +328,7 @@ to come back and focus at a different hour, in a different place.
   `-PawmodoroFillJournal` completes the journal, `-PawmodoroMoon full` pins
   the moon.
 
-### L2. The roster (wave 1 — Home Waters, free)
+### L2. The roster (wave 1 — Home Waters, free) ✅ built
 
 All drawn by the generator on small grids in scene coordinates, 1–2 frames
 each — wildlife is an order of magnitude cheaper than a buddy (no frame set,
@@ -371,7 +371,7 @@ night — already drawn), a rainbow (finish a daytime session that ran rain
 ambience ≥ half its length), aurora (Peaks, night, rare). Deterministic
 conditions, so they feel *earned*, not rolled.
 
-### L4. Journal UI
+### L4. Journal UI ✅ built
 
 A grid on the stats screen, one page per place. Unseen species render as dark
 silhouettes (the generator emits these for free — same grid, outline-only
@@ -436,7 +436,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~2~~ | ~~F1 pipeline + scenes + vignette~~ — **done**, all 8 places shipped | L | |
 | ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
 | ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**, nine buddies ship | M | second wave (Pip, Bramble) still at #11 |
-| 5 | **L journal, wave 1** (engine + Home Waters roster + journal UI + micro-encounters) | L | the new centerpiece — see Phase L |
+| ~~5~~ | ~~**L journal, wave 1**~~ — **done**: engine, 12 species, journal UI | L | micro-encounters (L5) not yet built |
 | 6 | G sound studio (five loops + mixer) | M | |
 | 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
 | 8 | K postcards + album | M | picks up sighting mentions from L |

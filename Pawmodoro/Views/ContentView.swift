@@ -142,6 +142,15 @@ struct ContentView: View {
                         tint: Theme.bark
                     )
                 }
+
+                // Whatever came out while you were holding still. Only
+                // mounted for its own slice of the phase.
+                if engine.isRunning,
+                   let sighting = engine.sighting,
+                   let phase = sighting.phase(at: engine.progress) {
+                    WildlifeView(species: sighting.species, phase: phase)
+                        .id(sighting.species)
+                }
             }
             .animation(.easeInOut(duration: 0.8), value: place)
         }

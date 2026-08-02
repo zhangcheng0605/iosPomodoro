@@ -10,8 +10,9 @@ enum StorageKeys {
     static let hasOnboarded = "pawmodoro.hasOnboarded"
     static let hasPlus = "pawmodoro.hasPlus"
     static let tipsGiven = "pawmodoro.tipsGiven"
+    static let journal = "pawmodoro.journal"
 
-    static let all = [settings, sessions, hasOnboarded, hasPlus, tipsGiven]
+    static let all = [settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal]
 }
 
 /// Command-line switches that make Pawmodoro practical to drive in a simulator.
@@ -94,6 +95,19 @@ enum LaunchOptions {
         else { return nil }
         return Buddy(rawValue: raw)
     }()
+
+    /// Guarantee a particular sighting this session, e.g.
+    /// `-PawmodoroSighting whale`. Waiting for a one-in-twelve roll is not a
+    /// way to check an animation.
+    static let forcedSighting: Species? = {
+        guard arguments.contains("-PawmodoroSighting"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroSighting")
+        else { return nil }
+        return Species(rawValue: raw)
+    }()
+
+    /// Mark every species as already seen, for looking at the journal.
+    static let fillJournal = isSet("-PawmodoroFillJournal")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -106,6 +120,8 @@ enum LaunchOptions {
     static let forcedPlace: Place? = nil
     static let unlockPlaces = false
     static let forcedBuddy: Buddy? = nil
+    static let forcedSighting: Species? = nil
+    static let fillJournal = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

@@ -50,17 +50,27 @@ final class TimerEngine {
     /// whatever celebration they like.
     var completion: PhaseCompletion?
 
+    /// The wildlife appearance scheduled for this focus phase, if the roll went
+    /// that way. Cleared whenever the phase stops for any reason.
+    private(set) var sighting: Sighting?
+
     let log: SessionLog
+    let journal: Journal
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
     /// Which whole second the closing heartbeat last fired on.
     @ObservationIgnored private var lastHeartbeatSecond: Int?
 
-    init(settings: PomodoroSettings? = nil, log: SessionLog = SessionLog()) {
+    init(
+        settings: PomodoroSettings? = nil,
+        log: SessionLog = SessionLog(),
+        journal: Journal = Journal()
+    ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
         self.log = log
+        self.journal = journal
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -69,6 +79,9 @@ final class TimerEngine {
         }
         if let forced = LaunchOptions.forcedBuddy {
             self.settings.buddy = forced
+        }
+        if LaunchOptions.fillJournal {
+            journal.fillForDebug()
         }
     }
 
@@ -105,6 +118,10 @@ final class TimerEngine {
         if runState == .idle || remaining <= 0 {
             remaining = phaseDuration
         }
+        // Rolled once per fresh focus phase — resuming from a pause keeps
+        // whatever was already scheduled rather than buying another ticket.
+        if runState == .idle { rollSighting() }
+
         let end = Date().addingTimeInterval(remaining)
         endDate = end
         runState = .running
@@ -141,6 +158,7 @@ final class TimerEngine {
         stopTicker()
         NotificationManager.shared.cancelPending()
         endDate = nil
+        sighting = nil
         runState = .idle
         remaining = phaseDuration
         refreshAmbience()
@@ -151,6 +169,9 @@ final class TimerEngine {
         stopTicker()
         NotificationManager.shared.cancelPending()
         endDate = nil
+        // Whatever was out there simply leaves. Nothing is logged and nothing
+        // is said about it — abandoning a session is not punished here.
+        sighting = nil
         advance(natural: false)
     }
 
@@ -207,6 +228,43 @@ final class TimerEngine {
         }
         if changed {
             settingsDidChange()
+        }
+    }
+
+    // MARK: Sightings
+
+    /// Decide whether anything turns up during this focus phase, and when.
+    ///
+    /// Rolled up front rather than moment to moment so the whole appearance is
+    /// a pure function of `progress` afterwards — no timer, no state machine,
+    /// and the animal is guaranteed to be gone before the chime.
+    private func rollSighting() {
+        sighting = nil
+        guard phase == .focus else { return }
+
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+
+        if let forced = LaunchOptions.forcedSighting {
+            sighting = Sighting(species: forced)
+            return
+        }
+
+        let eligible = Species.allCases.filter {
+            $0.isEligible(place: settings.place, dayPart: part, focusMinutes: settings.focusMinutes)
+        }
+        guard !eligible.isEmpty else { return }
+
+        // The first session somewhere new always shows you something: the
+        // whole system is invisible until it has happened once.
+        if !journal.hasSeenAnything(at: settings.place),
+           let welcome = eligible.filter({ $0.rarity == .common }).randomElement() {
+            sighting = Sighting(species: welcome)
+            return
+        }
+
+        for species in eligible.shuffled() where Double.random(in: 0..<1) < species.rarity.chance {
+            sighting = Sighting(species: species)
+            return
         }
     }
 
@@ -294,8 +352,18 @@ final class TimerEngine {
         SoundPlayer.shared.playChime()
 
         var arrival: Place?
+        var seen: Species?
         if finished == .focus {
             log.add(minutes: settings.focusMinutes)
+            // You only keep what you stayed for.
+            if let sighting {
+                seen = sighting.species
+                journal.add(
+                    sighting.species,
+                    at: settings.place,
+                    dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
+                )
+            }
             // Checked after the log is written, so this session counts toward
             // the threshold it might have just crossed.
             arrival = newlyReachedPlace()
@@ -314,8 +382,10 @@ final class TimerEngine {
             pawsEarned: filledPaws,
             pawsPerCycle: pawsPerCycle,
             isCycleComplete: finished == .focus && phase == .longBreak,
-            arrivedAt: arrival
+            arrivedAt: arrival,
+            saw: seen
         )
+        sighting = nil
     }
 
     private func advance(natural: Bool) {

@@ -19,6 +19,12 @@ enum BuddyPose: Equatable {
     /// One eye cracked open and shut again — petted mid-nap. The buddy never
     /// actually wakes during focus; that would make the fiction punitive.
     case stirring
+    /// Awake and alert through a focus session. Only the owl, only at night.
+    case watching
+    /// Off in a hot spring for the break. Only the capybara.
+    case soaking
+    /// The signature pose a buddy takes at the place it likes best.
+    case atHome
 
     /// How often the frame is allowed to change.
     ///
@@ -31,12 +37,15 @@ enum BuddyPose: Equatable {
         case .idle: 0.25
         case .waking, .happy: 1.0 / 8.0
         case .stirring: 0.25
+        // The three quirk rests hold a single frame; they still need a slow
+        // tick so a blink or a shuffle can land, but nothing faster.
+        case .watching, .soaking, .atHome: 0.5
         }
     }
 
     var isLoop: Bool {
         switch self {
-        case .napping, .idle: true
+        case .napping, .idle, .watching, .soaking, .atHome: true
         case .waking, .happy, .stirring: false
         }
     }
@@ -56,13 +65,18 @@ enum BuddyFrames {
         case .stirring: return buddy.frame("wake")
         case .happy: return step(in: happySteps(buddy), at: t)
         case .waking: return step(in: wakingSteps(buddy), at: t)
+        // Each of these falls back to an ordinary pose if the buddy has no
+        // frame for it, so a quirk is always additive and never a blank.
+        case .watching: return buddy.watchFrame ?? buddy.frame("awake")
+        case .soaking: return buddy.breakFrame ?? idle(buddy, t)
+        case .atHome: return buddy.homeFrame ?? idle(buddy, t)
         }
     }
 
     /// How long a one-shot runs. Loops return nil.
     static func duration(for buddy: Buddy, pose: BuddyPose) -> TimeInterval? {
         switch pose {
-        case .napping, .idle: return nil
+        case .napping, .idle, .watching, .soaking, .atHome: return nil
         case .stirring: return 0.9
         case .happy: return total(happySteps(buddy))
         case .waking: return total(wakingSteps(buddy))
@@ -82,6 +96,13 @@ enum BuddyFrames {
     /// into an obvious rhythm. Deterministic rather than random: the same
     /// elapsed time always gives the same frame, which keeps it testable.
     private static func idle(_ buddy: Buddy, _ elapsed: TimeInterval) -> String {
+        // A buddy that doesn't sit down shuffles instead of blinking: standing
+        // perfectly still reads as a frozen app rather than as a penguin.
+        if let shuffle = buddy.idleShuffleFrame {
+            let phase = elapsed.truncatingRemainder(dividingBy: 1.6)
+            return phase < 0.8 ? buddy.frame("awake") : shuffle
+        }
+
         let cycle: TimeInterval = 4.25
         let index = (elapsed / cycle).rounded(.down)
         let phase = elapsed - index * cycle
@@ -95,7 +116,16 @@ enum BuddyFrames {
     private typealias Step = (frame: String, duration: TimeInterval)
 
     private static func happySteps(_ buddy: Buddy) -> [Step] {
-        [
+        // A buddy with a signature celebration holds it, bracketed by the
+        // ordinary bounce so the moment still has a beginning and an end.
+        if let signature = buddy.celebrationFrame {
+            return [
+                (buddy.frame("happy_1"), 0.12),
+                (signature, 0.46),
+                (buddy.frame("happy_0"), 0.16),
+            ]
+        }
+        return [
             (buddy.frame("happy_1"), 0.16),
             (buddy.frame("happy_0"), 0.16),
             (buddy.frame("happy_1"), 0.16),

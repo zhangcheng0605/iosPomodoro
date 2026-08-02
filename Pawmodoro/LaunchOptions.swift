@@ -84,6 +84,16 @@ enum LaunchOptions {
 
     /// Treat every place as reached, without seeding a session history.
     static let unlockPlaces = isSet("-PawmodoroUnlockPlaces")
+
+    /// Start with a particular buddy, e.g. `-PawmodoroBuddy owl`. Nine buddies
+    /// with quirks that depend on the hour and the place is a lot of states to
+    /// reach by tapping.
+    static let forcedBuddy: Buddy? = {
+        guard arguments.contains("-PawmodoroBuddy"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroBuddy")
+        else { return nil }
+        return Buddy(rawValue: raw)
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -95,6 +105,7 @@ enum LaunchOptions {
     static let forcedDayPart: DayPart? = nil
     static let forcedPlace: Place? = nil
     static let unlockPlaces = false
+    static let forcedBuddy: Buddy? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

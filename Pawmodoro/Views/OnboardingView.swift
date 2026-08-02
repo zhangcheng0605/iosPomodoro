@@ -80,7 +80,7 @@ struct OnboardingView: View {
             // wrong moment to put a padlock in front of someone.
             Picker("Buddy", selection: $engine.settings.buddy) {
                 ForEach(Buddy.allCases.filter { !$0.isPlus }) { buddy in
-                    Text(buddy.name).tag(buddy)
+                    Text(engine.settings.displayName(for: buddy)).tag(buddy)
                 }
             }
             .pickerStyle(.segmented)

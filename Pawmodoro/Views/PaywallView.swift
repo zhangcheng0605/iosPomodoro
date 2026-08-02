@@ -36,7 +36,7 @@ struct PaywallView: View {
             Text("A bigger, cozier den")
                 .font(.title2.bold())
                 .foregroundStyle(Theme.bark)
-            Text("Three more buddies, three more sounds, three more themes.")
+            Text("Six more buddies, four far isles, and every sound and theme.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
@@ -45,16 +45,21 @@ struct PaywallView: View {
     }
 
     private var buddyShowcase: some View {
-        HStack(spacing: 4) {
-            ForEach(Buddy.allCases.filter(\.isPlus)) { buddy in
-                VStack(spacing: 4) {
-                    BuddySprite(buddy: buddy, sleeping: false, size: 76)
-                    Text(buddy.name)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.bark.opacity(0.8))
+        // Six Plus buddies no longer fit across a phone, so the row scrolls
+        // rather than shrinking each of them into illegibility.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(Buddy.allCases.filter(\.isPlus)) { buddy in
+                    VStack(spacing: 4) {
+                        BuddySprite(buddy: buddy, sleeping: false, size: 68)
+                        Text(buddy.name)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.bark.opacity(0.8))
+                    }
+                    .frame(width: 78)
                 }
-                .frame(maxWidth: .infinity)
             }
+            .padding(.horizontal, 12)
         }
         .padding(.vertical, 12)
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.65)))
@@ -64,8 +69,8 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 14) {
             feature(
                 icon: "pawprint.fill",
-                title: "Five buddies in total",
-                detail: "Momo the bunny, Peanut the hamster and Yuzu the fox join Mochi and Biscuit."
+                title: "Nine buddies in total",
+                detail: "Tofu the capybara soaks on breaks, Luna the owl keeps watch at night, and Maple the red panda throws both arms up when you pet them."
             )
             feature(
                 icon: "speaker.wave.2.fill",

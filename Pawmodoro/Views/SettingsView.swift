@@ -13,8 +13,27 @@ struct SettingsView: View {
 
         NavigationStack {
             Form {
-                Section("Your buddy") {
+                Section {
                     BuddyPicker { showPaywall = true }
+                    HStack {
+                        Text("Name")
+                        Spacer()
+                        TextField(
+                            engine.settings.buddy.name,
+                            text: Binding(
+                                get: { engine.settings.buddyNames[engine.settings.buddy.rawValue] ?? "" },
+                                set: { engine.settings.setName($0, for: engine.settings.buddy) }
+                            )
+                        )
+                        .multilineTextAlignment(.trailing)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                    }
+                } header: {
+                    Text("Your buddy")
+                } footer: {
+                    Text("Leave the name blank to go back to \(engine.settings.buddy.name).")
                 }
 
                 Section {

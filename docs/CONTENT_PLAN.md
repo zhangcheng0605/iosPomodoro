@@ -189,7 +189,7 @@ the paywall copy is updated (see M).
 
 ---
 
-## Phase H — The Cast (four new buddies, each with a quirk)
+## Phase H — The Cast (four new buddies, each with a quirk) ✅ built
 
 More buddies is content; buddies with *quirks* are character. Each new buddy
 gets the full frame set from `build_frames` **plus one signature behavior**
@@ -435,7 +435,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | 1b | Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
 | ~~2~~ | ~~F1 pipeline + scenes + vignette~~ — **done**, all 8 places shipped | L | |
 | ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
-| 4 | H cast (four buddies + quirks + naming + home turf) | M | |
+| ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**, nine buddies ship | M | second wave (Pip, Bramble) still at #11 |
 | 5 | **L journal, wave 1** (engine + Home Waters roster + journal UI + micro-encounters) | L | the new centerpiece — see Phase L |
 | 6 | G sound studio (five loops + mixer) | M | |
 | 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |

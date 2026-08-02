@@ -16,13 +16,16 @@ struct PomodoroSettings: Codable, Equatable {
     var breatheOnBreaks: Bool = true
     /// Where the journey is currently sitting.
     var place: Place = .meadow
+    /// Names the user has given their buddies, keyed by species. Empty means
+    /// "use the name it came with".
+    var buddyNames: [String: String] = [:]
 
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
-        case breatheOnBreaks, place
+        case breatheOnBreaks, place, buddyNames
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -53,6 +56,31 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.breatheOnBreaks
         place = try container.decodeIfPresent(Place.self, forKey: .place)
             ?? fallback.place
+        buddyNames = try container.decodeIfPresent([String: String].self, forKey: .buddyNames)
+            ?? fallback.buddyNames
+    }
+
+    // MARK: Naming
+    //
+    // Every caption in the app routes through this rather than `Buddy.name`,
+    // so renaming one reaches the notifications and the tip jar too.
+
+    /// What to call this buddy: the user's name for it, or the one it came with.
+    func displayName(for buddy: Buddy) -> String {
+        let custom = buddyNames[buddy.rawValue]?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return custom.isEmpty ? buddy.name : custom
+    }
+
+    /// Storing an empty (or unchanged) name clears the override, so the field
+    /// can always be emptied to get the original name back.
+    mutating func setName(_ name: String, for buddy: Buddy) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == buddy.name {
+            buddyNames.removeValue(forKey: buddy.rawValue)
+        } else {
+            buddyNames[buddy.rawValue] = String(trimmed.prefix(20))
+        }
     }
 
     // MARK: Per-phase durations

@@ -67,6 +67,9 @@ final class TimerEngine {
         if let forced = LaunchOptions.forcedPlace {
             self.settings.place = forced
         }
+        if let forced = LaunchOptions.forcedBuddy {
+            self.settings.buddy = forced
+        }
     }
 
     // MARK: Derived values
@@ -89,6 +92,9 @@ final class TimerEngine {
 
     var pawsPerCycle: Int { max(1, settings.sessionsPerLongBreak) }
 
+    /// What the current buddy is called — the user's name for it, if any.
+    var buddyName: String { settings.displayName(for: settings.buddy) }
+
     /// Paw prints to show as earned in the current cycle.
     var filledPaws: Int { min(focusInCycle, pawsPerCycle) }
 
@@ -104,7 +110,7 @@ final class TimerEngine {
         runState = .running
         lastHeartbeatSecond = nil
         NotificationManager.shared.schedulePhaseEnd(
-            for: phase, buddyName: settings.buddy.name, at: end
+            for: phase, buddyName: buddyName, at: end
         )
         HapticsDirector.shared.start()
         refreshAmbience()

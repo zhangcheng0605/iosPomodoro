@@ -53,6 +53,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroClock <0-23>` | Pins the sky to one time of day (`-PawmodoroClock 22` for night + stars) |
 | `-PawmodoroPlace <id>` | Start at a place, e.g. `-PawmodoroPlace cloudspire` |
 | `-PawmodoroUnlockPlaces` | Treat every place as reached, without seeding history |
+| `-PawmodoroBuddy <id>` | Start with one buddy, e.g. `-PawmodoroBuddy owl` |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -93,6 +94,14 @@ There are no tests. A change is verified by building and looking at it:
   from it so windows light up after dark. It asserts that the rows behind the
   countdown contain sky only; if a composition drifts upward it fails loudly.
   Never suppress its stderr — an art bug looks exactly like success otherwise.
+- **A buddy's quirk is data, not a special case.** `Buddy` exposes
+  `idleShuffleFrame`, `celebrationFrame`, `breakFrame`, `watchFrame` and
+  `homeFrame`; `BuddyFrames` reads them and falls back to the ordinary pose
+  when one is nil. Adding a quirk to a new buddy is a switch arm and a sprite,
+  never a branch in `BuddyView`.
+- **Every caption goes through `settings.displayName(for:)`**, never
+  `Buddy.name` — buddies can be renamed, and the name has to reach the
+  notifications and the tip jar too.
 - **Text over scenery sits on its own backing.** The timer face, the buddy
   caption and the paw row each carry a theme-coloured capsule, because with a
   place behind the app the background is no longer a known colour. Removing

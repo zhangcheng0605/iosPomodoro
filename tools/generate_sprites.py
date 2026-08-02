@@ -72,6 +72,49 @@ FOX_PALETTE = {
     ACCENT: (78, 52, 46, 255),      # dark ear tips and paws
 }
 
+# --- The second cast -------------------------------------------------------
+
+CAPYBARA_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (86, 62, 44, 255),
+    BODY: (168, 126, 88, 255),      # coarse brown
+    SHADE: (140, 102, 68, 255),
+    CREAM: (214, 184, 148, 255),
+    PINK: (176, 206, 212, 255),     # only used as the tub's waterline
+    ACCENT: (150, 108, 68, 255),    # the tub itself
+    NOSE: (92, 68, 54, 255),
+}
+
+REDPANDA_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (92, 48, 34, 255),
+    BODY: (200, 104, 58, 255),      # rust
+    SHADE: (168, 80, 44, 255),
+    CREAM: (250, 244, 238, 255),    # the white face mask
+    ACCENT: (74, 48, 40, 255),      # dark legs and tail rings
+    NOSE: (58, 44, 40, 255),
+}
+
+PENGUIN_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (26, 30, 42, 255),
+    BODY: (58, 64, 82, 255),        # slate back
+    SHADE: (40, 46, 62, 255),
+    CREAM: (250, 250, 252, 255),    # belly
+    ACCENT: (242, 166, 68, 255),    # beak and feet
+    NOSE: (242, 166, 68, 255),
+}
+
+OWL_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (74, 58, 46, 255),
+    BODY: (152, 130, 110, 255),     # mottled taupe
+    SHADE: (120, 100, 84, 255),
+    CREAM: (234, 220, 202, 255),
+    ACCENT: (206, 158, 74, 255),    # beak
+    NOSE: (206, 158, 74, 255),
+}
+
 
 def new_grid():
     return Image.new("L", (S, S), T)
@@ -506,12 +549,318 @@ def fx_heart():
 
 # --- Frame table ------------------------------------------------------------
 
+# --- Capybara (Tofu) -------------------------------------------------------
+#
+# The shape note: a capybara is a brick with a blunt muzzle. Keeping the head
+# nearly rectangular is what stops it reading as a very large hamster.
+
+def capybara_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Small round ears, high and wide apart.
+    d.ellipse([10, 6, 16, 12], fill=SHADE)
+    d.ellipse([24, 6, 30, 12], fill=SHADE)
+    # Loaf body.
+    d.ellipse([6, 21, 34, 37], fill=BODY)
+    d.ellipse([12, 27, 28, 37], fill=CREAM)
+    # Blocky head.
+    d.rounded_rectangle([8, 8, 32, 27], radius=6, fill=BODY)
+    # Blunt muzzle across the whole lower face.
+    d.rounded_rectangle([11, 18, 29, 28], radius=5, fill=CREAM)
+    eyes(d, 14, 26, 15, eyes_mode)
+    d.rounded_rectangle([17, 21, 23, 25], radius=2, fill=NOSE)
+    d.line([(20, 25), (20, 27)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def capybara_asleep(eyes_mode="closed"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([5, 21, 35, 36], fill=BODY)
+    d.ellipse([12, 27, 30, 36], fill=CREAM)
+    d.ellipse([7, 15, 13, 21], fill=SHADE)          # ear
+    d.rounded_rectangle([5, 16, 24, 32], radius=6, fill=BODY)
+    d.rounded_rectangle([7, 23, 22, 32], radius=5, fill=CREAM)
+    eyes(d, 12, 19, 22, eyes_mode)
+    d.rounded_rectangle([11, 26, 16, 29], radius=2, fill=NOSE)
+    return outline_silhouette(g)
+
+
+def capybara_soak():
+    """The quirk: a capybara in a wooden tub, which is the whole reason this
+    animal is in the app."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Steam, in white so it reads against the sky rather than against the fur.
+    for x0, y0 in ((9, 4), (20, 1), (31, 4)):
+        for i in range(4):
+            d.point((x0 + (i % 2), y0 + i * 2), fill=GLINT)
+    # Head and shoulders, kept well clear of the rim.
+    d.ellipse([11, 11, 16, 16], fill=SHADE)
+    d.ellipse([24, 11, 29, 16], fill=SHADE)
+    d.rounded_rectangle([10, 12, 30, 28], radius=6, fill=BODY)
+    d.rounded_rectangle([13, 19, 27, 29], radius=5, fill=CREAM)
+    eyes(d, 15, 25, 17, "happy")
+    d.rounded_rectangle([18, 22, 23, 26], radius=2, fill=NOSE)
+    # The tub: water first, then a plain rim over it. Three staves, not seven —
+    # the first attempt read as a barcode.
+    d.rectangle([5, 28, 35, 32], fill=PINK)
+    d.rounded_rectangle([4, 31, 36, 38], radius=3, fill=ACCENT)
+    for x in (13, 20, 27):
+        d.line([(x, 32), (x, 37)], fill=SHADE)
+    return outline_silhouette(g)
+
+
+# --- Red panda (Maple) -----------------------------------------------------
+
+def redpanda_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Ringed tail, curling up the right.
+    for i, (x, y) in enumerate([(30, 33), (33, 30), (35, 26), (35, 21)]):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=ACCENT if i % 2 else BODY)
+    d.ellipse([9, 22, 31, 37], fill=BODY)
+    d.ellipse([13, 26, 27, 37], fill=CREAM)
+    d.ellipse([11, 32, 17, 37], fill=ACCENT)         # dark legs
+    d.ellipse([23, 32, 29, 37], fill=ACCENT)
+    # Big round ears with white insides.
+    d.ellipse([6, 5, 16, 15], fill=BODY)
+    d.ellipse([24, 5, 34, 15], fill=BODY)
+    d.ellipse([8, 7, 14, 13], fill=CREAM)
+    d.ellipse([26, 7, 32, 13], fill=CREAM)
+    d.ellipse([8, 7, 32, 27], fill=BODY)
+    # The mask: white cheeks and brows, which is the whole face.
+    d.ellipse([10, 15, 20, 25], fill=CREAM)
+    d.ellipse([20, 15, 30, 25], fill=CREAM)
+    d.ellipse([14, 10, 20, 15], fill=CREAM)
+    d.ellipse([20, 10, 26, 15], fill=CREAM)
+    eyes(d, 15, 25, 17, eyes_mode)
+    d.polygon([(19, 20), (21, 20), (20, 22)], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def redpanda_asleep(eyes_mode="closed"):
+    """Asleep hugging its own tail — the silhouette that tells you which
+    buddy this is with the screen at arm's length."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([6, 21, 34, 36], fill=BODY)
+    # The tail comes right around the front as a pillow.
+    for i, (x, y) in enumerate([(31, 28), (27, 33), (21, 35), (15, 34), (10, 30)]):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=ACCENT if i % 2 else SHADE)
+    d.ellipse([5, 13, 13, 21], fill=BODY)            # ears
+    d.ellipse([19, 13, 27, 21], fill=BODY)
+    d.ellipse([7, 15, 11, 19], fill=CREAM)
+    d.ellipse([21, 15, 25, 19], fill=CREAM)
+    d.ellipse([5, 15, 26, 32], fill=BODY)
+    d.ellipse([7, 22, 16, 31], fill=CREAM)
+    d.ellipse([16, 22, 25, 31], fill=CREAM)
+    eyes(d, 12, 20, 23, eyes_mode)
+    d.polygon([(15, 26), (17, 26), (16, 28)], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def redpanda_armsup():
+    """Petted: both arms straight up. Red pandas do this when startled; here
+    it is played as delight, which is the only honest reading in this app."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    for i, (x, y) in enumerate([(31, 34), (34, 31), (36, 27)]):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=ACCENT if i % 2 else BODY)
+    d.ellipse([11, 25, 29, 38], fill=BODY)
+    d.ellipse([14, 29, 26, 38], fill=CREAM)
+    # Arms drawn as strokes from the shoulders, angled outward, with dark paws
+    # on top. Drawn as blocks the first time, they read as two floating bricks.
+    d.line([(13, 27), (7, 15)], fill=BODY, width=4)
+    d.line([(27, 27), (33, 15)], fill=BODY, width=4)
+    d.ellipse([3, 10, 10, 17], fill=ACCENT)
+    d.ellipse([30, 10, 37, 17], fill=ACCENT)
+    d.ellipse([8, 8, 17, 17], fill=BODY)             # ears
+    d.ellipse([23, 8, 32, 17], fill=BODY)
+    d.ellipse([10, 10, 15, 15], fill=CREAM)
+    d.ellipse([25, 10, 30, 15], fill=CREAM)
+    d.ellipse([10, 10, 30, 29], fill=BODY)
+    d.ellipse([12, 18, 21, 28], fill=CREAM)
+    d.ellipse([19, 18, 28, 28], fill=CREAM)
+    d.ellipse([15, 13, 20, 18], fill=CREAM)
+    d.ellipse([20, 13, 25, 18], fill=CREAM)
+    eyes(d, 16, 24, 20, "happy")
+    d.polygon([(19, 23), (21, 23), (20, 25)], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def redpanda_curl():
+    """Home turf: curled on its side, tail over the nose."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([5, 22, 35, 37], fill=BODY)
+    for i, (x, y) in enumerate([(32, 30), (28, 34), (22, 36), (16, 36), (11, 33)]):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=ACCENT if i % 2 else SHADE)
+    d.ellipse([6, 17, 13, 24], fill=BODY)
+    d.ellipse([18, 17, 25, 24], fill=BODY)
+    d.ellipse([6, 19, 27, 34], fill=BODY)
+    d.ellipse([8, 25, 16, 33], fill=CREAM)
+    d.ellipse([15, 25, 23, 33], fill=CREAM)
+    eyes(d, 12, 19, 26, "closed")
+    return outline_silhouette(g)
+
+
+# --- Penguin (Pebble) ------------------------------------------------------
+
+def penguin_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([16, 36, 24, 39], fill=ACCENT)         # feet, drawn first
+    d.ellipse([10, 34, 18, 39], fill=ACCENT)
+    d.ellipse([22, 34, 30, 39], fill=ACCENT)
+    # One upright body — a penguin has no visible neck either.
+    d.ellipse([9, 6, 31, 37], fill=BODY)
+    d.ellipse([13, 16, 27, 36], fill=CREAM)          # belly
+    d.ellipse([12, 9, 28, 22], fill=CREAM)           # face patch
+    d.ellipse([5, 17, 11, 32], fill=SHADE)           # flippers
+    d.ellipse([29, 17, 35, 32], fill=SHADE)
+    eyes(d, 16, 24, 15, eyes_mode)
+    d.polygon([(18, 18), (22, 18), (20, 22)], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def penguin_asleep(eyes_mode="closed"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([6, 20, 34, 37], fill=BODY)
+    d.ellipse([12, 26, 30, 37], fill=CREAM)
+    d.ellipse([26, 24, 34, 33], fill=SHADE)          # flipper over the back
+    d.ellipse([5, 15, 25, 32], fill=BODY)
+    d.ellipse([7, 19, 22, 31], fill=CREAM)
+    eyes(d, 12, 19, 22, eyes_mode)
+    d.polygon([(12, 25), (16, 25), (14, 29)], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def penguin_waddle():
+    """The idle quirk: weight shifted, one flipper out. Alternated with the
+    plain standing pose it reads as a shuffle on the spot."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([13, 35, 21, 39], fill=ACCENT)
+    d.ellipse([23, 36, 31, 39], fill=ACCENT)
+    d.ellipse([11, 7, 33, 37], fill=BODY)
+    d.ellipse([15, 17, 29, 36], fill=CREAM)
+    d.ellipse([14, 10, 30, 23], fill=CREAM)
+    d.ellipse([4, 14, 12, 28], fill=SHADE)           # the raised flipper
+    d.ellipse([31, 19, 37, 33], fill=SHADE)
+    eyes(d, 18, 26, 16, "open")
+    d.polygon([(20, 19), (24, 19), (22, 23)], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def penguin_slide():
+    """Happy, and the home-turf pose: belly down, flippers back."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([4, 22, 36, 34], fill=BODY)
+    d.ellipse([10, 26, 32, 34], fill=CREAM)
+    d.ellipse([28, 18, 38, 26], fill=SHADE)          # flippers swept back
+    d.ellipse([26, 28, 36, 35], fill=SHADE)
+    d.ellipse([4, 18, 20, 32], fill=BODY)            # head out front
+    d.ellipse([6, 21, 18, 31], fill=CREAM)
+    eyes(d, 10, 16, 22, "happy")
+    d.polygon([(4, 25), (9, 25), (6, 29)], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+# --- Owl (Luna) ------------------------------------------------------------
+
+def owl_eyes(d, left, right, y, mode):
+    """Owls are mostly eyes, so they get their own routine: a pale facial disc
+    under a much larger pupil than the `eyes` helper draws."""
+    for cx in (left, right):
+        d.ellipse([cx - 5, y - 5, cx + 5, y + 5], fill=CREAM)
+    if mode == "open":
+        for cx in (left, right):
+            d.ellipse([cx - 3, y - 3, cx + 3, y + 3], fill=EYE)
+            d.ellipse([cx - 2, y - 2, cx, y], fill=GLINT)
+    elif mode == "closed":
+        for cx in (left, right):
+            d.line([(cx - 3, y), (cx + 3, y)], fill=EYE)
+    else:                                            # happy
+        for cx in (left, right):
+            for dx in range(-3, 4):
+                d.point((cx + dx, y + abs(dx) // 2 - 1), fill=EYE)
+
+
+def owl_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.polygon([(8, 12), (11, 2), (17, 11)], fill=BODY)     # ear tufts
+    d.polygon([(32, 12), (29, 2), (23, 11)], fill=BODY)
+    d.ellipse([7, 8, 33, 37], fill=BODY)                   # one round body
+    d.ellipse([13, 24, 27, 37], fill=CREAM)                # speckled chest
+    for x, y in ((16, 27), (23, 29), (19, 32), (14, 31), (25, 33)):
+        d.point((x, y), fill=SHADE)
+    d.ellipse([5, 20, 11, 33], fill=SHADE)                 # wings
+    d.ellipse([29, 20, 35, 33], fill=SHADE)
+    owl_eyes(d, 14, 26, 17, eyes_mode)
+    d.polygon([(19, 21), (21, 21), (20, 25)], fill=ACCENT)
+    d.ellipse([14, 36, 19, 39], fill=ACCENT)               # talons
+    d.ellipse([21, 36, 26, 39], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def owl_asleep(eyes_mode="closed"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.polygon([(7, 18), (9, 9), (14, 17)], fill=BODY)
+    d.polygon([(26, 18), (24, 9), (19, 17)], fill=BODY)
+    d.ellipse([6, 20, 34, 37], fill=BODY)
+    d.ellipse([13, 26, 29, 37], fill=CREAM)
+    d.ellipse([5, 14, 27, 34], fill=BODY)
+    d.ellipse([26, 22, 34, 32], fill=SHADE)                # wing tucked over
+    owl_eyes(d, 12, 21, 24, eyes_mode)
+    d.polygon([(15, 27), (17, 27), (16, 30)], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def owl_watch():
+    """The nocturnal quirk: after dark Luna is awake through your focus, eyes
+    wide, tufts up. The one buddy that inverts the app's fiction."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.polygon([(7, 13), (10, 1), (17, 12)], fill=BODY)
+    d.polygon([(33, 13), (30, 1), (23, 12)], fill=BODY)
+    d.ellipse([6, 9, 34, 37], fill=BODY)
+    d.ellipse([13, 25, 27, 37], fill=CREAM)
+    for x, y in ((16, 28), (23, 30), (19, 33), (14, 32)):
+        d.point((x, y), fill=SHADE)
+    d.ellipse([4, 20, 10, 34], fill=SHADE)
+    d.ellipse([30, 20, 36, 34], fill=SHADE)
+    # Wider discs and bigger pupils than the resting pose: alert, not just awake.
+    for cx in (14, 26):
+        d.ellipse([cx - 6, 11, cx + 6, 23], fill=CREAM)
+        d.ellipse([cx - 4, 13, cx + 4, 21], fill=EYE)
+        d.ellipse([cx - 3, 14, cx - 1, 16], fill=GLINT)
+    d.polygon([(19, 22), (21, 22), (20, 26)], fill=ACCENT)
+    d.ellipse([14, 36, 19, 39], fill=ACCENT)
+    d.ellipse([21, 36, 26, 39], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+# Each entry: species, palette, awake, asleep, stretch (or None), and any
+# extra hand-drawn quirk poses keyed by the suffix they're emitted under.
 BUDDIES = [
-    ("cat", CAT_PALETTE, cat_awake, cat_asleep, cat_stretch),
-    ("dog", DOG_PALETTE, dog_awake, dog_asleep, dog_stretch),
-    ("bunny", BUNNY_PALETTE, bunny_awake, bunny_asleep, None),
-    ("hamster", HAMSTER_PALETTE, hamster_awake, hamster_asleep, None),
-    ("fox", FOX_PALETTE, fox_awake, fox_asleep, None),
+    ("cat", CAT_PALETTE, cat_awake, cat_asleep, cat_stretch, {}),
+    ("dog", DOG_PALETTE, dog_awake, dog_asleep, dog_stretch, {}),
+    ("bunny", BUNNY_PALETTE, bunny_awake, bunny_asleep, None, {}),
+    ("hamster", HAMSTER_PALETTE, hamster_awake, hamster_asleep, None, {}),
+    ("fox", FOX_PALETTE, fox_awake, fox_asleep, None, {}),
+    ("capybara", CAPYBARA_PALETTE, capybara_awake, capybara_asleep, None,
+     {"soak": capybara_soak}),
+    ("redpanda", REDPANDA_PALETTE, redpanda_awake, redpanda_asleep, None,
+     {"armsup": redpanda_armsup, "curl": redpanda_curl}),
+    ("penguin", PENGUIN_PALETTE, penguin_awake, penguin_asleep, None,
+     {"waddle": penguin_waddle, "slide": penguin_slide}),
+    ("owl", OWL_PALETTE, owl_awake, owl_asleep, None,
+     {"watch": owl_watch}),
 ]
 
 # Row the breathing squash removes. Both postures are drawn with the body
@@ -520,7 +869,7 @@ BUDDIES = [
 BREATHE_ROW = 26
 
 
-def build_frames(species, palette, awake, asleep, stretch):
+def build_frames(species, palette, awake, asleep, stretch, quirks=None):
     """Emit every frame for one buddy. Base names are unchanged from the
     original two-pose set, so nothing that already references them breaks."""
     to_png(awake(), palette, f"buddy_{species}_awake")
@@ -535,12 +884,15 @@ def build_frames(species, palette, awake, asleep, stretch):
     to_png(shift(happy, -2), palette, f"buddy_{species}_happy_1")
     if stretch is not None:
         to_png(stretch(), palette, f"buddy_{species}_stretch")
+    # Signature poses: the soak, the raised arms, the waddle, the watch.
+    for suffix, draw in (quirks or {}).items():
+        to_png(draw(), palette, f"buddy_{species}_{suffix}")
 
 
 if __name__ == "__main__":
     print("Sprites:")
-    for species, palette, awake, asleep, stretch in BUDDIES:
-        build_frames(species, palette, awake, asleep, stretch)
+    for species, palette, awake, asleep, stretch, quirks in BUDDIES:
+        build_frames(species, palette, awake, asleep, stretch, quirks)
     print("Effects:")
     to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
     to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)

@@ -17,7 +17,7 @@ struct TipJarView: View {
                         Text("Tip jar")
                             .font(.title2.bold())
                             .foregroundStyle(Theme.bark)
-                        Text("Pawmodoro is free, and tipping unlocks nothing at all. It just keeps \(engine.settings.buddy.name) in treats.")
+                        Text("Pawmodoro is free, and tipping unlocks nothing at all. It just keeps \(engine.buddyName) in treats.")
                             .font(.subheadline)
                             .foregroundStyle(Theme.bark.opacity(0.75))
                             .multilineTextAlignment(.center)

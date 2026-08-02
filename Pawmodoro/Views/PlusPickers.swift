@@ -53,7 +53,7 @@ struct BuddyPicker: View {
                             .offset(x: 4, y: -2)
                     }
                 }
-                Text(buddy.name)
+                Text(engine.settings.displayName(for: buddy))
                     .font(.caption2.weight(selected ? .bold : .regular))
                     .foregroundStyle(Theme.bark.opacity(unlocked ? 0.9 : 0.5))
             }
@@ -71,8 +71,8 @@ struct BuddyPicker: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             unlocked
-                ? "\(buddy.name) the \(buddy.kind)"
-                : "\(buddy.name) the \(buddy.kind), locked, requires Pawmodoro Plus"
+                ? "\(engine.settings.displayName(for: buddy)) the \(buddy.kind)"
+                : "\(engine.settings.displayName(for: buddy)) the \(buddy.kind), locked, requires Pawmodoro Plus"
         )
     }
 }

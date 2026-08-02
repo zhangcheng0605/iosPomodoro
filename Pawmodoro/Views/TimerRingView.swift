@@ -219,7 +219,7 @@ struct TimerRingView: View {
     // MARK: Copy
 
     private var statusLine: String {
-        let buddy = engine.settings.buddy.name
+        let buddy = engine.buddyName
         switch engine.runState {
         case .idle:
             return isAdjustable ? "drag the ring to set \(phase.dialNoun)" : "ready when you are"
@@ -229,10 +229,19 @@ struct TimerRingView: View {
                     ? "breathe with \(buddy)"
                     : "stretch those paws!"
             }
+            // A nocturnal buddy is awake through a night session, so the ring
+            // must not insist it's asleep while the caption below says it isn't.
+            if engine.settings.buddy.isNocturnal, nightOutside {
+                return "\(buddy) is wide awake"
+            }
             return "shhh… \(buddy) is napping"
         case .paused:
             return "paused"
         }
+    }
+
+    private var nightOutside: Bool {
+        (LaunchOptions.forcedDayPart ?? DayPart.current()) == .night
     }
 
     private var accessibilityLabel: String {

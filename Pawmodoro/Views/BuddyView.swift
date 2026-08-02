@@ -14,11 +14,49 @@ struct BuddyView: View {
 
     private var buddy: Buddy { engine.settings.buddy }
 
-    private var isNapping: Bool {
-        engine.isRunning && !engine.phase.isBreak
+    private var name: String { engine.settings.displayName(for: buddy) }
+
+    private var dayPart: DayPart {
+        LaunchOptions.forcedDayPart ?? DayPart.current()
     }
 
-    private var restingPose: BuddyPose { isNapping ? .napping : .idle }
+    private var isAtHome: Bool { engine.settings.place == buddy.homePlace }
+
+    /// Whether the buddy is asleep *right now* — which the owl inverts after
+    /// dark. Drives the zzz, the petting response and the caption.
+    private var isNapping: Bool {
+        restingPose == .napping
+    }
+
+    /// The resting animation, from the phase, the place and the hour.
+    ///
+    /// Reads as a pile of conditions because it is one: three quirks all land
+    /// on the same property. The order matters — the nocturnal flip outranks
+    /// everything, then the running phase, and home turf only shows when
+    /// nothing else is happening.
+    private var restingPose: BuddyPose {
+        let focusRunning = engine.isRunning && !engine.phase.isBreak
+        let breakRunning = engine.isRunning && engine.phase.isBreak
+        let night = dayPart == .night
+        let nocturnal = buddy.isNocturnal
+
+        if focusRunning {
+            // A nocturnal buddy is awake through a night session; everyone
+            // else — and Luna in daylight — naps through focus as usual.
+            return (nocturnal && night) ? .watching : .napping
+        }
+        if breakRunning {
+            if nocturnal { return night ? .idle : .napping }
+            return buddy.breakFrame != nil ? .soaking : .idle
+        }
+        // Idle. Home turf shows only when it doesn't contradict the buddy's own
+        // clock: Luna's home pose *is* her night watch, so showing it at noon
+        // would undo the one quirk that makes her different.
+        if isAtHome, buddy.homeFrame != nil, !nocturnal || night {
+            return .atHome
+        }
+        return .idle
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -54,7 +92,7 @@ struct BuddyView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: isNapping ? "Check on \(buddy.name)" : "Pet \(buddy.name)") {
+        .accessibilityAction(named: isNapping ? "Check on \(name)" : "Pet \(name)") {
             pet()
         }
         .onAppear { animator.setBase(restingPose) }
@@ -163,17 +201,31 @@ struct BuddyView: View {
 
     private var caption: String {
         if animator.isPlayingTransient(at: Date()), isNapping {
-            return "shhh — \(buddy.name) is dreaming"
+            return "shhh — \(name) is dreaming"
+        }
+        // The quirks get their own lines: a pose nobody comments on reads like
+        // a rendering mistake rather than a personality.
+        switch restingPose {
+        case .watching:
+            return "\(name) keeps watch — owls work nights"
+        case .soaking:
+            return "\(name) is having a soak"
+        case .atHome:
+            return "\(name) is exactly where they want to be"
+        default:
+            break
         }
         switch engine.runState {
         case .idle:
-            return "\(buddy.name) is waiting for you"
+            return isAtHome
+                ? "\(name) is home — \(engine.settings.place.name)"
+                : "\(name) is waiting for you"
         case .running:
             return engine.phase.isBreak
-                ? "\(buddy.name) is up and about — enjoy your break"
-                : "Don't wake \(buddy.name) — stay focused!"
+                ? "\(name) is up and about — enjoy your break"
+                : "Don't wake \(name) — stay focused!"
         case .paused:
-            return "\(buddy.name) wonders where you went…"
+            return "\(name) wonders where you went…"
         }
     }
 }

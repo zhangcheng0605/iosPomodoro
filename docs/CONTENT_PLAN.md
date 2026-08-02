@@ -213,8 +213,17 @@ nobody else has — the quirk is what people tell their friends about.
 - **Name your buddy** (small, beloved): a text field in Settings, default
   stays the given name; stored in settings; every caption already routes
   through `buddy.name` → route through the custom name instead.
-- Backlog if appetite remains: fawn ("Fern"), axolotl ("Rosy"), black cat
-  (seasonal October star).
+- **Home turf** (pairs the cast with the journey): each buddy has a favourite
+  place, and being there swaps its perch pose for a signature one — Tofu's
+  onsen tub is already planned; Pebble belly-slides at Starfall Peaks; Luna
+  keeps watch from a Woods branch; Maple curls on Blossom's veranda. One
+  extra frame each, plus a caption line ("Tofu is exactly where he wants to
+  be"). Cosmetic only — no bonuses, per the no-guilt rule.
+- **Second wave** (after the journal ships, since both trade on the same
+  charm): otter "Pip" — floats on his back during Harbor breaks, holding a
+  pebble like a treasure; hedgehog "Bramble" — its asleep pose is a perfect
+  ball, the best silhouette in the app. Backlog beyond that: fawn ("Fern"),
+  axolotl ("Rosy"), black cat (seasonal October star).
 
 **Done when:** all four have breathing/blink/wake/happy + quirk frames in
 both appearances across all scenes; Luna's nocturnal flip verified with
@@ -270,7 +279,9 @@ Settings; free icons for free buddies, Plus buddies' icons with Plus.
 When you *arrive* somewhere (scene unlock) and on each completed cycle, the
 buddy sends a postcard: the current scene at its current day-part, the buddy
 posed on its perch, a stamp (paw print), a date line, and a handwritten-style
-caption ("Made it to Harbor Isle — 4 sessions today. — Mochi"). Rendered
+caption ("Made it to Harbor Isle — 4 sessions today. — Mochi"). If a journal
+sighting happened that day, the postcard mentions it ("We saw a whale!") —
+the two keepsake systems feed each other. Rendered
 offline by compositing existing generated assets with SwiftUI `ImageRenderer`;
 saved to an **Album** grid on the stats screen; share-sheet export.
 
@@ -280,13 +291,125 @@ would voluntarily post, and every one carries the art style. Debug:
 
 ---
 
+## Phase L — The Field Journal (stillness attracts wildlife)
+
+The app's core fiction is *be still, be quiet, don't wake the buddy*. Extend
+that outward and it becomes a thesis no other pomodoro app can copy:
+
+> **While you hold still, the world comes out.** Shy animals appear in the
+> scenery mid-session — a stag stepping between the pines at dawn, an otter
+> rolling in the harbor, a whale that only surfaces for the long hauls. Leave
+> the session and they slip away, unrecorded. Finish it and the sighting is
+> pressed into a field journal.
+
+Forest grows a tree for focusing. Pawmodoro *shows you something* for
+focusing — and what appears depends on where you are, what time it is, how
+long you committed, and even the phase of the real moon. The existing content
+matrix (8 places × 4 day-parts) suddenly has gameplay stretched across it:
+the journal's hint lines ("Seen at dawn, in the Woods…") are literal reasons
+to come back and focus at a different hour, in a different place.
+
+### L1. The sightings engine
+
+- At `start()` of a focus phase, roll once against the pool of species
+  eligible for (place, day-part, session length, moon). On a hit, schedule
+  the appearance at 40–70% of `engine.progress` — it rides the existing
+  ticker like the vignette does; no new timeline.
+- The animal enters, lingers (loop of 2 frames), and leaves *before* the
+  chime. Completing the session naturally logs the sighting; abandoning means
+  it simply leaves — nothing lost, nothing said. No-guilt holds.
+- First session in a newly reached place guarantees a common sighting, so the
+  system teaches itself. Commons land ~1 in 3, uncommons ~1 in 8, rares ~1 in
+  12 eligible sessions; mythics are condition-gated, not luck-gated.
+- Sighted species persist under a new `pawmodoro.journal` key (registered in
+  `StorageKeys.all`): species id, place, day-part, first-seen date, count.
+- Reduce Motion: animals fade in/out in place instead of walking on.
+- Debug: `-PawmodoroSighting <id>` forces one this session,
+  `-PawmodoroFillJournal` completes the journal, `-PawmodoroMoon full` pins
+  the moon.
+
+### L2. The roster (wave 1 — Home Waters, free)
+
+All drawn by the generator on small grids in scene coordinates, 1–2 frames
+each — wildlife is an order of magnitude cheaper than a buddy (no frame set,
+no quirks), which is exactly why the menagerie can be *large*.
+
+| Species | Where | When | Behaviour | Rarity |
+|---|---|---|---|---|
+| Butterfly | Meadow, Blossom | day | flutters; may land on the napping buddy's nose | common |
+| Robin | Meadow | dawn | hops the fence line, pecks | common |
+| Red squirrel | Woods | day | spirals up a pine trunk | common |
+| Frog | Woods stream | dusk | hop + ripple ring | common |
+| Stag | Woods | dawn | steps from the treeline, grazes, lifts its head | uncommon |
+| Gull dive | Harbor | day | one gull breaks from the chevrons and dives | common |
+| Otter | Harbor | day | floats on its back, cracks a shell | uncommon |
+| Dolphin pair | Harbor | day | two arcs between the islets | uncommon |
+| **Whale** | Harbor | sessions ≥ 40 min | spout, then a slow fluke — the long-haul reward | rare |
+| Lantern moth | Blossom | night | orbits a lit lantern | common |
+| Koi | Blossom pool | day | surface ring, orange flash | uncommon |
+| Crane | Blossom | dawn | stands one-legged in the waterfall pool | uncommon |
+
+### L3. Wave 2 — Far Isles (reached via Plus places) + phenomena
+
+| Species | Where | When | Behaviour | Rarity |
+|---|---|---|---|---|
+| Dove lift-off | Keep | dawn | the flock rises past the towers | common |
+| Peacock | Keep | day | the tail fan — the showpiece frame | uncommon |
+| Kestrel | Cloudspire | day | hovers dead-still in the wind, then stoops | uncommon |
+| **Stray sheep** | Cloudspire | day | grazing on the floating island; no explanation given | rare |
+| Mountain hare | Peaks | dusk | white-on-white bound across the snowfield | uncommon |
+| Ibex | Peaks | dawn | silhouette on the far ridge | rare |
+| Tanuki | Onsen | night | waddles to the spring's edge, warms its paws | uncommon |
+| **Moon rabbit** | any water/lantern place | full-moon night | sits in the reflection; gone by morning | mythic |
+
+The moon is computed offline from the synodic period — no network, a dozen
+lines. A pomodoro app that quietly knows the real moon is full is the kind of
+thing screenshots are made of.
+
+The journal's last page is **phenomena**, same rules: meteor shower (Peaks at
+night — already drawn), a rainbow (finish a daytime session that ran rain
+ambience ≥ half its length), aurora (Peaks, night, rare). Deterministic
+conditions, so they feel *earned*, not rolled.
+
+### L4. Journal UI
+
+A grid on the stats screen, one page per place. Unseen species render as dark
+silhouettes (the generator emits these for free — same grid, outline-only
+palette) with a hint line: *"Seen at dawn, in the Woods."* Seen species render
+as **sepia field-sketches** (same grid again, sketch palette), with first-seen
+date and count. The silhouette-plus-hint is the retention hook and honours
+the house rule: locked things are shown, never hidden.
+
+### L5. Micro-encounters (no journal, pure charm)
+
+Three tiny moments that need no collection system: the butterfly that lands
+on the sleeping buddy's nose (~60% through a Meadow/Blossom day session, and
+leaves at the chime); a robin that perches on the top of the timer ring for a
+few seconds; a snowflake that settles on the buddy's nose during Snowdrift
+season. Rare enough to be told about, cheap enough to ship in an afternoon.
+
+---
+
+## Phase N — The Travelogue (the map that shows the why)
+
+The stats screen gains a header strip: the eight places as tiny thumbnails
+joined by a dotted route, the boat marker sitting between your last unlock
+and the next, captioned "12 sessions to Blossom Village". The scene picker
+already renders places small, so this is composition, not new art. It turns
+`totalSessions` from a number into a *position* — and positions ask to be
+advanced.
+
+---
+
 ## M — Monetization restatement (one Plus, fatter on both sides)
 
 Same single non-consumable, no subscription. After this plan ships:
 
 - **Free:** 3 buddies (cat, dog, penguin), 2 themes, 4 scenes (the whole Home
   Waters route), 3 ambiences, 1 music loop (Paws & Chill — the hook), one
-  sound channel, seasonal events, postcards, naming, toys.
+  sound channel, seasonal events, postcards, naming, toys, **and the whole
+  field journal** — Far Isles species come with the Far Isles places, so the
+  journal deepens the existing Plus gate without adding a new one.
 - **Plus:** 9 buddies total, 8 themes, the Far Isles route (4 scenes), all
   sounds, **the mixer**, accessory wardrobe (Phase E), all alternate icons.
 
@@ -308,15 +431,18 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 
 | # | Scope | Size | Note |
 |---|---|---|---|
-| 1 | [REVIEW_FINDINGS.md](REVIEW_FINDINGS.md) fixes + Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
+| ~~1a~~ | ~~[REVIEW_FINDINGS.md](REVIEW_FINDINGS.md) fixes~~ — **done** (`345c995`) | S | |
+| 1b | Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
 | ~~2~~ | ~~F1 pipeline + scenes + vignette~~ — **done**, all 8 places shipped | L | |
 | ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
-| 4 | H cast (four buddies + quirks + naming) | M | |
-| 5 | G sound studio (five loops + mixer) | M | |
-| 6 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
-| 7 | K postcards + album | M | |
-| 8 | J toys + seasons + icons | M | shippable in slices |
-| 9 | E bond & accessories (from DELIGHT_PLAN) | M | benefits from the larger cast |
+| 4 | H cast (four buddies + quirks + naming + home turf) | M | |
+| 5 | **L journal, wave 1** (engine + Home Waters roster + journal UI + micro-encounters) | L | the new centerpiece — see Phase L |
+| 6 | G sound studio (five loops + mixer) | M | |
+| 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
+| 8 | K postcards + album | M | picks up sighting mentions from L |
+| 9 | **L wave 2** (Far Isles roster + moon + phenomena) + N travelogue map | M | |
+| 10 | J toys + seasons + icons | M | shippable in slices; migrations (autumn geese over every scene) join the seasonal layer here |
+| 11 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,
 screenshots light/dark, `python3 tools/check_contrast.py`, Release build,

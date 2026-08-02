@@ -1,4 +1,7 @@
-# Review findings — fix these first
+# Review findings — all fixed
+
+> **Status: resolved.** All three fixes landed in commit `345c995`
+> ("Fix the three confirmed review findings"). Kept for the record.
 
 An adversarial multi-agent review of the three delight commits
 (`a5c9618..08b5965`) surfaced many candidate defects; most were refuted

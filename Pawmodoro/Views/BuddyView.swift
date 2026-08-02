@@ -54,12 +54,14 @@ struct BuddyView: View {
         }
         .onAppear { animator.setBase(restingPose) }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
-        .onChange(of: engine.phase) { oldPhase, newPhase in
-            // Focus just ended: the buddy opens its eyes, stretches, and is
-            // pleased with you. This is the payoff for finishing a session.
-            if oldPhase == .focus, newPhase.isBreak, !reduceMotion {
-                animator.play(.waking, for: buddy)
-            }
+        .onChange(of: engine.completion) { _, completion in
+            // The payoff for *finishing* a focus session: the buddy opens its
+            // eyes, stretches, and is pleased with you. Driven by the
+            // completion event rather than the phase change, because skipping
+            // a session also moves focus -> break and must earn nothing.
+            guard let completion, completion.finished == .focus, !reduceMotion
+            else { return }
+            animator.play(.waking, for: buddy)
         }
     }
 

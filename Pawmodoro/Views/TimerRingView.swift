@@ -29,10 +29,9 @@ struct TimerRingView: View {
 
     private var minutes: Int { engine.settings.minutes(for: phase) }
 
-    /// While idle the ring shows how long the phase is, as a share of the range
-    /// it can be set to. While running it shows how much of it is left.
-    private var trim: Double {
-        guard isAdjustable else { return engine.progress }
+    /// How long the phase is, as a share of the range it can be set to. This is
+    /// what the dial shows while the timer is idle.
+    private var durationTrim: Double {
         let range = PomodoroSettings.range(for: phase)
         let span = Double(range.upperBound - range.lowerBound)
         guard span > 0 else { return 0 }
@@ -44,19 +43,33 @@ struct TimerRingView: View {
             Circle()
                 .stroke(Theme.bark.opacity(0.12), lineWidth: lineWidth)
 
+            // Two arcs rather than one that changes meaning. Sharing a single
+            // arc between "how long this phase is" and "how much is left" made
+            // it jump the moment you pressed play — from a third of the ring
+            // down to nothing. Now the dial fades out as the countdown grows
+            // in, and the handoff reads as one becoming the other.
             Circle()
-                .trim(from: 0, to: max(trim, 0.001))
+                .trim(from: 0, to: max(durationTrim, 0.001))
+                .stroke(
+                    Theme.accent(for: phase).opacity(0.55),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .opacity(isAdjustable ? 1 : 0)
+                .animation(.spring(duration: 0.25), value: minutes)
+
+            Circle()
+                .trim(from: 0, to: max(engine.progress, 0.001))
                 .stroke(
                     Theme.accent(for: phase),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
+                .opacity(isAdjustable ? 0 : 1)
                 .animation(.linear(duration: 0.25), value: engine.progress)
-                .animation(.spring(duration: 0.25), value: minutes)
 
-            if isAdjustable {
-                knob
-            }
+            knob
+                .opacity(isAdjustable ? 1 : 0)
 
             VStack(spacing: 4) {
                 Text(engine.remainingText)
@@ -73,6 +86,9 @@ struct TimerRingView: View {
             .padding(.horizontal, 36)
         }
         .frame(width: diameter, height: diameter)
+        // Crossfading the two arcs is what removes the snap; both opacities
+        // and the knob ride this one animation.
+        .animation(.easeInOut(duration: 0.35), value: isAdjustable)
         .scaleEffect(breathingScale)
         .animation(breathAnimation, value: breathing)
         .contentShape(Circle())
@@ -83,6 +99,13 @@ struct TimerRingView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(isAdjustable ? "\(minutes) minutes" : engine.remainingText)
         .accessibilityAdjustableAction { direction in
+            // The drag gesture and the knob are both gated on `isAdjustable`;
+            // without the same gate here, VoiceOver could re-length a phase
+            // that is already counting down.
+            guard isAdjustable else {
+                HapticsDirector.shared.nudge()
+                return
+            }
             let step = PomodoroSettings.step(for: phase)
             switch direction {
             case .increment: commit(minutes + step)
@@ -101,7 +124,7 @@ struct TimerRingView: View {
             .frame(width: lineWidth + 6, height: lineWidth + 6)
             .overlay(Circle().stroke(Theme.onAccent.opacity(0.35), lineWidth: 2))
             .offset(y: -diameter / 2)
-            .rotationEffect(.degrees(trim * 360))
+            .rotationEffect(.degrees(durationTrim * 360))
             .animation(.spring(duration: 0.25), value: minutes)
             .allowsHitTesting(false)
     }
@@ -140,6 +163,9 @@ struct TimerRingView: View {
     /// Writes through only on a real change, so the haptic fires once per
     /// detent rather than once per touch event.
     private func commit(_ newMinutes: Int) {
+        // The real gate: every caller is already conditional, but a phase that
+        // is running must never have its length changed underneath it.
+        guard isAdjustable else { return }
         let range = PomodoroSettings.range(for: phase)
         let clamped = min(max(newMinutes, range.lowerBound), range.upperBound)
         guard clamped != minutes else { return }

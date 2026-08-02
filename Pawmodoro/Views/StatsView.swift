@@ -11,6 +11,7 @@ struct StatsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    AlmanacView()
                     summaryGrid
                     weekChart
                     if log.totalSessions == 0 {

@@ -407,7 +407,7 @@ advanced.
 
 ---
 
-## Phase O — The Almanac page (absorbs N)
+## Phase O — The Almanac page (absorbs N) ✅ built
 
 The wildlife system, the moon, the seasons and the journey each produce
 "conditions" — and conditions want a forecast. The stats screen gains an
@@ -679,7 +679,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~7~~ | ~~I themes + M paywall copy~~ — **done**, eight themes | S | |
 | ~~8~~ | ~~K postcards + album~~ — **done** | M | |
 | ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
-| 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |
+| ~~10~~ | ~~**O almanac page** (absorbs N travelogue map)~~ — **done** | M | |
 | 11 | **U the stray** | M | the retention story; wants the habit loop live, hence after O |
 | 12 | **T star atlas** | S | zero new state; pairs with O's moon/night work |
 | 13 | **S dream diary** + L wave 3 (regulars, things heard) | M | richest after L wave 2 fills the journal |

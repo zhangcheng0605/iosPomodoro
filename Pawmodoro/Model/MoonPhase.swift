@@ -13,7 +13,12 @@ enum MoonPhase {
     private static let synodic = 29.530_588_853
 
     /// 0 at new moon, 0.5 at full, wrapping back to 1.
+    ///
+    /// The debug override lands here rather than only in `isFull`, so the
+    /// almanac's phase name and its icon agree with it — otherwise a forced
+    /// full moon shows "waning gibbous" beside a full-moon teaser.
     static func age(on date: Date = Date()) -> Double {
+        if let forced = LaunchOptions.forcedMoon { return forced ? 0.5 : 0.0 }
         let days = date.timeIntervalSince(reference) / 86_400.0
         let cycles = days / synodic
         return cycles - cycles.rounded(.down)
@@ -27,8 +32,7 @@ enum MoonPhase {
     /// True for roughly three nights around full — the moon rabbit's window.
     /// Wide enough to be catchable, narrow enough to stay rare.
     static func isFull(on date: Date = Date()) -> Bool {
-        if let forced = LaunchOptions.forcedMoon { return forced }
-        return abs(age(on: date) - 0.5) < 0.05
+        abs(age(on: date) - 0.5) < 0.05
     }
 
     static func name(on date: Date = Date()) -> String {

@@ -53,6 +53,10 @@ cozy pixel-art games.
 - [ ] Submit for review
 
 ### Phase 4 — Post-launch ideas
+
+> Superseded in part: the differentiation work (living buddy, tactile timer,
+> ambient scenes, Live Activity, bond/accessories) is now specified in detail
+> in [`DELIGHT_PLAN.md`](DELIGHT_PLAN.md) — build from there.
 - [x] More buddies — bunny, hamster and fox shipped as part of Pawmodoro Plus
 - [ ] Buddy levels up / unlocks accessories with completed sessions
 - [ ] Home screen widget showing today's paw prints (reuses the Widget Extension from

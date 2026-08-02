@@ -3,6 +3,12 @@
 Drawn procedurally on a small logical grid (so it is true pixel art), then
 upscaled with nearest-neighbour. Output goes into the asset catalog as
 single-scale imagesets. Original artwork, nothing to license.
+
+Each buddy has one drawing function per posture, taking an `eyes` mode. Extra
+animation frames are derived from those by grid transforms (`squash`, `shift`)
+rather than by drawing a second time, so a tweak to a buddy's face reaches
+every one of its frames. Frame names are listed in `FRAMES` at the bottom and
+must stay in step with `BuddyPose` in Pawmodoro/Animation/BuddyAnimator.swift.
 """
 import json
 import os
@@ -12,7 +18,8 @@ from PIL import Image, ImageDraw
 
 S = 40          # logical canvas, in "pixels" of pixel art
 UPSCALE = 10    # exported PNG is S * UPSCALE
-ASSETS = "/home/user/iosPomodoro/Pawmodoro/Assets.xcassets"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets")
 
 # Palette indices used while drawing.
 T, OUTLINE, BODY, SHADE, CREAM, PINK, EYE, GLINT, NOSE, ACCENT = range(10)
@@ -87,7 +94,7 @@ def outline_silhouette(grid):
     return Image.fromarray(arr, mode="L")
 
 
-def to_png(grid, palette, name):
+def to_png(grid, palette, name, template=False):
     arr = np.array(grid)
     rgba = np.zeros((S, S, 4), dtype=np.uint8)
     for index, colour in palette.items():
@@ -95,19 +102,20 @@ def to_png(grid, palette, name):
     img = Image.fromarray(rgba, mode="RGBA")
     img = img.resize((S * UPSCALE, S * UPSCALE), Image.NEAREST)
 
+    contents = {
+        "images": [{"filename": f"{name}.png", "idiom": "universal"}],
+        "info": {"author": "xcode", "version": 1},
+    }
+    if template:
+        # Only the alpha matters: the app tints these with the active theme.
+        contents["properties"] = {"template-rendering-intent": "template"}
+
     folder = os.path.join(ASSETS, f"{name}.imageset")
     os.makedirs(folder, exist_ok=True)
     img.save(os.path.join(folder, f"{name}.png"), "PNG")
     with open(os.path.join(folder, "Contents.json"), "w") as f:
-        json.dump(
-            {
-                "images": [{"filename": f"{name}.png", "idiom": "universal"}],
-                "info": {"author": "xcode", "version": 1},
-            },
-            f,
-            indent=2,
-        )
-    print(f"  {name}: {S * UPSCALE}x{S * UPSCALE}")
+        json.dump(contents, f, indent=2)
+    print(f"  {name}: {S * UPSCALE}x{S * UPSCALE}{' (template)' if template else ''}")
 
 
 def eyes_open(d, left, right, y):
@@ -123,7 +131,52 @@ def eyes_closed(d, left, right, y):
         d.point((cx + 3, y - 1), fill=EYE)
 
 
-def cat_awake():
+def eyes_happy(d, left, right, y):
+    """Closed and arching upward — the ^^ that reads as a smile."""
+    for cx in (left, right):
+        d.point((cx - 2, y + 1), fill=EYE)
+        d.point((cx - 1, y), fill=EYE)
+        d.point((cx, y - 1), fill=EYE)
+        d.point((cx + 1, y), fill=EYE)
+        d.point((cx + 2, y + 1), fill=EYE)
+
+
+EYE_MODES = {"open": eyes_open, "closed": eyes_closed, "happy": eyes_happy}
+
+
+def eyes(d, left, right, y, mode="open"):
+    EYE_MODES[mode](d, left, right, y)
+
+
+# --- Frame transforms -------------------------------------------------------
+#
+# Applied after `outline_silhouette`, so the outline moves with the art.
+
+def squash(grid, row, amount=1):
+    """Delete `amount` rows at `row`; everything above slides down to close
+    the gap. One row out of forty is a single pixel of pixel art — enough to
+    read as a breath without the silhouette wobbling."""
+    arr = np.array(grid)
+    out = np.full_like(arr, T)
+    out[row:] = arr[row:]
+    out[amount:row] = arr[0:row - amount]
+    return Image.fromarray(out, mode="L")
+
+
+def shift(grid, dy):
+    """Move the whole sprite `dy` rows (negative is up), clipping at the edge."""
+    arr = np.array(grid)
+    out = np.full_like(arr, T)
+    if dy < 0:
+        out[:S + dy] = arr[-dy:]
+    elif dy > 0:
+        out[dy:] = arr[:S - dy]
+    else:
+        out = arr
+    return Image.fromarray(out, mode="L")
+
+
+def cat_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Tail, curling up to the right.
@@ -148,7 +201,7 @@ def cat_awake():
     d.line([(24, 8), (22, 10)], fill=SHADE)
     # Muzzle.
     d.ellipse([13, 17, 27, 25], fill=CREAM)
-    eyes_open(d, 15, 25, 15)
+    eyes(d, 15, 25, 15, eyes_mode)
     d.polygon([(19, 19), (21, 19), (20, 21)], fill=NOSE)
     d.line([(20, 21), (18, 22)], fill=OUTLINE)
     d.line([(20, 21), (22, 22)], fill=OUTLINE)
@@ -159,7 +212,7 @@ def cat_awake():
     return outline_silhouette(g)
 
 
-def cat_asleep():
+def cat_asleep(eyes_mode="closed"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Curled-up body.
@@ -177,7 +230,7 @@ def cat_asleep():
     d.ellipse([6, 15, 25, 32], fill=BODY)
     # Muzzle sits on the lower half of the head, not on the belly.
     d.ellipse([9, 24, 21, 31], fill=CREAM)
-    eyes_closed(d, 12, 19, 22)
+    eyes(d, 12, 19, 22, eyes_mode)
     d.polygon([(14, 26), (16, 26), (15, 28)], fill=NOSE)
     d.line([(15, 28), (13, 29)], fill=OUTLINE)
     d.line([(15, 28), (17, 29)], fill=OUTLINE)
@@ -186,7 +239,7 @@ def cat_asleep():
     return outline_silhouette(g)
 
 
-def dog_awake():
+def dog_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Wagging tail, kept low and inside the canvas so the ears don't hide it.
@@ -204,7 +257,7 @@ def dog_awake():
     d.ellipse([8, 6, 32, 26], fill=BODY)
     # Patch over one eye.
     d.ellipse([21, 10, 30, 19], fill=SHADE)
-    eyes_open(d, 15, 25, 15)
+    eyes(d, 15, 25, 15, eyes_mode)
     # Snout.
     d.ellipse([13, 18, 27, 26], fill=CREAM)
     d.ellipse([17, 18, 23, 23], fill=EYE)            # big dog nose
@@ -216,7 +269,7 @@ def dog_awake():
     return outline_silhouette(g)
 
 
-def dog_asleep():
+def dog_asleep(eyes_mode="closed"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Curled-up body.
@@ -231,12 +284,12 @@ def dog_asleep():
     d.ellipse([6, 15, 25, 32], fill=BODY)
     # Snout with a small button nose.
     d.ellipse([9, 24, 21, 31], fill=CREAM)
-    eyes_closed(d, 12, 19, 22)
+    eyes(d, 12, 19, 22, eyes_mode)
     d.ellipse([14, 27, 16, 29], fill=EYE)
     return outline_silhouette(g)
 
 
-def bunny_awake():
+def bunny_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Tail puff, behind the body.
@@ -254,14 +307,14 @@ def bunny_awake():
     # Head and cheeks.
     d.ellipse([9, 13, 31, 31], fill=BODY)
     d.ellipse([12, 21, 28, 30], fill=CREAM)
-    eyes_open(d, 15, 25, 20)
+    eyes(d, 15, 25, 20, eyes_mode)
     d.polygon([(19, 24), (21, 24), (20, 26)], fill=NOSE)
     d.line([(20, 26), (18, 27)], fill=OUTLINE)
     d.line([(20, 26), (22, 27)], fill=OUTLINE)
     return outline_silhouette(g)
 
 
-def bunny_asleep():
+def bunny_asleep(eyes_mode="closed"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Ears laid back over the shoulder, drawn first so the body overlaps their
@@ -276,12 +329,12 @@ def bunny_asleep():
     # Head resting low on the left.
     d.ellipse([6, 16, 24, 32], fill=BODY)
     d.ellipse([9, 24, 21, 31], fill=CREAM)
-    eyes_closed(d, 12, 19, 22)
+    eyes(d, 12, 19, 22, eyes_mode)
     d.polygon([(14, 26), (16, 26), (15, 28)], fill=NOSE)
     return outline_silhouette(g)
 
 
-def hamster_awake():
+def hamster_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Small round ears behind the head.
@@ -293,7 +346,7 @@ def hamster_awake():
     d.ellipse([8, 21, 20, 33], fill=CREAM)
     d.ellipse([20, 21, 32, 33], fill=CREAM)
     d.ellipse([14, 20, 26, 32], fill=CREAM)
-    eyes_open(d, 14, 26, 21)
+    eyes(d, 14, 26, 21, eyes_mode)
     d.ellipse([19, 24, 21, 26], fill=EYE)
     # Short mouth only: cream paws on cream cheeks left a stray outline artifact.
     d.line([(20, 27), (18, 28)], fill=OUTLINE)
@@ -301,19 +354,19 @@ def hamster_awake():
     return outline_silhouette(g)
 
 
-def hamster_asleep():
+def hamster_asleep(eyes_mode="closed"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     d.ellipse([7, 10, 17, 20], fill=SHADE)       # ear, drawn first
     d.ellipse([6, 19, 34, 37], fill=BODY)
     d.ellipse([6, 16, 24, 33], fill=BODY)
     d.ellipse([8, 23, 22, 32], fill=CREAM)       # cheek
-    eyes_closed(d, 12, 19, 22)
+    eyes(d, 12, 19, 22, eyes_mode)
     d.ellipse([11, 26, 13, 28], fill=EYE)        # nose at the edge of the cheek
     return outline_silhouette(g)
 
 
-def fox_awake():
+def fox_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Bushy tail sweeping up the right, white at the tip.
@@ -335,14 +388,14 @@ def fox_awake():
     # Head with a white muzzle and cheek ruff.
     d.ellipse([8, 7, 32, 27], fill=BODY)
     d.ellipse([12, 16, 28, 26], fill=CREAM)
-    eyes_open(d, 15, 25, 16)
+    eyes(d, 15, 25, 16, eyes_mode)
     d.ellipse([19, 19, 21, 21], fill=ACCENT)
     d.line([(20, 21), (18, 23)], fill=OUTLINE)
     d.line([(20, 21), (22, 23)], fill=OUTLINE)
     return outline_silhouette(g)
 
 
-def fox_asleep():
+def fox_asleep(eyes_mode="closed"):
     g = new_grid()
     d = ImageDraw.Draw(g)
     d.ellipse([6, 20, 34, 36], fill=BODY)
@@ -358,20 +411,136 @@ def fox_asleep():
     d.polygon([(23, 9), (20, 13), (23, 14)], fill=ACCENT)
     d.ellipse([6, 15, 25, 32], fill=BODY)
     d.ellipse([9, 23, 21, 31], fill=CREAM)
-    eyes_closed(d, 12, 19, 22)
+    eyes(d, 12, 19, 22, eyes_mode)
     d.ellipse([14, 26, 16, 28], fill=ACCENT)
     return outline_silhouette(g)
 
 
+def cat_stretch(eyes_mode="happy"):
+    """The play-bow: rump up, forelegs reaching forward, head low."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Tail straight up off the raised rump.
+    for i, (x, y) in enumerate([(32, 24), (34, 20), (35, 15), (35, 10)]):
+        d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=SHADE if i > 2 else BODY)
+    # Raised hindquarters, right.
+    d.ellipse([21, 17, 37, 33], fill=BODY)
+    # Back sloping down toward the shoulders.
+    d.polygon([(23, 20), (35, 25), (32, 34), (13, 32)], fill=BODY)
+    # Shoulders low on the left, forelegs reaching out ahead.
+    d.ellipse([9, 25, 25, 37], fill=BODY)
+    d.ellipse([2, 32, 20, 37], fill=CREAM)
+    d.ellipse([1, 33, 7, 37], fill=CREAM)
+    # Head low, between the forelegs.
+    d.polygon([(5, 27), (6, 16), (13, 24)], fill=BODY)      # ears
+    d.polygon([(20, 27), (19, 16), (14, 24)], fill=BODY)
+    d.polygon([(8, 25), (8, 20), (11, 24)], fill=PINK)
+    d.polygon([(18, 25), (18, 20), (15, 24)], fill=PINK)
+    d.ellipse([4, 21, 21, 34], fill=BODY)
+    d.ellipse([6, 27, 18, 33], fill=CREAM)                  # muzzle
+    eyes(d, 9, 16, 26, eyes_mode)
+    d.polygon([(11, 29), (13, 29), (12, 31)], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def dog_stretch(eyes_mode="happy"):
+    """Same bow, with the dog's floppy ears hanging forward."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    for i, (x, y) in enumerate([(32, 25), (34, 21), (35, 17)]):
+        d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=SHADE if i > 1 else BODY)
+    d.ellipse([21, 17, 37, 33], fill=BODY)
+    d.polygon([(23, 20), (35, 25), (32, 34), (13, 32)], fill=BODY)
+    d.ellipse([9, 25, 25, 37], fill=BODY)
+    d.ellipse([2, 32, 20, 37], fill=CREAM)
+    d.ellipse([1, 33, 7, 37], fill=CREAM)
+    # Ears hang forward, drawn before the head.
+    d.ellipse([2, 21, 9, 34], fill=SHADE)
+    d.ellipse([17, 21, 24, 34], fill=SHADE)
+    d.ellipse([4, 21, 21, 34], fill=BODY)
+    d.ellipse([6, 27, 18, 33], fill=CREAM)
+    eyes(d, 9, 16, 26, eyes_mode)
+    d.ellipse([10, 29, 14, 32], fill=EYE)                   # button nose
+    return outline_silhouette(g)
+
+
+# --- Effect sprites ---------------------------------------------------------
+#
+# Drawn as flat silhouettes and exported opaque: the app renders them as
+# template images so `Theme` tints them, which keeps them right in all four
+# themes and both appearances without a second asset.
+
+FX_PALETTE = {T: (0, 0, 0, 0), OUTLINE: (255, 255, 255, 255)}
+
+
+def fx_zzz():
+    """Three z's climbing to the right, for the napping buddy."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    for (x, y, size) in ((11, 27, 4), (18, 18, 5), (26, 7, 6)):
+        d.line([(x, y), (x + size, y)], fill=OUTLINE)
+        d.line([(x + size, y), (x, y + size)], fill=OUTLINE)
+        d.line([(x, y + size), (x + size, y + size)], fill=OUTLINE)
+    return g
+
+
+def fx_heart():
+    """A 7x7 pixel heart, centred."""
+    g = new_grid()
+    rows = [
+        ".XX.XX.",
+        "XXXXXXX",
+        "XXXXXXX",
+        "XXXXXXX",
+        ".XXXXX.",
+        "..XXX..",
+        "...X...",
+    ]
+    d = ImageDraw.Draw(g)
+    for dy, row in enumerate(rows):
+        for dx, cell in enumerate(row):
+            if cell == "X":
+                d.point((17 + dx, 17 + dy), fill=OUTLINE)
+    return g
+
+
+# --- Frame table ------------------------------------------------------------
+
+BUDDIES = [
+    ("cat", CAT_PALETTE, cat_awake, cat_asleep, cat_stretch),
+    ("dog", DOG_PALETTE, dog_awake, dog_asleep, dog_stretch),
+    ("bunny", BUNNY_PALETTE, bunny_awake, bunny_asleep, None),
+    ("hamster", HAMSTER_PALETTE, hamster_awake, hamster_asleep, None),
+    ("fox", FOX_PALETTE, fox_awake, fox_asleep, None),
+]
+
+# Row the breathing squash removes. Both postures are drawn with the body
+# filling the lower half, so taking a row out of the mid-body reads as the
+# chest falling rather than the whole sprite shrinking.
+BREATHE_ROW = 26
+
+
+def build_frames(species, palette, awake, asleep, stretch):
+    """Emit every frame for one buddy. Base names are unchanged from the
+    original two-pose set, so nothing that already references them breaks."""
+    to_png(awake(), palette, f"buddy_{species}_awake")
+    to_png(awake("closed"), palette, f"buddy_{species}_awake_blink")
+    to_png(asleep(), palette, f"buddy_{species}_asleep")
+    to_png(squash(asleep(), BREATHE_ROW), palette, f"buddy_{species}_asleep_breathe")
+    # Eyes open but still curled up: the first moment of waking.
+    to_png(asleep("open"), palette, f"buddy_{species}_wake")
+    # Two-frame happy bounce, used for petting and for finishing a session.
+    happy = awake("happy")
+    to_png(happy, palette, f"buddy_{species}_happy_0")
+    to_png(shift(happy, -2), palette, f"buddy_{species}_happy_1")
+    if stretch is not None:
+        to_png(stretch(), palette, f"buddy_{species}_stretch")
+
+
 if __name__ == "__main__":
     print("Sprites:")
-    to_png(cat_awake(), CAT_PALETTE, "buddy_cat_awake")
-    to_png(cat_asleep(), CAT_PALETTE, "buddy_cat_asleep")
-    to_png(dog_awake(), DOG_PALETTE, "buddy_dog_awake")
-    to_png(dog_asleep(), DOG_PALETTE, "buddy_dog_asleep")
-    to_png(bunny_awake(), BUNNY_PALETTE, "buddy_bunny_awake")
-    to_png(bunny_asleep(), BUNNY_PALETTE, "buddy_bunny_asleep")
-    to_png(hamster_awake(), HAMSTER_PALETTE, "buddy_hamster_awake")
-    to_png(hamster_asleep(), HAMSTER_PALETTE, "buddy_hamster_asleep")
-    to_png(fox_awake(), FOX_PALETTE, "buddy_fox_awake")
-    to_png(fox_asleep(), FOX_PALETTE, "buddy_fox_asleep")
+    for species, palette, awake, asleep, stretch in BUDDIES:
+        build_frames(species, palette, awake, asleep, stretch)
+    print("Effects:")
+    to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
+    to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)

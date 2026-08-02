@@ -12,10 +12,38 @@ final class SoundPlayer {
 
     private var ambiencePlayer: AVAudioPlayer?
     private var chimePlayer: AVAudioPlayer?
+    private var purrPlayer: AVAudioPlayer?
+    private var purrStopTask: Task<Void, Never>?
     private var currentAmbience: Ambience = .off
     private var sessionConfigured = false
 
     private init() {}
+
+    /// A short purr when the buddy is petted.
+    ///
+    /// Its own player, so it can overlap the ambience loop without stopping it,
+    /// and quiet enough to sit under whatever else is playing. Fades out by
+    /// stopping on a timer — the loop file has no natural ending.
+    func playPurr() {
+        configureSessionIfNeeded()
+        if purrPlayer == nil {
+            purrPlayer = makePlayer(named: "purr")
+            purrPlayer?.numberOfLoops = -1
+            purrPlayer?.volume = 0.3
+        }
+        guard let player = purrPlayer else { return }
+        if !player.isPlaying {
+            player.currentTime = 0
+            player.play()
+        }
+        // Each pet extends the purr rather than restarting it.
+        purrStopTask?.cancel()
+        purrStopTask = Task { [weak player] in
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            guard !Task.isCancelled else { return }
+            player?.stop()
+        }
+    }
 
     func setAmbience(_ ambience: Ambience) {
         guard ambience != currentAmbience else { return }

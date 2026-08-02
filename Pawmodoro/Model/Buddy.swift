@@ -41,11 +41,26 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
-    var pickerLabel: String { "\(idleEmoji)  \(name) the \(kind)" }
+    /// No emoji here on purpose: the pickers show the sprite alongside this,
+    /// and emoji render as missing-glyph boxes on some simulator runtimes.
+    var pickerLabel: String { "\(name) the \(kind)" }
 
     /// Pixel-art sprites in the asset catalog, from tools/generate_sprites.py.
     var awakeAssetName: String { "buddy_\(species)_awake" }
     var asleepAssetName: String { "buddy_\(species)_asleep" }
+
+    /// One animation frame, e.g. `frame("happy_1")` -> `buddy_cat_happy_1`.
+    /// The suffixes are defined by `build_frames` in tools/generate_sprites.py.
+    func frame(_ suffix: String) -> String { "buddy_\(species)_\(suffix)" }
+
+    /// Only the two free buddies have a stretch pose drawn. The others skip
+    /// that beat of the wake-up rather than fall back to a wrong frame.
+    var hasStretchFrame: Bool {
+        switch self {
+        case .cat, .dog: true
+        case .bunny, .hamster, .fox: false
+        }
+    }
 
     /// Emoji are the fallback if a sprite can't be loaded for any reason.
     var idleEmoji: String {

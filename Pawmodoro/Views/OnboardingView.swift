@@ -42,18 +42,30 @@ struct OnboardingView: View {
 
     private var welcomePage: some View {
         infoPage(
-            emoji: "🐾",
             title: "Welcome to Pawmodoro",
             message: "A cozy focus timer. Your buddy naps while you work and plays when you rest."
-        )
+        ) {
+            // The sleeping buddy says more about the app than any icon could.
+            BuddySprite(buddy: engine.settings.buddy, sleeping: true, size: 132)
+        }
     }
 
     private var howItWorksPage: some View {
         infoPage(
-            emoji: "⏳",
             title: "Focus, then rest",
             message: "Work for 25 minutes, take a short break, and after four sessions enjoy a long one. Every finished session earns a paw print."
-        )
+        ) {
+            HStack(spacing: 14) {
+                ForEach(0..<4, id: \.self) { index in
+                    Image(systemName: "pawprint.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(
+                            index < 3 ? Theme.blossom : Theme.bark.opacity(0.18)
+                        )
+                }
+            }
+            .frame(height: 132)
+        }
     }
 
     private var buddyPage: some View {
@@ -85,10 +97,13 @@ struct OnboardingView: View {
         .padding(.top, 40)
     }
 
-    private func infoPage(emoji: String, title: String, message: String) -> some View {
+    private func infoPage<Art: View>(
+        title: String,
+        message: String,
+        @ViewBuilder art: () -> Art
+    ) -> some View {
         VStack(spacing: 20) {
-            Text(emoji)
-                .font(.system(size: 84))
+            art()
             Text(title)
                 .font(.title.bold())
                 .foregroundStyle(Theme.bark)

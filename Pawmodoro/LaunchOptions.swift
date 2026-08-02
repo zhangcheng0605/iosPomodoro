@@ -56,6 +56,10 @@ enum LaunchOptions {
 
     /// Start from a clean install without deleting the app.
     static let resetState = isSet("-PawmodoroResetState")
+
+    /// Fire a synthetic phase completion shortly after launch, so the
+    /// celebration can be iterated on without finishing a session first.
+    static let celebrate = isSet("-PawmodoroCelebrate")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -63,6 +67,7 @@ enum LaunchOptions {
     static let unlockPlus = false
     static let seedStats = false
     static let resetState = false
+    static let celebrate = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

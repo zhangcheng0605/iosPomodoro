@@ -45,10 +45,17 @@ final class TimerEngine {
     /// Focus sessions finished inside the current cycle, reset after a long break.
     private(set) var focusInCycle: Int = 0
 
+    /// Set when a phase runs out on its own, and left set until something
+    /// clears it. The engine stays free of any UI: views watch this and put on
+    /// whatever celebration they like.
+    var completion: PhaseCompletion?
+
     let log: SessionLog
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
+    /// Which whole second the closing heartbeat last fired on.
+    @ObservationIgnored private var lastHeartbeatSecond: Int?
 
     init(settings: PomodoroSettings? = nil, log: SessionLog = SessionLog()) {
         let resolved = settings ?? PomodoroSettings.load()
@@ -56,6 +63,7 @@ final class TimerEngine {
         self.log = log
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
+        HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
     }
 
     // MARK: Derived values
@@ -91,9 +99,11 @@ final class TimerEngine {
         let end = Date().addingTimeInterval(remaining)
         endDate = end
         runState = .running
+        lastHeartbeatSecond = nil
         NotificationManager.shared.schedulePhaseEnd(
             for: phase, buddyName: settings.buddy.name, at: end
         )
+        HapticsDirector.shared.start()
         refreshAmbience()
         startTicker()
     }
@@ -155,6 +165,7 @@ final class TimerEngine {
     func settingsDidChange() {
         settings.save()
         ThemeManager.shared.theme = settings.theme
+        HapticsDirector.shared.isEnabled = settings.hapticsEnabled
         if runState == .idle {
             remaining = phaseDuration
         }
@@ -210,25 +221,46 @@ final class TimerEngine {
     private func tick() {
         guard let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
+        pulseIfClosing()
         if remaining <= 0 {
             completePhase()
         }
+    }
+
+    /// One soft heartbeat per second over the last ten, tightening as the phase
+    /// closes. Driven off the existing ticker rather than a timer of its own.
+    private func pulseIfClosing() {
+        let window: TimeInterval = 10
+        guard remaining > 0, remaining <= window else { return }
+        let second = Int(remaining.rounded(.up))
+        guard second != lastHeartbeatSecond else { return }
+        lastHeartbeatSecond = second
+        HapticsDirector.shared.heartbeat(progress: 1 - remaining / window)
     }
 
     private func completePhase() {
         stopTicker()
         endDate = nil
         remaining = 0
+        lastHeartbeatSecond = nil
 
-        if settings.hapticsEnabled {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
+        let finished = phase
+        HapticsDirector.shared.complete()
         SoundPlayer.shared.playChime()
 
-        if phase == .focus {
+        if finished == .focus {
             log.add(minutes: settings.focusMinutes)
         }
         advance(natural: true)
+
+        // Published after `advance`, so the paw count and the phase it reports
+        // are the ones the UI is about to draw.
+        completion = PhaseCompletion(
+            finished: finished,
+            pawsEarned: filledPaws,
+            pawsPerCycle: pawsPerCycle,
+            isCycleComplete: finished == .focus && phase == .longBreak
+        )
     }
 
     private func advance(natural: Bool) {

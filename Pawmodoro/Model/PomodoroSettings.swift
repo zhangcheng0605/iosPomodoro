@@ -12,12 +12,15 @@ struct PomodoroSettings: Codable, Equatable {
     var buddy: Buddy = .cat
     var ambience: Ambience = .off
     var theme: AppTheme = .sakura
+    /// The ring pulses on a slow breath during breaks, to breathe along with.
+    var breatheOnBreaks: Bool = true
 
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
+        case breatheOnBreaks
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -44,6 +47,49 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.ambience
         theme = try container.decodeIfPresent(AppTheme.self, forKey: .theme)
             ?? fallback.theme
+        breatheOnBreaks = try container.decodeIfPresent(Bool.self, forKey: .breatheOnBreaks)
+            ?? fallback.breatheOnBreaks
+    }
+
+    // MARK: Per-phase durations
+    //
+    // The timer ring doubles as a dial when it's idle, so it needs to read and
+    // write whichever phase is on screen without knowing which field that is.
+
+    func minutes(for phase: TimerEngine.Phase) -> Int {
+        switch phase {
+        case .focus: focusMinutes
+        case .shortBreak: shortBreakMinutes
+        case .longBreak: longBreakMinutes
+        }
+    }
+
+    mutating func setMinutes(_ value: Int, for phase: TimerEngine.Phase) {
+        let range = Self.range(for: phase)
+        let clamped = min(max(value, range.lowerBound), range.upperBound)
+        switch phase {
+        case .focus: focusMinutes = clamped
+        case .shortBreak: shortBreakMinutes = clamped
+        case .longBreak: longBreakMinutes = clamped
+        }
+    }
+
+    /// Matches the bounds `clamped()` enforces, so the dial can't produce a
+    /// value that would be silently corrected on the next load.
+    static func range(for phase: TimerEngine.Phase) -> ClosedRange<Int> {
+        switch phase {
+        case .focus: 5...90
+        case .shortBreak: 1...30
+        case .longBreak: 5...60
+        }
+    }
+
+    /// How much one detent of the dial moves this phase.
+    static func step(for phase: TimerEngine.Phase) -> Int {
+        switch phase {
+        case .focus, .longBreak: 5
+        case .shortBreak: 1
+        }
     }
 
     func duration(for phase: TimerEngine.Phase) -> TimeInterval {

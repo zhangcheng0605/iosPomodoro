@@ -36,6 +36,18 @@ struct ContentView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+
+                if let completion = engine.completion {
+                    CelebrationView(
+                        completion: completion,
+                        accent: Theme.accent(for: engine.phase),
+                        secondary: Theme.blossom,
+                        streak: engine.log.currentStreak,
+                        onDismiss: { engine.completion = nil }
+                    )
+                    .id(completion.id)
+                    .transition(.opacity)
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -75,6 +87,16 @@ struct ContentView: View {
             .onChange(of: store.hasPlus) { _, hasPlus in
                 engine.applyEntitlement(hasPlus: hasPlus)
             }
+            .task {
+                guard LaunchOptions.celebrate else { return }
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                engine.completion = PhaseCompletion(
+                    finished: .focus,
+                    pawsEarned: engine.pawsPerCycle,
+                    pawsPerCycle: engine.pawsPerCycle,
+                    isCycleComplete: true
+                )
+            }
         }
     }
 
@@ -96,14 +118,23 @@ struct ContentView: View {
     private var pawPrints: some View {
         HStack(spacing: 10) {
             ForEach(0..<engine.pawsPerCycle, id: \.self) { index in
+                let earned = index < engine.filledPaws
                 Image(systemName: "pawprint.fill")
                     .font(.title3)
-                    .foregroundStyle(
-                        index < engine.filledPaws ? Theme.blossom : Theme.bark.opacity(0.18)
+                    .foregroundStyle(earned ? Theme.blossom : Theme.bark.opacity(0.18))
+                    .scaleEffect(earned ? 1 : 0.85)
+                    .rotationEffect(.degrees(earned ? 0 : -8))
+                    // The newest paw lands last and hardest — it's the one that
+                    // was just earned.
+                    .animation(
+                        .spring(duration: 0.45, bounce: 0.55)
+                            .delay(earned ? Double(index) * 0.04 : 0),
+                        value: engine.filledPaws
                     )
-                    .scaleEffect(index < engine.filledPaws ? 1 : 0.85)
-                    .animation(.spring(duration: 0.4), value: engine.filledPaws)
             }
+        }
+        .onChange(of: engine.filledPaws) { previous, current in
+            if current > previous { HapticsDirector.shared.stamp() }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
@@ -155,6 +186,7 @@ struct ContentView: View {
                 }
             }
         }
+        .buttonStyle(.squishy(pressedScale: 0.86))
         .accessibilityLabel(
             unlocked
                 ? "Ambience: \(option.label)"
@@ -173,6 +205,7 @@ struct ContentView: View {
                     .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
             }
+            .buttonStyle(.squishy)
             .accessibilityLabel("Restart phase")
 
             Button {
@@ -184,7 +217,11 @@ struct ContentView: View {
                     .background(Circle().fill(Theme.accent(for: engine.phase)))
                     .foregroundStyle(Theme.onAccent)
                     .shadow(color: Theme.accent(for: engine.phase).opacity(0.4), radius: 10, y: 4)
+                    .contentTransition(.symbolEffect(.replace))
             }
+            // A little deeper than the rest: it's the biggest target and the
+            // one press people repeat most.
+            .buttonStyle(.squishy(pressedScale: 0.88))
             .accessibilityLabel(engine.isRunning ? "Pause" : "Start")
 
             Button {
@@ -196,6 +233,7 @@ struct ContentView: View {
                     .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
             }
+            .buttonStyle(.squishy)
             .accessibilityLabel("Skip to next phase")
         }
     }

@@ -51,6 +51,7 @@ struct SettingsView: View {
                 Section("Behaviour") {
                     Toggle("Auto-start next phase", isOn: $engine.settings.autoStartNextPhase)
                     Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)
+                    Toggle("Breathing ring on breaks", isOn: $engine.settings.breatheOnBreaks)
                 }
 
                 plusSection

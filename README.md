@@ -43,6 +43,7 @@ cloning this repo to the app being live, in order, with timings.
 | [`docs/START_HERE.md`](docs/START_HERE.md) | **The whole path to launch, in order. Start here.** |
 | [`docs/DELIGHT_PLAN.md`](docs/DELIGHT_PLAN.md) | The build spec for the delight overhaul — living buddy, tactile timer, living scene, Live Activity, bond |
 | [`docs/CONTENT_PLAN.md`](docs/CONTENT_PLAN.md) | The content expansion — journey worlds, sound studio, new buddies, themes, seasons, postcards |
+| [`docs/SOUND_ALMANAC.md`](docs/SOUND_ALMANAC.md) | Fifty procedural lo-fi tracks: the engine, the mixtapes, the gapless player, radio |
 | [`docs/RUN_ON_YOUR_IPHONE.md`](docs/RUN_ON_YOUR_IPHONE.md) | **Install it on your own iPhone, no App Store needed** |
 | [`docs/SHARE_WITH_TESTERS.md`](docs/SHARE_WITH_TESTERS.md) | **Get it onto other people's iPhones over the air (TestFlight/UAT)** |
 | [`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md) | Clone, run, pull changes, run on your iPhone, fix build errors |

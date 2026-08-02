@@ -144,7 +144,13 @@ ring or controls by a pixel.
 
 ---
 
-## Phase G — The Sound Studio
+## Phase G — The Sound Studio → grown into the Sound Almanac
+
+> **Superseded and expanded:** the five-loop version below grew into a
+> fifty-track procedural music system — ten mixtapes, journey-earned
+> collections, a gapless AVAudioEngine player, radio mode. The build spec is
+> [SOUND_ALMANAC.md](SOUND_ALMANAC.md); the mixer idea below survives inside
+> it. Build from the almanac, not from this section.
 
 Today: six synthesized ambience loops, one channel. The upgrade: **music as a
 second channel, and mixing as the fancy bit.**
@@ -401,15 +407,74 @@ advanced.
 
 ---
 
+## Phase O — The Almanac page (absorbs N)
+
+The wildlife system, the moon, the seasons and the journey each produce
+"conditions" — and conditions want a forecast. The stats screen gains an
+**Almanac** header, the daily-open surface this app has been missing (and a
+retention driver that needs zero notifications):
+
+- **Today**: date, season, and the real moon phase (computed offline; the
+  same dozen lines wave 2's moon rabbit needs — build it here first).
+- **About now**: which species are possible *right now* in the current place
+  at the current day-part, shown as sketch (seen) or silhouette+hint (not) —
+  a live answer to "is it worth focusing here at this hour?" It reads
+  straight from `Species.isEligible`; no new state.
+- **Elsewhere today**: one line per other reached place with possible
+  species counts — "Whispering Woods: 2 about at dawn."
+- **The travelogue strip** (Phase N folds in here): the eight places joined
+  by a dotted route, boat marker between last unlock and next, "12 sessions
+  to Blossom Village."
+- Wave 2 hook: when the moon is full, a teaser line — "a good night for the
+  water's edge."
+
+## Phase P — Gentle streaks (the boat stays anchored)
+
+Streak apps run on guilt; this one won't. **One missed day per calendar week
+does not break the streak** — the stats screen says "the boat stayed anchored
+on Tuesday" and the count keeps breathing. Implementation is a pure change to
+`SessionLog.currentStreak` (derived from records; nothing new persisted), a
+copy pass on the stats cards, and an almanac line. Debug:
+`-PawmodoroSeedGap` seeds a history with a one-day hole to eyeball both
+states. The best-streak stat keeps its strict definition so the number still
+means something.
+
+## Phase Q — The settle-in (three breaths before the boat leaves)
+
+An optional start ritual, off by default: pressing play first plays **three
+slow breaths** (~12s) — the ring swells with the existing breath animation,
+the buddy circles and settles into its nap, then the countdown begins.
+Entirely a UI-layer overlay: the engine's `start()` is simply deferred, so
+the absolute-end-date timer logic is untouched. Tap anywhere to skip.
+`settleInBeforeFocus` in settings, lenient decoding. Reduce Motion: a plain
+3-2-1 fade. This is the cheapest "this app feels different" moment in the
+whole plan — competitors start with a click; Pawmodoro takes a breath.
+
+## Phase R — Expeditions & the Action Button
+
+- **Expedition presets**: three named recipes on the dial — Classic 25/5,
+  Deep Dive 50/10, Sprint 15/3 — as chips under the ring while idle. One tap
+  re-lengths all three phases; the dial still fine-tunes. Buddy caption
+  acknowledges: "a long crossing, then."
+- **App Intents**: a `StartFocusIntent` ("Start a focus session in
+  Pawmodoro") exposes the timer to Siri, Shortcuts, the Lock Screen — and
+  the **Action Button** on Pro iPhones. "Press the side button and the boat
+  sails" is an App Store screenshot caption, and it's ~40 lines.
+- Both are small; ship them together.
+
 ## M — Monetization restatement (one Plus, fatter on both sides)
 
 Same single non-consumable, no subscription. After this plan ships:
 
 - **Free:** 3 buddies (cat, dog, penguin), 2 themes, 4 scenes (the whole Home
-  Waters route), 3 ambiences, 1 music loop (Paws & Chill — the hook), one
-  sound channel, seasonal events, postcards, naming, toys, **and the whole
-  field journal** — Far Isles species come with the Far Isles places, so the
-  journal deepens the existing Plus gate without adding a new one.
+  Waters route), 3 ambiences, **25 of the 50 music tracks** (5 on day one +
+  a five-track mixtape with every Home Waters arrival), one sound channel,
+  seasonal events, postcards, naming, toys, gentle streaks, the settle-in,
+  the almanac, **and the whole field journal** — Far Isles species come with
+  the Far Isles places, so the journal deepens the existing Plus gate
+  without adding a new one.
+- **Plus additions from the Sound Almanac:** all 50 tracks instantly, the
+  two-channel mixer, and radio mode (the auto-DJ that scores your day).
 - **Plus:** 9 buddies total, 8 themes, the Far Isles route (4 scenes), all
   sounds, **the mixer**, accessory wardrobe (Phase E), all alternate icons.
 
@@ -437,12 +502,14 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
 | ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**, nine buddies ship | M | second wave (Pip, Bramble) still at #11 |
 | ~~5~~ | ~~**L journal, wave 1**~~ — **done**: engine, 12 species, journal UI | L | micro-encounters (L5) not yet built |
-| 6 | G sound studio (five loops + mixer) | M | |
+| 6 | **G+ Sound Almanac, slices 1–3** ([SOUND_ALMANAC.md](SOUND_ALMANAC.md)): engine + gapless player + Studio + 50 tracks + radio | L | the headline; three commits |
 | 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
 | 8 | K postcards + album | M | picks up sighting mentions from L |
-| 9 | **L wave 2** (Far Isles roster + moon + phenomena) + N travelogue map | M | |
-| 10 | J toys + seasons + icons | M | shippable in slices; migrations (autumn geese over every scene) join the seasonal layer here |
-| 11 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
+| 9 | **L wave 2** (Far Isles roster + moon + phenomena) | M | moon maths arrives with O if built first |
+| 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |
+| 11 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
+| 12 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |
+| 13 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,
 screenshots light/dark, `python3 tools/check_contrast.py`, Release build,

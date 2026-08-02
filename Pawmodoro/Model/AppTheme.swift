@@ -99,32 +99,50 @@ struct Palette: Equatable {
 /// clears 4.5:1 on every accent fill, in both light and dark appearance.
 enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
     case sakura
+    case snowdrift
     case matcha
     case cocoa
     case midnight
+    case ember
+    case lavender
+    case ink
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .sakura: "Sakura"
+        case .snowdrift: "Snowdrift"
         case .matcha: "Matcha"
         case .cocoa: "Cocoa"
         case .midnight: "Midnight"
+        case .ember: "Ember"
+        case .lavender: "Lavender"
+        case .ink: "Ink"
         }
     }
 
     var blurb: String {
         switch self {
         case .sakura: "Soft pinks and cream"
+        case .snowdrift: "Paper white and ice"
         case .matcha: "Green tea and mist"
         case .cocoa: "Warm caramel and milk"
         case .midnight: "Cool blues for late nights"
+        case .ember: "Sunset amber over charcoal"
+        case .lavender: "Lilac dusk"
+        case .ink: "Sumi-e greys and one red"
         }
     }
 
-    /// Sakura ships with the app; the rest come with Pawmodoro Plus.
-    var isPlus: Bool { self != .sakura }
+    /// Sakura and Snowdrift ship with the app — two free themes rather than
+    /// one, for the same reason the penguin is free.
+    var isPlus: Bool {
+        switch self {
+        case .sakura, .snowdrift: false
+        default: true
+        }
+    }
 
     var palette: Palette {
         switch self {
@@ -179,6 +197,58 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
                 surface:  .dual(1.00, 1.00, 1.00, 0.16, 0.18, 0.28),
                 onAccent: .dual(0.11, 0.13, 0.25, 0.11, 0.13, 0.25),
                 night:    .dual(0.64, 0.70, 0.86, 0.03, 0.04, 0.09)
+            )
+        case .snowdrift:
+            Palette(
+                cream:    .dual(0.97, 0.98, 1.00, 0.07, 0.09, 0.14),
+                blush:    .dual(0.84, 0.90, 0.97, 0.15, 0.20, 0.30),
+                blossom:  .dual(0.62, 0.78, 0.92, 0.66, 0.82, 0.96),
+                sage:     .dual(0.72, 0.87, 0.89, 0.56, 0.78, 0.82),
+                forest:   .dual(0.20, 0.32, 0.44, 0.68, 0.82, 0.92),
+                bark:     .dual(0.17, 0.25, 0.35, 0.93, 0.96, 1.00),
+                sunshine: .dual(0.88, 0.92, 0.98, 0.80, 0.86, 0.94),
+                surface:  .dual(1.00, 1.00, 1.00, 0.13, 0.17, 0.25),
+                onAccent: .dual(0.08, 0.13, 0.21, 0.08, 0.13, 0.21),
+                night:    .dual(0.66, 0.73, 0.86, 0.02, 0.04, 0.10)
+            )
+        case .ember:
+            Palette(
+                cream:    .dual(1.00, 0.96, 0.90, 0.13, 0.10, 0.09),
+                blush:    .dual(0.98, 0.82, 0.70, 0.28, 0.17, 0.13),
+                blossom:  .dual(0.94, 0.62, 0.46, 0.96, 0.68, 0.52),
+                sage:     .dual(0.90, 0.78, 0.56, 0.78, 0.68, 0.48),
+                forest:   .dual(0.42, 0.24, 0.16, 0.88, 0.72, 0.54),
+                bark:     .dual(0.34, 0.19, 0.13, 0.98, 0.93, 0.87),
+                sunshine: .dual(0.99, 0.82, 0.46, 0.90, 0.74, 0.42),
+                surface:  .dual(1.00, 1.00, 1.00, 0.22, 0.17, 0.15),
+                onAccent: .dual(0.21, 0.10, 0.06, 0.21, 0.10, 0.06),
+                night:    .dual(0.76, 0.66, 0.62, 0.06, 0.04, 0.04)
+            )
+        case .lavender:
+            Palette(
+                cream:    .dual(0.98, 0.96, 1.00, 0.11, 0.09, 0.16),
+                blush:    .dual(0.90, 0.84, 0.98, 0.23, 0.18, 0.34),
+                blossom:  .dual(0.76, 0.64, 0.94, 0.80, 0.70, 0.97),
+                sage:     .dual(0.80, 0.84, 0.96, 0.66, 0.72, 0.90),
+                forest:   .dual(0.32, 0.26, 0.48, 0.76, 0.72, 0.94),
+                bark:     .dual(0.26, 0.20, 0.40, 0.95, 0.93, 1.00),
+                sunshine: .dual(0.95, 0.88, 0.99, 0.86, 0.78, 0.94),
+                surface:  .dual(1.00, 1.00, 1.00, 0.18, 0.15, 0.28),
+                onAccent: .dual(0.13, 0.09, 0.25, 0.13, 0.09, 0.25),
+                night:    .dual(0.70, 0.66, 0.86, 0.03, 0.02, 0.10)
+            )
+        case .ink:
+            Palette(
+                cream:    .dual(0.98, 0.97, 0.95, 0.11, 0.11, 0.10),
+                blush:    .dual(0.88, 0.87, 0.84, 0.21, 0.21, 0.20),
+                blossom:  .dual(0.90, 0.50, 0.42, 0.92, 0.54, 0.46),
+                sage:     .dual(0.84, 0.84, 0.80, 0.66, 0.67, 0.63),
+                forest:   .dual(0.26, 0.26, 0.24, 0.80, 0.80, 0.77),
+                bark:     .dual(0.19, 0.19, 0.17, 0.95, 0.95, 0.93),
+                sunshine: .dual(0.92, 0.90, 0.84, 0.80, 0.78, 0.72),
+                surface:  .dual(1.00, 1.00, 1.00, 0.17, 0.17, 0.16),
+                onAccent: .dual(0.14, 0.06, 0.04, 0.14, 0.06, 0.04),
+                night:    .dual(0.72, 0.72, 0.76, 0.03, 0.03, 0.03)
             )
         }
     }

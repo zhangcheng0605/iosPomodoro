@@ -109,6 +109,15 @@ enum LaunchOptions {
     /// Mark every species as already seen, for looking at the journal.
     static let fillJournal = isSet("-PawmodoroFillJournal")
 
+    /// Start in a theme, e.g. `-PawmodoroTheme ink`. Eight themes times two
+    /// appearances is sixteen looks to check.
+    static let forcedTheme: AppTheme? = {
+        guard arguments.contains("-PawmodoroTheme"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroTheme")
+        else { return nil }
+        return AppTheme(rawValue: raw)
+    }()
+
     /// Pin the moon: `-PawmodoroMoon full` or `-PawmodoroMoon new`. Waiting a
     /// fortnight for the moon rabbit is not a way to check a sprite.
     static let forcedMoon: Bool? = {
@@ -142,6 +151,7 @@ enum LaunchOptions {
     static let fillJournal = false
     static let unlockMusic = false
     static let forcedMoon: Bool? = nil
+    static let forcedTheme: AppTheme? = nil
     static let forcedTrack: String? = nil
 #endif
 

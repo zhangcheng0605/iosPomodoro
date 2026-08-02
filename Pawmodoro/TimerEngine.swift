@@ -82,6 +82,10 @@ final class TimerEngine {
         if let forced = LaunchOptions.forcedBuddy {
             self.settings.buddy = forced
         }
+        if let forced = LaunchOptions.forcedTheme {
+            self.settings.theme = forced
+            ThemeManager.shared.theme = forced
+        }
         if LaunchOptions.fillJournal {
             journal.fillForDebug()
         }

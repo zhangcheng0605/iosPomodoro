@@ -237,7 +237,7 @@ both appearances across all scenes; Luna's nocturnal flip verified with
 
 ---
 
-## Phase I — Four new themes
+## Phase I — Four new themes ✅ built
 
 Cheap, high-visibility, and the contrast tool makes tuning mechanical: adjust
 values until `python3 tools/check_contrast.py` passes (it now also checks
@@ -676,7 +676,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**, nine buddies ship | M | second wave (Pip, Bramble) still at #11 |
 | ~~5~~ | ~~**L journal, wave 1**~~ — **done**: engine, 12 species, journal UI | L | micro-encounters (L5) not yet built |
 | ~~6~~ | ~~**G+ Sound Almanac, slices 1–3**~~ — **done**: engine, 50 tracks, gapless player, Studio, radio | L | cassette art still to come |
-| 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
+| ~~7~~ | ~~I themes + M paywall copy~~ — **done**, eight themes | S | |
 | 8 | K postcards + album | M | picks up sighting mentions from L |
 | ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
 | 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |

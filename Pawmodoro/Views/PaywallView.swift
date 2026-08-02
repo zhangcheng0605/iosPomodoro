@@ -36,7 +36,7 @@ struct PaywallView: View {
             Text("A bigger, cozier den")
                 .font(.title2.bold())
                 .foregroundStyle(Theme.bark)
-            Text("Fifty tracks, six more buddies, four far isles, and every theme.")
+            Text("Fifty tracks, six more buddies, four far isles, six more themes.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
@@ -79,8 +79,8 @@ struct PaywallView: View {
             )
             feature(
                 icon: "paintpalette.fill",
-                title: "Four themes",
-                detail: "Matcha, Cocoa and Midnight, each with its own light and dark look."
+                title: "Eight themes",
+                detail: "Matcha, Cocoa, Midnight, Ember, Lavender and Ink join Sakura and Snowdrift — each with its own light and dark look."
             )
             feature(
                 icon: "checkmark.seal.fill",

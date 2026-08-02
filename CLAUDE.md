@@ -57,6 +57,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
 | `-PawmodoroFillJournal` | Mark every species as already seen |
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
+| `-PawmodoroTheme <id>` | Start in a theme, e.g. `-PawmodoroTheme ink` |
 | `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 

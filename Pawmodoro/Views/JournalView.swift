@@ -31,12 +31,30 @@ struct JournalView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.6))
 
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(Journal.ordered) { species in
-                    tile(for: species)
+            ForEach(Journal.pages) { page in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(page.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.bark.opacity(0.8))
+                        Spacer()
+                        Text("\(seen(in: page)) / \(page.species.count)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Theme.bark.opacity(0.5))
+                    }
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(page.species) { species in
+                            tile(for: species)
+                        }
+                    }
                 }
+                .padding(.top, 4)
             }
         }
+    }
+
+    private func seen(in page: Journal.Page) -> Int {
+        page.species.filter(journal.hasSeen).count
     }
 
     private func tile(for species: Species) -> some View {

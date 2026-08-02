@@ -43,18 +43,31 @@ final class Journal {
         records.values.contains { $0.place == place.rawValue }
     }
 
-    /// The species in the order the journal lists them: by place, then by how
-    /// hard they are to find.
-    static var ordered: [Species] {
-        Species.allCases.sorted { left, right in
-            let lp = left.places.first ?? .meadow
-            let rp = right.places.first ?? .meadow
-            if lp != rp {
-                return lp.requiredSessions < rp.requiredSessions
-            }
-            return left.rarity.chance > right.rarity.chance
-        }
+    /// The journal, split into pages. Forty-one tiles in one grid is a wall;
+    /// by place it reads as somewhere you've been, which is the point.
+    struct Page: Identifiable {
+        let id: String
+        let title: String
+        let species: [Species]
     }
+
+    static var pages: [Page] {
+        var result: [Page] = Place.journey.compactMap { place in
+            let here = Species.allCases
+                .filter { !$0.isPhenomenon && $0.places.first == place }
+                .sorted { $0.rarity.chance > $1.rarity.chance }
+            guard !here.isEmpty else { return nil }
+            return Page(id: place.rawValue, title: place.name, species: here)
+        }
+        let phenomena = Species.allCases.filter(\.isPhenomenon)
+        if !phenomena.isEmpty {
+            result.append(Page(id: "phenomena", title: "Phenomena", species: phenomena))
+        }
+        return result
+    }
+
+    /// Flat order, for counting.
+    static var ordered: [Species] { pages.flatMap(\.species) }
 
     // MARK: Writing
 

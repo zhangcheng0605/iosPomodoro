@@ -355,7 +355,7 @@ no quirks), which is exactly why the menagerie can be *large*.
 | Koi | Blossom pool | day | surface ring, orange flash | uncommon |
 | Crane | Blossom | dawn | stands one-legged in the waterfall pool | uncommon |
 
-### L3. Wave 2 — Far Isles (reached via Plus places) + phenomena
+### L3. Wave 2 — Far Isles (reached via Plus places) + phenomena ✅ built (expanded to 41 species total)
 
 | Species | Where | When | Behaviour | Rarity |
 |---|---|---|---|---|
@@ -678,7 +678,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~6~~ | ~~**G+ Sound Almanac, slices 1–3**~~ — **done**: engine, 50 tracks, gapless player, Studio, radio | L | cassette art still to come |
 | 7 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |
 | 8 | K postcards + album | M | picks up sighting mentions from L |
-| 9 | **L wave 2** (Far Isles roster + moon + phenomena) | M | moon maths arrives with O if built first |
+| ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
 | 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |
 | 11 | **U the stray** | M | the retention story; wants the habit loop live, hence after O |
 | 12 | **T star atlas** | S | zero new state; pairs with O's moon/night work |

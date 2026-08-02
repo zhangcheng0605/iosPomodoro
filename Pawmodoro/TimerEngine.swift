@@ -61,6 +61,8 @@ final class TimerEngine {
     @ObservationIgnored private var ticker: Timer?
     /// Which whole second the closing heartbeat last fired on.
     @ObservationIgnored private var lastHeartbeatSecond: Int?
+    /// Seconds of this phase spent with rain playing — the rainbow's condition.
+    @ObservationIgnored private var rainSeconds: TimeInterval = 0
 
     init(
         settings: PomodoroSettings? = nil,
@@ -123,7 +125,10 @@ final class TimerEngine {
         }
         // Rolled once per fresh focus phase — resuming from a pause keeps
         // whatever was already scheduled rather than buying another ticket.
-        if runState == .idle { rollSighting() }
+        if runState == .idle {
+            rainSeconds = 0
+            rollSighting()
+        }
 
         let end = Date().addingTimeInterval(remaining)
         endDate = end
@@ -318,7 +323,12 @@ final class TimerEngine {
         }
 
         let eligible = Species.allCases.filter {
-            $0.isEligible(place: settings.place, dayPart: part, focusMinutes: settings.focusMinutes)
+            $0.isEligible(
+                place: settings.place,
+                dayPart: part,
+                focusMinutes: settings.focusMinutes,
+                moonIsFull: MoonPhase.isFull()
+            )
         }
         guard !eligible.isEmpty else { return }
 
@@ -330,7 +340,11 @@ final class TimerEngine {
             return
         }
 
-        for species in eligible.shuffled() where Double.random(in: 0..<1) < species.rarity.chance {
+        // A mythic's conditions are its rarity — if one is eligible at all,
+        // the night is already unusual, so it goes to the front of the queue.
+        let ordered = eligible.filter { $0.rarity == .mythic }.shuffled()
+            + eligible.filter { $0.rarity != .mythic }.shuffled()
+        for species in ordered where Double.random(in: 0..<1) < species.rarity.chance {
             sighting = Sighting(species: species)
             return
         }
@@ -394,6 +408,7 @@ final class TimerEngine {
     private func tick() {
         guard let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
+        if settings.ambience == .rain { rainSeconds += 0.25 }
         pulseIfClosing()
         if remaining <= 0 {
             completePhase()
@@ -425,6 +440,15 @@ final class TimerEngine {
         var seen: Species?
         if finished == .focus {
             log.add(minutes: settings.focusMinutes)
+            // A rainbow is not rolled: it is earned by a session that
+            // actually ran rain for at least half its length, which is only
+            // knowable now. Deterministic, so it feels given rather than won.
+            if sighting == nil,
+               rainSeconds >= phaseDuration / 2,
+               (LaunchOptions.forcedDayPart ?? DayPart.current()) == .day,
+               Species.rainbow.spec.places.contains(settings.place) {
+                sighting = Sighting(species: .rainbow)
+            }
             // You only keep what you stayed for.
             if let sighting {
                 seen = sighting.species

@@ -5,169 +5,260 @@ import Foundation
 ///
 /// The app's fiction is "be quiet, don't wake the buddy". Pointed outward,
 /// that becomes the reason shy animals appear at all — and what appears
-/// depends on where you are, what hour it is and how long you committed. That
-/// turns the eight places and four times of day from decoration into reasons
-/// to focus somewhere else, at some other hour.
+/// depends on where you are, what hour it is, how long you committed, and in
+/// two cases on the real sky. That turns eight places and four times of day
+/// from decoration into reasons to focus somewhere else, at some other hour.
+///
+/// Everything about a species lives in one `Spec` row rather than in a dozen
+/// parallel switches: at forty-one entries, parallel switches are how a table
+/// quietly goes out of step with itself.
 ///
 /// Ids must match the sprites emitted by tools/generate_wildlife.py.
 enum Species: String, Codable, CaseIterable, Identifiable {
-    case butterfly
-    case robin
-    case squirrel
-    case frog
-    case stag
-    case gull
-    case otter
-    case dolphin
-    case whale
-    case moth
-    case koi
-    case crane
+    // Home Waters — free places.
+    case butterfly, robin, bee, hare, swallow, foxcub
+    case squirrel, frog, stag, woodpecker, badger, fawn, tawnyowl
+    case gull, otter, dolphin, whale, crab, seal, heron, turtle
+    case moth, koi, crane, dragonfly, firefly, kingfisher, hedgehog
+    // The Far Isles — reached through Plus places.
+    case dove, peacock
+    case swift, sheep
+    case ptarmigan, mountainhare, ibex
+    case macaque, tanuki, moonrabbit
+    // Phenomena.
+    case rainbow, meteors, aurora
 
     var id: String { rawValue }
 
-    var name: String {
+    struct Spec {
+        let name: String
+        let note: String
+        let places: [Place]
+        /// Empty means any time of day.
+        let dayParts: [DayPart]
+        let rarity: Rarity
+        let motion: Motion
+        let altitude: Double
+        let size: CGSize
+        var minimumMinutes: Int = 0
+        var needsFullMoon: Bool = false
+        /// Awarded at the end of a session that actually ran rain, rather than
+        /// rolled at the start — you can't know at the start.
+        var needsRain: Bool = false
+        var isPhenomenon: Bool = false
+    }
+
+    // MARK: The table
+
+    var spec: Spec {
         switch self {
-        case .butterfly: "Butterfly"
-        case .robin: "Robin"
-        case .squirrel: "Red Squirrel"
-        case .frog: "Frog"
-        case .stag: "Stag"
-        case .gull: "Gull"
-        case .otter: "Otter"
-        case .dolphin: "Dolphins"
-        case .whale: "Whale"
-        case .moth: "Lantern Moth"
-        case .koi: "Koi"
-        case .crane: "Crane"
+        // --- Meadow Home
+        case .butterfly: Spec(name: "Butterfly", note: "Landed while you weren't moving.",
+            places: [.meadow, .blossom], dayParts: [.day], rarity: .common,
+            motion: .flutter, altitude: 0.155, size: .init(width: 26, height: 21))
+        case .robin: Spec(name: "Robin", note: "Working the fence line at first light.",
+            places: [.meadow], dayParts: [.dawn], rarity: .common,
+            motion: .hop, altitude: 0.775, size: .init(width: 26, height: 23))
+        case .bee: Spec(name: "Bee", note: "Went through the clover and left again.",
+            places: [.meadow, .blossom], dayParts: [.day], rarity: .common,
+            motion: .flutter, altitude: 0.190, size: .init(width: 20, height: 16))
+        case .hare: Spec(name: "Hare", note: "Sat very still, then wasn't there.",
+            places: [.meadow], dayParts: [.dusk], rarity: .uncommon,
+            motion: .hop, altitude: 0.780, size: .init(width: 38, height: 32))
+        case .swallow: Spec(name: "Swallow", note: "Cut the whole field in one pass.",
+            places: [.meadow], dayParts: [.day], rarity: .common,
+            motion: .arc, altitude: 0.150, size: .init(width: 34, height: 26))
+        case .foxcub: Spec(name: "Fox Cub", note: "Too young to know it should hide.",
+            places: [.meadow], dayParts: [.night], rarity: .rare,
+            motion: .linger, altitude: 0.780, size: .init(width: 40, height: 32))
+
+        // --- Whispering Woods
+        case .squirrel: Spec(name: "Red Squirrel", note: "Went up the pine without stopping.",
+            places: [.woods], dayParts: [.day], rarity: .common,
+            motion: .hop, altitude: 0.770, size: .init(width: 28, height: 32))
+        case .frog: Spec(name: "Frog", note: "One hop, then rings on the water.",
+            places: [.woods], dayParts: [.dusk], rarity: .common,
+            motion: .hop, altitude: 0.790, size: .init(width: 24, height: 20))
+        case .stag: Spec(name: "Stag", note: "Stepped out of the treeline and looked up.",
+            places: [.woods], dayParts: [.dawn], rarity: .uncommon,
+            motion: .linger, altitude: 0.775, size: .init(width: 54, height: 50))
+        case .woodpecker: Spec(name: "Woodpecker", note: "You heard it before you saw it.",
+            places: [.woods], dayParts: [.day], rarity: .common,
+            motion: .hop, altitude: 0.740, size: .init(width: 30, height: 28))
+        case .badger: Spec(name: "Badger", note: "Crossed the path without hurrying.",
+            places: [.woods], dayParts: [.night], rarity: .uncommon,
+            motion: .linger, altitude: 0.785, size: .init(width: 44, height: 27))
+        case .fawn: Spec(name: "Fawn", note: "Waiting exactly where it was left.",
+            places: [.woods], dayParts: [.dawn], rarity: .uncommon,
+            motion: .linger, altitude: 0.770, size: .init(width: 40, height: 34))
+        case .tawnyowl: Spec(name: "Tawny Owl", note: "Two calls, then nothing at all.",
+            places: [.woods], dayParts: [.night], rarity: .rare,
+            motion: .linger, altitude: 0.735, size: .init(width: 32, height: 32))
+
+        // --- Harbor Isle
+        case .gull: Spec(name: "Gull", note: "Broke from the others and dived.",
+            places: [.harbor], dayParts: [.day], rarity: .common,
+            motion: .arc, altitude: 0.155, size: .init(width: 32, height: 21))
+        case .otter: Spec(name: "Otter", note: "Floating on its back, holding something.",
+            places: [.harbor], dayParts: [.day], rarity: .uncommon,
+            motion: .linger, altitude: 0.800, size: .init(width: 42, height: 26))
+        case .dolphin: Spec(name: "Dolphins", note: "Two arcs between the islets.",
+            places: [.harbor], dayParts: [.day], rarity: .uncommon,
+            motion: .arc, altitude: 0.800, size: .init(width: 46, height: 30))
+        case .whale: Spec(name: "Whale", note: "Spouted once, then went down slowly.",
+            places: [.harbor], dayParts: [.day], rarity: .rare,
+            motion: .arc, altitude: 0.805, size: .init(width: 64, height: 35),
+            minimumMinutes: 40)
+        case .crab: Spec(name: "Crab", note: "Sideways across the wet stones.",
+            places: [.harbor], dayParts: [.dusk], rarity: .common,
+            motion: .linger, altitude: 0.815, size: .init(width: 30, height: 22))
+        case .seal: Spec(name: "Seal", note: "Watched you for a while, then rolled.",
+            places: [.harbor], dayParts: [.day], rarity: .uncommon,
+            motion: .linger, altitude: 0.805, size: .init(width: 44, height: 23))
+        case .heron: Spec(name: "Heron", note: "Did not move once the whole time.",
+            places: [.harbor], dayParts: [.dawn], rarity: .uncommon,
+            motion: .linger, altitude: 0.760, size: .init(width: 34, height: 40))
+        case .turtle: Spec(name: "Turtle", note: "Surfaced, breathed, and was gone.",
+            places: [.harbor], dayParts: [.day], rarity: .rare,
+            motion: .linger, altitude: 0.805, size: .init(width: 40, height: 23))
+
+        // --- Blossom Village
+        case .moth: Spec(name: "Lantern Moth", note: "Circling a lit lantern, patiently.",
+            places: [.blossom], dayParts: [.night], rarity: .common,
+            motion: .flutter, altitude: 0.175, size: .init(width: 24, height: 20))
+        case .koi: Spec(name: "Koi", note: "A ring on the surface, then orange.",
+            places: [.blossom], dayParts: [.day], rarity: .uncommon,
+            motion: .linger, altitude: 0.800, size: .init(width: 38, height: 22))
+        case .crane: Spec(name: "Crane", note: "Standing on one leg in the shallows.",
+            places: [.blossom], dayParts: [.dawn], rarity: .uncommon,
+            motion: .linger, altitude: 0.755, size: .init(width: 34, height: 46))
+        case .dragonfly: Spec(name: "Dragonfly", note: "Hung in the air, then jumped sideways.",
+            places: [.blossom], dayParts: [.day], rarity: .common,
+            motion: .flutter, altitude: 0.185, size: .init(width: 32, height: 21))
+        case .firefly: Spec(name: "Firefly", note: "On, off, and somewhere else.",
+            places: [.blossom, .woods], dayParts: [.night], rarity: .common,
+            motion: .flutter, altitude: 0.200, size: .init(width: 18, height: 14))
+        case .kingfisher: Spec(name: "Kingfisher", note: "A blue line over the water.",
+            places: [.blossom], dayParts: [.dawn], rarity: .uncommon,
+            motion: .arc, altitude: 0.170, size: .init(width: 32, height: 26))
+        case .hedgehog: Spec(name: "Hedgehog", note: "Rustled, stopped, rustled again.",
+            places: [.blossom, .meadow], dayParts: [.dusk], rarity: .uncommon,
+            motion: .linger, altitude: 0.800, size: .init(width: 36, height: 23))
+
+        // --- Sunstone Keep
+        case .dove: Spec(name: "Dove", note: "The whole flock went up at once.",
+            places: [.keep], dayParts: [.dawn], rarity: .common,
+            motion: .arc, altitude: 0.150, size: .init(width: 32, height: 26))
+        case .peacock: Spec(name: "Peacock", note: "Opened the fan and held it.",
+            places: [.keep], dayParts: [.day], rarity: .uncommon,
+            motion: .linger, altitude: 0.760, size: .init(width: 50, height: 40))
+
+        // --- Cloudspire
+        case .swift: Spec(name: "Swift", note: "Never landed the entire session.",
+            places: [.cloudspire], dayParts: [.day], rarity: .common,
+            motion: .arc, altitude: 0.145, size: .init(width: 36, height: 26))
+        case .sheep: Spec(name: "Stray Sheep", note: "On a floating island. No explanation given.",
+            places: [.cloudspire], dayParts: [.day], rarity: .rare,
+            motion: .linger, altitude: 0.775, size: .init(width: 42, height: 34))
+
+        // --- Starfall Peaks
+        case .ptarmigan: Spec(name: "Ptarmigan", note: "White on white until it moved.",
+            places: [.peaks], dayParts: [.day], rarity: .common,
+            motion: .hop, altitude: 0.780, size: .init(width: 30, height: 26))
+        case .mountainhare: Spec(name: "Mountain Hare", note: "Bounded across and did not stop.",
+            places: [.peaks], dayParts: [.dusk], rarity: .uncommon,
+            motion: .hop, altitude: 0.780, size: .init(width: 38, height: 32))
+        case .ibex: Spec(name: "Ibex", note: "A silhouette on the far ridge.",
+            places: [.peaks], dayParts: [.dawn], rarity: .rare,
+            motion: .linger, altitude: 0.755, size: .init(width: 44, height: 38))
+
+        // --- Moonlit Onsen
+        case .macaque: Spec(name: "Snow Macaque", note: "Sat in the water like it owned it.",
+            places: [.onsen], dayParts: [.day], rarity: .common,
+            motion: .linger, altitude: 0.790, size: .init(width: 40, height: 32))
+        case .tanuki: Spec(name: "Tanuki", note: "Came to the edge and warmed its paws.",
+            places: [.onsen], dayParts: [.night], rarity: .uncommon,
+            motion: .linger, altitude: 0.790, size: .init(width: 42, height: 30))
+        case .moonrabbit: Spec(name: "Moon Rabbit", note: "Sat in the reflection. Gone by morning.",
+            places: [.onsen, .blossom, .harbor], dayParts: [.night], rarity: .mythic,
+            motion: .linger, altitude: 0.795, size: .init(width: 32, height: 38),
+            needsFullMoon: true)
+
+        // --- Phenomena
+        case .rainbow: Spec(name: "Rainbow", note: "The rain stopped before you did.",
+            places: [.meadow, .woods, .harbor, .blossom, .keep, .cloudspire, .peaks, .onsen],
+            dayParts: [.day], rarity: .uncommon,
+            motion: .linger, altitude: 0.230, size: .init(width: 84, height: 48),
+            needsRain: true, isPhenomenon: true)
+        case .meteors: Spec(name: "Meteor Shower", note: "Three in a row, then nothing for ages.",
+            places: [.peaks], dayParts: [.night], rarity: .uncommon,
+            motion: .flutter, altitude: 0.140, size: .init(width: 56, height: 42),
+            isPhenomenon: true)
+        case .aurora: Spec(name: "Aurora", note: "The whole sky, quietly, for a while.",
+            places: [.peaks], dayParts: [.night], rarity: .rare,
+            motion: .linger, altitude: 0.150, size: .init(width: 92, height: 60),
+            isPhenomenon: true)
         }
     }
 
-    /// Shown in the journal once seen — a line of field-guide flavour.
-    var note: String {
-        switch self {
-        case .butterfly: "Landed while you weren't moving."
-        case .robin: "Working the fence line at first light."
-        case .squirrel: "Went up the pine without stopping."
-        case .frog: "One hop, then rings on the water."
-        case .stag: "Stepped out of the treeline and looked up."
-        case .gull: "Broke from the others and dived."
-        case .otter: "Floating on its back, holding something."
-        case .dolphin: "Two arcs between the islets."
-        case .whale: "Spouted once, then went down slowly."
-        case .moth: "Circling a lit lantern, patiently."
-        case .koi: "A ring on the surface, then orange."
-        case .crane: "Standing on one leg in the shallows."
-        }
-    }
+    // MARK: Convenience
 
-    // MARK: Where and when
-
-    var places: [Place] {
-        switch self {
-        case .butterfly: [.meadow, .blossom]
-        case .robin: [.meadow]
-        case .squirrel, .frog, .stag: [.woods]
-        case .gull, .otter, .dolphin, .whale: [.harbor]
-        case .moth, .koi, .crane: [.blossom]
-        }
-    }
-
-    /// Empty means any time of day.
-    var dayParts: [DayPart] {
-        switch self {
-        case .butterfly, .squirrel, .gull, .otter, .dolphin, .whale, .koi: [.day]
-        case .robin, .stag, .crane: [.dawn]
-        case .frog: [.dusk]
-        case .moth: [.night]
-        }
-    }
-
-    /// A session at least this long, in minutes. The whale is the long-haul
-    /// reward: it exists to make a forty-minute session worth choosing.
-    var minimumMinutes: Int {
-        self == .whale ? 40 : 0
-    }
-
-    var rarity: Rarity {
-        switch self {
-        case .butterfly, .robin, .squirrel, .frog, .gull, .moth: .common
-        case .stag, .otter, .dolphin, .koi, .crane: .uncommon
-        case .whale: .rare
-        }
-    }
-
-    func isEligible(place: Place, dayPart: DayPart, focusMinutes: Int) -> Bool {
-        places.contains(place)
-            && (dayParts.isEmpty || dayParts.contains(dayPart))
-            && focusMinutes >= minimumMinutes
-    }
-
-    /// The clue shown under a species you haven't seen. It has to be enough to
-    /// act on — that's the whole retention mechanism — without being a recipe.
-    var hint: String {
-        let where_ = places.map(\.name).joined(separator: " or ")
-        var when = dayParts.first.map { $0.hintPhrase } ?? "any time"
-        if minimumMinutes > 0 {
-            when += ", on a long session"
-        }
-        return "\(when.capitalizedFirst), in \(where_)"
-    }
-
-    // MARK: Drawing
+    var name: String { spec.name }
+    var note: String { spec.note }
+    var places: [Place] { spec.places }
+    var dayParts: [DayPart] { spec.dayParts }
+    var rarity: Rarity { spec.rarity }
+    var motion: Motion { spec.motion }
+    var altitude: Double { spec.altitude }
+    var size: CGSize { spec.size }
+    var isPhenomenon: Bool { spec.isPhenomenon }
 
     var frames: [String] { ["wild_\(rawValue)_0", "wild_\(rawValue)_1"] }
     var ghostAsset: String { "wild_\(rawValue)_ghost" }
     var sketchAsset: String { "wild_\(rawValue)_sketch" }
 
-    var motion: Motion {
-        switch self {
-        case .butterfly, .moth: .flutter
-        case .gull, .dolphin, .whale: .arc
-        case .robin, .squirrel, .frog: .hop
-        case .stag, .crane, .otter, .koi: .linger
-        }
+    /// Whether this could turn up in the session about to start.
+    ///
+    /// Rain is deliberately excluded here: a rainbow depends on what the
+    /// session *did*, which nobody knows when it begins. It is awarded on
+    /// completion instead.
+    func isEligible(
+        place: Place,
+        dayPart: DayPart,
+        focusMinutes: Int,
+        moonIsFull: Bool
+    ) -> Bool {
+        guard !spec.needsRain else { return false }
+        return spec.places.contains(place)
+            && (spec.dayParts.isEmpty || spec.dayParts.contains(dayPart))
+            && focusMinutes >= spec.minimumMinutes
+            && (!spec.needsFullMoon || moonIsFull)
     }
 
-    /// Where on screen it crosses, as a fraction of height. The sky band above
-    /// the ring and the ground band below the paw row are the only places the
-    /// UI leaves free.
-    var altitude: Double {
-        switch self {
-        case .butterfly, .moth, .gull: 0.155
-        case .robin, .squirrel, .stag, .crane, .frog: 0.775
-        case .otter, .dolphin, .whale, .koi: 0.800
-        }
+    /// The clue shown under a species you haven't seen. Enough to act on —
+    /// that is the whole retention mechanism — without being a recipe.
+    var hint: String {
+        if spec.needsRain { return "After focusing through the rain" }
+        let where_ = spec.places.count > 3
+            ? "anywhere"
+            : spec.places.map(\.name).joined(separator: " or ")
+        var when = spec.dayParts.first.map(\.hintPhrase) ?? "any time"
+        if spec.needsFullMoon { when = "under a full moon" }
+        if spec.minimumMinutes > 0 { when += ", on a long session" }
+        return "\(when.capitalizedFirst), in \(where_)"
     }
 
-    var size: CGSize {
-        switch self {
-        case .butterfly: CGSize(width: 26, height: 21)
-        case .robin: CGSize(width: 26, height: 23)
-        case .squirrel: CGSize(width: 28, height: 32)
-        case .frog: CGSize(width: 24, height: 20)
-        case .stag: CGSize(width: 54, height: 50)
-        case .gull: CGSize(width: 32, height: 21)
-        case .otter: CGSize(width: 42, height: 26)
-        case .dolphin: CGSize(width: 46, height: 30)
-        case .whale: CGSize(width: 64, height: 35)
-        case .moth: CGSize(width: 24, height: 20)
-        case .koi: CGSize(width: 38, height: 22)
-        case .crane: CGSize(width: 34, height: 46)
-        }
-    }
+    enum Rarity: String, Codable, CaseIterable {
+        case common, uncommon, rare, mythic
 
-    enum Rarity: String, Codable {
-        case common
-        case uncommon
-        case rare
-
-        /// Odds of turning up in a session it's eligible for.
+        /// Odds of turning up in a session it's eligible for. Mythic is not
+        /// rolled at all — its conditions are the gate.
         var chance: Double {
             switch self {
             case .common: 1.0 / 3.0
             case .uncommon: 1.0 / 8.0
             case .rare: 1.0 / 12.0
+            case .mythic: 1.0 / 2.0
             }
         }
 

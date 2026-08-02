@@ -109,6 +109,15 @@ enum LaunchOptions {
     /// Mark every species as already seen, for looking at the journal.
     static let fillJournal = isSet("-PawmodoroFillJournal")
 
+    /// Pin the moon: `-PawmodoroMoon full` or `-PawmodoroMoon new`. Waiting a
+    /// fortnight for the moon rabbit is not a way to check a sprite.
+    static let forcedMoon: Bool? = {
+        guard arguments.contains("-PawmodoroMoon"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroMoon")
+        else { return nil }
+        return raw.lowercased() == "full"
+    }()
+
     /// Every mixtape available, without Plus and without travelling.
     static let unlockMusic = isSet("-PawmodoroUnlockMusic")
 
@@ -132,6 +141,7 @@ enum LaunchOptions {
     static let forcedSighting: Species? = nil
     static let fillJournal = false
     static let unlockMusic = false
+    static let forcedMoon: Bool? = nil
     static let forcedTrack: String? = nil
 #endif
 

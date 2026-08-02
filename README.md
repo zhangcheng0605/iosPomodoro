@@ -42,6 +42,7 @@ cloning this repo to the app being live, in order, with timings.
 |---|---|
 | [`docs/START_HERE.md`](docs/START_HERE.md) | **The whole path to launch, in order. Start here.** |
 | [`docs/DELIGHT_PLAN.md`](docs/DELIGHT_PLAN.md) | The build spec for the delight overhaul — living buddy, tactile timer, living scene, Live Activity, bond |
+| [`docs/CONTENT_PLAN.md`](docs/CONTENT_PLAN.md) | The content expansion — journey worlds, sound studio, new buddies, themes, seasons, postcards |
 | [`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md) | Clone, run, pull changes, run on your iPhone, fix build errors |
 | [`docs/SIMULATOR.md`](docs/SIMULATOR.md) | Building and testing with Claude Code's iOS Simulator pane, and the debug launch flags |
 | [`docs/APP_STORE_LAUNCH_GUIDE.md`](docs/APP_STORE_LAUNCH_GUIDE.md) | First-time App Store submission, start to finish |

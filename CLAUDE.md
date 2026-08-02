@@ -3,10 +3,13 @@
 A SwiftUI Pomodoro timer for iOS 17+. No dependencies, no package manager, no
 network calls, no test target. The whole app is `Pawmodoro/`.
 
-**Current focus:** the delight overhaul specified in
-`docs/DELIGHT_PLAN.md` — work it phase by phase, in order. Known quirk while
-you do: the iOS 26.3 simulator runtime is missing the primary emoji font, so
-emoji in `Text` views render as `?` boxes in the pane (Phase A removes them).
+**Current focus:** two plan documents, worked phase by phase.
+`docs/DELIGHT_PLAN.md` covers feel (phases A–C are built; D needs a 30-second
+Xcode step from the user first; E pending). `docs/CONTENT_PLAN.md` covers
+content (journey worlds, sound studio, new buddies, themes, postcards) and
+has the build order that interleaves both. Known quirk: the iOS 26.3
+simulator runtime is missing the primary emoji font, so emoji in `Text`
+views render as `?` boxes in the pane (the app itself no longer uses any).
 
 ## Running it
 

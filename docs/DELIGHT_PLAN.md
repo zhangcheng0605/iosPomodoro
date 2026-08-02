@@ -6,6 +6,11 @@
 > clock. **Phase D is next** and needs one 30-second step in Xcode from you
 > (creating the Widget Extension target) before the code can land — see D1.
 > Phase E is unstarted.
+>
+> The *content* expansion — journey worlds, sound studio, four new buddies,
+> four new themes, seasons, postcards — is specified separately in
+> [CONTENT_PLAN.md](CONTENT_PLAN.md), which also holds the combined build
+> order.
 
 This is the build spec for making Pawmodoro *fancy*: the Pomodoro app people
 open to show their friends. It was drafted against the code as of branch

@@ -4,7 +4,7 @@ import SwiftUI
 /// and which buddy you want.
 struct OnboardingView: View {
     @Environment(TimerEngine.self) private var engine
-    @AppStorage("pawmodoro.hasOnboarded") private var hasOnboarded = false
+    @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var pageIndex = 0
 
     private let lastPage = 2

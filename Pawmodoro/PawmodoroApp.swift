@@ -2,9 +2,17 @@ import SwiftUI
 
 @main
 struct PawmodoroApp: App {
-    @State private var engine = TimerEngine()
-    @State private var store = StoreManager()
+    @State private var engine: TimerEngine
+    @State private var store: StoreManager
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        // Before the engine and the store are built, since both read
+        // UserDefaults on init and the debug launch options rewrite it.
+        LaunchOptions.applyAtLaunch()
+        _engine = State(initialValue: TimerEngine())
+        _store = State(initialValue: StoreManager())
+    }
 
     var body: some Scene {
         WindowGroup {

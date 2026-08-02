@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tools/run-sim.sh:*)",
+      "Bash(./tools/run-sim.sh:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(xcrun xctrace:*)",
+      "Bash(open -a Simulator:*)"
+    ]
+  }
+}

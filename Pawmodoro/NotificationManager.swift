@@ -10,6 +10,10 @@ final class NotificationManager {
     private let phaseEndIdentifier = "pawmodoro.phaseEnd"
 
     func requestPermissionIfNeeded() {
+        // The system alert lands on top of the timer the first time it starts,
+        // which is in the way when the app is being driven in a simulator.
+        guard !LaunchOptions.suppressNotificationPrompt else { return }
+
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .notDetermined else { return }

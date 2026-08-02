@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
-    @AppStorage("pawmodoro.hasOnboarded") private var hasOnboarded = false
+    @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
     @State private var showStats = false
     @State private var showPaywall = false

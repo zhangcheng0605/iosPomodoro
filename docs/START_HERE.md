@@ -20,7 +20,7 @@ mkdir -p ~/Developer
 cd ~/Developer
 git clone https://github.com/zhangcheng0605/iosPomodoro.git
 cd iosPomodoro
-git checkout claude/ios-pomodoro-app-store-dndsc9
+git checkout claude/pawmodoro-ios-simulator-sf815f
 open Pawmodoro.xcodeproj
 ```
 
@@ -34,6 +34,11 @@ to me. I'll push fixes; you run `git pull` and press ⌘R again.
 
 Once it runs, click around: start a timer, open Settings, switch buddies and
 themes, open the paywall (purchases work in the simulator — no account, no money).
+
+A 25-minute focus phase is a long wait, so debug builds take launch flags that
+turn minutes into seconds and skip past onboarding. If you'd rather have Claude
+build and tap through the app for you, in a simulator beside the conversation,
+that's [`docs/SIMULATOR.md`](SIMULATOR.md) — same Xcode install, no ⌘R.
 
 ### 4. Enroll in the Apple Developer Program — **do this tonight**
 [developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll)

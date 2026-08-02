@@ -11,6 +11,10 @@ Built with SwiftUI. iOS 17+. No dependencies, no accounts, no data collection.
 2. `git clone` this repo, then `open Pawmodoro.xcodeproj`.
 3. Press **⌘R** to run in the iPhone simulator.
 
+Or skip Xcode's window and let Claude Code Desktop build and drive the app in
+its iOS Simulator pane — see [`docs/SIMULATOR.md`](docs/SIMULATOR.md). Either
+way, `tools/run-sim.sh --demo` builds, installs and launches from a terminal.
+
 **New here? Read [`docs/START_HERE.md`](docs/START_HERE.md)** — every step from
 cloning this repo to the app being live, in order, with timings.
 
@@ -38,6 +42,7 @@ cloning this repo to the app being live, in order, with timings.
 |---|---|
 | [`docs/START_HERE.md`](docs/START_HERE.md) | **The whole path to launch, in order. Start here.** |
 | [`docs/XCODE_WORKFLOW.md`](docs/XCODE_WORKFLOW.md) | Clone, run, pull changes, run on your iPhone, fix build errors |
+| [`docs/SIMULATOR.md`](docs/SIMULATOR.md) | Building and testing with Claude Code's iOS Simulator pane, and the debug launch flags |
 | [`docs/APP_STORE_LAUNCH_GUIDE.md`](docs/APP_STORE_LAUNCH_GUIDE.md) | First-time App Store submission, start to finish |
 | [`docs/LIVE_ACTIVITY.md`](docs/LIVE_ACTIVITY.md) | Add the lock screen / Dynamic Island timer (needs an Xcode step) |
 | [`docs/MONETIZATION.md`](docs/MONETIZATION.md) | Setting up the in-app purchases, banking, and sandbox testing |

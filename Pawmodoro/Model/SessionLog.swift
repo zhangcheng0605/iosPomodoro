@@ -15,7 +15,7 @@ final class SessionLog {
     private(set) var records: [SessionRecord] = []
 
     @ObservationIgnored private let defaults: UserDefaults
-    private static let storageKey = "pawmodoro.sessions"
+    private static let storageKey = StorageKeys.sessions
     private static let maxRecords = 1000
 
     init(defaults: UserDefaults = .standard) {

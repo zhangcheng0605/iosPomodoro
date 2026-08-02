@@ -39,8 +39,8 @@ final class StoreManager {
     @ObservationIgnored private var updatesTask: Task<Void, Never>?
 
     private enum Keys {
-        static let hasPlus = "pawmodoro.hasPlus"
-        static let tipsGiven = "pawmodoro.tipsGiven"
+        static let hasPlus = StorageKeys.hasPlus
+        static let tipsGiven = StorageKeys.tipsGiven
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -76,6 +76,14 @@ final class StoreManager {
 
     /// Re-derives `hasPlus` from what StoreKit says the user owns.
     func refreshEntitlements() async {
+        // Launched with -PawmodoroUnlockPlus, stand in for a purchase: a build
+        // installed with `simctl` has no StoreKit configuration attached, so
+        // there is otherwise no way to see the Plus content in a simulator.
+        if LaunchOptions.unlockPlus {
+            updateHasPlus(true)
+            return
+        }
+
         var unlocked = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }

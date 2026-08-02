@@ -52,7 +52,9 @@ struct PomodoroSettings: Codable, Equatable {
         case .shortBreak: shortBreakMinutes
         case .longBreak: longBreakMinutes
         }
-        return TimeInterval(max(1, minutes) * 60)
+        // `LaunchOptions.minute` is 60 in every shipping build; `-PawmodoroFastTimers`
+        // drops it to 1 so a full cycle can be watched in a simulator.
+        return TimeInterval(max(1, minutes)) * LaunchOptions.minute
     }
 
     /// Keep values inside the ranges the UI offers, in case stored data is odd.
@@ -67,7 +69,7 @@ struct PomodoroSettings: Codable, Equatable {
 }
 
 extension PomodoroSettings {
-    static let storageKey = "pawmodoro.settings"
+    static let storageKey = StorageKeys.settings
 
     static func load(from defaults: UserDefaults = .standard) -> PomodoroSettings {
         guard let data = defaults.data(forKey: storageKey),

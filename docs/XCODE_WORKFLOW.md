@@ -17,7 +17,7 @@ whenever I push more work. You never need to copy files around by hand.
 3. Switch to the branch I'm working on:
 
    ```sh
-   git checkout claude/ios-pomodoro-app-store-dndsc9
+   git checkout claude/pawmodoro-ios-simulator-sf815f
    ```
 
 4. Open the project:

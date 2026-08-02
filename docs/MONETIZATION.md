@@ -31,8 +31,8 @@ refund or delete a purchase so you can test the locked state again.
 
 ## Step 2 — Fix the product identifiers
 
-`Pawmodoro/Store/StoreIDs.swift` uses the placeholder prefix
-`com.example.pawmodoro`. Once you set your real bundle identifier, change these
+`Pawmodoro/Store/StoreIDs.swift` uses the prefix
+`com.zhangcheng.pawmodoro`. Once you set your real bundle identifier, change these
 to match, and change the matching `productID` values in `Pawmodoro.storekit` too.
 
 They don't have to equal your bundle ID, but they must be identical in three

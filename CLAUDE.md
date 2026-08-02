@@ -14,8 +14,8 @@ views render as `?` boxes in the pane (the app itself no longer uses any).
 ## Running it
 
 The app builds for the iOS Simulator with no signing setup — the bundle ID is
-still the placeholder `com.example.pawmodoro` and `DEVELOPMENT_TEAM` is empty,
-which is fine for a simulator and only matters for a device.
+`com.zhangcheng.pawmodoro` and `DEVELOPMENT_TEAM` is empty — the team only
+matters for a device, and is set in Xcode rather than here.
 
 ```sh
 tools/run-sim.sh --demo --headless    # build, install, launch on the booted simulator
@@ -32,7 +32,7 @@ xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Debug \
     -destination "id=$UDID" -derivedDataPath build/simulator \
     CODE_SIGNING_ALLOWED=NO build
 xcrun simctl install "$UDID" build/simulator/Build/Products/Debug-iphonesimulator/Pawmodoro.app
-xcrun simctl launch "$UDID" com.example.pawmodoro -PawmodoroDemo
+xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo
 ```
 
 ## Launch options — use these, the app is slow to check without them

@@ -13,7 +13,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.example.pawmodoro.plus",
+      "productID" : "com.zhangcheng.pawmodoro.plus",
       "referenceName" : "Pawmodoro Plus",
       "type" : "NonConsumable"
     },
@@ -28,7 +28,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.example.pawmodoro.tip.small",
+      "productID" : "com.zhangcheng.pawmodoro.tip.small",
       "referenceName" : "Tip - small",
       "type" : "Consumable"
     },
@@ -43,7 +43,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.example.pawmodoro.tip.medium",
+      "productID" : "com.zhangcheng.pawmodoro.tip.medium",
       "referenceName" : "Tip - medium",
       "type" : "Consumable"
     },
@@ -58,7 +58,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.example.pawmodoro.tip.large",
+      "productID" : "com.zhangcheng.pawmodoro.tip.large",
       "referenceName" : "Tip - large",
       "type" : "Consumable"
     }

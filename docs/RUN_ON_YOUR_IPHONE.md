@@ -25,24 +25,17 @@ re-signing every week, and you need it for the App Store anyway.
 
 ### 1. Give the app its own bundle identifier
 
-The project still ships the placeholder `com.example.pawmodoro`. Apple needs
-something unique to you, and `example.com` is reserved.
+**Already done** — the project ships as `com.zhangcheng.pawmodoro`, and the
+in-app purchase identifiers were renamed to match. Nothing to do here.
 
-In Xcode: select the **Pawmodoro** project in the left sidebar → the
-**Pawmodoro** target → **Signing & Capabilities** → change **Bundle
-Identifier** to something like:
+It used to be `com.example.pawmodoro`, which would have failed: Apple reserves
+`example.com`, so it can never be registered.
 
-```
-com.zhangcheng.pawmodoro
-```
-
-Reverse-domain style. It doesn't have to be a domain you own — it just has to
-be unique. Use it consistently from here on.
-
-> Doing this also breaks the in-app purchase product IDs, which are prefixed
-> with the bundle ID. That's fine for personal use — the store isn't set up
-> yet anyway, and the paywall degrades to its "store isn't available" state.
-> See [MONETIZATION.md](MONETIZATION.md) when you get to that.
+You only need to touch this if Xcode complains that the identifier is
+unavailable — someone else got there first. In that case: select the
+**Pawmodoro** project in the left sidebar → the **Pawmodoro** target →
+**Signing & Capabilities** → edit **Bundle Identifier** to something more
+specific, like `com.zhangcheng.pawmodoro.app`.
 
 ### 2. Sign in and pick your team
 

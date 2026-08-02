@@ -55,8 +55,8 @@ automatically — no need to close and reopen the project.
    - Check **Automatically manage signing**
    - Set **Team** to your personal team
    - Change **Bundle Identifier** to something unique to you, e.g.
-     `com.zhangcheng.pawmodoro` (the repo ships the placeholder
-     `com.example.pawmodoro`, which Apple will not accept)
+     `com.zhangcheng.pawmodoro` (already set; change only if Apple says it is taken
+     `com.zhangcheng.pawmodoro`, which Apple will not accept)
 4. Pick your phone from the device dropdown at the top, then ⌘R.
 
 With a free account the app expires after 7 days — just re-run it to reinstall.

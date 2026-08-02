@@ -21,7 +21,7 @@ enum StorageKeys {
 /// interrupts the first start, and the Plus content needs a purchase. These
 /// flags collapse all of it, so a change can be seen in seconds.
 ///
-///     xcrun simctl launch booted com.example.pawmodoro -PawmodoroDemo
+///     xcrun simctl launch booted com.zhangcheng.pawmodoro -PawmodoroDemo
 ///
 /// They are compiled out of Release builds: outside `DEBUG` every flag is a
 /// `false` constant, so the branches reading them fold away and nothing about
@@ -64,7 +64,7 @@ enum LaunchOptions {
     /// Pin the sky to one time of day. Takes an hour, in the `-Key value` form
     /// `UserDefaults` parses for free:
     ///
-    ///     xcrun simctl launch booted com.example.pawmodoro -PawmodoroClock 22
+    ///     xcrun simctl launch booted com.zhangcheng.pawmodoro -PawmodoroClock 22
     ///
     /// Checking all four skies otherwise means waiting for the day to go round.
     static let forcedDayPart: DayPart? = {

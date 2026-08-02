@@ -81,7 +81,7 @@ You'll need:
 - **Guideline 4.2 (minimum functionality)**: a bare timer can be flagged as "too simple."
   The buddy, paw prints, stats, streaks, ambience, and onboarding are what lift Pawmodoro
   above that bar — don't strip them back to just a countdown.
-- **Placeholder identifiers**: the repo ships `com.example.pawmodoro` and an empty
+- **Placeholder identifiers**: the repo ships `com.zhangcheng.pawmodoro` and an empty
   `DEVELOPMENT_TEAM`. Both must be yours before you archive (see Step 3).
 - **Missing privacy policy URL**: see Step 5.
 - **Screenshots that don't match the app**: keep captions honest.

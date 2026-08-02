@@ -22,7 +22,7 @@ cd "$(dirname "$0")/.."
 PROJECT="Pawmodoro.xcodeproj"
 SCHEME="Pawmodoro"
 # Must match PRODUCT_BUNDLE_IDENTIFIER in the project.
-BUNDLE_ID="com.example.pawmodoro"
+BUNDLE_ID="com.zhangcheng.pawmodoro"
 DERIVED_DATA="build/simulator"
 
 DEVICE_NAME=""

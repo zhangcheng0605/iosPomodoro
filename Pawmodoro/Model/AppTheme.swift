@@ -16,6 +16,15 @@ struct RGBComponents: Equatable {
     var uiColor: UIColor {
         UIColor(red: red, green: green, blue: blue, alpha: 1)
     }
+
+    /// Linear blend, `amount` being how much of `other` ends up in the result.
+    func mixed(with other: RGBComponents, amount: Double) -> RGBComponents {
+        RGBComponents(
+            red + (other.red - red) * amount,
+            green + (other.green - green) * amount,
+            blue + (other.blue - blue) * amount
+        )
+    }
 }
 
 /// A colour that resolves differently in light and dark appearance.
@@ -55,6 +64,34 @@ struct Palette: Equatable {
     let sunshine: DualColor
     let surface: DualColor
     let onAccent: DualColor
+    /// The hue the sky takes after dark. In dark appearance it's a real depth;
+    /// in light appearance it's cool moonlight rather than blackness, because
+    /// a light-mode phone shouldn't go dark just because it's late.
+    let night: DualColor
+
+    /// How much `cream` is blended into a sky wash before it's drawn.
+    ///
+    /// This is what keeps the wash safe. Mixing the hue toward the background's
+    /// own base pins the wash's luminance near the background's, so the tint
+    /// reads as a change of colour rather than of brightness — and the text
+    /// contrast barely moves however strongly it's applied. Lowering this will
+    /// fail `tools/check_contrast.py`.
+    static let skyMix: Double = 0.58
+
+    /// The tint for a time of day, or nil at midday when the sky is just itself.
+    func sky(_ part: DayPart) -> DualColor? {
+        let hue: DualColor
+        switch part {
+        case .day: return nil
+        case .dawn: hue = sunshine
+        case .dusk: hue = blossom
+        case .night: hue = night
+        }
+        return DualColor(
+            light: hue.light.mixed(with: cream.light, amount: Self.skyMix),
+            dark: hue.dark.mixed(with: cream.dark, amount: Self.skyMix)
+        )
+    }
 }
 
 /// The colour schemes the user can pick between. Every one of these was checked
@@ -101,7 +138,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
                 bark:     .dual(0.45, 0.32, 0.24, 0.95, 0.92, 0.86),
                 sunshine: .dual(0.97, 0.82, 0.45, 0.86, 0.71, 0.42),
                 surface:  .dual(1.00, 1.00, 1.00, 0.22, 0.21, 0.29),
-                onAccent: .dual(0.24, 0.15, 0.13, 0.24, 0.15, 0.13)
+                onAccent: .dual(0.24, 0.15, 0.13, 0.24, 0.15, 0.13),
+                night:    .dual(0.72, 0.68, 0.82, 0.05, 0.04, 0.10)
             )
         case .matcha:
             Palette(
@@ -113,7 +151,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
                 bark:     .dual(0.24, 0.33, 0.26, 0.91, 0.95, 0.89),
                 sunshine: .dual(0.95, 0.85, 0.55, 0.86, 0.76, 0.48),
                 surface:  .dual(1.00, 1.00, 1.00, 0.17, 0.23, 0.19),
-                onAccent: .dual(0.13, 0.21, 0.15, 0.13, 0.21, 0.15)
+                onAccent: .dual(0.13, 0.21, 0.15, 0.13, 0.21, 0.15),
+                night:    .dual(0.66, 0.74, 0.72, 0.03, 0.07, 0.05)
             )
         case .cocoa:
             Palette(
@@ -125,7 +164,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
                 bark:     .dual(0.35, 0.24, 0.18, 0.95, 0.91, 0.85),
                 sunshine: .dual(0.94, 0.80, 0.52, 0.85, 0.72, 0.46),
                 surface:  .dual(1.00, 1.00, 1.00, 0.24, 0.20, 0.18),
-                onAccent: .dual(0.20, 0.12, 0.08, 0.20, 0.12, 0.08)
+                onAccent: .dual(0.20, 0.12, 0.08, 0.20, 0.12, 0.08),
+                night:    .dual(0.74, 0.68, 0.64, 0.07, 0.05, 0.04)
             )
         case .midnight:
             Palette(
@@ -137,7 +177,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable, PlusLockable {
                 bark:     .dual(0.24, 0.26, 0.40, 0.91, 0.93, 0.99),
                 sunshine: .dual(0.88, 0.82, 0.98, 0.80, 0.74, 0.95),
                 surface:  .dual(1.00, 1.00, 1.00, 0.16, 0.18, 0.28),
-                onAccent: .dual(0.11, 0.13, 0.25, 0.11, 0.13, 0.25)
+                onAccent: .dual(0.11, 0.13, 0.25, 0.11, 0.13, 0.25),
+                night:    .dual(0.64, 0.70, 0.86, 0.03, 0.04, 0.09)
             )
         }
     }

@@ -46,6 +46,8 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroUnlockPlus` | Pretend Plus is owned, to see the locked content unlocked |
 | `-PawmodoroSeedStats` | Two weeks of history, so the stats screen has data |
 | `-PawmodoroResetState` | Clean-install state without deleting the app |
+| `-PawmodoroCelebrate` | Fires a phase completion ~1.5s after launch, for the confetti and cycle card |
+| `-PawmodoroClock <0-23>` | Pins the sky to one time of day (`-PawmodoroClock 22` for night + stars) |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -80,6 +82,16 @@ There are no tests. A change is verified by building and looking at it:
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.
   Adding a raw colour quietly breaks both.
+- **Run `python3 tools/check_contrast.py` after touching a palette.** It reads
+  the real values out of `AppTheme.swift` and blends the time-of-day sky wash
+  over every phase background, in every theme and appearance — 216 pairs. The
+  wash is safe because `Palette.sky(_:)` mixes each hue toward `cream` first,
+  which pins its luminance near the background's; lowering `Palette.skyMix`
+  will fail the check.
+- **Animation is driven by `TimelineView`, never by a `Timer`.** A timeline
+  stops when its view is off screen or the app is backgrounded, so an idle app
+  costs nothing. Loops run at 2–4fps, bursts at 8fps, particles at 30fps, and
+  a canvas is only mounted while it has something to draw.
 - **The countdown derives from an absolute end `Date`**, never accumulated
   ticks; iOS suspends backgrounded apps. Don't convert `TimerEngine` to a
   tick-counter.

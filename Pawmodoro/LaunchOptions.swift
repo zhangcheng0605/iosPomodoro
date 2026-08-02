@@ -60,6 +60,18 @@ enum LaunchOptions {
     /// Fire a synthetic phase completion shortly after launch, so the
     /// celebration can be iterated on without finishing a session first.
     static let celebrate = isSet("-PawmodoroCelebrate")
+
+    /// Pin the sky to one time of day. Takes an hour, in the `-Key value` form
+    /// `UserDefaults` parses for free:
+    ///
+    ///     xcrun simctl launch booted com.example.pawmodoro -PawmodoroClock 22
+    ///
+    /// Checking all four skies otherwise means waiting for the day to go round.
+    static let forcedDayPart: DayPart? = {
+        guard arguments.contains("-PawmodoroClock") else { return nil }
+        let hour = UserDefaults.standard.integer(forKey: "PawmodoroClock")
+        return DayPart.from(hour: hour)
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -68,6 +80,7 @@ enum LaunchOptions {
     static let seedStats = false
     static let resetState = false
     static let celebrate = false
+    static let forcedDayPart: DayPart? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

@@ -15,6 +15,19 @@ struct ContentView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.6), value: engine.phase)
 
+                sky
+
+                // Only while the timer is running with an ambience chosen —
+                // the same condition that has SoundPlayer playing, so the
+                // picture and the sound always agree.
+                if engine.isRunning, engine.settings.ambience != .off {
+                    AmbientSceneView(
+                        ambience: engine.settings.ambience,
+                        tint: Theme.bark,
+                        accent: Theme.accent(for: engine.phase)
+                    )
+                }
+
                 VStack(spacing: 0) {
                     phaseChip
                         .padding(.bottom, 20)
@@ -105,6 +118,28 @@ struct ContentView: View {
         Binding(get: { !hasOnboarded }, set: { hasOnboarded = !$0 })
     }
 
+    /// The time-of-day tint, and stars after dark.
+    ///
+    /// Re-checked once a minute rather than per frame — a sky that changes over
+    /// twenty minutes has nothing to say to a 60Hz display.
+    private var sky: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            ZStack {
+                if let wash = Theme.skyWash(for: part) {
+                    wash
+                        .opacity(Theme.skyWashOpacity)
+                        .ignoresSafeArea()
+                        .animation(.easeInOut(duration: 1.2), value: part)
+                }
+                if part.showsStars {
+                    StarfieldView(tint: Theme.bark)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
     private var phaseChip: some View {
         Text(engine.phase.title)
             .font(.headline)
@@ -185,6 +220,11 @@ struct ContentView: View {
                         .offset(x: 3, y: -3)
                 }
             }
+            // The chip stays small, but the target around it is a full 44pt:
+            // the visible size was below the minimum and these were genuinely
+            // hard to hit.
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.squishy(pressedScale: 0.86))
         .accessibilityLabel(

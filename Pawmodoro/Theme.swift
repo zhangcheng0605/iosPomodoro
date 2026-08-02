@@ -49,6 +49,20 @@ enum Theme {
         return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
     }
 
+    /// How strongly the time-of-day tint is laid over the phase background.
+    ///
+    /// Safe to raise: `Palette.sky(_:)` has already pulled the wash's luminance
+    /// close to the background's, so this changes how much hue arrives, not how
+    /// bright the result is. `tools/check_contrast.py` proves that over every
+    /// theme, appearance, phase and time of day.
+    static let skyWashOpacity: Double = 0.45
+
+    /// A tint over the phase background that follows the real time of day, so
+    /// an evening session doesn't look like a lunchtime one.
+    static func skyWash(for part: DayPart) -> Color? {
+        palette.sky(part)?.color
+    }
+
     static func accent(for phase: TimerEngine.Phase) -> Color {
         switch phase {
         case .focus: blossom
@@ -56,4 +70,25 @@ enum Theme {
         case .longBreak: sunshine
         }
     }
+}
+
+/// Four rough times of day, from the wall clock.
+enum DayPart: String, CaseIterable {
+    case dawn, day, dusk, night
+
+    static func current(at date: Date = Date(), calendar: Calendar = .current) -> DayPart {
+        from(hour: calendar.component(.hour, from: date))
+    }
+
+    static func from(hour: Int) -> DayPart {
+        switch hour {
+        case 5..<8: .dawn
+        case 8..<17: .day
+        case 17..<21: .dusk
+        default: .night
+        }
+    }
+
+    /// Only night gets stars.
+    var showsStars: Bool { self == .night }
 }

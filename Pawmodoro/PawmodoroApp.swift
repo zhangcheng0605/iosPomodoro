@@ -22,6 +22,7 @@ struct PawmodoroApp: App {
                 .fontDesign(.rounded)
                 .task {
                     await store.loadProducts()
+                    engine.storeHasPlus = store.hasPlus
                     engine.applyEntitlement(hasPlus: store.hasPlus)
                 }
         }

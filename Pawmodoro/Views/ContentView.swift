@@ -115,7 +115,9 @@ struct ContentView: View {
                 engine.settingsDidChange()
             }
             .onChange(of: store.hasPlus) { _, hasPlus in
+                engine.storeHasPlus = hasPlus
                 engine.applyEntitlement(hasPlus: hasPlus)
+                engine.refreshMusic(hasPlus: hasPlus)
             }
             .task {
                 guard LaunchOptions.celebrate else { return }

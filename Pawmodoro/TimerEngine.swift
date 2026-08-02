@@ -260,14 +260,44 @@ final class TimerEngine {
 
     /// Music follows the timer the same way ambience does: it plays while a
     /// phase is running and rests otherwise, so a forgotten app is silent.
-    func refreshMusic() {
+    func refreshMusic(hasPlus: Bool = true) {
         MusicPlayer.shared.volume = Float(settings.musicVolume)
-        guard runState == .running, let track = currentTrack else {
+        let radio = settings.radioMode && (hasPlus || LaunchOptions.unlockMusic)
+        MusicPlayer.shared.nextForRadio = radio ? { [weak self] in self?.radioPick() } : nil
+
+        guard runState == .running else {
             MusicPlayer.shared.stop()
             return
         }
-        MusicPlayer.shared.play(track)
+        if radio {
+            MusicPlayer.shared.play(MusicPlayer.shared.current ?? radioPick() ?? MusicCatalog.opener)
+        } else if let track = currentTrack {
+            MusicPlayer.shared.play(track)
+        } else {
+            MusicPlayer.shared.stop()
+        }
     }
+
+    /// The auto-DJ. Prefers tracks belonging to where you are, and matches
+    /// energy to the hour — brighter by day, quieter after dark.
+    private func radioPick() -> MusicTrack? {
+        let hasPlus = LaunchOptions.unlockMusic || storeHasPlus
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+        let wanted: ClosedRange<Int> = (part == .dawn || part == .day) ? 2...3 : 1...2
+
+        let available = MusicCatalog.tracks.filter { isUnlocked($0.gate, hasPlus: hasPlus) }
+        guard !available.isEmpty else { return nil }
+
+        let here = available.filter { $0.collection == settings.place.rawValue }
+        let pool = here.isEmpty ? available : here
+        let matched = pool.filter { wanted.contains($0.energy) }
+        let choices = (matched.isEmpty ? pool : matched)
+            .filter { $0.id != MusicPlayer.shared.current?.id }
+        return (choices.isEmpty ? pool : choices).randomElement()
+    }
+
+    /// Radio needs to know the entitlement without owning a StoreManager.
+    var storeHasPlus: Bool = false
 
     // MARK: Sightings
 

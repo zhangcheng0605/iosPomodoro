@@ -36,7 +36,7 @@ struct PaywallView: View {
             Text("A bigger, cozier den")
                 .font(.title2.bold())
                 .foregroundStyle(Theme.bark)
-            Text("Six more buddies, four far isles, and every sound and theme.")
+            Text("Fifty tracks, six more buddies, four far isles, and every theme.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
@@ -74,8 +74,8 @@ struct PaywallView: View {
             )
             feature(
                 icon: "speaker.wave.2.fill",
-                title: "Six ambient sounds",
-                detail: "Add forest, café and ocean to rain, purring and the fireplace."
+                title: "The whole Sound Almanac",
+                detail: "All fifty lo-fi tracks at once, the mixer that layers a sound under a track, and radio — which picks for you, matched to where you are and the hour."
             )
             feature(
                 icon: "paintpalette.fill",

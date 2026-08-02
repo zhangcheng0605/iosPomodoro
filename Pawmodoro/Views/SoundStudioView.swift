@@ -79,6 +79,23 @@ struct SoundStudioView: View {
 
             slider("Ambience", value: $engine.settings.ambienceVolume, enabled: layered)
             slider("Music", value: $engine.settings.musicVolume, enabled: layered)
+
+            Divider().opacity(0.3)
+
+            Toggle(isOn: Binding(
+                get: { engine.settings.radioMode && layered },
+                set: { engine.settings.radioMode = layered ? $0 : false }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Radio").font(.subheadline.weight(.semibold))
+                    Text("Let the app pick, matched to where you are and the hour.")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.bark.opacity(0.6))
+                }
+            }
+            .tint(Theme.blossom)
+            .disabled(!layered)
+            .opacity(layered ? 1 : 0.4)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface.opacity(0.7)))

@@ -24,6 +24,8 @@ struct PomodoroSettings: Codable, Equatable {
     var music: String?
     var musicVolume: Double = 0.7
     var ambienceVolume: Double = 0.8
+    /// Let the app choose the track, matched to the place and the hour.
+    var radioMode: Bool = false
 
     init() {}
 
@@ -31,7 +33,7 @@ struct PomodoroSettings: Codable, Equatable {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
-        case music, musicVolume, ambienceVolume
+        case music, musicVolume, ambienceVolume, radioMode
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -69,6 +71,8 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.musicVolume
         ambienceVolume = try container.decodeIfPresent(Double.self, forKey: .ambienceVolume)
             ?? fallback.ambienceVolume
+        radioMode = try container.decodeIfPresent(Bool.self, forKey: .radioMode)
+            ?? fallback.radioMode
     }
 
     // MARK: Naming

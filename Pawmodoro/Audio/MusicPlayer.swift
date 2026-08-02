@@ -22,6 +22,13 @@ final class MusicPlayer {
 
     private(set) var current: MusicTrack?
     private var started = false
+    private var radioTask: Task<Void, Never>?
+
+    /// Radio asks for the next track when the current one has gone round a few
+    /// times. Rotating on phase boundaries instead would leave a 27-second loop
+    /// repeating fifty times inside one focus session, which is the very thing
+    /// radio exists to fix.
+    var nextForRadio: (() -> MusicTrack?)?
 
     /// 0...1, applied on top of whatever each node is doing.
     var volume: Float = 0.7 {
@@ -51,9 +58,25 @@ final class MusicPlayer {
         if outgoing.isPlaying {
             ramp(outgoing, to: 0, over: crossfade) { outgoing.stop() }
         }
+        scheduleRadioRotation(after: track)
+    }
+
+    private func scheduleRadioRotation(after track: MusicTrack) {
+        radioTask?.cancel()
+        guard nextForRadio != nil else { return }
+        let seconds = Double(track.loopFrames) / 22_050.0 * 3.0
+        radioTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, let next = self.nextForRadio?() else { return }
+                self.play(next, crossfade: 2.4)
+            }
+        }
     }
 
     func stop(fade: TimeInterval = 0.6) {
+        radioTask?.cancel()
         current = nil
         for player in players where player.isPlaying {
             ramp(player, to: 0, over: fade) { player.stop() }
@@ -63,6 +86,7 @@ final class MusicPlayer {
     /// Called when the app is backgrounded: iOS tears the engine down anyway,
     /// and holding it running is the sort of thing that gets an app rejected.
     func suspend() {
+        radioTask?.cancel()
         guard started else { return }
         for player in players { player.stop() }
         engine.pause()

@@ -105,6 +105,9 @@ PROGRESSIONS = {
     "i-VI-III-VII": ["i", "VI", "III", "VII"],
     "i-iv-VII-III": ["i", "iv", "VII", "III"],
     "i-VII-VI-V": ["i", "VII", "VI", "v"],
+    "I-V-vi-IV": ["I", "V", "vi", "IV"],
+    "i-v-VI-VII": ["i", "v", "VI", "VII"],
+    "I-IV-I-V": ["I", "IV", "I", "V"],
 }
 
 MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
@@ -546,6 +549,14 @@ COLLECTIONS = [
     # id, title, blurb, gate
     ("chill1", "Paws & Chill I", "The classic study loop.", "free"),
     ("meadow", "Meadow Mornings", "Gentle, and a little birdsong.", "arrival:meadow"),
+    ("woods", "Under the Pines", "Minor keys, wind and water.", "arrival:woods"),
+    ("harbor", "Saltwater Tapes", "Slower, with the tide underneath.", "arrival:harbor"),
+    ("blossom", "Lantern Nights", "Evening music, music box forward.", "arrival:blossom"),
+    ("chill2", "Paws & Chill II", "Five more of the same warmth.", "plus"),
+    ("cloudspire", "Cloudspire Drift", "Airy and sparse, mostly pads.", "plus"),
+    ("nighttrain", "Night Train", "Rail rhythm at half speed.", "plus"),
+    ("onsen", "Moonlit Onsen", "Mallets and plucks over water.", "plus"),
+    ("starfall", "Starfall", "The sparsest set. Space between notes.", "plus"),
 ]
 
 TRACKS = [
@@ -560,6 +571,54 @@ TRACKS = [
     Track(8, "clover_rows", "Clover Rows", "meadow", "arrival:meadow", 72, "D", "I-vi-IV-V", ["pluck", "pad"], "birds", 2),
     Track(9, "biscuits_nap", "Biscuit's Nap", "meadow", "arrival:meadow", 64, "F", "I-iii-IV-I", ["pad", "sub"], "wind", 1),
     Track(10, "chimney_smoke", "Chimney Smoke", "meadow", "arrival:meadow", 68, "A", "i-VII-VI-V", ["ep"], "crackle", 1),
+
+    Track(11, "needle_carpet", "Needle Carpet", "woods", "arrival:woods", 66, "E", "i-VI-III-VII", ["pad", "marimba"], "wind", 1),
+    Track(12, "creekside_study", "Creekside Study", "woods", "arrival:woods", 70, "G", "I-V-vi-IV", ["ep"], "water", 2),
+    Track(13, "mushroom_lamp", "Mushroom Lamp", "woods", "arrival:woods", 62, "C", "i-iv-VII-III", ["musicbox"], "crickets", 1),
+    Track(14, "old_log_bridge", "Old Log Bridge", "woods", "arrival:woods", 72, "D", "I-IV-vi-V", ["marimba", "brush"], "water", 2),
+    Track(15, "fern_light", "Fern Light", "woods", "arrival:woods", 68, "A", "I-iii-IV-I", ["pad"], "birds", 1),
+
+    Track(16, "slow_tide", "Slow Tide", "harbor", "arrival:harbor", 63, "C", "I-vi-IV-V", ["pad", "sub"], "waves", 1),
+    Track(17, "rope_and_plank", "Rope & Plank", "harbor", "arrival:harbor", 74, "F", "I-IV-vi-V", ["ep", "shaker"], "waves", 2),
+    Track(18, "lighthouse_pulse", "Lighthouse Pulse", "harbor", "arrival:harbor", 70, "A", "i-VI-III-VII", ["sub", "pad"], "waves", 2),
+    Track(19, "ferry_at_noon", "Ferry at Noon", "harbor", "arrival:harbor", 72, "Bb", "ii-V-I-vi", ["ep", "brush"], "crackle", 2),
+    Track(20, "salt_on_glass", "Salt on Glass", "harbor", "arrival:harbor", 66, "D", "i-VII-VI-V", ["ep"], "waves", 1),
+
+    Track(21, "paper_glow", "Paper Glow", "blossom", "arrival:blossom", 64, "E", "i-VI-III-VII", ["musicbox", "pad"], "crickets", 1),
+    Track(22, "petal_drift", "Petal Drift", "blossom", "arrival:blossom", 70, "C", "I-vi-IV-V", ["ep", "marimba"], None, 2),
+    Track(23, "waterfall_ink", "Waterfall Ink", "blossom", "arrival:blossom", 68, "G", "I-V-vi-IV", ["pluck"], "water", 2),
+    Track(24, "festival_ended", "Festival Ended", "blossom", "arrival:blossom", 60, "A", "i-iv-VII-III", ["pad"], "crackle", 1),
+    Track(25, "terrace_steps", "Terrace Steps", "blossom", "arrival:blossom", 72, "F", "I-IV-vi-V", ["ep", "shaker"], None, 2),
+
+    Track(26, "second_wind", "Second Wind", "chill2", "plus", 74, "E", "i-VI-III-VII", ["ep", "brush"], "crackle", 2),
+    Track(27, "margin_notes", "Margin Notes", "chill2", "plus", 70, "C", "ii-V-I-vi", ["ep", "marimba"], "rain", 2),
+    Track(28, "half_closed_eyes", "Half-Closed Eyes", "chill2", "plus", 64, "F", "I-iii-IV-I", ["pad", "ep"], "crackle", 1),
+    Track(29, "borrowed_sweater", "Borrowed Sweater", "chill2", "plus", 68, "A", "i-VII-VI-V", ["ep"], "rain", 1),
+    Track(30, "sunday_loop", "Sunday Loop", "chill2", "plus", 72, "G", "I-vi-IV-V", ["musicbox", "brush"], "crackle", 2),
+
+    Track(31, "above_the_weather", "Above the Weather", "cloudspire", "plus", 58, "C", "I-V-vi-IV", ["pad"], "wind", 1),
+    Track(32, "balloon_mail", "Balloon Mail", "cloudspire", "plus", 66, "G", "I-IV-I-V", ["ep", "pad"], "wind", 1),
+    Track(33, "roots_in_the_sky", "Roots in the Sky", "cloudspire", "plus", 62, "D", "i-VI-III-VII", ["pad", "sub"], None, 1),
+    Track(34, "thin_air_waltz", "Thin Air Waltz", "cloudspire", "plus", 84, "F", "I-vi-IV-V", ["musicbox"], "wind", 2, 3),
+    Track(35, "anchorless", "Anchorless", "cloudspire", "plus", 60, "A", "i-v-VI-VII", ["pad"], "wind", 1),
+
+    Track(36, "sleeper_car", "Sleeper Car", "nighttrain", "plus", 52, "A", "i-VI-III-VII", ["clack", "sub", "ep"], "rumble", 2),
+    Track(37, "viaduct", "Viaduct", "nighttrain", "plus", 56, "E", "i-iv-VII-III", ["clack", "pad"], "rumble", 2),
+    Track(38, "window_seat", "Window Seat", "nighttrain", "plus", 60, "C", "I-vi-IV-V", ["ep", "brush"], "rumble", 2),
+    Track(39, "tunnel_counting", "Tunnel Counting", "nighttrain", "plus", 54, "D", "i-VII-VI-V", ["clack", "musicbox"], "rumble", 2),
+    Track(40, "last_stop_lullaby", "Last Stop Lullaby", "nighttrain", "plus", 48, "F", "I-iii-IV-I", ["musicbox", "pad"], None, 1),
+
+    Track(41, "steam_rise", "Steam Rise", "onsen", "plus", 62, "A", "i-v-VI-VII", ["pluck"], "water", 1),
+    Track(42, "stone_and_water", "Stone & Water", "onsen", "plus", 66, "D", "I-V-vi-IV", ["marimba"], "water", 2),
+    Track(43, "capybara_club", "Capybara Club", "onsen", "plus", 70, "G", "I-IV-vi-V", ["ep", "shaker"], "water", 2),
+    Track(44, "warm_to_the_bone", "Warm to the Bone", "onsen", "plus", 58, "C", "I-IV-I-V", ["pad", "sub"], "water", 1),
+    Track(45, "snow_on_cedar", "Snow on Cedar", "onsen", "plus", 60, "E", "i-VI-III-VII", ["musicbox"], "wind", 1),
+
+    Track(46, "meteor_ledger", "Meteor Ledger", "starfall", "plus", 54, "C", "I-V-vi-IV", ["celesta", "pad"], "crickets", 1),
+    Track(47, "counting_in_the_dark", "Counting in the Dark", "starfall", "plus", 50, "A", "i-VI-III-VII", ["pad", "sub"], None, 1),
+    Track(48, "ridge_light", "Ridge Light", "starfall", "plus", 58, "F", "I-iii-IV-I", ["ep"], "wind", 1),
+    Track(49, "perseid_tape", "Perseid Tape", "starfall", "plus", 56, "D", "i-iv-VII-III", ["musicbox"], "crickets", 1),
+    Track(50, "hello_moon", "Hello, Moon", "starfall", "plus", 46, "C", "I-V-vi-IV", ["pad", "celesta"], "crickets", 1),
 ]
 
 

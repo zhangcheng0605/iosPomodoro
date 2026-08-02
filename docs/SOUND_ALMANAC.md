@@ -1,5 +1,10 @@
 # The Sound Almanac — fifty tracks, zero licenses
 
+> **Status: built.** All fifty tracks generate, the gapless AVAudioEngine
+> player and the Sound Studio ship, and radio mode works. Outstanding from
+> this spec: the pixel cassette icons for the shelf (§1) and the buddy's
+> bpm-synced ear twitch (§4).
+
 This supersedes the five-loop version of Phase G in
 [CONTENT_PLAN.md](CONTENT_PLAN.md). The ask grew: **fifty lo-fi/ambient
 tracks**, tiered free/paid. Fifty hand-crafted loops would be a content

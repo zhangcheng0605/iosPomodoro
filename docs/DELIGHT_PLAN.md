@@ -1,5 +1,12 @@
 # Pawmodoro Delight Plan — the version people stay for
 
+> **Status: phases A, B and C are built and on the default branch.** The buddy
+> breathes, blinks and can be petted; the ring is a dial and finishing a session
+> throws paw-print confetti; the ambience is visible and the sky follows the
+> clock. **Phase D is next** and needs one 30-second step in Xcode from you
+> (creating the Widget Extension target) before the code can land — see D1.
+> Phase E is unstarted.
+
 This is the build spec for making Pawmodoro *fancy*: the Pomodoro app people
 open to show their friends. It was drafted against the code as of branch
 `claude/pawmodoro-ios-simulator-sf815f` (now the default), with every feature
@@ -90,7 +97,7 @@ these:
 
 ---
 
-## Phase A — A living buddy
+## Phase A — A living buddy ✅ built
 
 **Goal:** within ten seconds of looking at the idle screen, something alive
 happens. The buddy breathes, blinks, and responds to touch. This phase also
@@ -200,7 +207,7 @@ emoji `Text` renders as `?` boxes in the pane:
 
 ---
 
-## Phase B — A timer you can feel
+## Phase B — A timer you can feel ✅ built
 
 **Goal:** the controls feel physical. This is the phase reviewers describe
 with the word "juicy".
@@ -301,7 +308,7 @@ in [CLAUDE.md](../CLAUDE.md)'s table).
 
 ---
 
-## Phase C — The living scene
+## Phase C — The living scene ✅ built
 
 **Goal:** the background is worth looking at. Ambience becomes visible.
 Time of day is real.
@@ -369,7 +376,7 @@ Reduce Motion, off when idle. One `MotionSource` object, low update rate
 
 ---
 
-## Phase D — Presence beyond the app
+## Phase D — Presence beyond the app ← next
 
 **Goal:** the buddy exists on the lock screen and in the Dynamic Island.
 Highest-visibility feature per line of code; the recipe already exists in

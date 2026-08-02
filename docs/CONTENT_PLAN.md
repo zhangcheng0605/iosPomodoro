@@ -462,6 +462,179 @@ whole plan — competitors start with a click; Pawmodoro takes a breath.
   sails" is an App Store screenshot caption, and it's ~40 lines.
 - Both are small; ship them together.
 
+## The journal family — why these three are next
+
+The Field Journal landed because of five properties, worth naming so we can
+deliberately build more of it: it **grew out of the core fiction** (be still →
+the world comes out) rather than being bolted on; it **rewards exactly the
+behaviour the app exists for** (finishing sessions), never engagement tricks;
+it **multiplies content that already exists** (8 places × 4 day-parts became a
+possibility matrix at ~2 frames per species); the **unseen half is the hook**
+(silhouettes + hints are reasons to come back); and it **punishes nothing**.
+
+Three systems follow from the same premise, each pointing the journal's logic
+in a new direction: inward (what the buddy dreams), upward (what the night sky
+remembers), and across days (who is watching you from the hedge).
+
+---
+
+## Phase S — The Dream Diary (the journal, pointed inward)
+
+> Your buddy sleeps through every focus session. Sleeping creatures dream.
+> **What Mochi dreams about is your shared journey.**
+
+Mid-session, a small thought bubble sometimes rises over the napping buddy: a
+sepia sketch inside it — the stag you two saw last week, the harbor you
+reached, the balloon crossing. Finish the session and the dream is pressed
+into a **Dream Diary** beside the field journal. Leave early and it simply
+fades, unrecorded — dreams are like that.
+
+The signature sentence: *"my cat just dreamed about the whale we saw."*
+
+### S1. The dream pool — almost entirely recycled content
+
+- **Memory dreams** (the heart of it): drawn from `journal.records` — a
+  species you've actually seen, shown as its existing `wild_*_sketch` asset.
+  The diary caption writes the relationship: "Dreamed of the stag, three days
+  after you met it."
+- **Journey dreams**: places you've reached and vignettes you've sailed with
+  (reuse `vignette_*` sprites in sketch tint).
+- **Surreal dreams** (six bespoke 20×20 sprites from `generate_sprites.py`,
+  the only new art): a fish holding the balloon's string, an enormous ball of
+  yarn, the tub sailing the harbor, an endless meadow, the night train with
+  one lit window, and a rabbit-shaped shadow on the moon — which is a teaser
+  for L wave 2, seen in dreams before it's ever seen in the world.
+- Weighting: memory > journey > surreal. A rich journal makes a rich dream
+  life, which quietly makes the journal itself more valuable.
+
+### S2. Mechanics
+
+- Roll at focus start alongside `rollSighting()` (~1 in 4 when no sighting
+  rolled; a session gets a dream **or** a sighting, never both competing).
+- Appears at 40–70% progress like wildlife, ~8s, `fx_bubble` sprite (2-frame
+  shimmer, generator) anchored above the sprite; **only while the buddy's
+  pose is `napping`** — so Luna dreams through her daytime naps instead of
+  night sessions, which is exactly right for an owl and needs no special
+  code beyond the pose check.
+- Kept on natural completion → `pawmodoro.dreams` (mirror of the journal
+  store; register in `StorageKeys.all`). `PhaseCompletion.dreamed` gets a
+  celebration-card line ("Mochi dreamed of the crane").
+- Diary UI: a second segment on the journal page — same grid, bubbles
+  instead of tiles; empty slots are faint "…" bubbles (locked things shown).
+- Reduce Motion: bubble fades instead of rising. No-guilt: nothing is ever
+  lost; an interrupted dream just isn't kept.
+- Debug: `-PawmodoroDream <id|memory|surreal>`.
+
+**Done when:** a forced memory-dream appears over a napping buddy, survives
+completion into the diary with the right caption, never appears over a
+watching owl at night, and the diary reads correctly in both appearances.
+
+---
+
+## Phase T — The Star Atlas (the journal, pointed up)
+
+> Focus at night and the sky keeps score. Every completed night session sets
+> one star; enough stars complete a constellation — **drawn permanently into
+> the night sky of every place you visit**, and named in an atlas.
+
+The signature sentence: *"I built that constellation."*
+
+### T1. Design
+
+- Seven constellations in a fixed order, each 5–8 stars with two lines of
+  world-lore in the atlas: **The Little Paw**, **The Sleeping Cat**, **The
+  Ferry**, **The Kettle**, **The Lantern**, **The Whale**, **The Long
+  Watch** (an owl; completing it is Luna's shrine). ~45 night sessions of
+  content, then each further 5 adds a loose "wanderer star" (cap 20).
+- **Zero new persistence.** `SessionRecord.endedAt` already knows the hour:
+  night sessions = records where `DayPart.from(hour:) == .night`. The whole
+  system is a pure function over the existing log — same trick as the
+  journey unlocks.
+- Render: `StarfieldView` gains a constellation layer — completed ones as
+  faint connected lines + brighter named stars, the in-progress one as its
+  partial star count, no lines yet. Static Canvas, only at night, already
+  gated by day-part. Positions live in a `ConstellationAtlas` table in
+  Swift (they're layout, not art — no generator needed).
+- Atlas UI: a card on the stats screen under the journal — completed ones
+  named with their lore; future ones as dot-outlines titled "unnamed"
+  (locked things shown; the count of remaining stars is the hint line).
+- Crossing a completion mid-session rides the existing celebration card:
+  "The Kettle is complete — look up tonight."
+- Free forever. The price is focusing at night, and that's the point.
+- Debug: `-PawmodoroNightSessions <n>` (seeds the log with n night records).
+
+**Done when:** seeding 12 night sessions shows The Little Paw complete and
+The Sleeping Cat partial, in every place's night sky, both appearances;
+`-PawmodoroClock 22` + a real completed session adds the next star live.
+
+---
+
+## Phase U — The Stray (the journal, stretched across days)
+
+> One day there are eyes in the hedge while you focus. Come back tomorrow and
+> she's on the fence. Keep showing up — not perfectly, just *actually* — and
+> after a couple of weeks the stray cat decides you're safe, walks up, and
+> **joins your buddies. Free.**
+
+This is how you befriend a real stray: repeated, calm, undemanding presence.
+Which is also exactly what a focus practice is. The mechanic *is* the fiction.
+
+The signature sentence: *"a stray cat watched me focus for two weeks and
+today she finally came inside."*
+
+### U1. The trust arc
+
+Progress counts **days with ≥1 natural focus session** after first
+appearance — never consecutive days. Miss a week and she's still there,
+waiting, exactly where you left off. **No meter, no progress bar, anywhere.**
+Her position *is* the progress, and instrumenting it would kill it.
+
+| Stage | Qualifying days | What you see |
+|---|---|---|
+| 1 | 1 | two eye-glints in the foreground shrubs, sessions only |
+| 2 | 3 | a small dark shape at the scene's edge; fades away if petted |
+| 3 | 5 | mid-ground, sitting, watching; an occasional tail flick |
+| 4 | 8 | on breaks, sits beside your buddy — two sprites, one caption |
+| 5 | 12 | idle morning: "she's still here." → name her (default **Soot**) |
+
+- Appears once the player has ≥3 focus-days in their trailing 7 (the arc
+  should start *after* the habit exists, not compete with forming it).
+- Persistence: one date, `pawmodoro.strayFirstSeen`, plus her chosen name in
+  `buddyNames` — everything else derives from the log. Register the key.
+- Art: `generate_sprites.py` — a full ninth-palette black-cat frame set
+  (dark grey body, amber eyes — near-black must still read against night
+  scenes), plus tiny stage sprites: `stray_eyes`, `stray_distant`.
+- Her quirk after joining: **she still does her rounds** — Soot is the one
+  buddy who occasionally appears *in the scenery* as a cameo when another
+  buddy is active. The wild stays in her.
+- Gating: **free.** The paywall never touches her; she is the generosity
+  headline and the October story (the seasonal black-cat backlog item is
+  hereby this feature's marketing moment, not a separate buddy).
+- Debug: `-PawmodoroStray <1-5>`.
+
+**Done when:** each stage renders in day and night scenes; petting a stage-2
+stray makes her fade (and nothing is lost); the naming sheet writes through
+`buddyNames`; stage never regresses; Reduce Motion swaps fades for cuts.
+
+---
+
+## L wave 3 — Regulars & things heard (journal deepeners, small)
+
+Two additions that ride the existing journal rather than adding systems:
+
+- **Regulars.** The 5th sighting of a species turns that individual into a
+  named regular: a one-pixel marking variant (`wild_{id}_regular`, palette
+  swap from the generator), a slightly higher appearance rate in its home
+  place, and an upgraded journal note ("The robin with the pale feather.
+  She knows you now."). Relationship over collection — very Pawmodoro.
+- **Things heard.** A rare page of *audio* sightings: distant whale song at
+  Harbor after dark, a train horn from beyond Starfall, an owl in the Woods
+  at night, the Keep's far bell at dawn, a wind chime in Blossom. 2–3s
+  one-shots from `generate_assets.py`, played once at low gain under
+  whatever else is playing, logged in the journal as "heard, not seen" with
+  an ear glyph. Headphone magic, nearly free.
+- Debug: `-PawmodoroHear <id>`.
+
 ## M — Monetization restatement (one Plus, fatter on both sides)
 
 Same single non-consumable, no subscription. After this plan ships:
@@ -507,9 +680,12 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | 8 | K postcards + album | M | picks up sighting mentions from L |
 | 9 | **L wave 2** (Far Isles roster + moon + phenomena) | M | moon maths arrives with O if built first |
 | 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |
-| 11 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
-| 12 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |
-| 13 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
+| 11 | **U the stray** | M | the retention story; wants the habit loop live, hence after O |
+| 12 | **T star atlas** | S | zero new state; pairs with O's moon/night work |
+| 13 | **S dream diary** + L wave 3 (regulars, things heard) | M | richest after L wave 2 fills the journal |
+| 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
+| 15 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |
+| 16 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,
 screenshots light/dark, `python3 tools/check_contrast.py`, Release build,

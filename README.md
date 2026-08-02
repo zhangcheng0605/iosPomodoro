@@ -40,6 +40,7 @@ cloning this repo to the app being live, in order, with timings.
 
 | File | What's in it |
 |---|---|
+| [`docs/RESUME_HERE.md`](docs/RESUME_HERE.md) | **Picking the build back up — where it stopped, what's blocked** |
 | [`docs/START_HERE.md`](docs/START_HERE.md) | **The whole path to launch, in order. Start here.** |
 | [`docs/DELIGHT_PLAN.md`](docs/DELIGHT_PLAN.md) | The build spec for the delight overhaul — living buddy, tactile timer, living scene, Live Activity, bond |
 | [`docs/CONTENT_PLAN.md`](docs/CONTENT_PLAN.md) | The content expansion — journey worlds, wildlife journal, dreams, the star atlas, the stray, sound studio, seasons, postcards |

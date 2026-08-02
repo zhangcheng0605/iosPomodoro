@@ -3,6 +3,9 @@
 A SwiftUI Pomodoro timer for iOS 17+. No dependencies, no package manager, no
 network calls, no test target. The whole app is `Pawmodoro/`.
 
+**Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says
+exactly where the build order stopped and what is blocked on the user.
+
 **Current focus:** two plan documents, worked phase by phase.
 `docs/DELIGHT_PLAN.md` covers feel (phases A–C are built; D needs a 30-second
 Xcode step from the user first; E pending). `docs/CONTENT_PLAN.md` covers

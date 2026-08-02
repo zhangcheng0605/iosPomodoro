@@ -280,7 +280,7 @@ Settings; free icons for free buddies, Plus buddies' icons with Plus.
 
 ---
 
-## Phase K — Postcards (the shareable keepsake)
+## Phase K — Postcards (the shareable keepsake) ✅ built
 
 When you *arrive* somewhere (scene unlock) and on each completed cycle, the
 buddy sends a postcard: the current scene at its current day-part, the buddy
@@ -677,7 +677,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~5~~ | ~~**L journal, wave 1**~~ — **done**: engine, 12 species, journal UI | L | micro-encounters (L5) not yet built |
 | ~~6~~ | ~~**G+ Sound Almanac, slices 1–3**~~ — **done**: engine, 50 tracks, gapless player, Studio, radio | L | cassette art still to come |
 | ~~7~~ | ~~I themes + M paywall copy~~ — **done**, eight themes | S | |
-| 8 | K postcards + album | M | picks up sighting mentions from L |
+| ~~8~~ | ~~K postcards + album~~ — **done** | M | |
 | ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
 | 10 | **O almanac page** (absorbs N travelogue map) | M | the daily-open surface |
 | 11 | **U the stray** | M | the retention story; wants the habit loop live, hence after O |

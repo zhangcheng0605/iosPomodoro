@@ -120,6 +120,15 @@ struct ContentView: View {
                 engine.refreshMusic(hasPlus: hasPlus)
             }
             .task {
+                if LaunchOptions.postcard, engine.album.cards.isEmpty {
+                    engine.album.add(Postcard(
+                        id: UUID(), date: Date(),
+                        place: engine.settings.place.rawValue,
+                        dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+                        buddy: engine.settings.buddy.rawValue,
+                        occasion: .arrival, sessions: 3, sighting: Species.stag.rawValue
+                    ))
+                }
                 guard LaunchOptions.celebrate else { return }
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 engine.completion = PhaseCompletion(

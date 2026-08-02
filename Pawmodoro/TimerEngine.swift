@@ -56,6 +56,7 @@ final class TimerEngine {
 
     let log: SessionLog
     let journal: Journal
+    let album: Album
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -67,12 +68,14 @@ final class TimerEngine {
     init(
         settings: PomodoroSettings? = nil,
         log: SessionLog = SessionLog(),
-        journal: Journal = Journal()
+        journal: Journal = Journal(),
+        album: Album = Album()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
         self.log = log
         self.journal = journal
+        self.album = album
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -475,6 +478,22 @@ final class TimerEngine {
 
         // Published after `advance`, so the paw count and the phase it reports
         // are the ones the UI is about to draw.
+        // A card for the two moments worth keeping: getting somewhere new,
+        // and closing a cycle. Both are rare enough that the album stays a
+        // record rather than a feed.
+        if finished == .focus, arrival != nil || (phase == .longBreak) {
+            album.add(Postcard(
+                id: UUID(),
+                date: Date(),
+                place: settings.place.rawValue,
+                dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+                buddy: settings.buddy.rawValue,
+                occasion: arrival != nil ? .arrival : .cycle,
+                sessions: log.todaySessions,
+                sighting: seen?.rawValue
+            ))
+        }
+
         completion = PhaseCompletion(
             finished: finished,
             pawsEarned: filledPaws,

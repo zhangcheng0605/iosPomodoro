@@ -16,6 +16,7 @@ struct StatsView: View {
                     if log.totalSessions == 0 {
                         emptyState
                     }
+                    AlbumView()
                     JournalView()
                 }
                 .padding()

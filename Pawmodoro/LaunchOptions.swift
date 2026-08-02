@@ -11,8 +11,9 @@ enum StorageKeys {
     static let hasPlus = "pawmodoro.hasPlus"
     static let tipsGiven = "pawmodoro.tipsGiven"
     static let journal = "pawmodoro.journal"
+    static let postcards = "pawmodoro.postcards"
 
-    static let all = [settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal]
+    static let all = [settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards]
 }
 
 /// Command-line switches that make Pawmodoro practical to drive in a simulator.
@@ -127,6 +128,9 @@ enum LaunchOptions {
         return raw.lowercased() == "full"
     }()
 
+    /// Send a postcard on launch, to look at one without earning it.
+    static let postcard = isSet("-PawmodoroPostcard")
+
     /// Every mixtape available, without Plus and without travelling.
     static let unlockMusic = isSet("-PawmodoroUnlockMusic")
 
@@ -149,6 +153,7 @@ enum LaunchOptions {
     static let forcedBuddy: Buddy? = nil
     static let forcedSighting: Species? = nil
     static let fillJournal = false
+    static let postcard = false
     static let unlockMusic = false
     static let forcedMoon: Bool? = nil
     static let forcedTheme: AppTheme? = nil

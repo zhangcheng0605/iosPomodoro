@@ -15,6 +15,8 @@ struct ContentView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.6), value: engine.phase)
 
+                scenery
+
                 sky
 
                 // Only while the timer is running with an ambience chosen —
@@ -118,6 +120,34 @@ struct ContentView: View {
         Binding(get: { !hasOnboarded }, set: { hasOnboarded = !$0 })
     }
 
+    /// Where the journey currently is, and whatever is crossing it.
+    ///
+    /// Both follow the same clock the sky does, and the traveller only appears
+    /// while a focus session runs — it *is* the countdown, so it has nothing to
+    /// say when nothing is counting.
+    private var scenery: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            let place = engine.settings.place
+            ZStack {
+                SceneryView(place: place, part: part)
+                    .id("\(place.rawValue)-\(part.rawValue)")
+
+                if let vignette = place.vignette,
+                   engine.isRunning,
+                   !engine.phase.isBreak {
+                    VignetteView(
+                        vignette: vignette,
+                        progress: engine.progress,
+                        tint: Theme.bark
+                    )
+                }
+            }
+            .animation(.easeInOut(duration: 0.8), value: place)
+        }
+        .allowsHitTesting(false)
+    }
+
     /// The time-of-day tint, and stars after dark.
     ///
     /// Re-checked once a minute rather than per frame — a sky that changes over
@@ -168,6 +198,9 @@ struct ContentView: View {
                     )
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Theme.cream.opacity(0.7)))
         .onChange(of: engine.filledPaws) { previous, current in
             if current > previous { HapticsDirector.shared.stamp() }
         }

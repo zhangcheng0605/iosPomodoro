@@ -51,6 +51,8 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroResetState` | Clean-install state without deleting the app |
 | `-PawmodoroCelebrate` | Fires a phase completion ~1.5s after launch, for the confetti and cycle card |
 | `-PawmodoroClock <0-23>` | Pins the sky to one time of day (`-PawmodoroClock 22` for night + stars) |
+| `-PawmodoroPlace <id>` | Start at a place, e.g. `-PawmodoroPlace cloudspire` |
+| `-PawmodoroUnlockPlaces` | Treat every place as reached, without seeding history |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -85,12 +87,23 @@ There are no tests. A change is verified by building and looking at it:
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.
   Adding a raw colour quietly breaks both.
+- **Scenery is generated too.** `tools/generate_scenes.py` draws each place
+  once into a grid of palette indices and exports it four times, one per time
+  of day — the grade is a palette transform, and the window index is exempt
+  from it so windows light up after dark. It asserts that the rows behind the
+  countdown contain sky only; if a composition drifts upward it fails loudly.
+  Never suppress its stderr — an art bug looks exactly like success otherwise.
+- **Text over scenery sits on its own backing.** The timer face, the buddy
+  caption and the paw row each carry a theme-coloured capsule, because with a
+  place behind the app the background is no longer a known colour. Removing
+  one will fail the contrast check.
 - **Run `python3 tools/check_contrast.py` after touching a palette.** It reads
   the real values out of `AppTheme.swift` and blends the time-of-day sky wash
   over every phase background, in every theme and appearance — 216 pairs. The
   wash is safe because `Palette.sky(_:)` mixes each hue toward `cream` first,
   which pins its luminance near the background's; lowering `Palette.skyMix`
-  will fail the check.
+  will fail the check. It also samples the real exported scene pixels behind
+  every text row — 51k measurements, a couple of seconds.
 - **Animation is driven by `TimelineView`, never by a `Timer`.** A timeline
   stops when its view is off screen or the app is backgrounded, so an idle app
   costs nothing. Loops run at 2–4fps, bursts at 8fps, particles at 30fps, and

@@ -40,6 +40,15 @@ struct TimerRingView: View {
 
     var body: some View {
         ZStack {
+            // The timer face. Once there is scenery behind the app, the
+            // countdown can no longer rely on the background being a known
+            // colour — so it brings its own. It also just looks better: a
+            // frosted dial floating over a landscape rather than text lying
+            // on top of it.
+            Circle()
+                .fill(Theme.cream.opacity(0.82))
+                .padding(lineWidth / 2)
+
             Circle()
                 .stroke(Theme.bark.opacity(0.12), lineWidth: lineWidth)
 

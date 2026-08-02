@@ -11,8 +11,13 @@ struct PhaseCompletion: Identifiable, Equatable {
     let pawsPerCycle: Int
     /// True when the fourth focus session of a cycle just landed.
     let isCycleComplete: Bool
+    /// Set when this session was the one that opened up somewhere new.
+    var arrivedAt: Place?
 
     /// Only finishing focus earns confetti; breaks get a quieter beat, so the
     /// big moment stays rare enough to keep meaning something.
     var deservesConfetti: Bool { finished == .focus }
+
+    /// Arriving somewhere is worth a card even mid-cycle.
+    var showsCard: Bool { isCycleComplete || arrivedAt != nil }
 }

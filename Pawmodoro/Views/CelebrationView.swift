@@ -25,16 +25,16 @@ struct CelebrationView: View {
             if completion.deservesConfetti && !reduceMotion {
                 confetti
             }
-            if completion.isCycleComplete {
+            if completion.showsCard {
                 card
             }
         }
-        .allowsHitTesting(completion.isCycleComplete)
+        .allowsHitTesting(completion.showsCard)
         .onTapGesture { onDismiss() }
         .task {
             // The card lingers a little after the paws settle, then leaves on
             // its own — nobody should have to dismiss a congratulation.
-            if completion.isCycleComplete {
+            if completion.showsCard {
                 withAnimation(.spring(duration: 0.5)) { showCard = true }
                 try? await Task.sleep(nanoseconds: 4_200_000_000)
                 onDismiss()
@@ -100,20 +100,38 @@ struct CelebrationView: View {
 
     private var card: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                ForEach(0..<completion.pawsPerCycle, id: \.self) { _ in
-                    Image(systemName: "pawprint.fill")
-                        .font(.headline)
-                        .foregroundStyle(accent)
+            if let place = completion.arrivedAt {
+                // Arriving somewhere outranks finishing a cycle: it's the rarer
+                // thing, and it's the reason the journey exists.
+                Image(systemName: place.isPlus ? "lock.fill" : "map.fill")
+                    .font(.title2)
+                    .foregroundStyle(accent)
+                Text("You've reached \(place.name)")
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                    .multilineTextAlignment(.center)
+                Text(place.isPlus
+                     ? "\(place.blurb) — unlock it with Pawmodoro Plus"
+                     : place.blurb)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            } else {
+                HStack(spacing: 8) {
+                    ForEach(0..<completion.pawsPerCycle, id: \.self) { _ in
+                        Image(systemName: "pawprint.fill")
+                            .font(.headline)
+                            .foregroundStyle(accent)
+                    }
                 }
+                Text("Cycle complete")
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
             }
-            Text("Cycle complete")
-                .font(.title3.bold())
-                .foregroundStyle(Theme.bark)
-            Text(subtitle)
-                .font(.footnote)
-                .foregroundStyle(Theme.bark.opacity(0.7))
-                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 22)
@@ -125,7 +143,10 @@ struct CelebrationView: View {
         .scaleEffect(showCard ? 1 : 0.85)
         .opacity(showCard ? 1 : 0)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Cycle complete. \(subtitle)")
+        .accessibilityLabel(
+            completion.arrivedAt.map { "You've reached \($0.name). \($0.blurb)" }
+                ?? "Cycle complete. \(subtitle)"
+        )
     }
 
     private var subtitle: String {

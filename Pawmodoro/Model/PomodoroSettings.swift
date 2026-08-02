@@ -14,13 +14,15 @@ struct PomodoroSettings: Codable, Equatable {
     var theme: AppTheme = .sakura
     /// The ring pulses on a slow breath during breaks, to breathe along with.
     var breatheOnBreaks: Bool = true
+    /// Where the journey is currently sitting.
+    var place: Place = .meadow
 
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
-        case breatheOnBreaks
+        case breatheOnBreaks, place
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -49,6 +51,8 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.theme
         breatheOnBreaks = try container.decodeIfPresent(Bool.self, forKey: .breatheOnBreaks)
             ?? fallback.breatheOnBreaks
+        place = try container.decodeIfPresent(Place.self, forKey: .place)
+            ?? fallback.place
     }
 
     // MARK: Per-phase durations

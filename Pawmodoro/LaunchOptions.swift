@@ -72,6 +72,18 @@ enum LaunchOptions {
         let hour = UserDefaults.standard.integer(forKey: "PawmodoroClock")
         return DayPart.from(hour: hour)
     }()
+
+    /// Start at a particular place, e.g. `-PawmodoroPlace cloudspire`. Reaching
+    /// the far ones honestly takes a hundred and twenty sessions.
+    static let forcedPlace: Place? = {
+        guard arguments.contains("-PawmodoroPlace"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroPlace")
+        else { return nil }
+        return Place(rawValue: raw)
+    }()
+
+    /// Treat every place as reached, without seeding a session history.
+    static let unlockPlaces = isSet("-PawmodoroUnlockPlaces")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -81,6 +93,8 @@ enum LaunchOptions {
     static let resetState = false
     static let celebrate = false
     static let forcedDayPart: DayPart? = nil
+    static let forcedPlace: Place? = nil
+    static let unlockPlaces = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

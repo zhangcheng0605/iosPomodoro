@@ -42,8 +42,13 @@ struct BuddyView: View {
 
             Text(caption)
                 .font(.footnote)
-                .foregroundStyle(Theme.bark.opacity(0.7))
+                .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                // Its own backing, for the same reason the timer face has one:
+                // there is scenery behind this now, and it can be any colour.
+                .background(Capsule().fill(Theme.cream.opacity(0.78)))
                 .animation(.easeInOut, value: caption)
         }
         .accessibilityElement(children: .ignore)

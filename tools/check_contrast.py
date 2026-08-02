@@ -78,6 +78,94 @@ def over(top, bottom, alpha):
     return tuple(t * alpha + b * (1 - alpha) for t, b in zip(top, bottom))
 
 
+# Mirrors SceneryView.veil — how much theme background is laid back over the
+# artwork. This is the knob that keeps eight places legible in four times of
+# day without hand-tuning each combination.
+SCENE_VEIL = 0.52
+
+# Rows the UI puts text over, as a fraction of screen height, paired with the
+# opacity of the theme-coloured backing that text sits on.
+#
+# Every one of these has a backing now. Artwork can be any colour a place needs
+# it to be, and the text is never reading against it directly — the timer face
+# (TimerRingView), the caption capsule (BuddyView) and the paw row capsule
+# (ContentView) each carry their own. What this check proves is that those
+# backings are opaque enough to survive the darkest scene under them.
+TEXT_ROWS = (
+    (0.335, 0.82),   # countdown, on the timer face
+    (0.412, 0.82),   # status line, same face
+    (0.690, 0.78),   # buddy caption capsule
+    (0.718, 0.70),   # paw print capsule
+)
+
+PLACES = ("meadow", "woods", "harbor", "blossom",
+          "keep", "cloudspire", "peaks", "onsen")
+
+
+def check_scenes(palettes, minimum):
+    """Measure the real exported pixels behind the real text rows.
+
+    The palette maths above cannot see this: a place is an image, so the only
+    honest check is to load it, composite what the app composites, and look."""
+    try:
+        from PIL import Image
+    except ImportError:
+        print("  (Pillow not installed — skipping the scene check)")
+        return [], 0
+
+    failures = []
+    checked = 0
+
+    for place in PLACES:
+        for part in ("dawn", "day", "dusk", "night"):
+            name = f"scene_{place}_{part}"
+            path = os.path.join(
+                ROOT, "Pawmodoro", "Assets.xcassets",
+                f"{name}.imageset", f"{name}.png",
+            )
+            if not os.path.exists(path):
+                failures.append(f"{name}: missing — run tools/generate_scenes.py")
+                continue
+
+            image = Image.open(path).convert("RGB")
+            width, height = image.size
+            pixels = image.load()
+
+            for theme, colours in sorted(palettes.items()):
+                for appearance in ("light", "dark"):
+                    def c(key):
+                        return colours[key][appearance]
+
+                    text = c("bark")
+                    wash_hue = SKY_HUE[part]
+                    worst = (99.0, None)
+
+                    for fraction, backing in TEXT_ROWS:
+                        y = min(height - 1, int(height * fraction))
+                        # Every 8th column is plenty to catch a bad region and
+                        # keeps the whole sweep under a second.
+                        for x in range(0, width, 8):
+                            r, g, b = pixels[x, y]
+                            scene = (r / 255.0, g / 255.0, b / 255.0)
+                            background = over(c("cream"), scene, SCENE_VEIL)
+                            if wash_hue is not None:
+                                wash = over(c("cream"), c(wash_hue), SKY_MIX)
+                                background = over(wash, background, SKY_WASH_OPACITY)
+                            # The text's own backing, last.
+                            background = over(c("cream"), background, backing)
+                            ratio = contrast(text, background)
+                            checked += 1
+                            if ratio < worst[0]:
+                                worst = (ratio, (fraction, x))
+                    if worst[0] < minimum:
+                        row, col = worst[1]
+                        failures.append(
+                            f"{name}/{theme}/{appearance} at row {row:.3f} "
+                            f"x={col}: {worst[0]:.2f}:1"
+                        )
+    return failures, checked
+
+
 def main():
     with open(THEME_FILE) as handle:
         palettes = parse_palettes(handle.read())
@@ -128,7 +216,12 @@ def main():
                         f"{theme}/{appearance}/onAccent on {accent}: {ratio:.2f}:1"
                     )
 
-    print(f"checked {checked} pairs against {MINIMUM}:1")
+    scene_failures, scene_checked = check_scenes(palettes, MINIMUM)
+    failures.extend(scene_failures)
+    checked += scene_checked
+
+    print(f"checked {checked} pairs against {MINIMUM}:1 "
+          f"({scene_checked} of them sampled from real scene pixels)")
     if failures:
         print(f"\n{len(failures)} FAILED:")
         for line in failures:

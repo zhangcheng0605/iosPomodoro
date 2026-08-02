@@ -17,6 +17,14 @@ struct SettingsView: View {
                     BuddyPicker { showPaywall = true }
                 }
 
+                Section {
+                    PlacePicker { showPaywall = true }
+                } header: {
+                    Text("Where you are")
+                } footer: {
+                    Text("Finish focus sessions to travel further. Places you reach stay yours.")
+                }
+
                 Section("Durations") {
                     Stepper(
                         "Focus: \(engine.settings.focusMinutes) min",

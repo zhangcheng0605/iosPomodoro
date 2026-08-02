@@ -64,6 +64,9 @@ final class TimerEngine {
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
+        if let forced = LaunchOptions.forcedPlace {
+            self.settings.place = forced
+        }
     }
 
     // MARK: Derived values
@@ -190,9 +193,45 @@ final class TimerEngine {
             settings.theme = .sakura
             changed = true
         }
+        if settings.place.isPlus {
+            // Back to the furthest free place already earned, not all the way
+            // home: losing Plus shouldn't undo the journey.
+            settings.place = furthestFreePlace
+            changed = true
+        }
         if changed {
             settingsDidChange()
         }
+    }
+
+    // MARK: The journey
+
+    /// Whether a place has been reached, ignoring Plus. Entitlement is checked
+    /// separately so progress and purchase stay independent.
+    func hasReached(_ place: Place) -> Bool {
+        LaunchOptions.unlockPlaces || log.totalSessions >= place.requiredSessions
+    }
+
+    /// Sessions still to go before this place opens.
+    func sessionsRemaining(to place: Place) -> Int {
+        max(0, place.requiredSessions - log.totalSessions)
+    }
+
+    private var furthestFreePlace: Place {
+        Place.journey.last { !$0.isPlus && hasReached($0) } ?? .meadow
+    }
+
+    /// The place a just-finished session has newly opened up, if any.
+    ///
+    /// Called after the log has been written, so `totalSessions` already counts
+    /// the session being celebrated. Returns nil for the very first place,
+    /// which is where everyone starts.
+    func newlyReachedPlace() -> Place? {
+        guard let reached = Place.journey.last(where: { hasReached($0) }),
+              reached.requiredSessions > 0,
+              log.totalSessions == reached.requiredSessions
+        else { return nil }
+        return reached
     }
 
     /// Ambience follows the timer: it plays while running and rests otherwise.
@@ -248,8 +287,17 @@ final class TimerEngine {
         HapticsDirector.shared.complete()
         SoundPlayer.shared.playChime()
 
+        var arrival: Place?
         if finished == .focus {
             log.add(minutes: settings.focusMinutes)
+            // Checked after the log is written, so this session counts toward
+            // the threshold it might have just crossed.
+            arrival = newlyReachedPlace()
+            if let arrival, !arrival.isPlus {
+                // Free arrivals move you there; the Far Isles wait behind the
+                // paywall rather than switching to a place you can't keep.
+                settings.place = arrival
+            }
         }
         advance(natural: true)
 
@@ -259,7 +307,8 @@ final class TimerEngine {
             finished: finished,
             pawsEarned: filledPaws,
             pawsPerCycle: pawsPerCycle,
-            isCycleComplete: finished == .focus && phase == .longBreak
+            isCycleComplete: finished == .focus && phase == .longBreak,
+            arrivedAt: arrival
         )
     }
 

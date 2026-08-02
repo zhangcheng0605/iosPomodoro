@@ -39,7 +39,7 @@ README already commits to. When a scene below cites an image, it cites the
 
 ---
 
-## Phase F — Worlds & the Journey (the centerpiece)
+## Phase F — Worlds & the Journey (the centerpiece) ✅ built
 
 ### F1. The scenery pipeline
 
@@ -309,8 +309,8 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | # | Scope | Size | Note |
 |---|---|---|---|
 | 1 | [REVIEW_FINDINGS.md](REVIEW_FINDINGS.md) fixes + Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
-| 2 | F1 pipeline + Meadow Home + Whispering Woods + vignette | L | the pattern-setter — get the safe zone + contrast mode right here |
-| 3 | F2 remaining six scenes + journey unlocks + arrivals | L | mostly generator work once #2 lands |
+| ~~2~~ | ~~F1 pipeline + scenes + vignette~~ — **done**, all 8 places shipped | L | |
+| ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
 | 4 | H cast (four buddies + quirks + naming) | M | |
 | 5 | G sound studio (five loops + mixer) | M | |
 | 6 | I themes + M paywall/monetization copy | S | contrast tool makes this mechanical |

@@ -5,7 +5,12 @@ Store, TestFlight, or anyone's approval. Xcode installs it directly over a
 cable, and it behaves like any other app: home screen icon, notifications,
 Focus modes, the lot.
 
-There is exactly one catch, and it depends on which Apple account you use.
+Two limits worth knowing up front: it only works over a **cable**, from **your**
+Mac, onto a phone **you're holding**. To send it to someone else's iPhone —
+a friend, a tester — see [SHARE_WITH_TESTERS.md](SHARE_WITH_TESTERS.md); that
+needs the paid developer account and TestFlight.
+
+Beyond that there is one catch, and it depends on which Apple account you use.
 
 | | Free Apple ID | Apple Developer Program ($99/yr) |
 |---|---|---|

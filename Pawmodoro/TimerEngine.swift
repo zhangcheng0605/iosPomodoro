@@ -175,6 +175,13 @@ final class TimerEngine {
         NotificationManager.shared.schedulePhaseEnd(
             for: phase, buddyName: buddyName, at: end
         )
+        // Started fresh or moved on in place: one card per run, not one per
+        // phase. A no-op until the widget extension exists.
+        if settings.liveActivityEnabled {
+            LiveActivityController.shared.startOrUpdate(
+                phase: phase, buddyName: buddyName, endDate: end
+            )
+        }
         HapticsDirector.shared.start()
         refreshAmbience()
         startTicker()
@@ -187,6 +194,7 @@ final class TimerEngine {
         endDate = nil
         stopTicker()
         NotificationManager.shared.cancelPending()
+        LiveActivityController.shared.end()
         refreshAmbience()
     }
 
@@ -203,6 +211,7 @@ final class TimerEngine {
     func reset() {
         stopTicker()
         NotificationManager.shared.cancelPending()
+        LiveActivityController.shared.end()
         endDate = nil
         sighting = nil
         dream = nil
@@ -216,6 +225,7 @@ final class TimerEngine {
     func skipPhase() {
         stopTicker()
         NotificationManager.shared.cancelPending()
+        LiveActivityController.shared.end()
         endDate = nil
         // Whatever was out there simply leaves, and whatever was being dreamed
         // is not kept. Nothing is logged and nothing is said about it —
@@ -588,6 +598,7 @@ final class TimerEngine {
 
     private func completePhase() {
         stopTicker()
+        LiveActivityController.shared.end()
         endDate = nil
         remaining = 0
         lastHeartbeatSecond = nil

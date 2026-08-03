@@ -1,5 +1,24 @@
 # Adding the Live Activity (lock screen + Dynamic Island)
 
+> **The code is already written.** Everything below except *Step 1* has been
+> done in the repo:
+>
+> - `Pawmodoro/LiveActivity/PawmodoroActivityAttributes.swift` — shared type
+> - `Pawmodoro/LiveActivity/LiveActivityController.swift` — the app side, wired
+>   into `TimerEngine.start/pause/reset/skipPhase/completePhase`
+> - `PawmodoroWidgets/PawmodoroLiveActivity.swift` — the widget UI, **in no
+>   target yet** because the target doesn't exist
+> - `INFOPLIST_KEY_NSSupportsLiveActivities = YES` on both app build configs,
+>   so Step 2 is done too
+> - A "Lock screen countdown" toggle in Settings → Behaviour
+>
+> So the whole job is now: **create the target (Step 1), delete the files Xcode
+> generates for it, drag in `PawmodoroWidgets/PawmodoroLiveActivity.swift`, and
+> tick `PawmodoroActivityAttributes.swift` for both targets.** Five minutes
+> rather than forty-five. The app builds and runs right now without any of it —
+> `Activity.request` simply returns nil with no extension present.
+
+
 A running Pomodoro on the lock screen is the single best remaining feature for
 this app — you can see the countdown without unlocking your phone.
 

@@ -30,6 +30,10 @@ struct PomodoroSettings: Codable, Equatable {
     /// default: it is a lovely thing to opt into and an irritating thing to
     /// have imposed on you when you only wanted the timer.
     var settleInBeforeFocus: Bool = false
+    /// Show the countdown on the lock screen and in the Dynamic Island. On by
+    /// default — it costs nothing (the system draws it from an end date) and
+    /// it is the whole point of having built it.
+    var liveActivityEnabled: Bool = true
 
     init() {}
 
@@ -38,6 +42,7 @@ struct PomodoroSettings: Codable, Equatable {
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
+        case liveActivityEnabled
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -80,6 +85,9 @@ struct PomodoroSettings: Codable, Equatable {
         settleInBeforeFocus = try container.decodeIfPresent(
             Bool.self, forKey: .settleInBeforeFocus
         ) ?? fallback.settleInBeforeFocus
+        liveActivityEnabled = try container.decodeIfPresent(
+            Bool.self, forKey: .liveActivityEnabled
+        ) ?? fallback.liveActivityEnabled
     }
 
     // MARK: Naming

@@ -86,7 +86,7 @@ focus" in Shortcuts.
 
 | # | Scope | State |
 |---|---|---|
-| 1b | Phase D — Live Activity | **blocked on you** — 30 seconds in Xcode, see below |
+| 1b | Phase D — Live Activity | code **done**; only the Xcode target step is left, see below |
 | 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done, and seen running |
 | 11 | U the stray | done — **never compiled** |
 | 12 | T star atlas | done — **never compiled** |
@@ -128,12 +128,26 @@ session cracks it open for a face).
 
 ## The one thing only you can do
 
-**Phase D (Live Activity)** is the highest-visibility feature left and it is
-blocked on a manual step: Xcode has to create the Widget Extension target (File
-→ New → Target → Widget Extension, name `PawmodoroWidgets`, tick "Include Live
-Activity"). Hand-editing a second target into `project.pbxproj` risks making
-the project unopenable. Do that step and the rest is code — the recipe is
-already written in `docs/LIVE_ACTIVITY.md`.
+**Phase D (Live Activity) — the code is written; only the target isn't.**
+
+Everything except the target now exists: the shared attributes type, the
+controller wired into every entry and exit of a running phase, the widget UI,
+the `NSSupportsLiveActivities` build setting, and a Settings toggle. The app
+builds and runs as it is — with no extension present `Activity.request` just
+returns nil and the whole thing is a no-op.
+
+What needs Xcode, and genuinely cannot be done from Linux, is creating the
+Widget Extension *target*: File → New → Target → Widget Extension, name
+`PawmodoroWidgets`, tick "Include Live Activity". Adding a second target by
+hand means writing a PBXNativeTarget, its build phases, a product reference, a
+configuration list and an embed phase across eight sections of
+`project.pbxproj` with fresh UUIDs, unverifiable, where a mistake makes the
+project unopenable. Not worth it.
+
+Then: delete the files Xcode generates for the target, drag in
+`PawmodoroWidgets/PawmodoroLiveActivity.swift`, and tick
+`Pawmodoro/LiveActivity/PawmodoroActivityAttributes.swift` for **both**
+targets. Five minutes. `docs/LIVE_ACTIVITY.md` has the detail.
 
 ## What's true about the app now
 

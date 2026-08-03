@@ -80,11 +80,14 @@ struct SettingsView: View {
                     Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)
                     Toggle("Breathing ring on breaks", isOn: $engine.settings.breatheOnBreaks)
                     Toggle("Settle in before focus", isOn: $engine.settings.settleInBeforeFocus)
+                    Toggle("Lock screen countdown", isOn: $engine.settings.liveActivityEnabled)
                 } header: {
                     Text("Behaviour")
                 } footer: {
                     Text("Settling in takes three slow breaths before the "
-                         + "countdown starts. Tap anywhere to skip it.")
+                         + "countdown starts. Tap anywhere to skip it. The lock "
+                         + "screen countdown is drawn by the system, so it costs "
+                         + "no battery.")
                 }
 
                 plusSection

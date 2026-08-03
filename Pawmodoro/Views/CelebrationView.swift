@@ -102,100 +102,11 @@ struct CelebrationView: View {
     // MARK: The cycle card
 
     private var card: some View {
+        // Each branch lives in its own small view: as one six-way if/else
+        // expression, the type checker timed out on the very first Mac build
+        // this file ever saw.
         VStack(spacing: 10) {
-            if let seen = completion.saw {
-                // A sighting outranks the cycle card: it is the rarer thing,
-                // and the whole reason the journal exists.
-                Image(seen.sketchAsset)
-                    .interpolation(.none)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 46)
-                Text("You saw a \(seen.name.lowercased())")
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                    .multilineTextAlignment(.center)
-                Text(seen.note)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            } else if let bond = completion.bondReached {
-                // The rarest card of all — five of these in three hundred
-                // sessions. It outranks everything except a sighting.
-                HStack(spacing: 4) {
-                    ForEach(0..<Bond.allCases.count - 1, id: \.self) { index in
-                        Image(systemName: index < bond.hearts ? "heart.fill" : "heart")
-                            .font(.subheadline)
-                            .foregroundStyle(index < bond.hearts
-                                             ? Theme.blossom : Theme.bark.opacity(0.25))
-                    }
-                }
-                Text(bond.name)
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                Text(bond.blurb(buddy: buddyName))
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            } else if let dream = completion.dreamed {
-                // Quieter than a sighting and rarer than a cycle: the buddy
-                // did something while you weren't looking, and you get told.
-                DreamBubble(dream: dream, phase: 0.5)
-                    .frame(width: 62, height: 62)
-                Text("\(buddyName) dreamed of \(dream.subject)")
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                    .multilineTextAlignment(.center)
-                Text(dream.line)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            } else if let figure = completion.completedFigure {
-                // Rarer than a sighting: seven of these exist, ever. The figure
-                // draws itself rather than using an asset — it is layout, and
-                // this is the first time anyone sees it joined up.
-                ConstellationFigure(figure: figure, lit: figure.starCount, tint: accent)
-                    .frame(width: 92, height: 66)
-                Text("\(figure.name) is complete")
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                    .multilineTextAlignment(.center)
-                Text("Look up tonight.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            } else if let place = completion.arrivedAt {
-                // Arriving somewhere outranks finishing a cycle: it's the rarer
-                // thing, and it's the reason the journey exists.
-                Image(systemName: place.isPlus ? "lock.fill" : "map.fill")
-                    .font(.title2)
-                    .foregroundStyle(accent)
-                Text("You've reached \(place.name)")
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                    .multilineTextAlignment(.center)
-                Text(place.isPlus
-                     ? "\(place.blurb) — unlock it with Pawmodoro Plus"
-                     : place.blurb)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            } else {
-                HStack(spacing: 8) {
-                    ForEach(0..<completion.pawsPerCycle, id: \.self) { _ in
-                        Image(systemName: "pawprint.fill")
-                            .font(.headline)
-                            .foregroundStyle(accent)
-                    }
-                }
-                Text("Cycle complete")
-                    .font(.title3.bold())
-                    .foregroundStyle(Theme.bark)
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.bark.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            }
+            cardContent
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 22)
@@ -207,20 +118,131 @@ struct CelebrationView: View {
         .scaleEffect(showCard ? 1 : 0.85)
         .opacity(showCard ? 1 : 0)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            completion.saw.map { "You saw a \($0.name). \($0.note)" }
-                ?? completion.bondReached.map {
-                    "\($0.name). \($0.blurb(buddy: buddyName))"
-                }
-                ?? completion.dreamed.map {
-                    "\(buddyName) dreamed of \($0.subject). \($0.line)"
-                }
-                ?? completion.completedFigure.map {
-                    "\($0.name) is complete. Look up tonight."
-                }
-                ?? completion.arrivedAt.map { "You've reached \($0.name). \($0.blurb)" }
-                ?? "Cycle complete. \(subtitle)"
-        )
+        .accessibilityLabel(cardAccessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var cardContent: some View {
+        if let seen = completion.saw {
+            sightingCard(seen)
+        } else if let bond = completion.bondReached {
+            bondCard(bond)
+        } else if let dream = completion.dreamed {
+            dreamCard(dream)
+        } else if let figure = completion.completedFigure {
+            figureCard(figure)
+        } else if let place = completion.arrivedAt {
+            arrivalCard(place)
+        } else {
+            cycleCard
+        }
+    }
+
+    /// A sighting outranks the cycle card: it is the rarer thing, and the
+    /// whole reason the journal exists.
+    @ViewBuilder
+    private func sightingCard(_ seen: Species) -> some View {
+        Image(seen.sketchAsset)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFit()
+            .frame(height: 46)
+        title("You saw a \(seen.name.lowercased())")
+        footnote(seen.note)
+    }
+
+    /// The rarest card of all — five of these in three hundred sessions.
+    @ViewBuilder
+    private func bondCard(_ bond: Bond) -> some View {
+        HStack(spacing: 4) {
+            ForEach(0..<Bond.allCases.count - 1, id: \.self) { index in
+                Image(systemName: index < bond.hearts ? "heart.fill" : "heart")
+                    .font(.subheadline)
+                    .foregroundStyle(index < bond.hearts
+                                     ? Theme.blossom : Theme.bark.opacity(0.25))
+            }
+        }
+        title(bond.name)
+        footnote(bond.blurb(buddy: buddyName))
+    }
+
+    /// Quieter than a sighting and rarer than a cycle.
+    @ViewBuilder
+    private func dreamCard(_ dream: Dream) -> some View {
+        DreamBubble(dream: dream, phase: 0.5)
+            .frame(width: 62, height: 62)
+        title("\(buddyName) dreamed of \(dream.subject)")
+        footnote(dream.line)
+    }
+
+    /// Seven of these exist, ever. The figure draws itself — it is layout,
+    /// and this is the first time anyone sees it joined up.
+    @ViewBuilder
+    private func figureCard(_ figure: Constellation) -> some View {
+        ConstellationFigure(figure: figure, lit: figure.starCount, tint: accent)
+            .frame(width: 92, height: 66)
+        title("\(figure.name) is complete")
+        footnote("Look up tonight.")
+    }
+
+    @ViewBuilder
+    private func arrivalCard(_ place: Place) -> some View {
+        Image(systemName: place.isPlus ? "lock.fill" : "map.fill")
+            .font(.title2)
+            .foregroundStyle(accent)
+        title("You've reached \(place.name)")
+        footnote(place.isPlus
+                 ? "\(place.blurb) — unlock it with Pawmodoro Plus"
+                 : place.blurb)
+    }
+
+    @ViewBuilder
+    private var cycleCard: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<completion.pawsPerCycle, id: \.self) { _ in
+                Image(systemName: "pawprint.fill")
+                    .font(.headline)
+                    .foregroundStyle(accent)
+            }
+        }
+        title("Cycle complete")
+        footnote(subtitle)
+    }
+
+    private func title(_ text: String) -> some View {
+        Text(text)
+            .font(.title3.bold())
+            .foregroundStyle(Theme.bark)
+            .multilineTextAlignment(.center)
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(Theme.bark.opacity(0.7))
+            .multilineTextAlignment(.center)
+    }
+
+    /// Plain statements on purpose. As a six-way chain of optional maps and
+    /// nil-coalescing, this one expression was what actually timed out the
+    /// type checker — the view code around it was fine.
+    private var cardAccessibilityLabel: String {
+        if let seen = completion.saw {
+            return "You saw a \(seen.name). \(seen.note)"
+        }
+        if let bond = completion.bondReached {
+            return "\(bond.name). \(bond.blurb(buddy: buddyName))"
+        }
+        if let dream = completion.dreamed {
+            return "\(buddyName) dreamed of \(dream.subject). \(dream.line)"
+        }
+        if let figure = completion.completedFigure {
+            return "\(figure.name) is complete. Look up tonight."
+        }
+        if let place = completion.arrivedAt {
+            return "You've reached \(place.name). \(place.blurb)"
+        }
+        return "Cycle complete. \(subtitle)"
     }
 
     private var subtitle: String {

@@ -155,6 +155,10 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Seed a history with a one-day hole in it, so both streak states can be
+    /// looked at without waiting for a bad week.
+    static let seedGap = isSet("-PawmodoroSeedGap")
+
     /// Guarantee a sound this session, e.g. `-PawmodoroHear owlcall`. These
     /// are the rarest things in the app and depend on both a place and an
     /// hour; waiting for one is not a way to check a synth.
@@ -214,6 +218,7 @@ enum LaunchOptions {
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil
+    static let seedGap = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -242,6 +247,30 @@ enum LaunchOptions {
         if let nightSessions {
             seedNightSessions(nightSessions, into: defaults)
         }
+        if seedGap {
+            seedGappedHistory(into: defaults)
+        }
+    }
+
+    /// Twelve days of history with exactly one day missing, four days back.
+    /// The gentle streak should forgive it and say so; a second hole in the
+    /// same week should end it, which is what makes this worth eyeballing.
+    private static func seedGappedHistory(into defaults: UserDefaults) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var records: [SessionRecord] = []
+        for daysAgo in 0..<12 where daysAgo != 4 {
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: today)
+            else { continue }
+            for index in 0..<3 {
+                let minutesIn = 9 * 60 + index * 50
+                let endedAt = calendar.date(byAdding: .minute, value: minutesIn, to: day) ?? day
+                records.append(SessionRecord(endedAt: endedAt, minutes: 25))
+            }
+        }
+        let ordered = records.sorted { $0.endedAt < $1.endedAt }
+        guard let data = try? JSONEncoder().encode(ordered) else { return }
+        defaults.set(data, forKey: StorageKeys.sessions)
     }
 
     /// Adds `count` sessions that all finished at 10pm, on consecutive

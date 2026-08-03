@@ -3,12 +3,16 @@ import SwiftUI
 struct ContentView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
+    @State private var bridge = IntentBridge.shared
     @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
     @State private var showStats = false
     @State private var showPaywall = false
     @State private var showStudio = false
     @State private var showStrayNaming = false
+    /// True while the three breaths are running. The engine knows nothing
+    /// about this — `start()` is simply called later.
+    @State private var settling = false
     /// Whether a stage-two stray has been sent off this phase. Nothing about
     /// her is ever persisted as lost, so this lives no longer than the phase.
     @State private var straySpooked = false
@@ -43,6 +47,14 @@ struct ContentView: View {
 
                     TimerRingView()
 
+                    // Only while idle: mid-session is the wrong moment to be
+                    // offered a different session.
+                    if engine.runState == .idle {
+                        expeditionRow
+                            .padding(.top, 12)
+                            .transition(.opacity)
+                    }
+
                     BuddyView()
                         .padding(.top, 18)
 
@@ -58,6 +70,12 @@ struct ContentView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+
+                if settling {
+                    SettleInView(onFinish: finishSettling)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
 
                 if let completion = engine.completion {
                     CelebrationView(
@@ -127,6 +145,12 @@ struct ContentView: View {
             .onChange(of: strayWantsIn) { _, wants in
                 if wants { showStrayNaming = true }
             }
+            // The Action Button, Siri and Shortcuts all arrive here. Acted on
+            // in the view rather than in the intent because on a cold launch
+            // the intent fires before the engine exists.
+            .onChange(of: bridge.wantsFocus) { _, wants in
+                if wants { consumeIntent() }
+            }
             .fullScreenCover(isPresented: onboardingPresented) {
                 OnboardingView()
             }
@@ -143,6 +167,7 @@ struct ContentView: View {
                 // already at the last stage — the ordinary case, since she is
                 // reached between sessions — needs asking directly.
                 if strayWantsIn { showStrayNaming = true }
+                if bridge.wantsFocus { consumeIntent() }
                 if LaunchOptions.postcard, engine.album.cards.isEmpty {
                     engine.album.add(Postcard(
                         id: UUID(), date: Date(),
@@ -162,6 +187,31 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    /// Start, if we aren't already, and clear the flag either way so a second
+    /// press of the Action Button isn't swallowed.
+    private func consumeIntent() {
+        bridge.wantsFocus = false
+        guard engine.runState != .running, !settling else { return }
+        beginOrToggle()
+    }
+
+    /// The play button. Everything about the settle-in lives here and nowhere
+    /// else — the ritual is a delay in front of `start()`, not a timer state.
+    private func beginOrToggle() {
+        let startingFocus = engine.runState == .idle && engine.phase == .focus
+        guard startingFocus, engine.settings.settleInBeforeFocus else {
+            engine.toggle()
+            return
+        }
+        NotificationManager.shared.requestPermissionIfNeeded()
+        withAnimation(.easeInOut(duration: 0.35)) { settling = true }
+    }
+
+    private func finishSettling() {
+        withAnimation(.easeInOut(duration: 0.35)) { settling = false }
+        engine.start()
     }
 
     /// Onboarding shows until it has been completed once.
@@ -314,6 +364,47 @@ struct ContentView: View {
         )
     }
 
+    /// Three named crossings. One tap re-lengths all three phases; the dial on
+    /// the ring still fine-tunes, and the moment it does no chip is selected.
+    private var expeditionRow: some View {
+        let current = Expedition.matching(engine.settings)
+        return HStack(spacing: 8) {
+            ForEach(Expedition.allCases) { expedition in
+                let selected = current == expedition
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        expedition.apply(to: &engine.settings)
+                    }
+                    HapticsDirector.shared.detent()
+                } label: {
+                    VStack(spacing: 1) {
+                        Text(expedition.name)
+                            .font(.caption.weight(selected ? .bold : .medium))
+                        Text(expedition.summary)
+                            .font(.system(size: 9).monospacedDigit())
+                            .opacity(0.75)
+                    }
+                    .foregroundStyle(selected ? Theme.onAccent : Theme.bark.opacity(0.7))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule().fill(
+                            selected
+                                ? Theme.accent(for: engine.phase)
+                                : Theme.cream.opacity(0.72)
+                        )
+                    )
+                }
+                .buttonStyle(.squishy(pressedScale: 0.9))
+                .accessibilityLabel(
+                    "\(expedition.name): \(expedition.focusMinutes) minute focus, "
+                        + "\(expedition.shortBreakMinutes) minute break"
+                )
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+        }
+    }
+
     private var ambienceRow: some View {
         HStack(spacing: 8) {
             ForEach(Ambience.allCases) { option in
@@ -386,7 +477,7 @@ struct ContentView: View {
             .accessibilityLabel("Restart phase")
 
             Button {
-                engine.toggle()
+                beginOrToggle()
             } label: {
                 Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
                     .font(.largeTitle)

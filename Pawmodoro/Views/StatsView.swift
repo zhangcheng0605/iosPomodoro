@@ -69,8 +69,12 @@ struct StatsView: View {
             )
             statCard(
                 title: "Streak",
-                value: "\(log.currentStreak)",
-                caption: log.currentStreak == 1 ? "day in a row" : "days in a row",
+                value: "\(log.streak.days)",
+                // When a day was forgiven, the card says so rather than
+                // quietly pretending it didn't happen. Naming the missed day
+                // is the whole difference between a kind streak and a fudged
+                // one, and it is the sentence this feature exists for.
+                caption: streakCaption,
                 icon: "flame.fill"
             )
             statCard(
@@ -80,6 +84,15 @@ struct StatsView: View {
                 icon: "pawprint.fill"
             )
         }
+    }
+
+    private var streakCaption: String {
+        let streak = log.streak
+        if let missed = streak.forgiven.first {
+            let day = missed.formatted(.dateTime.weekday(.wide))
+            return "the boat stayed anchored on \(day)"
+        }
+        return streak.days == 1 ? "day in a row" : "days in a row"
     }
 
     private func statCard(title: String, value: String, caption: String, icon: String) -> some View {

@@ -96,30 +96,68 @@ final class SessionLog {
         return records.filter { $0.endedAt >= cutoff }.count
     }
 
-    /// Consecutive days with at least one session. Today not being done yet does
-    /// not break the streak — only a fully missed day does.
-    var currentStreak: Int {
+    /// A streak, and the days it forgave getting there.
+    struct Streak: Equatable {
+        var days: Int
+        /// Days with no session that the streak survived anyway, newest first.
+        var forgiven: [Date] = []
+
+        var isForgiving: Bool { !forgiven.isEmpty }
+    }
+
+    /// Days with at least one session — **allowing one missed day per calendar
+    /// week**.
+    ///
+    /// Streak apps run on guilt, and a counter that resets to zero for one bad
+    /// Tuesday teaches people to stop opening the app rather than to focus. So
+    /// the boat stays anchored for a day and the count keeps breathing. Two
+    /// missed days in the same week does end it: forgiving everything would
+    /// make the number mean nothing, which is its own kind of dishonest.
+    ///
+    /// `bestStreak` deliberately keeps the strict definition — one number that
+    /// is kind and one that is exact.
+    var currentStreak: Int { streak.days }
+
+    var streak: Streak {
         let calendar = Calendar.current
         let activeDays = Set(records.map { calendar.startOfDay(for: $0.endedAt) })
-        guard !activeDays.isEmpty else { return 0 }
+        guard !activeDays.isEmpty else { return Streak(days: 0) }
 
         var cursor = calendar.startOfDay(for: Date())
+        // Today not being done yet has never broken anything, and still doesn't.
         if !activeDays.contains(cursor) {
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: cursor),
-                  activeDays.contains(yesterday)
-            else {
-                return 0
-            }
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: cursor)
+            else { return Streak(days: 0) }
             cursor = yesterday
         }
 
-        var streak = 0
-        while activeDays.contains(cursor) {
-            streak += 1
-            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+        var days = 0
+        var forgiven: [Date] = []
+        var spent: Set<Int> = []
+
+        while true {
+            if activeDays.contains(cursor) {
+                days += 1
+            } else {
+                let week = calendar.component(.weekOfYear, from: cursor)
+                let year = calendar.component(.yearForWeekOfYear, from: cursor)
+                let key = year * 100 + week
+                // The second miss inside one week ends it.
+                if spent.contains(key) { break }
+                // And a gap is only forgiven when the streak actually continues
+                // behind it. Without this the walk runs backwards through all
+                // of history, forgiving one day a week forever.
+                guard let earlier = calendar.date(byAdding: .day, value: -1, to: cursor),
+                      activeDays.contains(earlier)
+                else { break }
+                spent.insert(key)
+                forgiven.append(cursor)
+            }
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor)
+            else { break }
             cursor = previous
         }
-        return streak
+        return Streak(days: days, forgiven: forgiven)
     }
 
     var bestStreak: Int {

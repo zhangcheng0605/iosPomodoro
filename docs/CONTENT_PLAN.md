@@ -428,7 +428,7 @@ retention driver that needs zero notifications):
 - Wave 2 hook: when the moon is full, a teaser line — "a good night for the
   water's edge."
 
-## Phase P — Gentle streaks (the boat stays anchored)
+## Phase P — Gentle streaks (the boat stays anchored) ✅ built
 
 Streak apps run on guilt; this one won't. **One missed day per calendar week
 does not break the streak** — the stats screen says "the boat stayed anchored
@@ -439,7 +439,7 @@ copy pass on the stats cards, and an almanac line. Debug:
 states. The best-streak stat keeps its strict definition so the number still
 means something.
 
-## Phase Q — The settle-in (three breaths before the boat leaves)
+## Phase Q — The settle-in (three breaths before the boat leaves) ✅ built
 
 An optional start ritual, off by default: pressing play first plays **three
 slow breaths** (~12s) — the ring swells with the existing breath animation,
@@ -450,7 +450,7 @@ the absolute-end-date timer logic is untouched. Tap anywhere to skip.
 3-2-1 fade. This is the cheapest "this app feels different" moment in the
 whole plan — competitors start with a click; Pawmodoro takes a breath.
 
-## Phase R — Expeditions & the Action Button
+## Phase R — Expeditions & the Action Button ✅ built
 
 - **Expedition presets**: three named recipes on the dial — Classic 25/5,
   Deep Dive 50/10, Sprint 15/3 — as chips under the ring while idle. One tap
@@ -461,6 +461,25 @@ whole plan — competitors start with a click; Pawmodoro takes a breath.
   the **Action Button** on Pro iPhones. "Press the side button and the boat
   sails" is an App Store screenshot caption, and it's ~40 lines.
 - Both are small; ship them together.
+
+### As built (P, Q and R)
+
+- **The gentle streak forgives one day per calendar week, and says so.** The
+  card reads "the boat stayed anchored on Tuesday" rather than quietly
+  pretending nothing happened — naming the missed day is the difference
+  between a kind streak and a fudged one. A *second* miss in the same week
+  still ends it, and two consecutive days always end it: forgiving everything
+  would make the number mean nothing. `bestStreak` keeps the strict rule.
+  The walk was checked against eight histories, including the ones that could
+  have made it loop forever.
+- **The settle-in is a delay in front of `start()`** and nothing else. The
+  engine has no idea it exists, so the absolute-end-date countdown is
+  untouched. Guarded against finishing twice, which a tap during the last
+  breath would otherwise do.
+- **`AppShortcutsProvider` phrases all contain `\(.applicationName)`** — Apple
+  rejects the shortcut outright otherwise, and it fails at runtime rather than
+  at build time, so it is the single riskiest thing in this commit to have
+  written without a device.
 
 ## The journal family — why these three are next
 
@@ -788,7 +807,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~12~~ | ~~**T star atlas**~~ — **done**: seven figures, 47 stars | S | zero new state, as planned |
 | ~~13~~ | ~~**S dream diary** + L wave 3~~ — **done** | M | |
 | 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
-| 15 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |
+| ~~15~~ | ~~**P gentle streaks + Q settle-in + R expeditions/Action Button**~~ — **done** | S | |
 | 16 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,

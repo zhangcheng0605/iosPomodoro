@@ -283,6 +283,13 @@ struct BuddyView: View {
         }
         switch engine.runState {
         case .idle:
+            // A preset nobody remarks on is a settings change; one the cat
+            // notices is a decision about the afternoon. Classic is the
+            // default and passes without comment.
+            if let expedition = Expedition.matching(engine.settings),
+               expedition != .classic {
+                return "\(name) is waiting — \(expedition.remark)"
+            }
             return isAtHome
                 ? "\(name) is home — \(engine.settings.place.name)"
                 : "\(name) is waiting for you"

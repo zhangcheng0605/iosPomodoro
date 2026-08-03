@@ -26,6 +26,10 @@ struct PomodoroSettings: Codable, Equatable {
     var ambienceVolume: Double = 0.8
     /// Let the app choose the track, matched to the place and the hour.
     var radioMode: Bool = false
+    /// Three slow breaths before a focus session actually starts. Off by
+    /// default: it is a lovely thing to opt into and an irritating thing to
+    /// have imposed on you when you only wanted the timer.
+    var settleInBeforeFocus: Bool = false
 
     init() {}
 
@@ -33,7 +37,7 @@ struct PomodoroSettings: Codable, Equatable {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
-        case music, musicVolume, ambienceVolume, radioMode
+        case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -73,6 +77,9 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.ambienceVolume
         radioMode = try container.decodeIfPresent(Bool.self, forKey: .radioMode)
             ?? fallback.radioMode
+        settleInBeforeFocus = try container.decodeIfPresent(
+            Bool.self, forKey: .settleInBeforeFocus
+        ) ?? fallback.settleInBeforeFocus
     }
 
     // MARK: Naming

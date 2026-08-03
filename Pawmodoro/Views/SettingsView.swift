@@ -75,10 +75,16 @@ struct SettingsView: View {
                     ThemePicker { showPaywall = true }
                 }
 
-                Section("Behaviour") {
+                Section {
                     Toggle("Auto-start next phase", isOn: $engine.settings.autoStartNextPhase)
                     Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)
                     Toggle("Breathing ring on breaks", isOn: $engine.settings.breatheOnBreaks)
+                    Toggle("Settle in before focus", isOn: $engine.settings.settleInBeforeFocus)
+                } header: {
+                    Text("Behaviour")
+                } footer: {
+                    Text("Settling in takes three slow breaths before the "
+                         + "countdown starts. Tap anywhere to skip it.")
                 }
 
                 plusSection

@@ -3,15 +3,39 @@
 A SwiftUI Pomodoro timer for iOS 17+. No dependencies, no package manager, no
 network calls, no test target. The whole app is `Pawmodoro/`.
 
-**Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says
-exactly where the build order stopped and what is blocked on the user.
+> ## ⚠️ Read this before changing any code
+>
+> **The last fifteen commits have never been compiled and never been run.** Not
+> once, in any simulator, on any device. They were written on Linux — no Xcode,
+> no Swift toolchain — and pushed unverified. That is everything from *the
+> stray* (`73158df`) onward: the stray, the star atlas, the dream diary,
+> journal wave 3, micro-encounters, seasons, the scene toys, eye-tracking, the
+> snow-globe shake, gentle streaks, the settle-in, expeditions, the App Intent,
+> bond levels, Pip and Bramble, and the whole app side of the Live Activity.
+>
+> So: **expect the first build to fail, and treat every one of those features
+> as unseen** — not just unverified syntax, but unverified layout, placement,
+> timing and behaviour. `python3 tools/check_swift.py` passes on all of it, and
+> it is not a type checker; it cannot see argument labels, inference or SwiftUI
+> misuse, and it has never looked at a pixel.
+>
+> **If you have a Mac: build first, fix the errors, then walk the feature table
+> in `docs/RESUME_HERE.md` before building anything new.** Two of its rows are
+> *rules* rather than looks — Luna must show no dream bubble at night, and
+> dragging the scene during a focus phase must do nothing at all.
 
-**Current focus:** two plan documents, worked phase by phase.
-`docs/DELIGHT_PLAN.md` covers feel (phases A–C are built; D needs a 30-second
-Xcode step from the user first; E pending). `docs/CONTENT_PLAN.md` covers
-content (journey worlds, sound studio, new buddies, themes, postcards) and
-has the build order that interleaves both. Known quirk: the iOS 26.3
-simulator runtime is missing the primary emoji font, so emoji in `Text`
+**Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
+where the build order stopped, what has and hasn't been seen running, and what
+is blocked on the user.
+
+**Current focus:** two plan documents, worked phase by phase, and **both are
+now built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
+running, D (Live Activity) written but needing a one-time Xcode target step,
+E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers
+content and its build order is finished except alternate app icons. Each phase
+carries an **As built** section recording where the code diverged from the
+plan — read the relevant one before touching that code. Known quirk: the iOS
+26.3 simulator runtime is missing the primary emoji font, so emoji in `Text`
 views render as `?` boxes in the pane (the app itself no longer uses any).
 
 ## Running it
@@ -195,8 +219,9 @@ There are no tests. A change is verified by building and looking at it:
 
 ## Watch out
 
-- The code was written without a Mac, so parts of it have never been compiled.
-  A build error is more likely to be a real slip than an environment problem.
+- The code was written without a Mac, so much of it has never been compiled —
+  see the warning at the top of this file for exactly how much. A build error
+  is far more likely to be a real slip than an environment problem.
 - `Pawmodoro/` is a file-system synchronized group: new files are picked up
   automatically, and `project.pbxproj` doesn't need editing to add one.
 - Product IDs in `Store/StoreIDs.swift` must match the bundle ID prefix and

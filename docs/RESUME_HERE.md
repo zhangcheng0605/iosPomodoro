@@ -1,12 +1,27 @@
 # Resume here
 
-One long Linux session took the build order from item 11 to the end of item 16,
-minus three slices that genuinely need a Mac. Working tree clean, everything
-pushed to `claude/continue-plan-doc-b4ct6a`.
+One long Linux session took the build order from item 11 to the end of item 16
+and cleared the backlog behind it. Working tree clean, everything pushed to
+`claude/continue-plan-doc-b4ct6a`. Two items remain and neither is blocked.
 
-**Nothing built in that session has ever been compiled.** That is the standing
-risk and it is now seven phases deep. Read the next section before writing any
-more code.
+## ⚠️ None of it has been compiled, and none of it has been run
+
+Fifteen commits — everything from `73158df` onward — were written on Linux with
+no Xcode and no Swift toolchain, and pushed **unverified**. Not compiled once.
+Not launched once, in any simulator, on any device. Nobody has *looked* at a
+single one of these features.
+
+That means the risk is not only "will it build". It is also: does the stray sit
+where she should, is the dream bubble in the right place, do the constellations
+read at that opacity, does a stone skip convincingly, does the settle-in feel
+like twelve seconds or like forty. `tools/check_swift.py` passes on all of it
+and closes the mechanical classes — brackets, `#if DEBUG` parity, missing
+assets, non-exhaustive switches, constellation links that would crash — but it
+is not a type checker and it has never seen a pixel.
+
+**Build first. Fix what the compiler says. Then walk the table below before
+writing anything new.** Two of its rows are rules rather than looks, and those
+are the ones worth checking hardest.
 
 ## How this project is actually built
 

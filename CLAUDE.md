@@ -85,6 +85,18 @@ first-launch notification prompt, and the paywall's locked state.
 
 ## Verifying a change
 
+**Run `python3 tools/check_swift.py` before ending any session written without
+a Mac.** Most of this app is written on Linux and compiled days later, so a
+typo costs Mac time — which is the scarce resource here, not Linux time. It
+closes the mechanical error classes a compiler would catch instantly:
+unbalanced brackets, `#if DEBUG`/`#else` drift in `LaunchOptions` (a flag
+missing its Release stand-in builds fine in Debug and only fails the Release
+build), asset names with no imageset, `StorageKeys` missing from `.all`,
+`Theme.` and `LaunchOptions.` members that don't exist, and non-exhaustive
+switches over the app's own enums. Each of those seven is verified to actually
+fail the checker, not just assumed to. It is **not** a type checker and cannot
+become one: argument labels, inference and SwiftUI misuse still need Xcode.
+
 There are no tests. A change is verified by building and looking at it:
 
 1. `tools/run-sim.sh --demo --headless`

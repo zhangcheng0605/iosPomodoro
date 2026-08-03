@@ -3,6 +3,28 @@
 Last session built **the stray** (item 11) on a machine with no Xcode. Working
 tree clean, everything pushed.
 
+## How this project is actually built
+
+Weekdays are a Windows office and a Linux container: no Mac, no Xcode, no
+compiler. Evenings and weekends are the MacBook, and that time is short. So
+the rule is: **features get written on Linux, and Mac time is only for things
+that genuinely need a Mac.** Anything a machine can check without Xcode should
+already have been checked before the Mac ever sees it.
+
+That is what `tools/check_swift.py` is for — run it before ending any session,
+along with `check_contrast.py` and `check_stray.py`. It closes the mechanical
+error classes (brackets, `#if DEBUG` parity, missing assets, missing enum
+cases, unknown `Theme.`/`LaunchOptions.` members). It is not a type checker:
+argument labels, inference and SwiftUI misuse still land on the Mac.
+
+**A Swift toolchain would help and isn't installable here.** The environment's
+network policy allows package registries only, so `download.swift.org` returns
+403. Allowing that host would let a future session run `swiftc -parse` over
+everything and fully type-check the pure-Foundation model files — a real but
+modest improvement, since Linux has no SwiftUI or UIKit either way. It is an
+environment setting, changeable at
+https://code.claude.com/docs/en/claude-code-on-the-web.
+
 ## The one line to paste
 
 > read docs/RESUME_HERE.md, then continue the build order in
@@ -91,6 +113,7 @@ rest is code — the recipe is already written in `docs/LIVE_ACTIVITY.md`.
 ## Verification loop (do this every session)
 
 ```sh
+python3 tools/check_swift.py             # every session, Mac or not
 tools/run-sim.sh --demo --headless
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
@@ -104,6 +127,10 @@ in `CLAUDE.md` if you added one, and commit.
 
 ## Things learned the hard way — don't relearn them
 
+- **A checker that passes on its first run has proved nothing.** Every rule in
+  `check_swift.py` was verified by deliberately breaking the code and watching
+  it fail. One of the seven appeared not to work; the rule was fine and the
+  test mutation hadn't applied. Test the test.
 - **"Not sky" is not "standing on something".** The first stray check asserted
   she wasn't in the air and passed — while she sat on the open sea at Harbor
   Isle. An assertion that names the wrong complement is worse than none,

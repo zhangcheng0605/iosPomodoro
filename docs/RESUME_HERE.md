@@ -66,6 +66,12 @@ first. Each row is one launch.
 | Expeditions | idle | Three chips under the ring; tapping one re-lengths all phases and the buddy remarks |
 | Seasons | `-PawmodoroSeason autumn`, `sakura`, `winter` | Particles. `fireflies` and `lanterns` also need `-PawmodoroClock 22` |
 | Bond | `-PawmodoroBond 150` | Heart meter on the stats screen at "Devoted"; try 10, 30, 75, 300 |
+| Scene toys | idle or on a break, at `woods`/`harbor`/`onsen` | Tap water for rings; swipe to skip a stone 1–4 times |
+| …and at night | `-PawmodoroClock 22` | Drag: one firefly follows your finger, then leaves |
+| **Focus is sacred** | start a focus phase, then drag the scene | **Nothing happens.** The layer goes deaf during focus — a rule, not a look |
+| Eyes follow | drag anywhere while the buddy is awake | Pupils glance left/right. Outranked by a bounce or a stir |
+| Snow globe | shake the phone (⌃⌘Z in the simulator) | Motes go round once and settle |
+| Micro-encounters | `-PawmodoroPlace meadow`, several day sessions | One in twelve: a butterfly on the nose around 60% through |
 
 Two things nothing has verified, and a screenshot settles both in a second:
 
@@ -90,8 +96,8 @@ focus" in Shortcuts.
 | 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done, and seen running |
 | 11 | U the stray | done — **never compiled** |
 | 12 | T star atlas | done — **never compiled** |
-| 13 | S dream diary + L wave 3 (regulars, things heard) | done — **never compiled** |
-| 14 | J seasons | done — **never compiled**; toys and icons deferred, below |
+| 13 | S dream diary + L wave 3 + L5 micro-encounters | done — **never compiled** |
+| 14 | J seasons, toys, buddy magic | done — **never compiled**; icons still open, below |
 | 15 | P gentle streaks + Q settle-in + R expeditions & Action Button | done — **never compiled** |
 | 16 | E1 bond + Pip & Bramble | done — **never compiled**; E2 accessories deferred, below |
 
@@ -100,25 +106,25 @@ recording where the code and the plan diverged. Read the relevant one before
 touching that code — several record a decision that looks arbitrary until you
 know why.
 
-## What is deliberately not built
+## What is still open
 
-Three slices, all left for the same reason: they need a device more than they
-need code.
+Two things, and neither is blocked — they are simply what was left when the
+session ended. Both can be done from Linux.
 
-1. **Phase J's touch toys and buddy magic** — pond ripples, skipping stones,
-   the trailing firefly, petal gusts, eye-tracking, snow-globe shake. Every one
-   is a gesture or a motion event tuned by feel, over a scenery layer that is
-   currently `allowsHitTesting(false)`. Writing six of those blind would give
-   you six things to debug at once instead of one.
-2. **Phase J's alternate app icons.** The generator half is easy. The project
-   half needs `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS` plus alternate
-   icon entries in the target's build settings — an unverifiable edit to
-   `project.pbxproj`, which is exactly what CLAUDE.md warns about. Do the Xcode
-   side first and the picker is twenty lines.
-3. **Phase E2's accessories.** Five items per posture family per buddy is
-   roughly two hundred imagesets, each needing to line up against a head anchor
-   nobody has checked on a device. A generator afternoon plus a verification
-   pass, not a slice.
+1. **Alternate app icons.** The generator half is easy: one icon per buddy out
+   of `make_icon` in `generate_assets.py`, as `.appiconset` folders. The
+   project half needs `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`
+   and one `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` entry — additions to
+   an existing build-settings dict, the same shape as the
+   `NSSupportsLiveActivities` line already added safely, *not* a new target.
+   Then `UIApplication.setAlternateIconName` and a picker in Settings.
+2. **Phase E2's accessories.** Five items per posture family per buddy is
+   roughly two hundred imagesets. Verifiable from here despite the earlier
+   note to the contrary: write a `check_accessories.py` that composites each
+   overlay onto each frame and asserts it lands on the head, exactly the way
+   `check_stray.py` measures the stray. Volume is the cost, not uncertainty.
+
+**Everything else in both plans is built.**
 
 **Pip and Bramble** are built — the eleventh and twelfth buddies. Check them
 with `-PawmodoroBuddy otter` (start a session, then skip to the break: he

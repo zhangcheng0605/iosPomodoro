@@ -492,8 +492,8 @@ restraint *is* the brand.
 
 ### Done when
 
-- `-PawmodoroBond <sessions>` (new flag, `-Key value` form seeding the
-  session log length) previews every level and unlock without grinding.
+- ~~`-PawmodoroBond <sessions>`~~ **built** — seeds the log to a given
+  length, previewing every bond level and journey unlock without grinding.
 - Accessory aligns on every frame of every pose for cat + dog (full frame
   sets) and on base poses for the Plus buddies.
 - Plus revocation path: with a Plus accessory equipped, launching without

@@ -70,6 +70,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
+| `-PawmodoroBond <n>` | Seed n completed sessions, to preview every bond level |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

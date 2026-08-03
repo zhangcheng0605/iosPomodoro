@@ -65,7 +65,7 @@ first. Each row is one launch.
 | Settle-in | Settings → Behaviour → on, then play | Three breaths, ~12s, tap to skip |
 | Expeditions | idle | Three chips under the ring; tapping one re-lengths all phases and the buddy remarks |
 | Seasons | `-PawmodoroSeason autumn`, `sakura`, `winter` | Particles. `fireflies` and `lanterns` also need `-PawmodoroClock 22` |
-| Bond | `-PawmodoroSeedStats` | Heart meter on the stats screen |
+| Bond | `-PawmodoroBond 150` | Heart meter on the stats screen at "Devoted"; try 10, 30, 75, 300 |
 
 Two things nothing has verified, and a screenshot settles both in a second:
 

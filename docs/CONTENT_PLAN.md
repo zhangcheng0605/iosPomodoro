@@ -835,7 +835,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~11~~ | ~~**U the stray**~~ — **done**: five stages, Soot joins free | M | built without a Mac; see the note under Phase U |
 | ~~12~~ | ~~**T star atlas**~~ — **done**: seven figures, 47 stars | S | zero new state, as planned |
 | ~~13~~ | ~~**S dream diary** + L wave 3~~ — **done** | M | |
-| 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
+| 14 | J — ~~seasons~~ **done** · toys + icons open | M | both need a device; see Phase J |
 | ~~15~~ | ~~**P gentle streaks + Q settle-in + R expeditions/Action Button**~~ — **done** | S | |
 | 16 | E1 bond ✅ built · E2 accessories + Pip/Bramble still open | M | see DELIGHT_PLAN Phase E |
 

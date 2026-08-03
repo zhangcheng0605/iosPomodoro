@@ -155,6 +155,15 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Seed the log to a given length, e.g. `-PawmodoroBond 150`. Previews
+    /// every bond level — and, incidentally, every journey unlock — without
+    /// grinding three hundred sessions.
+    static let bondSessions: Int? = {
+        guard arguments.contains("-PawmodoroBond") else { return nil }
+        let count = UserDefaults.standard.integer(forKey: "PawmodoroBond")
+        return count > 0 ? count : nil
+    }()
+
     /// Force a time of year, e.g. `-PawmodoroSeason autumn`. Most of the year
     /// there is no season at all, and the ones there are last a fortnight.
     static let forcedSeason: Season? = {
@@ -229,6 +238,7 @@ enum LaunchOptions {
     static let forcedHeard: Heard? = nil
     static let seedGap = false
     static let forcedSeason: Season? = nil
+    static let bondSessions: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -260,6 +270,29 @@ enum LaunchOptions {
         if seedGap {
             seedGappedHistory(into: defaults)
         }
+        if let bondSessions {
+            seedSessionCount(bondSessions, into: defaults)
+        }
+    }
+
+    /// Exactly `count` completed sessions, spread back over the past fortnight
+    /// so the streak and the charts stay plausible. Replaces whatever was
+    /// there: this flag is about a total, and appending would make it a lie.
+    private static func seedSessionCount(_ count: Int, into defaults: UserDefaults) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var records: [SessionRecord] = []
+        for index in 0..<count {
+            let daysAgo = index % 14
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: today)
+            else { continue }
+            let minutesIn = 9 * 60 + (index / 14) * 35
+            let endedAt = calendar.date(byAdding: .minute, value: minutesIn, to: day) ?? day
+            records.append(SessionRecord(endedAt: endedAt, minutes: 25))
+        }
+        let ordered = records.sorted { $0.endedAt < $1.endedAt }
+        guard let data = try? JSONEncoder().encode(ordered) else { return }
+        defaults.set(data, forKey: StorageKeys.sessions)
     }
 
     /// Twelve days of history with exactly one day missing, four days back.

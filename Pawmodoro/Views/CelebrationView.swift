@@ -119,6 +119,24 @@ struct CelebrationView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.7))
                     .multilineTextAlignment(.center)
+            } else if let bond = completion.bondReached {
+                // The rarest card of all — five of these in three hundred
+                // sessions. It outranks everything except a sighting.
+                HStack(spacing: 4) {
+                    ForEach(0..<Bond.allCases.count - 1, id: \.self) { index in
+                        Image(systemName: index < bond.hearts ? "heart.fill" : "heart")
+                            .font(.subheadline)
+                            .foregroundStyle(index < bond.hearts
+                                             ? Theme.blossom : Theme.bark.opacity(0.25))
+                    }
+                }
+                Text(bond.name)
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                Text(bond.blurb(buddy: buddyName))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
             } else if let dream = completion.dreamed {
                 // Quieter than a sighting and rarer than a cycle: the buddy
                 // did something while you weren't looking, and you get told.
@@ -191,6 +209,9 @@ struct CelebrationView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             completion.saw.map { "You saw a \($0.name). \($0.note)" }
+                ?? completion.bondReached.map {
+                    "\($0.name). \($0.blurb(buddy: buddyName))"
+                }
                 ?? completion.dreamed.map {
                     "\(buddyName) dreamed of \($0.subject). \($0.line)"
                 }

@@ -12,6 +12,7 @@ struct StatsView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     AlmanacView()
+                    bondCard
                     summaryGrid
                     weekChart
                     if log.totalSessions == 0 {
@@ -84,6 +85,51 @@ struct StatsView: View {
                 icon: "pawprint.fill"
             )
         }
+    }
+
+    /// The bond meter. Five hearts and a line, and deliberately no bar: this
+    /// is a thing to notice having happened, not a target to chase.
+    private var bondCard: some View {
+        let bond = engine.bond
+        let name = engine.buddyName
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "heart.fill")
+                Text("You and \(name)")
+                Spacer()
+                Text(bond.name)
+                    .foregroundStyle(Theme.bark.opacity(0.75))
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.blossom)
+
+            HStack(spacing: 6) {
+                ForEach(0..<Bond.allCases.count - 1, id: \.self) { index in
+                    Image(systemName: index < bond.hearts ? "heart.fill" : "heart")
+                        .font(.title3)
+                        .foregroundStyle(index < bond.hearts
+                                         ? Theme.blossom : Theme.bark.opacity(0.22))
+                }
+            }
+
+            Text(bond.blurb(buddy: name))
+                .font(.caption)
+                .foregroundStyle(Theme.bark.opacity(0.65))
+
+            if let togo = Bond.sessionsToNext(from: log.totalSessions) {
+                Text("\(togo) more session\(togo == 1 ? "" : "s") together")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.bark.opacity(0.45))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "You and \(name): \(bond.name), \(bond.hearts) of 5. "
+                + bond.blurb(buddy: name)
+        )
     }
 
     private var streakCaption: String {

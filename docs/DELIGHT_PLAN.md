@@ -441,13 +441,13 @@ no App Group. If an App Group is added, `StorageKeys` moves to
 
 ---
 
-## Phase E — Bond & keepsakes
+## Phase E — Bond & keepsakes — *E1 built, E2 open*
 
 **Goal:** a reason to return tomorrow that isn't guilt. The buddy's bond
 grows with completed sessions; milestones unlock accessories it actually
 wears.
 
-### E1. Bond level
+### E1. Bond level ✅ built
 
 - Derived, not stored: thresholds over `log.totalSessions`
   ([SessionLog.swift](../Pawmodoro/Model/SessionLog.swift)) — 10 / 30 / 75 /
@@ -456,7 +456,16 @@ wears.
   ([StatsView.swift](../Pawmodoro/Views/StatsView.swift)) and in the
   celebration card when it advances.
 
-### E2. Accessories
+### E2. Accessories — open
+
+Not started, and the reason is arithmetic: five accessories drawn per posture
+family per buddy is roughly two hundred imagesets, and every one of them has to
+line up with a head anchor that has never been checked on a device. That is a
+generator afternoon plus a verification pass, not a slice. E1 shipped without
+it and stands on its own — the bond is visible on the stats screen and lands as
+a celebration card five times in three hundred sessions.
+
+### E2. Accessories (original spec)
 
 - Generator work: 5 accessories (red bandana, night-cap, scarf, tiny crown,
   round glasses) drawn once per *posture family* per buddy as transparent

@@ -837,7 +837,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~13~~ | ~~**S dream diary** + L wave 3~~ — **done** | M | |
 | 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
 | ~~15~~ | ~~**P gentle streaks + Q settle-in + R expeditions/Action Button**~~ — **done** | S | |
-| 16 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |
+| 16 | E1 bond ✅ built · E2 accessories + Pip/Bramble still open | M | see DELIGHT_PLAN Phase E |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,
 screenshots light/dark, `python3 tools/check_contrast.py`, Release build,

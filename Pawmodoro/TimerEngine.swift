@@ -143,6 +143,9 @@ final class TimerEngine {
     /// Paw prints to show as earned in the current cycle.
     var filledPaws: Int { min(focusInCycle, pawsPerCycle) }
 
+    /// How well you and your buddy know each other, counted out of the log.
+    var bond: Bond { Bond.level(at: log.totalSessions) }
+
     /// How far the stray has come. Counted out of the log every time it's read
     /// rather than stored, which is what makes it impossible to get out of step
     /// with the history it describes.
@@ -596,11 +599,14 @@ final class TimerEngine {
         var arrival: Place?
         var seen: Species?
         var figure: Constellation?
+        var bond: Bond?
         if finished == .focus {
             // Read either side of the write, so a figure can only be announced
             // by the one session that actually finished it.
             let nightsBefore = log.nightSessions
+            let sessionsBefore = log.totalSessions
             log.add(minutes: settings.focusMinutes)
+            bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
             figure = ConstellationAtlas.justCompleted(
                 before: nightsBefore, after: log.nightSessions
             )
@@ -668,7 +674,8 @@ final class TimerEngine {
             arrivedAt: arrival,
             saw: seen,
             completedFigure: figure,
-            dreamed: finished == .focus ? dream : nil
+            dreamed: finished == .focus ? dream : nil,
+            bondReached: bond
         )
         sighting = nil
         dream = nil

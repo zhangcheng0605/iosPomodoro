@@ -20,6 +20,8 @@ struct PhaseCompletion: Identifiable, Equatable {
     var completedFigure: Constellation?
     /// Set when the buddy dreamed and you stayed long enough to keep it.
     var dreamed: Dream?
+    /// Set when this session was the one that deepened the bond a level.
+    var bondReached: Bond?
 
     /// Only finishing focus earns confetti; breaks get a quieter beat, so the
     /// big moment stays rare enough to keep meaning something.
@@ -30,6 +32,6 @@ struct PhaseCompletion: Identifiable, Equatable {
     /// have happened.
     var showsCard: Bool {
         isCycleComplete || arrivedAt != nil || saw != nil
-            || completedFigure != nil || dreamed != nil
+            || completedFigure != nil || dreamed != nil || bondReached != nil
     }
 }

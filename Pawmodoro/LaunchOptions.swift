@@ -50,6 +50,23 @@ enum LaunchOptions {
 
     private static func isSet(_ name: String) -> Bool { arguments.contains(name) }
 
+    /// The token after a flag, read from the argument list itself.
+    ///
+    /// `UserDefaults`' automatic `-key value` parsing pairs tokens blindly, so
+    /// a valueless flag followed by a valued one — `-PawmodoroFillJournal
+    /// -PawmodoroDream memory` — consumes `-PawmodoroDream` as FillJournal's
+    /// "value" and the dream flag silently vanishes. Every valued flag reads
+    /// through this instead, which makes the whole debug surface immune to
+    /// argument order. Found the hard way, mid-verification.
+    private static func value(after name: String) -> String? {
+        let all = ProcessInfo.processInfo.arguments
+        guard let index = all.firstIndex(of: name), index + 1 < all.count else {
+            return nil
+        }
+        let next = all[index + 1]
+        return next.hasPrefix("-") ? nil : next
+    }
+
     /// The three flags you almost always want together.
     private static let demo = isSet("-PawmodoroDemo")
 
@@ -86,7 +103,7 @@ enum LaunchOptions {
     /// Checking all four skies otherwise means waiting for the day to go round.
     static let forcedDayPart: DayPart? = {
         guard arguments.contains("-PawmodoroClock") else { return nil }
-        let hour = UserDefaults.standard.integer(forKey: "PawmodoroClock")
+        let hour = value(after: "-PawmodoroClock").flatMap(Int.init) ?? 12
         return DayPart.from(hour: hour)
     }()
 
@@ -94,7 +111,7 @@ enum LaunchOptions {
     /// the far ones honestly takes a hundred and twenty sessions.
     static let forcedPlace: Place? = {
         guard arguments.contains("-PawmodoroPlace"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroPlace")
+              let raw = value(after: "-PawmodoroPlace")
         else { return nil }
         return Place(rawValue: raw)
     }()
@@ -107,7 +124,7 @@ enum LaunchOptions {
     /// reach by tapping.
     static let forcedBuddy: Buddy? = {
         guard arguments.contains("-PawmodoroBuddy"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroBuddy")
+              let raw = value(after: "-PawmodoroBuddy")
         else { return nil }
         return Buddy(rawValue: raw)
     }()
@@ -117,7 +134,7 @@ enum LaunchOptions {
     /// way to check an animation.
     static let forcedSighting: Species? = {
         guard arguments.contains("-PawmodoroSighting"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroSighting")
+              let raw = value(after: "-PawmodoroSighting")
         else { return nil }
         return Species(rawValue: raw)
     }()
@@ -129,7 +146,7 @@ enum LaunchOptions {
     /// appearances is sixteen looks to check.
     static let forcedTheme: AppTheme? = {
         guard arguments.contains("-PawmodoroTheme"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroTheme")
+              let raw = value(after: "-PawmodoroTheme")
         else { return nil }
         return AppTheme(rawValue: raw)
     }()
@@ -138,7 +155,7 @@ enum LaunchOptions {
     /// fortnight for the moon rabbit is not a way to check a sprite.
     static let forcedMoon: Bool? = {
         guard arguments.contains("-PawmodoroMoon"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroMoon")
+              let raw = value(after: "-PawmodoroMoon")
         else { return nil }
         return raw.lowercased() == "full"
     }()
@@ -152,7 +169,7 @@ enum LaunchOptions {
     /// Start with a track selected, e.g. `-PawmodoroTrack kettle_song`.
     static let forcedTrack: String? = {
         guard arguments.contains("-PawmodoroTrack") else { return nil }
-        return UserDefaults.standard.string(forKey: "PawmodoroTrack")
+        return value(after: "-PawmodoroTrack")
     }()
 
     /// Seed the log to a given length, e.g. `-PawmodoroBond 150`. Previews
@@ -160,7 +177,7 @@ enum LaunchOptions {
     /// grinding three hundred sessions.
     static let bondSessions: Int? = {
         guard arguments.contains("-PawmodoroBond") else { return nil }
-        let count = UserDefaults.standard.integer(forKey: "PawmodoroBond")
+        let count = value(after: "-PawmodoroBond").flatMap(Int.init) ?? 0
         return count > 0 ? count : nil
     }()
 
@@ -168,7 +185,7 @@ enum LaunchOptions {
     /// there is no season at all, and the ones there are last a fortnight.
     static let forcedSeason: Season? = {
         guard arguments.contains("-PawmodoroSeason"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroSeason")
+              let raw = value(after: "-PawmodoroSeason")
         else { return nil }
         return Season(rawValue: raw)
     }()
@@ -182,7 +199,7 @@ enum LaunchOptions {
     /// hour; waiting for one is not a way to check a synth.
     static let forcedHeard: Heard? = {
         guard arguments.contains("-PawmodoroHear"),
-              let raw = UserDefaults.standard.string(forKey: "PawmodoroHear")
+              let raw = value(after: "-PawmodoroHear")
         else { return nil }
         return Heard(rawValue: raw)
     }()
@@ -193,7 +210,7 @@ enum LaunchOptions {
     /// to check a bubble.
     static let forcedDream: String? = {
         guard arguments.contains("-PawmodoroDream") else { return nil }
-        return UserDefaults.standard.string(forKey: "PawmodoroDream")
+        return value(after: "-PawmodoroDream")
     }()
 
     /// Seed the log with n sessions finished after dark, e.g.
@@ -201,7 +218,7 @@ enum LaunchOptions {
     /// wandering stars run to 145; neither is reachable by hand.
     static let nightSessions: Int? = {
         guard arguments.contains("-PawmodoroNightSessions") else { return nil }
-        let count = UserDefaults.standard.integer(forKey: "PawmodoroNightSessions")
+        let count = value(after: "-PawmodoroNightSessions").flatMap(Int.init) ?? 0
         return count > 0 ? count : nil
     }()
 
@@ -210,7 +227,7 @@ enum LaunchOptions {
     /// which is not a way to check a sprite.
     static let forcedStrayStage: Int? = {
         guard arguments.contains("-PawmodoroStray") else { return nil }
-        let stage = UserDefaults.standard.integer(forKey: "PawmodoroStray")
+        let stage = value(after: "-PawmodoroStray").flatMap(Int.init) ?? 0
         return (1...5).contains(stage) ? stage : nil
     }()
 #else

@@ -371,6 +371,13 @@ final class TimerEngine {
         sighting = nil
         guard phase == .focus else { return }
 
+        // A forced dream must actually appear: a rolled sighting would
+        // preempt it (the two are exclusive by design), which made the debug
+        // flag lose a coin toss in any place with common wildlife about.
+        if LaunchOptions.forcedDream != nil, LaunchOptions.forcedSighting == nil {
+            return
+        }
+
         let part = LaunchOptions.forcedDayPart ?? DayPart.current()
 
         if let forced = LaunchOptions.forcedSighting {
@@ -505,6 +512,13 @@ final class TimerEngine {
     private func rollDream() {
         dream = nil
         guard phase == .focus, sighting == nil else { return }
+
+        // Luna keeps watch through a night focus — awake creatures don't
+        // dream. Without this, the roll still happened and the diary quietly
+        // recorded dreams she never showed: the display was gated on the
+        // napping pose, but the keep wasn't.
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+        if settings.buddy.isNocturnal, part == .night { return }
 
         if let forced = LaunchOptions.forcedDream {
             dream = Dream.from(id: forced) ?? pool().first { $0.id.hasPrefix(forced) }

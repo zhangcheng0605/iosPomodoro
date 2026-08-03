@@ -54,8 +54,12 @@ struct Constellation: Identifiable, Equatable {
 enum ConstellationAtlas {
 
     /// The slice of the screen the sky occupies, as fractions of its height.
-    /// Stops short of the countdown ring, which begins around 0.335.
-    static let skyTop = 0.03
+    /// Stops short of the countdown ring, which begins around 0.335 — and
+    /// starts *below* the toolbar. The first Mac run found The Little Paw
+    /// drawn under the stats pill and the clock: 0.03 was measured against
+    /// the artwork's sky, which starts at the top of the screen, not against
+    /// the chrome that floats over it (status bar + toolbar reach ~0.12).
+    static let skyTop = 0.125
     static let skyBottom = 0.33
 
     static let all: [Constellation] = [

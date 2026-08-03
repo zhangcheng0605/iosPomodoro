@@ -115,6 +115,142 @@ OWL_PALETTE = {
     NOSE: (206, 158, 74, 255),
 }
 
+# --- The second wave -------------------------------------------------------
+
+OTTER_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (78, 56, 40, 255),
+    BODY: (150, 110, 76, 255),      # river brown
+    SHADE: (120, 86, 58, 255),
+    CREAM: (234, 216, 192, 255),    # muzzle and belly
+    ACCENT: (96, 72, 54, 255),      # webbed feet
+    NOSE: (72, 54, 46, 255),
+    PINK: (176, 206, 212, 255),     # only used as the pebble's wet highlight
+}
+
+HEDGEHOG_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (86, 66, 50, 255),
+    BODY: (216, 180, 140, 255),     # the bare face and legs
+    SHADE: (126, 100, 76, 255),     # the mass of spines
+    CREAM: (240, 218, 190, 255),
+    ACCENT: (92, 72, 56, 255),      # spine tips
+    NOSE: (58, 46, 42, 255),
+}
+
+
+def otter_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Thick tail, laid along the ground rather than curled: an otter's tail is
+    # a rudder, and drawing it like a cat's loses the animal.
+    for x, y in ((30, 35), (34, 34), (37, 31)):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=SHADE)
+    d.ellipse([10, 20, 30, 38], fill=BODY)
+    d.ellipse([14, 26, 26, 38], fill=CREAM)
+    d.ellipse([12, 33, 17, 38], fill=ACCENT)         # webbed feet
+    d.ellipse([23, 33, 28, 38], fill=ACCENT)
+    d.ellipse([9, 9, 15, 15], fill=SHADE)            # small low ears
+    d.ellipse([25, 9, 31, 15], fill=SHADE)
+    # A broad flat head and a wide muzzle — the two things that stop this
+    # reading as another cat.
+    d.ellipse([9, 6, 31, 24], fill=BODY)
+    d.ellipse([12, 15, 28, 25], fill=CREAM)
+    eyes(d, 15, 25, 13, eyes_mode)
+    d.ellipse([18, 17, 22, 20], fill=NOSE)
+    d.line([(20, 20), (20, 22)], fill=OUTLINE)
+    for y in (19, 21):
+        d.line([(10, y), (13, y + 1)], fill=OUTLINE)
+        d.line([(30, y), (27, y + 1)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def otter_asleep(eyes_mode="closed"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([5, 20, 35, 36], fill=BODY)
+    d.ellipse([12, 26, 30, 36], fill=CREAM)
+    for x, y in ((31, 31), (27, 35), (21, 36), (16, 35)):
+        d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=SHADE)
+    d.ellipse([6, 14, 12, 20], fill=SHADE)
+    d.ellipse([5, 15, 25, 32], fill=BODY)
+    d.ellipse([8, 23, 22, 32], fill=CREAM)
+    eyes(d, 12, 19, 22, eyes_mode)
+    d.ellipse([13, 26, 17, 29], fill=NOSE)
+    return outline_silhouette(g)
+
+
+def otter_float():
+    """The quirk, and the single most otter thing an otter does: on his back,
+    both paws holding a pebble on his chest like a treasure.
+
+    No water drawn under him. He is composited over whatever place you're in,
+    and a block of blue would fight every scene that isn't the harbour."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Lying flat, head to the left, belly up.
+    d.ellipse([8, 16, 36, 30], fill=BODY)
+    d.ellipse([13, 20, 32, 30], fill=CREAM)
+    d.ellipse([31, 12, 37, 19], fill=ACCENT)         # hind feet, out of the water
+    d.ellipse([2, 14, 17, 28], fill=BODY)            # head, tipped back
+    d.ellipse([4, 18, 15, 27], fill=CREAM)
+    eyes(d, 7, 12, 19, "happy")
+    d.ellipse([5, 21, 8, 24], fill=NOSE)
+    d.line([(2, 20), (5, 21)], fill=OUTLINE)
+    # The pebble, and the two paws holding it there.
+    d.ellipse([19, 15, 26, 22], fill=SHADE)
+    d.point((21, 17), fill=PINK)
+    d.ellipse([16, 19, 21, 24], fill=BODY)
+    d.ellipse([24, 19, 29, 24], fill=BODY)
+    return outline_silhouette(g)
+
+
+def _spines(d, count, start, end, inner=12, outer=16, cx=20, cy=25):
+    """Short strokes radiating off the dome, between two angles in radians."""
+    for index in range(count):
+        angle = start + (end - start) * index / max(1, count - 1)
+        d.line(
+            [(cx + np.cos(angle) * inner, cy + np.sin(angle) * inner),
+             (cx + np.cos(angle) * outer, cy + np.sin(angle) * outer)],
+            fill=ACCENT,
+        )
+
+
+def hedgehog_awake(eyes_mode="open"):
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([5, 12, 35, 38], fill=SHADE)
+    _spines(d, 16, np.pi, 2 * np.pi)                 # over the top half only
+    # The face pokes out from under the spines, low and central. A hedgehog is
+    # mostly nose, and that is the whole read at this size.
+    d.ellipse([11, 22, 29, 38], fill=BODY)
+    d.ellipse([14, 28, 26, 38], fill=CREAM)
+    eyes(d, 16, 24, 28, eyes_mode)
+    d.polygon([(18, 32), (22, 32), (20, 36)], fill=NOSE)
+    d.ellipse([13, 36, 17, 39], fill=BODY)
+    d.ellipse([23, 36, 27, 39], fill=BODY)
+    return outline_silhouette(g)
+
+
+def hedgehog_asleep(eyes_mode="closed"):
+    """The quirk, and the reason this animal is in the app: asleep, a hedgehog
+    is a perfect ball. No face, no feet, no telling which end is which — the
+    best silhouette in the cast.
+
+    The `open` variant is the wake frame, where the ball cracks far enough for
+    a face. That transition is worth more than any extra pose would be."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([7, 12, 33, 38], fill=SHADE)
+    _spines(d, 22, 0, 2 * np.pi)                     # all the way round
+    if eyes_mode != "closed":
+        d.ellipse([12, 24, 26, 38], fill=BODY)
+        d.ellipse([15, 29, 24, 38], fill=CREAM)
+        eyes(d, 16, 22, 29, eyes_mode)
+        d.polygon([(18, 33), (21, 33), (19, 36)], fill=NOSE)
+    return outline_silhouette(g)
+
+
 # --- The stray (Soot) ------------------------------------------------------
 #
 # The one palette here whose outline is *lighter* than its body. Every other
@@ -1074,6 +1210,10 @@ BUDDIES = [
      {"waddle": penguin_waddle, "slide": penguin_slide}),
     ("owl", OWL_PALETTE, owl_awake, owl_asleep, None,
      {"watch": owl_watch}),
+    ("otter", OTTER_PALETTE, otter_awake, otter_asleep, None,
+     {"float": otter_float}),
+    # Bramble gets no extra pose on purpose: his asleep frame *is* the quirk.
+    ("hedgehog", HEDGEHOG_PALETTE, hedgehog_awake, hedgehog_asleep, None, {}),
     # Soot is a cat, so she is the cat's drawings in her own palette rather
     # than a tenth animal — which is also why she inherits the stretch.
     ("stray", STRAY_PALETTE, cat_awake, cat_asleep, cat_stretch, {}),

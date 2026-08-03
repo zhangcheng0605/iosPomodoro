@@ -36,7 +36,7 @@ struct PaywallView: View {
             Text("A bigger, cozier den")
                 .font(.title2.bold())
                 .foregroundStyle(Theme.bark)
-            Text("Fifty tracks, six more buddies, four far isles, six more themes.")
+            Text("Fifty tracks, eight more buddies, four far isles, six more themes.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
@@ -69,8 +69,8 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 14) {
             feature(
                 icon: "pawprint.fill",
-                title: "Nine buddies in total",
-                detail: "Tofu the capybara soaks on breaks, Luna the owl keeps watch at night, and Maple the red panda throws both arms up when you pet them."
+                title: "Eleven buddies in total",
+                detail: "Tofu the capybara soaks on breaks, Luna the owl keeps watch at night, Pip the otter floats on his back holding a pebble, and Bramble the hedgehog sleeps as a perfect ball."
             )
             feature(
                 icon: "speaker.wave.2.fill",

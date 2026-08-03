@@ -275,7 +275,7 @@ struct BuddyView: View {
         case .watching:
             return "\(name) keeps watch — owls work nights"
         case .soaking:
-            return "\(name) is having a soak"
+            return "\(name) \(buddy.breakRemark ?? "is having a soak")"
         case .atHome:
             return "\(name) is exactly where they want to be"
         default:

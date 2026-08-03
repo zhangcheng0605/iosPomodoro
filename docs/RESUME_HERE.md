@@ -93,7 +93,7 @@ focus" in Shortcuts.
 | 13 | S dream diary + L wave 3 (regulars, things heard) | done — **never compiled** |
 | 14 | J seasons | done — **never compiled**; toys and icons deferred, below |
 | 15 | P gentle streaks + Q settle-in + R expeditions & Action Button | done — **never compiled** |
-| 16 | E1 bond | done — **never compiled**; E2 accessories deferred, below |
+| 16 | E1 bond + Pip & Bramble | done — **never compiled**; E2 accessories deferred, below |
 
 Every phase above carries an **As built** section in its plan document
 recording where the code and the plan diverged. Read the relevant one before
@@ -120,10 +120,11 @@ need code.
    nobody has checked on a device. A generator afternoon plus a verification
    pass, not a slice.
 
-**Pip and Bramble**, the second-wave buddies (an otter who floats on his back
-holding a pebble; a hedgehog whose asleep pose is a perfect ball) are also
-still open. They are pure generator work and could be done from Linux — they
-were simply the lowest-value item left when the session ran out.
+**Pip and Bramble** are built — the eleventh and twelfth buddies. Check them
+with `-PawmodoroBuddy otter` (start a session, then skip to the break: he
+should be on his back with a pebble, captioned "floating with a pebble") and
+`-PawmodoroBuddy hedgehog` (during focus he is a perfect ball; finishing the
+session cracks it open for a face).
 
 ## The one thing only you can do
 
@@ -136,7 +137,7 @@ already written in `docs/LIVE_ACTIVITY.md`.
 
 ## What's true about the app now
 
-- **9 buddies**, four with signature quirks. Renameable.
+- **11 buddies**, six with signature quirks. Renameable.
 - **Soot**, a tenth who cannot be picked, bought or unlocked — she turns up in
   the hedge after you've focused on three days out of seven, comes closer over
   twelve more, and lets you name her. Free, and the paywall never mentions her.

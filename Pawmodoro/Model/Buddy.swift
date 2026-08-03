@@ -4,8 +4,8 @@ import Foundation
 ///
 /// Each buddy after the first two carries one signature behaviour — a soak, a
 /// waddle, a pair of raised arms, a night watch. The quirk is the point: five
-/// interchangeable animals is a list, and nine animals that each do something
-/// only they do is a cast.
+/// interchangeable animals is a list, and eleven animals that each do
+/// something only they do is a cast.
 enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     case cat
     case dog
@@ -16,6 +16,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     case capybara
     case redpanda
     case owl
+    case otter
+    case hedgehog
     /// Soot. Not bought and not chosen — she turns up on her own and has to be
     /// waited out. See `Stray`.
     case stray
@@ -48,7 +50,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     var isPlus: Bool {
         switch self {
         case .cat, .dog, .penguin, .stray: false
-        case .bunny, .hamster, .fox, .capybara, .redpanda, .owl: true
+        case .bunny, .hamster, .fox, .capybara, .redpanda, .owl,
+             .otter, .hedgehog: true
         }
     }
 
@@ -65,6 +68,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "Tofu"
         case .redpanda: "Maple"
         case .owl: "Luna"
+        case .otter: "Pip"
+        case .hedgehog: "Bramble"
         case .stray: "Soot"
         }
     }
@@ -80,6 +85,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "capybara"
         case .redpanda: "red panda"
         case .owl: "owl"
+        case .otter: "otter"
+        case .hedgehog: "hedgehog"
         case .stray: "cat"
         }
     }
@@ -127,9 +134,28 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
-    /// Shown while a break runs, wherever the buddy is. Tofu goes for a soak.
+    /// Shown while a break runs, wherever the buddy is. Tofu goes for a soak;
+    /// Pip goes on his back with a pebble, which is the single most otter
+    /// thing an otter does.
     var breakFrame: String? {
-        self == .capybara ? frame("soak") : nil
+        switch self {
+        case .capybara: frame("soak")
+        case .otter: frame("float")
+        default: nil
+        }
+    }
+
+    /// What the caption says while `breakFrame` is on screen.
+    ///
+    /// Data rather than a branch in `BuddyView`, for the same reason the frames
+    /// are: two buddies share the pose and "Pip is having a soak" would be a
+    /// lie about an otter.
+    var breakRemark: String? {
+        switch self {
+        case .capybara: "is having a soak"
+        case .otter: "is floating with a pebble"
+        default: nil
+        }
     }
 
     /// Awake through focus after dark, dozing through daytime breaks — the one
@@ -156,6 +182,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .redpanda: .blossom
         case .penguin: .peaks
         case .owl: .woods
+        case .otter: .harbor
+        case .hedgehog: .meadow    // hedgerows, which is the whole name
         case .stray: .blossom      // village alleys, which is where strays live
         }
     }
@@ -168,6 +196,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .redpanda: frame("curl")       // curled on Blossom's veranda
         case .penguin: frame("slide")       // belly-down on the snow
         case .owl: frame("watch")           // keeping watch over the woods
+        case .otter: frame("float")         // the harbour is for floating in
         default: nil
         }
     }
@@ -184,6 +213,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "🦫"
         case .redpanda: "🦝"
         case .owl: "🦉"
+        case .otter: "🦦"
+        case .hedgehog: "🦔"
         case .stray: "🐈‍⬛"
         }
     }
@@ -201,6 +232,8 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "🦫"
         case .redpanda: "🦝"
         case .owl: "🦉"
+        case .otter: "🦦"
+        case .hedgehog: "🦔"
         case .stray: "🐈‍⬛"
         }
     }

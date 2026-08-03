@@ -225,10 +225,15 @@ nobody else has — the quirk is what people tell their friends about.
   keeps watch from a Woods branch; Maple curls on Blossom's veranda. One
   extra frame each, plus a caption line ("Tofu is exactly where he wants to
   be"). Cosmetic only — no bonuses, per the no-guilt rule.
-- **Second wave** (after the journal ships, since both trade on the same
-  charm): otter "Pip" — floats on his back during Harbor breaks, holding a
+- ~~**Second wave**~~ **built**: otter "Pip" — floats on his back holding a
   pebble like a treasure; hedgehog "Bramble" — its asleep pose is a perfect
-  ball, the best silhouette in the app. Backlog beyond that: fawn ("Fern"),
+  ball, and it is indeed the best silhouette in the app. Pip floats on *every*
+  break rather than only at the Harbor, because break poses are already data
+  (`breakFrame`) and gating one on a place would mean a branch in `BuddyView`,
+  which the conventions forbid. He also floats when idle at the Harbor, via
+  `homeFrame`. Bramble deliberately has no extra pose: his asleep frame is the
+  quirk, and its `open` variant cracks the ball far enough for a face, which
+  makes the wake-up worth more than a fifth pose would have been. Backlog beyond that: fawn ("Fern"),
   axolotl ("Rosy"), black cat (seasonal October star).
 
 **Done when:** all four have breathing/blink/wake/happy + quirk frames in
@@ -825,7 +830,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | 1b | Phase D (Live Activity) | S | needs the user's 30s Xcode target step first |
 | ~~2~~ | ~~F1 pipeline + scenes + vignette~~ — **done**, all 8 places shipped | L | |
 | ~~3~~ | ~~F2 scenes + journey unlocks + arrivals~~ — **done** | L | |
-| ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**, nine buddies ship | M | second wave (Pip, Bramble) still at #11 |
+| ~~4~~ | ~~H cast (four buddies + quirks + naming + home turf)~~ — **done**; second wave shipped too, eleven buddies | M | |
 | ~~5~~ | ~~**L journal, wave 1**~~ — **done**: engine, 12 species, journal UI | L | micro-encounters (L5) not yet built |
 | ~~6~~ | ~~**G+ Sound Almanac, slices 1–3**~~ — **done**: engine, 50 tracks, gapless player, Studio, radio | L | cassette art still to come |
 | ~~7~~ | ~~I themes + M paywall copy~~ — **done**, eight themes | S | |
@@ -837,7 +842,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~13~~ | ~~**S dream diary** + L wave 3~~ — **done** | M | |
 | 14 | J — ~~seasons~~ **done** · toys + icons open | M | both need a device; see Phase J |
 | ~~15~~ | ~~**P gentle streaks + Q settle-in + R expeditions/Action Button**~~ — **done** | S | |
-| 16 | E1 bond ✅ built · E2 accessories + Pip/Bramble still open | M | see DELIGHT_PLAN Phase E |
+| 16 | E1 bond ✅ · Pip + Bramble ✅ · E2 accessories still open | M | see DELIGHT_PLAN Phase E |
 
 Every session ends the standard way: `tools/run-sim.sh --demo --headless`,
 screenshots light/dark, `python3 tools/check_contrast.py`, Release build,

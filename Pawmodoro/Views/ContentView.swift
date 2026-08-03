@@ -30,6 +30,8 @@ struct ContentView: View {
 
                 sky
 
+                seasonal
+
                 // Only while the timer is running with an ambience chosen —
                 // the same condition that has SoundPlayer playing, so the
                 // picture and the sound always agree.
@@ -297,6 +299,29 @@ struct ContentView: View {
             && !engine.stray.hasJoined
             && engine.strayStage >= .home
             && engine.runState == .idle
+    }
+
+    /// Whatever time of year it is, if it is any in particular.
+    ///
+    /// Above the sky so fireflies and lanterns read against the night wash,
+    /// and below the UI so nothing ever drifts over the countdown. Most of the
+    /// year this mounts nothing at all, which is what keeps it special.
+    @ViewBuilder
+    private var seasonal: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            if let season = Season.current(),
+               !season.nightOnly || part == .night {
+                SeasonalView(
+                    season: season,
+                    tint: Theme.bark,
+                    accent: Theme.accent(for: engine.phase),
+                    withBats: Season.hasBats() && part == .night
+                )
+                .id(season)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     /// The time-of-day tint, and stars after dark.

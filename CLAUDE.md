@@ -69,6 +69,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroDream <id\|kind>` | Force a dream, e.g. `surreal.yarn` or just `memory` |
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
+| `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

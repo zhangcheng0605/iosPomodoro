@@ -155,6 +155,15 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Force a time of year, e.g. `-PawmodoroSeason autumn`. Most of the year
+    /// there is no season at all, and the ones there are last a fortnight.
+    static let forcedSeason: Season? = {
+        guard arguments.contains("-PawmodoroSeason"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroSeason")
+        else { return nil }
+        return Season(rawValue: raw)
+    }()
+
     /// Seed a history with a one-day hole in it, so both streak states can be
     /// looked at without waiting for a bad week.
     static let seedGap = isSet("-PawmodoroSeedGap")
@@ -219,6 +228,7 @@ enum LaunchOptions {
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil
     static let seedGap = false
+    static let forcedSeason: Season? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

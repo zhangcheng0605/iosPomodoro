@@ -255,7 +255,7 @@ the content *multiplies* rather than adds.
 
 ---
 
-## Phase J — Toys, seasons, and small magic
+## Phase J — Toys, seasons, and small magic — *seasons built, rest deferred*
 
 **Scene toys** (breaks and idle only — focus stays sacred):
 - **Pond ripples** — touch water in Woods/Onsen: expanding rings (Canvas).
@@ -277,6 +277,35 @@ and small prop sprites; `-PawmodoroSeason <name>` to force):
   screenshot.
 **Alternate app icons** — one per buddy (generator emits them); picker in
 Settings; free icons for free buddies, Plus buddies' icons with Plus.
+
+### As built — and what deliberately isn't
+
+**Seasonal dressing shipped.** Five windows, date-derived so there is no state:
+sakura 20 Mar–15 Apr, fireflies through July and August, leaf fall 10–31 Oct
+with bats after the 24th, snow through December, and lanterns 21 Jan–20 Feb.
+That last window is a deliberate approximation — Lunar New Year moves inside
+it, and computing it properly means shipping a lunisolar calendar to hang some
+paper lanterns. Fireflies and lanterns are night-only. The layer runs at 12fps
+rather than the weather's 30, because it is on screen whenever the app is,
+where rain only runs while the timer does. Most of the year it mounts nothing
+at all, which is what keeps it worth noticing. Force it with
+`-PawmodoroSeason`.
+
+**Two slices are deliberately not built**, because both need a device more than
+they need code:
+
+- **The touch toys** (pond ripples, skipping stones, the trailing firefly,
+  petal gusts) and **buddy magic** (eye-tracking, snow-globe shake). Every one
+  is a gesture or a motion event tuned by feel, over a scenery layer that is
+  currently `allowsHitTesting(false)`. Writing four of those blind and shipping
+  them unverified would be four things to debug at once on the Mac rather than
+  one; they want an afternoon with a simulator, not a Linux session.
+- **Alternate app icons.** These need `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS`
+  and a set of alternate icon entries in the target's build settings, plus
+  `setAlternateIconName` at runtime. The generator half is easy; the project
+  half is an unverifiable edit to `project.pbxproj`, which is exactly the class
+  of change that has its own warning in CLAUDE.md. Do the Xcode side first,
+  then the picker is twenty lines.
 
 ---
 

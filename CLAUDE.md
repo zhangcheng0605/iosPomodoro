@@ -3,26 +3,23 @@
 A SwiftUI Pomodoro timer for iOS 17+. No dependencies, no package manager, no
 network calls, no test target. The whole app is `Pawmodoro/`.
 
-> ## ⚠️ Read this before changing any code
+> ## ✅ The Linux backlog has now been built and walked (Aug 2026, on a Mac)
 >
-> **The last fifteen commits have never been compiled and never been run.** Not
-> once, in any simulator, on any device. They were written on Linux — no Xcode,
-> no Swift toolchain — and pushed unverified. That is everything from *the
-> stray* (`73158df`) onward: the stray, the star atlas, the dream diary,
-> journal wave 3, micro-encounters, seasons, the scene toys, eye-tracking, the
-> snow-globe shake, gentle streaks, the settle-in, expeditions, the App Intent,
-> bond levels, Pip and Bramble, and the whole app side of the Live Activity.
+> The fifteen blind commits from *the stray* (`73158df`) onward have been
+> compiled — Debug **and** Release — installed, and driven in the simulator.
+> One compile error existed in all of it (a type-check timeout in
+> `CelebrationView`), plus three logic bugs found on screen: valued debug
+> flags were order-sensitive, a forced dream could be pre-empted by a rolled
+> sighting, and a nocturnal buddy banked dreams it never showed. All fixed.
+> Both rules hold: Luna shows no dream bubble at night (and keeps none), and
+> dragging the scene during focus does nothing.
 >
-> So: **expect the first build to fail, and treat every one of those features
-> as unseen** — not just unverified syntax, but unverified layout, placement,
-> timing and behaviour. `python3 tools/check_swift.py` passes on all of it, and
-> it is not a type checker; it cannot see argument labels, inference or SwiftUI
-> misuse, and it has never looked at a pixel.
->
-> **If you have a Mac: build first, fix the errors, then walk the feature table
-> in `docs/RESUME_HERE.md` before building anything new.** Two of its rows are
-> *rules* rather than looks — Luna must show no dream bubble at night, and
-> dragging the scene during a focus phase must do nothing at all.
+> A few rows could not be driven through the simulator pane and are still
+> unseen — the input-latency ones (toys, firefly follow, eye-tracking), the
+> snow-globe shake, micro-encounters and the regulars (no debug flag), the
+> iPhone SE layout (no SE runtime installed), and everything you verify by
+> ear. The feature table in `docs/RESUME_HERE.md` records the outcome of
+> every row.
 
 **Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
 where the build order stopped, what has and hasn't been seen running, and what

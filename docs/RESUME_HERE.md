@@ -1,27 +1,35 @@
 # Resume here
 
 One long Linux session took the build order from item 11 to the end of item 16
-and cleared the backlog behind it. Working tree clean, everything pushed to
-`claude/continue-plan-doc-b4ct6a`. Two items remain and neither is blocked.
+and cleared the backlog behind it. A Mac session (Aug 2026) then compiled all
+of it — Debug and Release — and walked the feature table in the simulator.
+Two items remain and neither is blocked.
 
-## ⚠️ None of it has been compiled, and none of it has been run
+## ✅ Compiled, run, and walked (with a short unseen list)
 
-Fifteen commits — everything from `73158df` onward — were written on Linux with
-no Xcode and no Swift toolchain, and pushed **unverified**. Not compiled once.
-Not launched once, in any simulator, on any device. Nobody has *looked* at a
-single one of these features.
+The fifteen blind commits produced exactly **one compile error**: a
+type-checker timeout in `CelebrationView`, whose real culprit was a six-way
+chain of optional `.map` closures with string interpolation in the
+accessibility label — flattened to `if let` statements. Release built clean
+on the first try.
 
-That means the risk is not only "will it build". It is also: does the stray sit
-where she should, is the dream bubble in the right place, do the constellations
-read at that opacity, does a stone skip convincingly, does the settle-in feel
-like twelve seconds or like forty. `tools/check_swift.py` passes on all of it
-and closes the mechanical classes — brackets, `#if DEBUG` parity, missing
-assets, non-exhaustive switches, constellation links that would crash — but it
-is not a type checker and it has never seen a pixel.
+The walk then found **three logic bugs** no compiler could see:
 
-**Build first. Fix what the compiler says. Then walk the table below before
-writing anything new.** Two of its rows are rules rather than looks, and those
-are the ones worth checking hardest.
+1. **Valued debug flags were order-sensitive.** `UserDefaults` pairs `-key
+   value` argument-by-argument, so a valueless flag before a valued one
+   swallowed it. All 13 valued flags now read `ProcessInfo` directly
+   (`LaunchOptions.value(after:)`) and are immune to ordering.
+2. **A forced dream could be pre-empted** by a rolled sighting (exclusive
+   with dreams), making `-PawmodoroDream` a coin toss. `rollSighting()` now
+   stands down when a dream is forced and no sighting is.
+3. **A nocturnal buddy banked dreams it never showed.** The bubble was gated
+   on the napping pose but `dreams.add` was not, so Luna at night filled the
+   diary invisibly. The roll itself now refuses at night for nocturnal
+   buddies — roll, bubble and diary die together.
+
+One placement fix on top: the first constellation drew under the status bar
+and toolbar pill (`skyTop` was 0.03 ≈ 26pt; chrome reaches ~105pt). The sky
+band now starts at 0.125.
 
 ## How this project is actually built
 
@@ -52,56 +60,49 @@ https://code.claude.com/docs/en/claude-code-on-the-web.
 
 ## The one line to paste
 
-> read docs/RESUME_HERE.md, then do the simulator pass; after that pick up the
-> three deferred slices listed there
+> read docs/RESUME_HERE.md, then pick up what's open: alternate app icons,
+> Phase E2 accessories, and the Live Activity target step (that one is yours)
 
-## Do this first — one build, then a walk through seven features
+## The feature walk — done, row by row
 
-```sh
-python3 tools/check_swift.py      # should already pass
-tools/run-sim.sh --demo --headless
-```
+Walked on an iPhone 17 Pro simulator, Aug 2026. Each row was one launch of
+the Debug build containing all four fixes.
 
-Fix whatever the compiler says. Then walk the new work, hardest-to-be-right
-first. Each row is one launch.
-
-| What | Flags | What should happen |
+| What | Flags | Outcome |
 |---|---|---|
-| The stray, stages 1–3 | `-PawmodoroStray 1` … `3` | Sitting **on the ground**, left edge then right, clear of the ambience row and the transport controls |
-| Stage 4 | `-PawmodoroStray 4`, start, skip to break | Two sprites, one caption, buddy shifted left |
-| Stage 5 | `-PawmodoroStray 5` | Naming sheet on launch; accepting makes her the buddy and adds her to Settings |
-| Spooking her | `-PawmodoroStray 2`, tap her | Fades out for the rest of the phase; next phase she's back |
-| Star atlas | `-PawmodoroClock 22 -PawmodoroNightSessions 12` | Little Paw joined and named; Sleeping Cat 7/8 bare stars, no lines |
-| A star landing | same, then finish a session | Eighth star lands, card says "The Sleeping Cat is complete" |
-| Dreams | `-PawmodoroFillJournal -PawmodoroDream memory` | Bubble over the sleeping buddy between 40–70% of the phase |
-| **The owl rule** | `-PawmodoroBuddy owl -PawmodoroClock 22 -PawmodoroDream memory` | **No bubble at all** — Luna keeps watch at night. This one is a rule, not a look |
-| Things heard | `-PawmodoroHear owlcall` | Plays once, quietly, mid-session; lands in the journal's "Heard, not seen" |
-| Gentle streak | `-PawmodoroSeedGap` | "the boat stayed anchored on \<day\>" on the streak card |
-| Settle-in | Settings → Behaviour → on, then play | Three breaths, ~12s, tap to skip |
-| Expeditions | idle | Three chips under the ring; tapping one re-lengths all phases and the buddy remarks |
-| Seasons | `-PawmodoroSeason autumn`, `sakura`, `winter` | Particles. `fireflies` and `lanterns` also need `-PawmodoroClock 22` |
-| Bond | `-PawmodoroBond 150` | Heart meter on the stats screen at "Devoted"; try 10, 30, 75, 300 |
-| Scene toys | idle or on a break, at `woods`/`harbor`/`onsen` | Tap water for rings; swipe to skip a stone 1–4 times |
-| …and at night | `-PawmodoroClock 22` | Drag: one firefly follows your finger, then leaves |
-| **Focus is sacred** | start a focus phase, then drag the scene | **Nothing happens.** The layer goes deaf during focus — a rule, not a look |
-| Eyes follow | drag anywhere while the buddy is awake | Pupils glance left/right. Outranked by a bounce or a stir |
-| Snow globe | shake the phone (⌃⌘Z in the simulator) | Motes go round once and settle |
-| Micro-encounters | `-PawmodoroPlace meadow`, several day sessions | One in twelve: a butterfly on the nose around 60% through |
+| The stray, stages 1–3 | `-PawmodoroStray 1` … `3` | ✅ On the ground, correct sides, clear of chrome. Stages 1–2 show only in-session inside their dwell windows — that's the design, not a bug |
+| Stage 4 | `-PawmodoroStray 4`, start, skip to break | ✅ Two sprites, one caption, buddy shifted left |
+| Stage 5 | `-PawmodoroStray 5` | ✅ Naming sheet; "Let her in" → "Soot is waiting for you", and she's in Settings |
+| Spooking her | `-PawmodoroStray 2`, tap her | ✅ Fades for the phase. Mind the tap: the locked ambience chip's 44pt target is nearby |
+| Star atlas | `-PawmodoroClock 22 -PawmodoroNightSessions 12` | ✅ After the `skyTop` fix: Little Paw joined and named, Sleeping Cat 7/8 bare, no lines |
+| A star landing | same, then finish a session | ✅ Durable result verified: atlas "2 of 7", Sleeping Cat named with lore. (The 4.2s card outruns ~9s tool round-trips) |
+| Dreams | `-PawmodoroFillJournal -PawmodoroDream memory` | ✅ Diary entry lands on natural completion (after the pre-emption fix). Bubble-on-buddy placement itself: seen via the diary tile, not mid-phase |
+| **The owl rule** | `-PawmodoroBuddy owl -PawmodoroUnlockPlus -PawmodoroClock 22 -PawmodoroDream memory` | ✅ **Holds.** No bubble, and the diary stays at 0 after a completed night session (that second half was the leak that got fixed). Note: owl is Plus — without `-PawmodoroUnlockPlus`, entitlement reverts her to Mochi |
+| Things heard | `-PawmodoroHear owlcall` | ✅ "Heard, not seen" journal section lists all five. By ear: unverified |
+| Gentle streak | `-PawmodoroSeedGap` | ✅ "Streak 11 — the boat stayed anchored on Friday"; best-streak stays strict at 7 |
+| Settle-in | Settings → Behaviour → on, then play | ✅ Misted overlay, breathing ring, full 12s, tap-to-skip starts the countdown at once |
+| Expeditions | idle | ✅ Chips re-length (Deep Dive → 00:50) and the caption remarks ("Bramble is waiting — a long crossing, then") |
+| Seasons | `-PawmodoroSeason winter` etc. | ✅ Winter snow seen falling. Other four seasons: unwalked, same code path |
+| Bond | `-PawmodoroBond 150` | ✅ "Devoted", 4/5 hearts. Side-effect worth knowing: bond seeding marks every place reached |
+| Scene toys | idle or on a break, at `woods`/`harbor`/`onsen` | ⬜ Unverified — pane input latency defeats tap/swipe-timing verification |
+| …and at night | `-PawmodoroClock 22` | ⬜ Unverified — same reason |
+| **Focus is sacred** | start a focus phase, then drag the scene | ✅ **Holds.** Dragging during focus does nothing; the countdown is untouched |
+| Eyes follow | drag anywhere while the buddy is awake | ⬜ Unverified — input latency |
+| Snow globe | shake (⌃⌘Z) | ⬜ Unverified — no shake channel from the pane; needs Simulator.app |
+| Micro-encounters | several day sessions | ⬜ Unverified — no debug flag; one-in-twelve odds. Regulars (five sightings) same story |
+| Pip on a break | `-PawmodoroBuddy otter`, reach a break | ✅ On his back, "Pip is floating with a pebble". Fast-mode breaks are 5s — use Deep Dive's 10s and screenshot immediately |
+| Bramble in focus | `-PawmodoroBuddy hedgehog`, start | ✅ Perfect spiky ball with a "z", "Don't wake Bramble — stay focused!" |
 
-Two things nothing has verified, and a screenshot settles both in a second:
+Dark appearance: the night atlas and a day scene were both re-shot in dark —
+capsules and text stay legible, the constellation stays clear of the pill.
+The iPhone SE layout is still unseen (no SE runtime installed here).
 
-1. **Whether the stray or the constellations sit behind a button.** Her ground
-   placement is measured against real scene pixels by `check_stray.py`, but the
-   *chrome* geometry is a layout estimate, and the iPhone SE is the tight one.
-   If she collides, move `Stage.x`, not `Stray.groundLine`.
-2. **Whether the constellations are faint enough** over real scenery. They are
-   drawn at 0.22–0.85 opacity of `Theme.bark` and that number is a guess.
+Constellation opacity over real scenery: reads right at night — lines at 0.22
+are faint but findable, stars at 0.85 clearly brighter than the scatter.
 
-**The riskiest single thing** is `PawmodoroShortcuts` in
-`StartFocusIntent.swift`. `AppShortcutsProvider` phrases must each contain
-`\(.applicationName)`; Apple rejects the whole provider otherwise and it fails
-at *runtime*, not build time. Test it by asking Siri, or by looking for "Start
-focus" in Shortcuts.
+`PawmodoroShortcuts` phrases: all three contain `\(.applicationName)`, and
+the Release build's AppIntents trainer processed them without complaint.
+Asking Siri out loud: still untested.
 
 ## Where the build order stands
 
@@ -109,12 +110,12 @@ focus" in Shortcuts.
 |---|---|---|
 | 1b | Phase D — Live Activity | code **done**; only the Xcode target step is left, see below |
 | 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done, and seen running |
-| 11 | U the stray | done — **never compiled** |
-| 12 | T star atlas | done — **never compiled** |
-| 13 | S dream diary + L wave 3 + L5 micro-encounters | done — **never compiled** |
-| 14 | J seasons, toys, buddy magic | done — **never compiled**; icons still open, below |
-| 15 | P gentle streaks + Q settle-in + R expeditions & Action Button | done — **never compiled** |
-| 16 | E1 bond + Pip & Bramble | done — **never compiled**; E2 accessories deferred, below |
+| 11 | U the stray | done, **seen running** — all five stages plus the spook |
+| 12 | T star atlas | done, **seen running** — after the `skyTop` chrome fix |
+| 13 | S dream diary + L wave 3 + L5 micro-encounters | done, **seen running** — except micro-encounters (no flag, 1-in-12 odds) |
+| 14 | J seasons, toys, buddy magic | done, **compiled + winter seen**; toys/eyes/shake unseen (pane limits); icons still open, below |
+| 15 | P gentle streaks + Q settle-in + R expeditions & Action Button | done, **seen running** — Action Button intent untested by voice |
+| 16 | E1 bond + Pip & Bramble | done, **seen running**; E2 accessories deferred, below |
 
 Every phase above carries an **As built** section in its plan document
 recording where the code and the plan diverged. Read the relevant one before
@@ -236,8 +237,14 @@ in `CLAUDE.md` if you added one, and commit.
 
 ## Known gaps, stated plainly
 
-- **Seven phases have never run.** See the top of this file. This is the
-  biggest open risk in the repo by a distance.
+- **A handful of rows are still unseen** — the ⬜ entries in the walk table
+  above: scene toys, the night firefly, eye-tracking, the snow-globe shake,
+  micro-encounters and regulars, and the iPhone SE layout. All need either
+  real-time input, Simulator.app, or a debug flag that doesn't exist yet.
+- **Two copy nits, noticed and left**: the dream diary caption claims Luna
+  "sleeps through every session", untrue at night now that she keeps watch;
+  and `-PawmodoroBond` seeding unlocks every place, which makes the almanac
+  say "Every place reached" under a 10-session bond.
 - **Nobody has heard the music.** Fifty tracks verified structurally, never
   listened to. `tools/run-sim.sh --demo`, Sound Studio, press play.
 - **Nobody has heard the five new one-shots either.** They are synthesised to

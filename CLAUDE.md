@@ -136,6 +136,12 @@ There are no tests. A change is verified by building and looking at it:
   nothing to fall out of step, and the animal always leaves before the chime.
   Timing a 6-second appearance from a screenshot loop is hopeless — use
   `-PawmodoroSighting` and read the journal afterwards instead.
+- **Watch a generator's stderr, and mean it.** `python3 tools/generate_sprites.py
+  | grep something` sends only stdout to the pipe: a traceback goes to stderr,
+  vanishes, and the grep reports zero matches as if the run had simply produced
+  nothing. That is how a shadowed variable (`for suffix, shift in …`, over the
+  module-level `shift()`) looked like a silent no-op rather than a crash. Use
+  `2>&1` or run it bare.
 - **A buddy's quirk is data, not a special case.** `Buddy` exposes
   `idleShuffleFrame`, `celebrationFrame`, `breakFrame`, `watchFrame` and
   `homeFrame`; `BuddyFrames` reads them and falls back to the ordinary pose

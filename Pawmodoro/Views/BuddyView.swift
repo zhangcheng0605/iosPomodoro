@@ -9,6 +9,7 @@ struct BuddyView: View {
     @State private var hearts: [Heart] = []
     @State private var heartSeed = 0
     @State private var lastPet = Date.distantPast
+    @State private var touch = TouchTracker.shared
 
     private let spriteSize: CGFloat = 104
 
@@ -175,7 +176,7 @@ struct BuddyView: View {
             TimelineView(.periodic(from: .now, by: tickInterval)) { context in
                 BuddySprite(
                     buddy: buddy,
-                    assetName: animator.frameName(for: buddy, at: context.date),
+                    assetName: frameName(at: context.date),
                     size: spriteSize,
                     sleeping: isNapping
                 )
@@ -185,6 +186,19 @@ struct BuddyView: View {
             // idle rate and drop half its frames.
             .id(tickInterval)
         }
+    }
+
+    /// The frame to draw, with one thing layered over the animator: an awake
+    /// buddy watches your finger.
+    ///
+    /// Deliberately outranked by everything else. A one-shot — a bounce, a
+    /// stir, a wake-up — is a thing the buddy is *doing*, and a glance is only
+    /// where it happens to be looking.
+    private func frameName(at date: Date) -> String {
+        if let x = touch.x, !isNapping, !animator.isPlayingTransient(at: date) {
+            return buddy.frame(x < 0.5 ? "look_l" : "look_r")
+        }
+        return animator.frameName(for: buddy, at: date)
     }
 
     /// Follows whichever pose is on screen, so a slow breathing loop doesn't

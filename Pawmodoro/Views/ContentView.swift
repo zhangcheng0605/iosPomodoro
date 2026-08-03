@@ -26,6 +26,8 @@ struct ContentView: View {
 
                 scenery
 
+                toys
+
                 stray
 
                 sky
@@ -256,6 +258,25 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.8), value: place)
         }
         .allowsHitTesting(false)
+    }
+
+    /// What a finger does to the place you're in.
+    ///
+    /// Between the scenery and the stray on purpose: a tap on her still
+    /// spooks her because she is above this, and everything else falls
+    /// through to here. The transport controls are above both, so they always
+    /// win. Focus phases leave it mounted but deaf — see `SceneToyView`.
+    @ViewBuilder
+    private var toys: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            SceneToyView(
+                toy: engine.settings.place.toy(at: part),
+                enabled: !(engine.isRunning && !engine.phase.isBreak),
+                tint: Theme.bark,
+                accent: Theme.blossom
+            )
+        }
     }
 
     /// Whoever is in the hedge.

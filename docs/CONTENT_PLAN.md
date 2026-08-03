@@ -262,13 +262,13 @@ the content *multiplies* rather than adds.
 
 ## Phase J — Toys, seasons, and small magic — *seasons built, rest deferred*
 
-**Scene toys** (breaks and idle only — focus stays sacred):
+**Scene toys** ✅ built (breaks and idle only — focus stays sacred):
 - **Pond ripples** — touch water in Woods/Onsen: expanding rings (Canvas).
 - **Skipping stones** — swipe across water in Harbor/Woods: 1–4 skips with
   haptic ticks and rings; a toy, not a game — no score, ever.
 - **Firefly** — after dark, one firefly trails your finger, then wanders off.
 - **Petal gust** — swipe in Blossom Village: petals scatter and resettle.
-**Buddy magic:**
+**Buddy magic:** eye-tracking ✅ built; snow-globe shake open.
 - **Eye-tracking** — drag a finger near an awake buddy and its pupils follow
   (two pupil-offset frames per buddy; absurd charm for ~20 lines of Python).
 - **Snow-globe shake** — shake the phone: current scene's particles swirl

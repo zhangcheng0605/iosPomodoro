@@ -348,9 +348,22 @@ def eyes_happy(d, left, right, y):
 
 EYE_MODES = {"open": eyes_open, "closed": eyes_closed, "happy": eyes_happy}
 
+# How far sideways the eyes are drawn, in logical pixels.
+#
+# Set around a call to a buddy's `awake()` to get a glance without redrawing
+# the animal: every buddy routes its eyes through `eyes()`, so shifting them
+# here shifts them for all twelve. Two pixels is the whole effect — more and
+# they leave the face.
+EYE_SHIFT = 0
+
+
+def set_eye_shift(value):
+    global EYE_SHIFT
+    EYE_SHIFT = value
+
 
 def eyes(d, left, right, y, mode="open"):
-    EYE_MODES[mode](d, left, right, y)
+    EYE_MODES[mode](d, left + EYE_SHIFT, right + EYE_SHIFT, y)
 
 
 # --- Frame transforms -------------------------------------------------------
@@ -1123,6 +1136,7 @@ def penguin_slide():
 def owl_eyes(d, left, right, y, mode):
     """Owls are mostly eyes, so they get their own routine: a pale facial disc
     under a much larger pupil than the `eyes` helper draws."""
+    left, right = left + EYE_SHIFT, right + EYE_SHIFT
     for cx in (left, right):
         d.ellipse([cx - 5, y - 5, cx + 5, y + 5], fill=CREAM)
     if mode == "open":
@@ -1238,6 +1252,16 @@ def build_frames(species, palette, awake, asleep, stretch, quirks=None):
     happy = awake("happy")
     to_png(happy, palette, f"buddy_{species}_happy_0")
     to_png(shift(happy, -2), palette, f"buddy_{species}_happy_1")
+    # Two glances, for the eyes that follow a finger. A grid transform can't
+    # do this — the pupils are drawn, not overlaid — but shifting the shared
+    # `eyes()` helper reaches every buddy for free.
+    # `dx`, not `shift` — that name is a module-level function two lines above,
+    # and rebinding it here makes it local for the whole body, which breaks the
+    # happy frame with an UnboundLocalError.
+    for suffix, dx in (("look_l", -2), ("look_r", 2)):
+        set_eye_shift(dx)
+        to_png(awake(), palette, f"buddy_{species}_{suffix}")
+    set_eye_shift(0)
     if stretch is not None:
         to_png(stretch(), palette, f"buddy_{species}_stretch")
     # Signature poses: the soak, the raised arms, the waddle, the watch.

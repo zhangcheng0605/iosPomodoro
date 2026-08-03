@@ -531,7 +531,7 @@ watching owl at night, and the diary reads correctly in both appearances.
 
 ---
 
-## Phase T — The Star Atlas (the journal, pointed up)
+## Phase T — The Star Atlas (the journal, pointed up) ✅ built
 
 > Focus at night and the sky keeps score. Every completed night session sets
 > one star; enough stars complete a constellation — **drawn permanently into
@@ -566,6 +566,33 @@ The signature sentence: *"I built that constellation."*
 **Done when:** seeding 12 night sessions shows The Little Paw complete and
 The Sleeping Cat partial, in every place's night sky, both appearances;
 `-PawmodoroClock 22` + a real completed session adds the next star live.
+
+### As built
+
+Shipped as specced, zero new persistence — `SessionLog.nightSessions` counts
+records whose hour is night and everything else is arithmetic over it. Four
+notes:
+
+- **47 stars, not 45.** The Sleeping Cat is 8 stars rather than 6, because at 6
+  she *also* completed by night 12 and the done-when above wants her partial
+  there. The second figure is the one that teaches you these take a while, and
+  finishing two inside a fortnight doesn't teach that.
+- **`nightSessions` honours a forced clock.** In Debug, `-PawmodoroClock 22`
+  makes every logged session count as night, which is what makes the second
+  half of the done-when checkable at all. In Release `forcedDayPart` is a nil
+  constant and it is the record's own hour, always.
+- **Lines only on completion.** A half-built figure shows bare stars. Drawing
+  its lines early reads as broken rather than unfinished, and gives away a
+  shape that is better recognised on the night it lands.
+- **Link indices are checked.** A link naming a star that doesn't exist is an
+  index-out-of-range crash the moment the figure is drawn, and no compiler can
+  see it — the star count only exists at runtime. `tools/check_swift.py`
+  asserts every pair is in range, and that rule is verified to fire.
+
+**Not yet seen running**, like Phase U: written on Linux, never compiled. The
+figures and their sky layout were checked by rendering them in Python — no
+overlaps, lowest star at 0.319 of screen height against a countdown ring that
+starts at 0.335.
 
 ---
 
@@ -714,7 +741,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
 | ~~10~~ | ~~**O almanac page** (absorbs N travelogue map)~~ — **done** | M | |
 | ~~11~~ | ~~**U the stray**~~ — **done**: five stages, Soot joins free | M | built without a Mac; see the note under Phase U |
-| 12 | **T star atlas** | S | zero new state; pairs with O's moon/night work |
+| ~~12~~ | ~~**T star atlas**~~ — **done**: seven figures, 47 stars | S | zero new state, as planned |
 | 13 | **S dream diary** + L wave 3 (regulars, things heard) | M | richest after L wave 2 fills the journal |
 | 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
 | 15 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |

@@ -150,6 +150,15 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Seed the log with n sessions finished after dark, e.g.
+    /// `-PawmodoroNightSessions 12`. The atlas is 45 nights of content and the
+    /// wandering stars run to 145; neither is reachable by hand.
+    static let nightSessions: Int? = {
+        guard arguments.contains("-PawmodoroNightSessions") else { return nil }
+        let count = UserDefaults.standard.integer(forKey: "PawmodoroNightSessions")
+        return count > 0 ? count : nil
+    }()
+
     /// Put the stray at a stage of her trust arc, `-PawmodoroStray 1` to `5`.
     /// The honest way to reach stage 5 is to focus on twelve separate days,
     /// which is not a way to check a sprite.
@@ -178,6 +187,7 @@ enum LaunchOptions {
     static let forcedTheme: AppTheme? = nil
     static let forcedTrack: String? = nil
     static let forcedStrayStage: Int? = nil
+    static let nightSessions: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -203,6 +213,38 @@ enum LaunchOptions {
         if seedStats {
             seedSampleSessions(into: defaults)
         }
+        if let nightSessions {
+            seedNightSessions(nightSessions, into: defaults)
+        }
+    }
+
+    /// Adds `count` sessions that all finished at 10pm, on consecutive
+    /// evenings going back from tonight.
+    ///
+    /// Appends rather than replaces, so this composes with `-PawmodoroSeedStats`
+    /// instead of one of them silently winning. Note it does move the journey
+    /// along — forty-five night sessions is enough to reach Sunstone Keep —
+    /// which is honest: those are real completed sessions as far as the rest of
+    /// the app is concerned.
+    private static func seedNightSessions(_ count: Int, into defaults: UserDefaults) {
+        let calendar = Calendar.current
+        let tonight = calendar.startOfDay(for: Date())
+
+        var records: [SessionRecord] = []
+        if let data = defaults.data(forKey: StorageKeys.sessions),
+           let existing = try? JSONDecoder().decode([SessionRecord].self, from: data) {
+            records = existing
+        }
+        for index in 0..<count {
+            guard let evening = calendar.date(
+                byAdding: .hour, value: 22 - index * 24, to: tonight
+            ) else { continue }
+            records.append(SessionRecord(endedAt: evening, minutes: 25))
+        }
+
+        let ordered = records.sorted { $0.endedAt < $1.endedAt }
+        guard let data = try? JSONEncoder().encode(ordered) else { return }
+        defaults.set(data, forKey: StorageKeys.sessions)
     }
 
     /// A fortnight of plausible history. The same shape every run, so a

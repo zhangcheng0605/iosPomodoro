@@ -68,6 +68,23 @@ final class SessionLog {
             .reduce(0) { $0 + $1.minutes }
     }
 
+    /// Sessions finished after dark — the only input the star atlas has.
+    ///
+    /// A pure function over the log, like the journey unlocks: the sky keeps
+    /// score without anything new being written down.
+    var nightSessions: Int {
+        let calendar = Calendar.current
+        return records.filter { record in
+            // Honouring a forced clock is what lets `-PawmodoroClock 22` plus
+            // one real session add a star on the spot. In a Release build
+            // `forcedDayPart` is a nil constant and this is the record's own
+            // hour, always.
+            let part = LaunchOptions.forcedDayPart
+                ?? DayPart.from(hour: calendar.component(.hour, from: record.endedAt))
+            return part == .night
+        }.count
+    }
+
     /// Sessions in the last seven days, today included.
     var weekSessions: Int {
         let calendar = Calendar.current

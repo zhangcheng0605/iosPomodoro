@@ -18,6 +18,7 @@ struct StatsView: View {
                         emptyState
                     }
                     AlbumView()
+                    StarAtlasView()
                     JournalView()
                 }
                 .padding()

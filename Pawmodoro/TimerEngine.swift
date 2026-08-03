@@ -472,8 +472,15 @@ final class TimerEngine {
 
         var arrival: Place?
         var seen: Species?
+        var figure: Constellation?
         if finished == .focus {
+            // Read either side of the write, so a figure can only be announced
+            // by the one session that actually finished it.
+            let nightsBefore = log.nightSessions
             log.add(minutes: settings.focusMinutes)
+            figure = ConstellationAtlas.justCompleted(
+                before: nightsBefore, after: log.nightSessions
+            )
             // Checked after the log is written, so the session that just
             // finished counts toward the week she is deciding about. She only
             // ever starts watching off the back of a session you completed.
@@ -531,7 +538,8 @@ final class TimerEngine {
             pawsPerCycle: pawsPerCycle,
             isCycleComplete: finished == .focus && phase == .longBreak,
             arrivedAt: arrival,
-            saw: seen
+            saw: seen,
+            completedFigure: figure
         )
         sighting = nil
     }

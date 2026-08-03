@@ -116,6 +116,20 @@ struct CelebrationView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.7))
                     .multilineTextAlignment(.center)
+            } else if let figure = completion.completedFigure {
+                // Rarer than a sighting: seven of these exist, ever. The figure
+                // draws itself rather than using an asset — it is layout, and
+                // this is the first time anyone sees it joined up.
+                ConstellationFigure(figure: figure, lit: figure.starCount, tint: accent)
+                    .frame(width: 92, height: 66)
+                Text("\(figure.name) is complete")
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                    .multilineTextAlignment(.center)
+                Text("Look up tonight.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
             } else if let place = completion.arrivedAt {
                 // Arriving somewhere outranks finishing a cycle: it's the rarer
                 // thing, and it's the reason the journey exists.
@@ -161,6 +175,9 @@ struct CelebrationView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             completion.saw.map { "You saw a \($0.name). \($0.note)" }
+                ?? completion.completedFigure.map {
+                    "\($0.name) is complete. Look up tonight."
+                }
                 ?? completion.arrivedAt.map { "You've reached \($0.name). \($0.blurb)" }
                 ?? "Cycle complete. \(subtitle)"
         )

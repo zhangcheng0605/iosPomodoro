@@ -1,7 +1,10 @@
 # Resume here
 
-Last session built **the stray** (item 11) on a machine with no Xcode. Working
-tree clean, everything pushed.
+Last session built **the stray** (item 11) and **the star atlas** (item 12) on
+a machine with no Xcode. Working tree clean, everything pushed.
+
+**Neither has ever been compiled.** That is the standing risk; see the
+simulator pass below.
 
 ## How this project is actually built
 
@@ -28,7 +31,7 @@ https://code.claude.com/docs/en/claude-code-on-the-web.
 ## The one line to paste
 
 > read docs/RESUME_HERE.md, then continue the build order in
-> docs/CONTENT_PLAN.md from item 12 (T, the star atlas)
+> docs/CONTENT_PLAN.md from item 13 (S, the dream diary, plus L wave 3)
 
 ## Do this first — it is fifteen minutes and it unblocks judgement
 
@@ -63,6 +66,25 @@ What to look at, in order of how likely it is to be wrong:
 5. **Both appearances, and a night scene.** She is near-black by design; the
    pale rim is what carries her. `-PawmodoroClock 22 -PawmodoroStray 3`.
 
+Then the atlas, which needs a night sky and so pairs with step 5:
+
+```sh
+xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo \
+    -PawmodoroClock 22 -PawmodoroNightSessions 12
+```
+
+Expect The Little Paw joined up and named, The Sleeping Cat at 7 of 8 bare
+stars with no lines yet, and the rest unnamed dot-outlines in the atlas card
+on the stats screen. Then finish one real session — with the clock still
+forced to 22 it counts as a night — and the eighth star should land and the
+celebration card should say *"The Sleeping Cat is complete."* Try 47 and 145
+too: 47 finishes all seven, 145 is every wandering star.
+
+The figures and their sky layout are already checked (no overlaps, nothing
+below 0.319 of screen height against a ring starting at 0.335). What has never
+been checked is whether they read as *faint enough* over real scenery — they
+are drawn at 0.22–0.85 opacity of `Theme.bark`, and that number is a guess.
+
 ## Where the build order stands
 
 Items 1–11 are done. `docs/CONTENT_PLAN.md` has the authoritative table with
@@ -73,8 +95,8 @@ the finished rows struck through; this is the summary:
 | 1b | Phase D — Live Activity | **blocked on you** — needs a 30-second Xcode step, see below |
 | 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done |
 | 11 | U the stray | done — **unverified on a device, see above** |
-| **12** | **T star atlas** | **next** |
-| 13 | S dream diary + L wave 3 (regulars, things heard) | after |
+| 12 | T star atlas | done — **unverified on a device, see above** |
+| **13** | **S dream diary + L wave 3 (regulars, things heard)** | **next** |
 | 14 | J toys, seasons, alternate icons | after |
 | 15 | P gentle streaks + Q settle-in + R expeditions/Action Button | after |
 | 16 | E bond & accessories + second-wave buddies (Pip, Bramble) | after |
@@ -101,6 +123,10 @@ rest is code — the recipe is already written in `docs/LIVE_ACTIVITY.md`.
 - **Soot**, a tenth who cannot be picked, bought or unlocked — she turns up in
   the hedge after you have focused on three days out of seven, gets closer over
   twelve more, and lets you name her. Free, and the paywall never mentions her.
+- **Seven constellations**, 47 stars, one star per focus session finished after
+  dark. Completed figures are drawn into the night sky of every place, with
+  their lore in an atlas on the stats screen. No new state: it is arithmetic
+  over the hour each session ended at.
 - **8 places** with a boat/balloon/train whose position *is* the countdown,
   four times of day each, lit windows after dark.
 - **41 journal species** including a moon rabbit gated on the real moon, plus

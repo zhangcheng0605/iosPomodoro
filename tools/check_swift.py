@@ -228,6 +228,36 @@ def check_switch_exhaustiveness(failures, enums):
                 )
 
 
+def check_constellation_links(failures):
+    """A link naming a star that doesn't exist is an index-out-of-range crash
+    the moment that figure is drawn, and the compiler cannot see it — the
+    counts only exist at runtime.
+    """
+    path = os.path.join(SOURCE, "Model", "Constellation.swift")
+    if not os.path.exists(path):
+        return
+    source = open(path).read()
+    for match in re.finditer(
+        r'id: "(\w+)",.*?stars: \[(.*?)\],\s*\n\s*links: \[(.*?)\]\s*\n\s*\)',
+        source, re.S,
+    ):
+        name, stars, links = match.groups()
+        count = len(re.findall(r"CGPoint\(", stars))
+        pairs = [
+            (int(a), int(b)) for a, b in re.findall(r"\((\d+), *(\d+)\)", links)
+        ]
+        for a, b in pairs:
+            if a >= count or b >= count:
+                failures.append(
+                    f"Constellation.swift: '{name}' has {count} stars but a "
+                    f"link joins ({a}, {b}) — that is a crash when it is drawn"
+                )
+        if a_self := [p for p in pairs if p[0] == p[1]]:
+            failures.append(
+                f"Constellation.swift: '{name}' links a star to itself {a_self}"
+            )
+
+
 def rel(path):
     return os.path.relpath(path, ROOT)
 
@@ -241,6 +271,7 @@ def main():
     check_members(failures, launch_options)
     enums = enum_cases()
     check_switch_exhaustiveness(failures, enums)
+    check_constellation_links(failures)
 
     files = list(swift_files())
     print(f"checked {len(files)} Swift files, {len(imagesets())} imagesets, "

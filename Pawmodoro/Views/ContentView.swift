@@ -263,7 +263,10 @@ struct ContentView: View {
                         .animation(.easeInOut(duration: 1.2), value: part)
                 }
                 if part.showsStars {
-                    StarfieldView(tint: Theme.bark)
+                    StarfieldView(
+                        tint: Theme.bark,
+                        nightSessions: engine.log.nightSessions
+                    )
                 }
             }
         }

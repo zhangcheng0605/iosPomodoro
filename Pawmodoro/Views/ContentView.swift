@@ -8,6 +8,10 @@ struct ContentView: View {
     @State private var showStats = false
     @State private var showPaywall = false
     @State private var showStudio = false
+    @State private var showStrayNaming = false
+    /// Whether a stage-two stray has been sent off this phase. Nothing about
+    /// her is ever persisted as lost, so this lives no longer than the phase.
+    @State private var straySpooked = false
 
     var body: some View {
         NavigationStack {
@@ -17,6 +21,8 @@ struct ContentView: View {
                     .animation(.easeInOut(duration: 0.6), value: engine.phase)
 
                 scenery
+
+                stray
 
                 sky
 
@@ -108,6 +114,18 @@ struct ContentView: View {
             .sheet(isPresented: $showStudio) {
                 SoundStudioView()
             }
+            .sheet(isPresented: $showStrayNaming) {
+                StrayNamingSheet()
+            }
+            // She comes back next time you start. Being spooked costs the rest
+            // of the phase and nothing else — there is no state anywhere that
+            // remembers it.
+            .onChange(of: engine.isRunning) { _, running in
+                if running { straySpooked = false }
+            }
+            .onChange(of: strayWantsIn) { _, wants in
+                if wants { showStrayNaming = true }
+            }
             .fullScreenCover(isPresented: onboardingPresented) {
                 OnboardingView()
             }
@@ -120,6 +138,10 @@ struct ContentView: View {
                 engine.refreshMusic(hasPlus: hasPlus)
             }
             .task {
+                // `onChange` only fires on a transition, so a launch that is
+                // already at the last stage — the ordinary case, since she is
+                // reached between sessions — needs asking directly.
+                if strayWantsIn { showStrayNaming = true }
                 if LaunchOptions.postcard, engine.album.cards.isEmpty {
                     engine.album.add(Postcard(
                         id: UUID(), date: Date(),
@@ -181,6 +203,49 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.8), value: place)
         }
         .allowsHitTesting(false)
+    }
+
+    /// Whoever is in the hedge.
+    ///
+    /// Its own layer rather than part of `scenery`, for one concrete reason:
+    /// that layer is `allowsHitTesting(false)` so the controls stay reachable
+    /// through it, and a stage-two stray has to be touchable to be spooked.
+    /// `StrayView` puts the hit region on the sprite alone.
+    @ViewBuilder
+    private var stray: some View {
+        if let stage = visibleStrayStage {
+            StrayView(
+                stage: stage,
+                progress: engine.isRunning ? engine.progress : nil,
+                spooked: $straySpooked
+            )
+        }
+    }
+
+    /// Which stage of the arc is out in the scene right now, if any.
+    private var visibleStrayStage: Stray.Stage? {
+        // Some places she can't get to on four legs.
+        guard engine.settings.place.strayVisits else { return nil }
+        // She can't be in two places: from stage four, a break has her sitting
+        // beside your buddy instead, which `BuddyView` draws.
+        if engine.isRunning, engine.phase.isBreak, engine.strayStage >= .beside {
+            return nil
+        }
+        // Once she lives here the arc is over, and all that's left is the
+        // occasional glimpse of her still doing her rounds.
+        if engine.stray.hasJoined {
+            return engine.strayCameo ? Stray.Stage.watching : nil
+        }
+        return engine.strayStage.scenePresence
+    }
+
+    /// The one moment she asks for something. Only when nothing is running —
+    /// she picks her time, and it is never the middle of your work.
+    private var strayWantsIn: Bool {
+        hasOnboarded
+            && !engine.stray.hasJoined
+            && engine.strayStage >= .home
+            && engine.runState == .idle
     }
 
     /// The time-of-day tint, and stars after dark.

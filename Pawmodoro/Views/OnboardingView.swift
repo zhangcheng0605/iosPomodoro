@@ -79,7 +79,7 @@ struct OnboardingView: View {
             // Only the buddies that ship with the app: a first launch is the
             // wrong moment to put a padlock in front of someone.
             Picker("Buddy", selection: $engine.settings.buddy) {
-                ForEach(Buddy.allCases.filter { !$0.isPlus }) { buddy in
+                ForEach(Buddy.starters) { buddy in
                     Text(engine.settings.displayName(for: buddy)).tag(buddy)
                 }
             }

@@ -12,8 +12,18 @@ enum StorageKeys {
     static let tipsGiven = "pawmodoro.tipsGiven"
     static let journal = "pawmodoro.journal"
     static let postcards = "pawmodoro.postcards"
+    /// The day the stray first turned up. Every stage of her arc is counted
+    /// back out of the session log from here, so this one date is the whole of
+    /// her progress.
+    static let strayFirstSeen = "pawmodoro.strayFirstSeen"
+    /// The day she came inside. Can't be derived from her name: accepting the
+    /// default name stores no override at all.
+    static let strayJoined = "pawmodoro.strayJoined"
 
-    static let all = [settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards]
+    static let all = [
+        settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
+        strayFirstSeen, strayJoined,
+    ]
 }
 
 /// Command-line switches that make Pawmodoro practical to drive in a simulator.
@@ -139,6 +149,15 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroTrack") else { return nil }
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
+
+    /// Put the stray at a stage of her trust arc, `-PawmodoroStray 1` to `5`.
+    /// The honest way to reach stage 5 is to focus on twelve separate days,
+    /// which is not a way to check a sprite.
+    static let forcedStrayStage: Int? = {
+        guard arguments.contains("-PawmodoroStray") else { return nil }
+        let stage = UserDefaults.standard.integer(forKey: "PawmodoroStray")
+        return (1...5).contains(stage) ? stage : nil
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -158,6 +177,7 @@ enum LaunchOptions {
     static let forcedMoon: Bool? = nil
     static let forcedTheme: AppTheme? = nil
     static let forcedTrack: String? = nil
+    static let forcedStrayStage: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

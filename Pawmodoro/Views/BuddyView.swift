@@ -58,25 +58,56 @@ struct BuddyView: View {
         return .idle
     }
 
+    /// From stage four the stray sits beside your buddy through a break — the
+    /// first time the two of them are in the same frame, and the beat that
+    /// makes her joining feel inevitable rather than granted.
+    ///
+    /// Suppressed when she *is* the buddy: Soot cannot sit next to herself.
+    private var strayIsAlongside: Bool {
+        engine.strayStage >= .beside
+            && buddy != .stray
+            && engine.isRunning
+            && engine.phase.isBreak
+    }
+
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
-                sprite
-                    .contentShape(Rectangle())
-                    .gesture(petGesture)
+            // The zzz and the hearts live inside the buddy's own cell, not the
+            // row: when the stray sits down the buddy shifts left to make room,
+            // and effects anchored to the row would be left hanging beside it.
+            HStack(spacing: 6) {
+                ZStack {
+                    sprite
+                        .contentShape(Rectangle())
+                        .gesture(petGesture)
 
-                if isNapping {
-                    zzz
-                        .offset(x: spriteSize * 0.36, y: -spriteSize * 0.30)
-                        .transition(.opacity)
+                    if isNapping {
+                        zzz
+                            .offset(x: spriteSize * 0.36, y: -spriteSize * 0.30)
+                            .transition(.opacity)
+                    }
+
+                    ForEach(hearts) { heart in
+                        HeartParticle(drift: heart.drift, reduceMotion: reduceMotion)
+                            .offset(y: -spriteSize * 0.22)
+                    }
                 }
 
-                ForEach(hearts) { heart in
-                    HeartParticle(drift: heart.drift, reduceMotion: reduceMotion)
-                        .offset(y: -spriteSize * 0.22)
+                if strayIsAlongside {
+                    // Smaller, and she keeps a little distance: she is sitting
+                    // *beside* your buddy, not replacing it. No gesture on her
+                    // either — she isn't yours to pet yet.
+                    BuddySprite(
+                        buddy: .stray,
+                        assetName: Buddy.stray.frame("awake"),
+                        size: spriteSize * 0.62
+                    )
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
                 }
             }
             .animation(.easeInOut, value: isNapping)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: strayIsAlongside)
 
             Text(caption)
                 .font(.footnote)
@@ -199,9 +230,24 @@ struct BuddyView: View {
 
     // MARK: Caption
 
+    /// What to call her. She belongs to nobody until the naming moment, so
+    /// before that she is only ever "the stray" — giving her a name early
+    /// would be the app deciding something the player hasn't yet.
+    private var strayName: String {
+        engine.stray.hasJoined
+            ? engine.settings.displayName(for: .stray)
+            : "the stray"
+    }
+
     private var caption: String {
         if animator.isPlayingTransient(at: Date()), isNapping {
             return "shhh — \(name) is dreaming"
+        }
+        // Ahead of the quirk poses on purpose: a soak happens every other
+        // break, and the two of them sitting together is the payoff of a
+        // fortnight. One caption for two sprites, so it reads as one moment.
+        if strayIsAlongside {
+            return "\(name) has company — \(strayName) sat down too"
         }
         // The quirks get their own lines: a pose nobody comments on reads like
         // a rendering mistake rather than a personality.

@@ -17,6 +17,18 @@ and ocean ambience; and the Matcha, Cocoa and Midnight themes. The free app keep
 Mochi, Biscuit, rain, purr, fireplace and the Sakura theme — a complete app on its
 own, which matters for App Review.
 
+> **This section is out of date.** It describes the app as of Phase G. Since
+> then the cast has grown to nine buddies, the wardrobe to eight themes and the
+> music to fifty tracks. The current split is the M section of
+> [CONTENT_PLAN.md](CONTENT_PLAN.md), which is authoritative; rewriting this
+> table is part of that phase's remaining work, not the stray's.
+
+**Soot is free, and she is the generosity headline.** The stray who turns up in
+the hedge and joins you after about a fortnight of showing up costs nothing, is
+never mentioned on the paywall, and cannot be bought at any price. That is the
+point of her: a buddy you can only get by turning up is worth more as a story
+than as a SKU, and it is the honest answer to "what do I get for free?".
+
 ## Step 1 — Test it locally first (no account needed)
 
 The repo ships `Pawmodoro.storekit`, a local StoreKit configuration, and the

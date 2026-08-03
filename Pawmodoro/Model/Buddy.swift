@@ -16,18 +16,38 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     case capybara
     case redpanda
     case owl
+    /// Soot. Not bought and not chosen — she turns up on her own and has to be
+    /// waited out. See `Stray`.
+    case stray
 
     var id: String { rawValue }
+
+    /// The buddies a player can pick right now.
+    ///
+    /// Soot is the one thing in the app deliberately *not* shown with a
+    /// padlock. The convention exists so people can see what Plus would buy
+    /// them; she isn't for sale, and a greyed-out cat captioned "Soot" from
+    /// day one would spoil a two-week story to sell nothing.
+    static func roster(strayJoined: Bool) -> [Buddy] {
+        allCases.filter { $0 != .stray || strayJoined }
+    }
+
+    /// The buddies offered on the very first launch: what ships with the app,
+    /// minus the one who has to arrive by herself.
+    static var starters: [Buddy] {
+        allCases.filter { !$0.isPlus && $0 != .stray }
+    }
 
     /// Matches the sprite file names in the asset catalog.
     var species: String { rawValue }
 
     /// Cat, dog and penguin ship with the app; the rest come with Pawmodoro
     /// Plus. The penguin is free on purpose — a visibly generous free tier is
-    /// the cheapest goodwill available.
+    /// the cheapest goodwill available. Soot is free for a different reason:
+    /// charging for a cat who chose you would be the wrong story to tell.
     var isPlus: Bool {
         switch self {
-        case .cat, .dog, .penguin: false
+        case .cat, .dog, .penguin, .stray: false
         case .bunny, .hamster, .fox, .capybara, .redpanda, .owl: true
         }
     }
@@ -45,6 +65,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "Tofu"
         case .redpanda: "Maple"
         case .owl: "Luna"
+        case .stray: "Soot"
         }
     }
 
@@ -59,6 +80,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "capybara"
         case .redpanda: "red panda"
         case .owl: "owl"
+        case .stray: "cat"
         }
     }
 
@@ -74,11 +96,13 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     /// The suffixes are defined by `build_frames` in tools/generate_sprites.py.
     func frame(_ suffix: String) -> String { "buddy_\(species)_\(suffix)" }
 
-    /// Only the two original buddies have a stretch pose drawn. The others skip
-    /// that beat of the wake-up rather than fall back to a wrong frame.
+    /// Only the buddies drawn from the cat's and dog's poses have a stretch.
+    /// The others skip that beat of the wake-up rather than fall back to a
+    /// wrong frame. Soot has one because she *is* the cat's drawings, in her
+    /// own palette.
     var hasStretchFrame: Bool {
         switch self {
-        case .cat, .dog: true
+        case .cat, .dog, .stray: true
         default: false
         }
     }
@@ -132,6 +156,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .redpanda: .blossom
         case .penguin: .peaks
         case .owl: .woods
+        case .stray: .blossom      // village alleys, which is where strays live
         }
     }
 
@@ -159,6 +184,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "🦫"
         case .redpanda: "🦝"
         case .owl: "🦉"
+        case .stray: "🐈‍⬛"
         }
     }
 
@@ -175,6 +201,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .capybara: "🦫"
         case .redpanda: "🦝"
         case .owl: "🦉"
+        case .stray: "🐈‍⬛"
         }
     }
 }

@@ -54,9 +54,18 @@ final class TimerEngine {
     /// that way. Cleared whenever the phase stops for any reason.
     private(set) var sighting: Sighting?
 
+    /// Whether Soot is doing her rounds this phase.
+    ///
+    /// Her one quirk, and the only one that shows while somebody else is the
+    /// buddy: a cat who spent a fortnight deciding to come in doesn't stop
+    /// being a cat afterwards. Rolled once per phase for the same reason a
+    /// sighting is — a per-frame decision would have her flicker.
+    private(set) var strayCameo = false
+
     let log: SessionLog
     let journal: Journal
     let album: Album
+    let stray: Stray
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -69,13 +78,15 @@ final class TimerEngine {
         settings: PomodoroSettings? = nil,
         log: SessionLog = SessionLog(),
         journal: Journal = Journal(),
-        album: Album = Album()
+        album: Album = Album(),
+        stray: Stray = Stray()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
         self.log = log
         self.journal = journal
         self.album = album
+        self.stray = stray
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -92,6 +103,7 @@ final class TimerEngine {
         if LaunchOptions.fillJournal {
             journal.fillForDebug()
         }
+        stray.seedForDebug()
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
             self.settings.music = forced
         }
@@ -123,6 +135,11 @@ final class TimerEngine {
     /// Paw prints to show as earned in the current cycle.
     var filledPaws: Int { min(focusInCycle, pawsPerCycle) }
 
+    /// How far the stray has come. Counted out of the log every time it's read
+    /// rather than stored, which is what makes it impossible to get out of step
+    /// with the history it describes.
+    var strayStage: Stray.Stage { stray.stage(log: log) }
+
     // MARK: Controls
 
     func start() {
@@ -135,6 +152,7 @@ final class TimerEngine {
         if runState == .idle {
             rainSeconds = 0
             rollSighting()
+            rollStrayCameo()
         }
 
         let end = Date().addingTimeInterval(remaining)
@@ -357,6 +375,15 @@ final class TimerEngine {
         }
     }
 
+    /// Roughly one phase in four, once she lives here and somebody else is on
+    /// duty. Never while she *is* the buddy — she can't do her rounds and keep
+    /// you company at the same time.
+    private func rollStrayCameo() {
+        strayCameo = stray.hasJoined
+            && settings.buddy != .stray
+            && Double.random(in: 0..<1) < 0.25
+    }
+
     // MARK: The journey
 
     /// Whether a place has been reached, ignoring Plus. Entitlement is checked
@@ -447,6 +474,10 @@ final class TimerEngine {
         var seen: Species?
         if finished == .focus {
             log.add(minutes: settings.focusMinutes)
+            // Checked after the log is written, so the session that just
+            // finished counts toward the week she is deciding about. She only
+            // ever starts watching off the back of a session you completed.
+            stray.noticeIfReady(log: log)
             // A rainbow is not rolled: it is earned by a session that
             // actually ran rain for at least half its length, which is only
             // knowable now. Deterministic, so it feels given rather than won.

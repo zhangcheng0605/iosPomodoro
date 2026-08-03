@@ -569,7 +569,7 @@ The Sleeping Cat partial, in every place's night sky, both appearances;
 
 ---
 
-## Phase U — The Stray (the journal, stretched across days)
+## Phase U — The Stray (the journal, stretched across days) ✅ built
 
 > One day there are eyes in the hedge while you focus. Come back tomorrow and
 > she's on the fence. Keep showing up — not perfectly, just *actually* — and
@@ -615,6 +615,39 @@ Her position *is* the progress, and instrumenting it would kill it.
 **Done when:** each stage renders in day and night scenes; petting a stage-2
 stray makes her fade (and nothing is lost); the naming sheet writes through
 `buddyNames`; stage never regresses; Reduce Motion swaps fades for cuts.
+
+### As built
+
+Everything above shipped. Five things came out differently, and all five are
+worth knowing before touching this again:
+
+- **She doesn't go to Harbor Isle or Cloudspire.** The plan assumed every place
+  has ground under the screen edges where she sits. Two don't: Harbor is open
+  water from the near edge to the horizon, and Cloudspire's island narrows to
+  nothing well short of them. `Place.strayVisits` says so, and
+  `tools/check_stray.py` is what found it — the first draft had her sitting
+  placidly on the sea. Nothing is lost by it: the arc counts days you focused,
+  not places she was seen in, so a fortnight at the Harbor still brings her in.
+- **She is positioned by her feet, not her middle.** `Stray.groundLine` is one
+  screen fraction shared by every stage and every place. Anchoring the centre
+  instead — the obvious way — put the largest stage in the Onsen's hot spring
+  while the two smaller sprites looked fine, purely because it is taller.
+- **The vertical descent in the stage table became a size progression.** In
+  this art style everything below the treeline is the same ground, so height
+  reads as nothing; distance is carried by how big she is drawn, how far across
+  she is, and how long she stays. Dwell time is doing real work here — stage 1
+  looks in for a third of a session, stage 3 stays for nearly all of it.
+- **"Idle morning" became just idle.** Gating the naming moment on the hour
+  would mean somebody who only ever focuses at night never gets her, which is
+  the one outcome this phase cannot have.
+- **A second key.** The plan called for one date; there are two. Whether she
+  has joined cannot be read off her name, because accepting the default stores
+  no override at all — `setName` clears an override equal to the original.
+
+**Not yet seen running.** This was built on Linux with no Xcode: the Swift has
+never been compiled and no stage has been looked at in a simulator. The art and
+its placement are verified by `tools/check_stray.py` against the real exported
+scene pixels, which is as far as that goes without a Mac.
 
 ---
 
@@ -680,7 +713,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~8~~ | ~~K postcards + album~~ — **done** | M | |
 | ~~9~~ | ~~**L wave 2**~~ — **done**, and then some: 41 species, moon, phenomena | M | wave 3 (regulars, things heard) still open |
 | ~~10~~ | ~~**O almanac page** (absorbs N travelogue map)~~ — **done** | M | |
-| 11 | **U the stray** | M | the retention story; wants the habit loop live, hence after O |
+| ~~11~~ | ~~**U the stray**~~ — **done**: five stages, Soot joins free | M | built without a Mac; see the note under Phase U |
 | 12 | **T star atlas** | S | zero new state; pairs with O's moon/night work |
 | 13 | **S dream diary** + L wave 3 (regulars, things heard) | M | richest after L wave 2 fills the journal |
 | 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |

@@ -64,6 +64,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroPostcard` | Put one postcard in the album on launch |
 | `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
+| `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -129,6 +130,19 @@ There are no tests. A change is verified by building and looking at it:
   caption and the paw row each carry a theme-coloured capsule, because with a
   place behind the app the background is no longer a known colour. Removing
   one will fail the contrast check.
+- **The stray stands on the ground, and that is checked, not eyeballed.** She
+  is the only art placed by fractions of the *screen* rather than drawn into a
+  scene, so nothing else in the pipeline can catch her floating.
+  `tools/check_stray.py` composites what the app composites — scene, veil, sky
+  wash — behind each stage sprite at its shipping position and asserts two
+  things: she is standing on something, and her silhouette clears 2:1 against
+  whatever is behind it, in every place, time of day, theme and appearance, on
+  a tall phone and a short one. It found her sitting on the open sea at Harbor
+  and hanging in mid-air over Cloudspire, which is why `Place.strayVisits`
+  exists. Note the sprite is positioned by its **feet** (`Stray.groundLine`),
+  never its centre — anchoring the centre put the biggest stage in the Onsen's
+  hot spring while the two smaller ones looked fine. Run it after moving her,
+  resizing a stage sprite, or redrawing any scene.
 - **Run `python3 tools/check_contrast.py` after touching a palette.** It reads
   the real values out of `AppTheme.swift` and blends the time-of-day sky wash
   over every phase background, in every theme and appearance — 216 pairs. The
@@ -146,7 +160,9 @@ There are no tests. A change is verified by building and looking at it:
 - **New user-facing state gets a key in `StorageKeys`** (`LaunchOptions.swift`),
   so `-PawmodoroResetState` keeps working.
 - **Locked content is shown with a padlock, never hidden**, and tapping it opens
-  the paywall.
+  the paywall. The single exception is Soot, who is hidden until she arrives —
+  she isn't for sale, and a greyed-out cat from day one would spoil a two-week
+  story to sell nothing. Everything else still follows the rule.
 - Every asset is generated: `tools/generate_assets.py` (icon, audio),
   `generate_sprites.py` (buddies), `generate_scenes.py` (places, vignettes)
   and `generate_wildlife.py` (species, plus their journal silhouettes and

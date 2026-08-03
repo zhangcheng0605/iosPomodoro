@@ -73,6 +73,24 @@ enum Place: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
+    /// Whether the stray turns up here.
+    ///
+    /// She walks, so she needs ground under her, and these two places have
+    /// none where she sits: Harbor Isle is open water from the near edge to
+    /// the horizon, and Cloudspire is an island that forgot to land and
+    /// narrows to nothing well short of the screen edges. Rather than float a
+    /// cat over either, she just doesn't follow you out there.
+    ///
+    /// Nothing is lost by it — her arc counts days you focused, not places she
+    /// was seen in, so a fortnight at the Harbor still brings her all the way
+    /// in. `tools/check_stray.py` is what found both.
+    var strayVisits: Bool {
+        switch self {
+        case .harbor, .cloudspire: false
+        default: true
+        }
+    }
+
     /// What crosses this place while a focus session runs, if anything.
     var vignette: Vignette? {
         switch self {

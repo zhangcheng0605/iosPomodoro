@@ -18,7 +18,16 @@ struct BuddyPicker: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(Buddy.allCases) { buddy in
+                // Soot appears here the day she comes inside and not before —
+                // see `Buddy.roster(strayJoined:)` for why she is the one
+                // exception to showing locked content.
+                // `|| selected` so the picker can never be showing a row-set
+                // that excludes the buddy currently in use, which
+                // `-PawmodoroBuddy stray` would otherwise do.
+                ForEach(Buddy.roster(
+                    strayJoined: engine.stray.hasJoined
+                        || engine.settings.buddy == .stray
+                )) { buddy in
                     tile(for: buddy)
                 }
             }

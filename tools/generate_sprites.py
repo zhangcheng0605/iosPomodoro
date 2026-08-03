@@ -115,9 +115,33 @@ OWL_PALETTE = {
     NOSE: (206, 158, 74, 255),
 }
 
+# --- The stray (Soot) ------------------------------------------------------
+#
+# The one palette here whose outline is *lighter* than its body. Every other
+# buddy is drawn on a light background and outlined dark; Soot spends her first
+# two weeks standing in a scene that may be a night sky, and a near-black cat
+# outlined in near-black is a hole in the picture rather than an animal. The
+# pale rim is what makes her silhouette survive the darkest place in the app —
+# tools/check_stray.py measures it rather than trusting this note.
 
-def new_grid():
-    return Image.new("L", (S, S), T)
+STRAY_PALETTE = {
+    **CAT_PALETTE,
+    OUTLINE: (128, 136, 156, 255),  # a rim of moonlight, not a dark line
+    BODY: (58, 62, 76, 255),        # charcoal with a blue lean
+    SHADE: (42, 45, 57, 255),
+    CREAM: (176, 182, 196, 255),    # the small pale chest patch
+    PINK: (110, 88, 100, 255),      # ear insides, dusty
+    EYE: (240, 176, 72, 255),       # amber — the only warm thing about her
+    NOSE: (116, 92, 102, 255),
+    ACCENT: (240, 176, 72, 255),
+}
+
+
+def new_grid(width=S, height=None):
+    """A blank drawing grid. Buddies are square; the stray's stage sprites are
+    drawn on grids matched to their own aspect, the way the wildlife generator
+    does it, because `scaledToFit` would letterbox a square into a wide frame."""
+    return Image.new("L", (width, height or width), T)
 
 
 def outline_silhouette(grid):
@@ -139,11 +163,12 @@ def outline_silhouette(grid):
 
 def to_png(grid, palette, name, template=False):
     arr = np.array(grid)
-    rgba = np.zeros((S, S, 4), dtype=np.uint8)
+    height, width = arr.shape
+    rgba = np.zeros((height, width, 4), dtype=np.uint8)
     for index, colour in palette.items():
         rgba[arr == index] = colour
     img = Image.fromarray(rgba, mode="RGBA")
-    img = img.resize((S * UPSCALE, S * UPSCALE), Image.NEAREST)
+    img = img.resize((width * UPSCALE, height * UPSCALE), Image.NEAREST)
 
     contents = {
         "images": [{"filename": f"{name}.png", "idiom": "universal"}],
@@ -158,7 +183,8 @@ def to_png(grid, palette, name, template=False):
     img.save(os.path.join(folder, f"{name}.png"), "PNG")
     with open(os.path.join(folder, "Contents.json"), "w") as f:
         json.dump(contents, f, indent=2)
-    print(f"  {name}: {S * UPSCALE}x{S * UPSCALE}{' (template)' if template else ''}")
+    print(f"  {name}: {width * UPSCALE}x{height * UPSCALE}"
+          f"{' (template)' if template else ''}")
 
 
 def eyes_open(d, left, right, y):
@@ -527,6 +553,73 @@ def fx_zzz():
     return g
 
 
+# --- The stray's stages ----------------------------------------------------
+#
+# Three small sprites that do the first three-quarters of the trust arc. She is
+# never drawn at buddy size until she is close enough to sit beside one, so the
+# progression is carried by the art itself rather than by a meter: two points of
+# light, then a shape, then a cat.
+#
+# Sizes here set the aspect the app draws them at — `Stray.Stage.size` in
+# Pawmodoro/Model/Stray.swift must match, or `scaledToFit` letterboxes them.
+
+
+def stray_eyes():
+    """Stage one. Not a cat yet: two amber points in the dark of a hedge.
+
+    No outline pass — a pale rim around something whose whole job is to be
+    half-hidden would hand the game away on the first day."""
+    g = new_grid(20, 10)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 18, 8], fill=SHADE)          # the shadow she is inside
+    for cx in (6, 13):
+        d.rectangle([cx - 1, 4, cx + 1, 5], fill=EYE)
+        d.point((cx, 4), fill=BODY)               # the slit of a pupil
+    return g
+
+
+def stray_distant():
+    """Stage two. A shape at the edge of the scene — ears and a tail are the
+    whole read at this size, so the face is two amber pixels and nothing else."""
+    g = new_grid(26, 23)
+    d = ImageDraw.Draw(g)
+    for x, y in ((20, 20), (22, 17), (23, 13)):   # tail, held up and still
+        d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=SHADE)
+    d.ellipse([6, 10, 20, 22], fill=BODY)         # sitting body
+    d.polygon([(7, 8), (8, 2), (12, 7)], fill=BODY)
+    d.polygon([(18, 8), (17, 2), (13, 7)], fill=BODY)
+    d.ellipse([6, 3, 19, 14], fill=BODY)          # head
+    d.point((10, 8), fill=EYE)
+    d.point((15, 8), fill=EYE)
+    return outline_silhouette(g)
+
+
+def stray_watch(tail_up=False):
+    """Stage three. Close enough to be a cat: ears up, amber eyes, and the pale
+    chest patch that tells you she is Soot and not a shadow.
+
+    The two frames differ only in the tail, which is the entire animation — a
+    cat that is otherwise holding perfectly still is exactly the point."""
+    g = new_grid(44, 40)
+    d = ImageDraw.Draw(g)
+    tail = ([(34, 31), (38, 26), (40, 20), (39, 14)] if tail_up
+            else [(34, 34), (37, 35), (40, 33), (41, 29)])
+    for x, y in tail:
+        d.ellipse([x - 2, y - 2, x + 2, y + 2], fill=SHADE)
+    d.ellipse([10, 16, 34, 38], fill=BODY)        # sitting body
+    d.ellipse([17, 25, 27, 38], fill=CREAM)       # the chest patch
+    d.polygon([(11, 12), (13, 1), (20, 9)], fill=BODY)      # ears
+    d.polygon([(33, 12), (31, 1), (24, 9)], fill=BODY)
+    d.polygon([(14, 10), (14, 5), (18, 9)], fill=PINK)
+    d.polygon([(30, 10), (30, 5), (26, 9)], fill=PINK)
+    d.ellipse([11, 4, 33, 24], fill=BODY)         # head
+    for cx in (17, 27):
+        d.ellipse([cx - 2, 11, cx + 2, 15], fill=EYE)
+        d.point((cx, 13), fill=BODY)              # the slit
+    d.polygon([(21, 17), (23, 17), (22, 19)], fill=NOSE)
+    return outline_silhouette(g)
+
+
 def fx_heart():
     """A 7x7 pixel heart, centred."""
     g = new_grid()
@@ -861,6 +954,9 @@ BUDDIES = [
      {"waddle": penguin_waddle, "slide": penguin_slide}),
     ("owl", OWL_PALETTE, owl_awake, owl_asleep, None,
      {"watch": owl_watch}),
+    # Soot is a cat, so she is the cat's drawings in her own palette rather
+    # than a tenth animal — which is also why she inherits the stretch.
+    ("stray", STRAY_PALETTE, cat_awake, cat_asleep, cat_stretch, {}),
 ]
 
 # Row the breathing squash removes. Both postures are drawn with the body
@@ -893,6 +989,11 @@ if __name__ == "__main__":
     print("Sprites:")
     for species, palette, awake, asleep, stretch, quirks in BUDDIES:
         build_frames(species, palette, awake, asleep, stretch, quirks)
+    print("The stray:")
+    to_png(stray_eyes(), STRAY_PALETTE, "stray_eyes")
+    to_png(stray_distant(), STRAY_PALETTE, "stray_distant")
+    to_png(stray_watch(), STRAY_PALETTE, "stray_watch_0")
+    to_png(stray_watch(tail_up=True), STRAY_PALETTE, "stray_watch_1")
     print("Effects:")
     to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
     to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)

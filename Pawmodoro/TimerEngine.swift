@@ -165,6 +165,7 @@ final class TimerEngine {
             rollSighting()
             rollDream()
             rollHeard()
+            rollEncounter()
             rollStrayCameo()
         }
 
@@ -216,6 +217,7 @@ final class TimerEngine {
         sighting = nil
         dream = nil
         scheduledSound = nil
+        encounter = nil
         runState = .idle
         remaining = phaseDuration
         refreshAmbience()
@@ -233,6 +235,7 @@ final class TimerEngine {
         sighting = nil
         dream = nil
         scheduledSound = nil
+        encounter = nil
         advance(natural: false)
     }
 
@@ -401,6 +404,37 @@ final class TimerEngine {
             sighting = Sighting(species: species)
             return
         }
+    }
+
+    // MARK: Micro-encounters
+
+    /// The tiny thing visiting this phase, if one is. Never recorded anywhere:
+    /// it happens, and then it has happened.
+    private(set) var encounter: MicroEncounter?
+
+    /// On screen right now, or nil.
+    var visibleEncounter: (encounter: MicroEncounter, phase: Double)? {
+        guard isRunning, phase == .focus, let encounter else { return nil }
+        let window = encounter.window
+        guard window.contains(progress) else { return nil }
+        let span = window.upperBound - window.lowerBound
+        guard span > 0 else { return nil }
+        return (encounter, (progress - window.lowerBound) / span)
+    }
+
+    private func rollEncounter() {
+        encounter = nil
+        guard phase == .focus else { return }
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+        let season = Season.current()
+
+        let possible = MicroEncounter.allCases.filter {
+            $0.isPossible(place: settings.place, dayPart: part, season: season)
+        }
+        guard let candidate = possible.randomElement(),
+              Double.random(in: 0..<1) < MicroEncounter.chance
+        else { return }
+        encounter = candidate
     }
 
     // MARK: Things heard

@@ -24,6 +24,12 @@ struct ContentView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.6), value: engine.phase)
 
+                // Zero-size, no drawing: it just sits in the responder chain
+                // so a shake reaches the scene.
+                ShakeDetector()
+                    .frame(width: 0, height: 0)
+                    .allowsHitTesting(false)
+
                 scenery
 
                 toys
@@ -33,6 +39,16 @@ struct ContentView: View {
                 sky
 
                 seasonal
+
+                // Something tiny that settles on the buddy or the ring. Above
+                // the scene, below the UI: it lands *on* things, so it has to
+                // be in front of them.
+                if let visit = engine.visibleEncounter {
+                    MicroEncounterView(
+                        encounter: visit.encounter, phase: visit.phase
+                    )
+                    .id(visit.encounter)
+                }
 
                 // Only while the timer is running with an ambience chosen —
                 // the same condition that has SoundPlayer playing, so the

@@ -90,6 +90,12 @@ struct SceneToyView: View {
             .contentShape(Rectangle())
             .gesture(enabled ? gesture(in: geometry.size) : nil)
             .onDisappear { TouchTracker.shared.x = nil }
+            // The snow globe. Works in any place and at any hour, including
+            // during focus — a shake is not a fiddle, it is something you do
+            // once and then go back to work.
+            .onReceive(NotificationCenter.default.publisher(for: .pawmodoroShake)) { _ in
+                swirl(in: geometry.size)
+            }
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
@@ -181,6 +187,24 @@ struct SceneToyView: View {
         }
     }
 
+    /// Everything loose in the scene goes round once and resettles.
+    private func swirl(in size: CGSize) {
+        guard effects.count < 40 else { return }   // no stacking a shake storm
+        let now = Date()
+        for index in 0..<18 {
+            let n = Double(index)
+            add(Effect(
+                kind: .mote(
+                    angle: n / 18 * .pi * 2,
+                    radius: size.width * (0.18 + 0.26 * (n * 0.6180339887)
+                        .truncatingRemainder(dividingBy: 1))
+                ),
+                at: .zero, born: now, life: 2.0
+            ))
+        }
+        HapticsDirector.shared.detent()
+    }
+
     private func follow(_ point: CGPoint) {
         if firefly == nil {
             firefly = Firefly(at: point, born: Date())
@@ -225,6 +249,17 @@ struct SceneToyView: View {
                     )),
                     with: .color(tint.opacity(fade)),
                     lineWidth: max(0.6, 2.2 * (1 - t))
+                )
+            case .mote(let angle, let radius):
+                // Round once and settle: the swirl decays as it goes, so the
+                // mote spirals inward and drops rather than orbiting forever.
+                let sweep = angle + t * .pi * 2
+                let out = radius * (1 - t * 0.45)
+                let x = size.width / 2 + cos(sweep) * out
+                let y = size.height * 0.42 + sin(sweep) * out * 0.5 + t * t * 90
+                canvas.fill(
+                    Path(ellipseIn: CGRect(x: x - 2, y: y - 2, width: 4, height: 4)),
+                    with: .color(tint.opacity((1 - t) * 0.5))
                 )
             case .petal(let driftX, let spin):
                 let x = effect.at.x + driftX * t * 90 + sin(t * .pi * 3 + spin) * 10
@@ -276,6 +311,9 @@ struct SceneToyView: View {
         enum Kind {
             case ring
             case petal(driftX: Double, spin: Double)
+            /// One mote of the snow-globe swirl. `angle` is where it starts on
+            /// the circle and `radius` how far out it sits.
+            case mote(angle: Double, radius: Double)
         }
 
         var id: Int = 0

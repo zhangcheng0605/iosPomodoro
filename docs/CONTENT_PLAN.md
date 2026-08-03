@@ -268,7 +268,7 @@ the content *multiplies* rather than adds.
   haptic ticks and rings; a toy, not a game — no score, ever.
 - **Firefly** — after dark, one firefly trails your finger, then wanders off.
 - **Petal gust** — swipe in Blossom Village: petals scatter and resettle.
-**Buddy magic:** eye-tracking ✅ built; snow-globe shake open.
+**Buddy magic:** ✅ built — eye-tracking and the snow-globe shake.
 - **Eye-tracking** — drag a finger near an awake buddy and its pupils follow
   (two pupil-offset frames per buddy; absurd charm for ~20 lines of Python).
 - **Snow-globe shake** — shake the phone: current scene's particles swirl
@@ -420,13 +420,20 @@ as **sepia field-sketches** (same grid again, sketch palette), with first-seen
 date and count. The silhouette-plus-hint is the retention hook and honours
 the house rule: locked things are shown, never hidden.
 
-### L5. Micro-encounters (no journal, pure charm)
+### L5. Micro-encounters (no journal, pure charm) ✅ built
 
 Three tiny moments that need no collection system: the butterfly that lands
 on the sleeping buddy's nose (~60% through a Meadow/Blossom day session, and
 leaves at the chime); a robin that perches on the top of the timer ring for a
 few seconds; a snowflake that settles on the buddy's nose during Snowdrift
 season. Rare enough to be told about, cheap enough to ship in an afternoon.
+
+Built as specced, one in twelve per eligible session. No new art: the butterfly
+and the robin reuse their journal sprites, so the one on the nose is
+recognisably the one from the page, and the snowflake is six strokes in a
+Canvas because a twelve-point sprite would be four white pixels and a rumour.
+Conditions are deliberately narrow — a butterfly on a nose in a snowstorm at
+midnight would be charming exactly once and wrong every time after.
 
 ---
 

@@ -1,169 +1,168 @@
 # Resume here
 
-Last session built **the stray** (item 11), **the star atlas** (item 12) and
-**the dream diary** (item 13's first half) on a machine with no Xcode. Working tree clean, everything pushed.
+One long Linux session took the build order from item 11 to the end of item 16,
+minus three slices that genuinely need a Mac. Working tree clean, everything
+pushed to `claude/continue-plan-doc-b4ct6a`.
 
-**None of the three has ever been compiled.** That is the standing risk; see
-the simulator pass below.
+**Nothing built in that session has ever been compiled.** That is the standing
+risk and it is now seven phases deep. Read the next section before writing any
+more code.
 
 ## How this project is actually built
 
 Weekdays are a Windows office and a Linux container: no Mac, no Xcode, no
-compiler. Evenings and weekends are the MacBook, and that time is short. So
-the rule is: **features get written on Linux, and Mac time is only for things
-that genuinely need a Mac.** Anything a machine can check without Xcode should
+compiler. Evenings and weekends are the MacBook, and that time is short. So the
+rule is: **features get written on Linux, and Mac time is only for things that
+genuinely need a Mac.** Anything a machine can check without Xcode should
 already have been checked before the Mac ever sees it.
 
-That is what `tools/check_swift.py` is for — run it before ending any session,
+That is what `tools/check_swift.py` is for. Run it before ending any session,
 along with `check_contrast.py` and `check_stray.py`. It closes the mechanical
-error classes (brackets, `#if DEBUG` parity, missing assets, missing enum
-cases, unknown `Theme.`/`LaunchOptions.` members). It is not a type checker:
-argument labels, inference and SwiftUI misuse still land on the Mac.
+error classes — brackets, `#if DEBUG` parity, missing assets, missing enum
+cases, unknown `Theme.`/`LaunchOptions.` members, constellation links that
+would crash. Every rule in it is verified by deliberately breaking the code and
+watching it fail.
 
-**A Swift toolchain would help and isn't installable here.** The environment's
-network policy allows package registries only, so `download.swift.org` returns
-403. Allowing that host would let a future session run `swiftc -parse` over
-everything and fully type-check the pure-Foundation model files — a real but
-modest improvement, since Linux has no SwiftUI or UIKit either way. It is an
-environment setting, changeable at
+It is **not** a type checker. Argument labels, inference and SwiftUI misuse are
+invisible to it and will surface on the Mac. Expect the first build after this
+session to throw a handful of errors.
+
+**A Swift toolchain would narrow that and isn't installable here.** The
+environment's network policy allows package registries only, so
+`download.swift.org` returns 403. Allowing that host would let a future session
+run a real parser over everything and fully type-check the pure-Foundation
+model files — worth doing, but not transformative, since Linux has no SwiftUI
+or UIKit either way. It's an environment setting, changeable at
 https://code.claude.com/docs/en/claude-code-on-the-web.
 
 ## The one line to paste
 
-> read docs/RESUME_HERE.md, then continue the build order in
-> docs/CONTENT_PLAN.md from L wave 3 (regulars, things heard), then item 14
+> read docs/RESUME_HERE.md, then do the simulator pass; after that pick up the
+> three deferred slices listed there
 
-## Do this first — it is fifteen minutes and it unblocks judgement
-
-The stray, the atlas and the dream diary have **never been compiled and never
-been seen running.** All three were written on Linux. Before building anything
-on top of them:
+## Do this first — one build, then a walk through seven features
 
 ```sh
+python3 tools/check_swift.py      # should already pass
 tools/run-sim.sh --demo --headless
 ```
 
-Then walk her arc, which is one flag:
+Fix whatever the compiler says. Then walk the new work, hardest-to-be-right
+first. Each row is one launch.
 
-```sh
-xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo -PawmodoroStray 1
-# ...and 2, 3, 4, 5
-```
+| What | Flags | What should happen |
+|---|---|---|
+| The stray, stages 1–3 | `-PawmodoroStray 1` … `3` | Sitting **on the ground**, left edge then right, clear of the ambience row and the transport controls |
+| Stage 4 | `-PawmodoroStray 4`, start, skip to break | Two sprites, one caption, buddy shifted left |
+| Stage 5 | `-PawmodoroStray 5` | Naming sheet on launch; accepting makes her the buddy and adds her to Settings |
+| Spooking her | `-PawmodoroStray 2`, tap her | Fades out for the rest of the phase; next phase she's back |
+| Star atlas | `-PawmodoroClock 22 -PawmodoroNightSessions 12` | Little Paw joined and named; Sleeping Cat 7/8 bare stars, no lines |
+| A star landing | same, then finish a session | Eighth star lands, card says "The Sleeping Cat is complete" |
+| Dreams | `-PawmodoroFillJournal -PawmodoroDream memory` | Bubble over the sleeping buddy between 40–70% of the phase |
+| **The owl rule** | `-PawmodoroBuddy owl -PawmodoroClock 22 -PawmodoroDream memory` | **No bubble at all** — Luna keeps watch at night. This one is a rule, not a look |
+| Things heard | `-PawmodoroHear owlcall` | Plays once, quietly, mid-session; lands in the journal's "Heard, not seen" |
+| Gentle streak | `-PawmodoroSeedGap` | "the boat stayed anchored on \<day\>" on the streak card |
+| Settle-in | Settings → Behaviour → on, then play | Three breaths, ~12s, tap to skip |
+| Expeditions | idle | Three chips under the ring; tapping one re-lengths all phases and the buddy remarks |
+| Seasons | `-PawmodoroSeason autumn`, `sakura`, `winter` | Particles. `fireflies` and `lanterns` also need `-PawmodoroClock 22` |
+| Bond | `-PawmodoroSeedStats` | Heart meter on the stats screen |
 
-What to look at, in order of how likely it is to be wrong:
+Two things nothing has verified, and a screenshot settles both in a second:
 
-1. **Stages 1–3 in the scene.** She should be sitting *on the ground* at the
-   left edge (stage 1) or the right edge (stages 2–3), clear of the ambience
-   row and the transport controls. Placement is verified against the real scene
-   pixels by `tools/check_stray.py`, but nothing has verified she isn't behind
-   a *button* — that geometry is a layout estimate, and the iPhone SE is the
-   tight one. If she collides, move `Stage.x`, not `Stray.groundLine`.
-2. **Stage 4, on a break.** Two sprites, one caption, buddy shifted left to
-   make room. `-PawmodoroStray 4` then start a session and skip to the break.
-3. **Stage 5.** The naming sheet should come up on launch. Accepting it makes
-   her the active buddy and puts her in the Settings picker for good.
-4. **Spooking her.** At stage 2 only, tapping her should fade her out for the
-   rest of the phase. Starting the next phase brings her back.
-5. **Both appearances, and a night scene.** She is near-black by design; the
-   pale rim is what carries her. `-PawmodoroClock 22 -PawmodoroStray 3`.
+1. **Whether the stray or the constellations sit behind a button.** Her ground
+   placement is measured against real scene pixels by `check_stray.py`, but the
+   *chrome* geometry is a layout estimate, and the iPhone SE is the tight one.
+   If she collides, move `Stage.x`, not `Stray.groundLine`.
+2. **Whether the constellations are faint enough** over real scenery. They are
+   drawn at 0.22–0.85 opacity of `Theme.bark` and that number is a guess.
 
-Then the atlas, which needs a night sky and so pairs with step 5:
-
-```sh
-xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo \
-    -PawmodoroClock 22 -PawmodoroNightSessions 12
-```
-
-Expect The Little Paw joined up and named, The Sleeping Cat at 7 of 8 bare
-stars with no lines yet, and the rest unnamed dot-outlines in the atlas card
-on the stats screen. Then finish one real session — with the clock still
-forced to 22 it counts as a night — and the eighth star should land and the
-celebration card should say *"The Sleeping Cat is complete."* Try 47 and 145
-too: 47 finishes all seven, 145 is every wandering star.
-
-Then the dreams, which need the buddy asleep and so ride any focus session:
-
-```sh
-xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo \
-    -PawmodoroFillJournal -PawmodoroDream memory
-```
-
-The bubble should rise over the sleeping buddy between 40% and 70% of the
-phase and be gone before the chime. Then `-PawmodoroBuddy owl -PawmodoroClock
-22 -PawmodoroDream memory`: Luna keeps watch at night rather than sleeping, so
-**no bubble should appear at all** — that is the one behaviour in this phase
-that is a rule rather than a look. Finish a session to see it land in the
-diary at the bottom of the stats screen.
-
-The figures and their sky layout are already checked (no overlaps, nothing
-below 0.319 of screen height against a ring starting at 0.335). What has never
-been checked is whether they read as *faint enough* over real scenery — they
-are drawn at 0.22–0.85 opacity of `Theme.bark`, and that number is a guess.
+**The riskiest single thing** is `PawmodoroShortcuts` in
+`StartFocusIntent.swift`. `AppShortcutsProvider` phrases must each contain
+`\(.applicationName)`; Apple rejects the whole provider otherwise and it fails
+at *runtime*, not build time. Test it by asking Siri, or by looking for "Start
+focus" in Shortcuts.
 
 ## Where the build order stands
 
-Items 1–13a are done. `docs/CONTENT_PLAN.md` has the authoritative table with
-the finished rows struck through; this is the summary:
-
 | # | Scope | State |
 |---|---|---|
-| 1b | Phase D — Live Activity | **blocked on you** — needs a 30-second Xcode step, see below |
-| 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done |
-| 11 | U the stray | done — **unverified on a device, see above** |
-| 12 | T star atlas | done — **unverified on a device, see above** |
-| 13a | S dream diary | done — **unverified on a device** |
-| **13b** | **L wave 3 — regulars, things heard** | **next** |
-| 14 | J toys, seasons, alternate icons | after |
-| 15 | P gentle streaks + Q settle-in + R expeditions/Action Button | after |
-| 16 | E bond & accessories + second-wave buddies (Pip, Bramble) | after |
+| 1b | Phase D — Live Activity | **blocked on you** — 30 seconds in Xcode, see below |
+| 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done, and seen running |
+| 11 | U the stray | done — **never compiled** |
+| 12 | T star atlas | done — **never compiled** |
+| 13 | S dream diary + L wave 3 (regulars, things heard) | done — **never compiled** |
+| 14 | J seasons | done — **never compiled**; toys and icons deferred, below |
+| 15 | P gentle streaks + Q settle-in + R expeditions & Action Button | done — **never compiled** |
+| 16 | E1 bond | done — **never compiled**; E2 accessories deferred, below |
 
-The remaining specs are in `docs/CONTENT_PLAN.md`, each written to
-implementation grade with persistence keys, debug flags and done-when criteria.
-Phases U, T and S each now carry an **As built** section recording where the
-plan and the code diverged — read the relevant one before touching that code.
+Every phase above carries an **As built** section in its plan document
+recording where the code and the plan diverged. Read the relevant one before
+touching that code — several record a decision that looks arbitrary until you
+know why.
+
+## What is deliberately not built
+
+Three slices, all left for the same reason: they need a device more than they
+need code.
+
+1. **Phase J's touch toys and buddy magic** — pond ripples, skipping stones,
+   the trailing firefly, petal gusts, eye-tracking, snow-globe shake. Every one
+   is a gesture or a motion event tuned by feel, over a scenery layer that is
+   currently `allowsHitTesting(false)`. Writing six of those blind would give
+   you six things to debug at once instead of one.
+2. **Phase J's alternate app icons.** The generator half is easy. The project
+   half needs `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS` plus alternate
+   icon entries in the target's build settings — an unverifiable edit to
+   `project.pbxproj`, which is exactly what CLAUDE.md warns about. Do the Xcode
+   side first and the picker is twenty lines.
+3. **Phase E2's accessories.** Five items per posture family per buddy is
+   roughly two hundred imagesets, each needing to line up against a head anchor
+   nobody has checked on a device. A generator afternoon plus a verification
+   pass, not a slice.
+
+**Pip and Bramble**, the second-wave buddies (an otter who floats on his back
+holding a pebble; a hedgehog whose asleep pose is a perfect ball) are also
+still open. They are pure generator work and could be done from Linux — they
+were simply the lowest-value item left when the session ran out.
 
 ## The one thing only you can do
 
-**Phase D (Live Activity)** is the single highest-visibility feature left and
-it is blocked on a manual step: Xcode has to create the Widget Extension
-target (File → New → Target → Widget Extension, name `PawmodoroWidgets`,
-tick "Include Live Activity"). Hand-editing a second target into
-`project.pbxproj` risks making the project unopenable. Do that step and the
-rest is code — the recipe is already written in `docs/LIVE_ACTIVITY.md`.
+**Phase D (Live Activity)** is the highest-visibility feature left and it is
+blocked on a manual step: Xcode has to create the Widget Extension target (File
+→ New → Target → Widget Extension, name `PawmodoroWidgets`, tick "Include Live
+Activity"). Hand-editing a second target into `project.pbxproj` risks making
+the project unopenable. Do that step and the rest is code — the recipe is
+already written in `docs/LIVE_ACTIVITY.md`.
 
 ## What's true about the app now
 
-- **9 buddies**, four with signature quirks (Tofu soaks on breaks, Pebble
-  waddles and belly-slides, Maple throws both arms up, Luna is nocturnal).
-  Renameable.
+- **9 buddies**, four with signature quirks. Renameable.
 - **Soot**, a tenth who cannot be picked, bought or unlocked — she turns up in
-  the hedge after you have focused on three days out of seven, gets closer over
+  the hedge after you've focused on three days out of seven, comes closer over
   twelve more, and lets you name her. Free, and the paywall never mentions her.
-- **Seven constellations**, 47 stars, one star per focus session finished after
-  dark. Completed figures are drawn into the night sky of every place, with
-  their lore in an atlas on the stats screen. No new state: it is arithmetic
-  over the hour each session ended at.
-- **A dream diary.** The napping buddy sometimes dreams mid-session — of a
-  species you both saw, a vignette you travelled with, or one of six things
-  that only happen asleep. Stay to the end and it is kept; leave and it just
-  fades. A session gets a dream *or* a sighting, never both.
-- **8 places** with a boat/balloon/train whose position *is* the countdown,
-  four times of day each, lit windows after dark.
-- **41 journal species** including a moon rabbit gated on the real moon, plus
-  rainbow / meteors / aurora as phenomena.
-- **50 music tracks** from a composition engine, gapless, with radio mode;
-  25 earnable free by travelling.
+- **8 places**, four times of day each, with a boat/balloon/train whose
+  position *is* the countdown.
+- **41 journal species** plus phenomena; the fifth sighting of one turns it
+  into a named regular with its own marking and note.
+- **5 things you can only hear**, never see.
+- **7 constellations, 47 stars**, one per focus session finished after dark,
+  drawn permanently into every night sky.
+- **A dream diary** — the sleeping buddy dreams of where you've been together.
+- **50 music tracks**, gapless, with radio mode; 25 earnable free.
 - **8 themes**, all passing 102,832 contrast measurements.
-- Postcards, the almanac page, the travelogue route.
+- **A bond** over five levels, and a streak that forgives one day a week.
+- **Five seasons** that arrive without being announced.
+- Postcards, the almanac, the travelogue, expeditions, a settle-in ritual, and
+  an Action Button intent.
 
-## Verification loop (do this every session)
+## Verification loop (every session)
 
 ```sh
 python3 tools/check_swift.py             # every session, Mac or not
-tools/run-sim.sh --demo --headless
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_stray.py --preview /tmp/stray.png   # and look at it
+tools/run-sim.sh --demo --headless
 xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Release \
   -destination 'platform=iOS Simulator,id=<UDID>' CODE_SIGNING_ALLOWED=NO build
 ```
@@ -174,50 +173,48 @@ in `CLAUDE.md` if you added one, and commit.
 ## Things learned the hard way — don't relearn them
 
 - **A checker that passes on its first run has proved nothing.** Every rule in
-  `check_swift.py` was verified by deliberately breaking the code and watching
-  it fail. One of the seven appeared not to work; the rule was fine and the
-  test mutation hadn't applied. Test the test.
+  `check_swift.py` was verified by deliberately breaking the code. Two of them
+  were wrong when written: one blamed a nested enum for its parent's switches,
+  and one required a `case`'s labels and its colon on the same line, silently
+  skipping every arm long enough to wrap. Both looked strict and were blind.
 - **"Not sky" is not "standing on something".** The first stray check asserted
   she wasn't in the air and passed — while she sat on the open sea at Harbor
-  Isle. An assertion that names the wrong complement is worse than none,
-  because it reports success. Enumerate what a thing *may* rest on, not what it
-  may not.
-- **Anchor a sprite by its feet.** Positioning by the centre is what put the
-  largest stray sprite in the Onsen's hot spring while the two smaller ones
-  looked fine. The bug scaled with the art, which is the hardest kind to see.
-- **Don't time a short animation with a screenshot loop.** Tool round-trips
-  are ~9 seconds; a six-second sighting will be missed every time. Force the
-  state with a debug flag and inspect the durable result instead (the journal,
-  the log).
-- **Never suppress a generator's stderr.** `generate_scenes.py` failed
-  silently on a stray space in the sailboat art and looked like success.
-- **Assertions catch what eyes don't.** The RMS/peak fight in the music master
-  chain and Starfall's ridge drifting into the countdown were both found by
-  checks, not by looking.
+  Isle. Enumerate what a thing *may* rest on, not what it may not.
+- **Anchor a sprite by its feet.** Positioning by the centre put the largest
+  stray sprite in the Onsen's hot spring while the two smaller ones looked
+  fine. The bug scaled with the art, which is the hardest kind to see.
+- **Don't time a short animation with a screenshot loop.** Tool round-trips are
+  ~9 seconds; a six-second sighting will be missed every time. Force the state
+  with a debug flag and inspect the durable result instead.
+- **Never suppress a generator's stderr.** `generate_scenes.py` failed silently
+  on a stray space in the sailboat art and looked like success.
 - **Measure the thing you actually mean.** The first loop-seam check compared
-  whole windows from the end and the start of a track, which only proves a
-  tune's end sounds different from its beginning. Always true; useless.
-- **Regenerating art can move pixels you didn't touch.** A newer Pillow fills
-  `rounded_rectangle` differently and closed a 1px gap in the capybara's nose.
-  It was an improvement, but check a regenerated asset's pixels rather than
-  assuming a clean diff — and revert the files that changed only in encoding,
-  or the real change drowns in seventy of them.
+  windows from the end and the start of a track, which only proves a tune's end
+  sounds different from its beginning. Always true; useless.
+- **Regenerating art moves pixels you didn't touch.** A newer Pillow fills
+  `rounded_rectangle` differently. Check a regenerated asset's pixels rather
+  than assuming, and revert the files that changed only in encoding — otherwise
+  the real change drowns in seventy of them.
+- **Ten pixels is not enough for an upright rabbit.** Head, ears and body merge
+  into a thumbprint. Side profile, ears swept back.
 
 ## Known gaps, stated plainly
 
-- **The stray has never run.** See the top of this file. This is the biggest
-  open risk in the repo right now.
-- **Nobody has heard the music.** Fifty tracks are verified structurally
-  (harmonic content matches each track's key and progression, loop seam is
-  0.03× a normal sample step) but never listened to. Worth doing:
-  `tools/run-sim.sh --demo`, pick a track in the Sound Studio, press play.
-- **Haptics are unverified.** They are no-ops in the simulator. The purr, the
-  dial detents and the final-ten-seconds heartbeat need a real device — see
+- **Seven phases have never run.** See the top of this file. This is the
+  biggest open risk in the repo by a distance.
+- **Nobody has heard the music.** Fifty tracks verified structurally, never
+  listened to. `tools/run-sim.sh --demo`, Sound Studio, press play.
+- **Nobody has heard the five new one-shots either.** They are synthesised to
+  peak under 0.35 so they sit under the ambience, but that is a number, not an
+  ear.
+- **Haptics are unverified.** No-ops in the simulator — see
   `docs/RUN_ON_YOUR_IPHONE.md`.
+- **Regulars are hard to check by hand** — a species needs five sightings.
+  There is no debug flag for it; `-PawmodoroFillJournal` only marks things
+  seen once. Worth adding a count to that flag next time.
 - `docs/MONETIZATION.md`'s product table is stale (it describes the app as of
-  Phase G). The M section of `CONTENT_PLAN.md` is the authoritative split.
-- Sound Almanac spec leftovers: pixel cassette icons for the shelf, and the
-  buddy's bpm-synced ear twitch.
-- Journal spec leftover: L5 micro-encounters (the butterfly that lands on a
-  sleeping buddy's nose).
+  Phase G). The M section of `CONTENT_PLAN.md` is authoritative.
+- Sound Almanac leftovers: pixel cassette icons, and the bpm-synced ear twitch.
+- Journal leftover: L5 micro-encounters (the butterfly that lands on a sleeping
+  buddy's nose).
 - Long place names truncate in the settings place picker ("Whispering Wo…").

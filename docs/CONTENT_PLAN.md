@@ -706,7 +706,7 @@ scene pixels, which is as far as that goes without a Mac.
 
 ---
 
-## L wave 3 — Regulars & things heard (journal deepeners, small)
+## L wave 3 — Regulars & things heard (journal deepeners, small) ✅ built
 
 Two additions that ride the existing journal rather than adding systems:
 
@@ -722,6 +722,22 @@ Two additions that ride the existing journal rather than adding systems:
   whatever else is playing, logged in the journal as "heard, not seen" with
   an ear glyph. Headphone magic, nearly free.
 - Debug: `-PawmodoroHear <id>`.
+
+### As built
+
+Both shipped. Two notes:
+
+- **Markings are grouped by body plan, not written one species at a time.**
+  Forty bespoke lines would read better, but "the whale with the notched ear"
+  is much worse than a plain line — a shared phrase that is always true beats
+  a unique one that is sometimes absurd. Birds get a pale feather, insects a
+  torn wing, swimmers a pale scar, land mammals a notched ear. Phenomena never
+  become regulars at all, and don't get a marked sprite.
+- **Sounds are logged when they play, not on completion.** Unlike a sighting
+  there is nothing to stay for: you either heard it or you didn't. They are
+  also rolled independently of the sighting and the dream, because a sound is
+  not competing for the screen — hearing a whale while watching a stag is a
+  better session, not a busier one.
 
 ## M — Monetization restatement (one Plus, fatter on both sides)
 
@@ -770,7 +786,7 @@ existing particle budgets; every new text placement is measured, not eyeballed.
 | ~~10~~ | ~~**O almanac page** (absorbs N travelogue map)~~ — **done** | M | |
 | ~~11~~ | ~~**U the stray**~~ — **done**: five stages, Soot joins free | M | built without a Mac; see the note under Phase U |
 | ~~12~~ | ~~**T star atlas**~~ — **done**: seven figures, 47 stars | S | zero new state, as planned |
-| 13 | **S dream diary** + L wave 3 (regulars, things heard) | M | richest after L wave 2 fills the journal |
+| ~~13~~ | ~~**S dream diary** + L wave 3~~ — **done** | M | |
 | 14 | J toys + seasons + icons | M | shippable in slices; migrations join the seasonal layer here |
 | 15 | **P gentle streaks + Q settle-in + R expeditions/Action Button** | S | three small wins, one session |
 | 16 | E bond & accessories (from DELIGHT_PLAN) + H second-wave buddies (Pip, Bramble) | M | benefits from the larger cast |

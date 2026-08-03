@@ -216,6 +216,45 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     var frames: [String] { ["wild_\(rawValue)_0", "wild_\(rawValue)_1"] }
     var ghostAsset: String { "wild_\(rawValue)_ghost" }
     var sketchAsset: String { "wild_\(rawValue)_sketch" }
+    /// The marked variant, once this species has become an individual.
+    var regularAsset: String { "wild_\(rawValue)_regular" }
+
+    // MARK: Regulars
+
+    /// What tells this individual apart, once you have seen enough of them to
+    /// start noticing.
+    ///
+    /// Grouped by body plan rather than written one species at a time. Forty
+    /// bespoke lines would be better, but "the whale with the notched ear" is
+    /// much worse than a plain one — a shared phrase that is always *true*
+    /// beats a unique one that is sometimes absurd.
+    var marking: String {
+        switch self {
+        case .robin, .swallow, .gull, .heron, .woodpecker, .tawnyowl, .crane,
+             .kingfisher, .dove, .peacock, .swift, .ptarmigan:
+            "a pale feather"
+        case .butterfly, .bee, .moth, .dragonfly, .firefly:
+            "a torn wing"
+        case .dolphin, .whale, .seal, .otter, .turtle, .koi, .crab, .frog:
+            "a pale scar"
+        case .hare, .foxcub, .squirrel, .stag, .badger, .fawn, .hedgehog,
+             .sheep, .mountainhare, .ibex, .macaque, .tanuki, .moonrabbit:
+            "a notched ear"
+        case .rainbow, .meteors, .aurora:
+            // A rainbow is never an individual, and never becomes a regular.
+            ""
+        }
+    }
+
+    /// Whether this can become someone rather than something.
+    var canBeRegular: Bool { !isPhenomenon }
+
+    /// The journal's line once it is a regular. Relationship over collection:
+    /// the note stops describing the species and starts describing the one you
+    /// keep running into.
+    var regularNote: String {
+        "The \(name.lowercased()) with \(marking). The same one, every time."
+    }
 
     /// Whether this could turn up in the session about to start.
     ///

@@ -161,6 +161,7 @@ final class TimerEngine {
             rainSeconds = 0
             rollSighting()
             rollDream()
+            rollHeard()
             rollStrayCameo()
         }
 
@@ -202,6 +203,7 @@ final class TimerEngine {
         endDate = nil
         sighting = nil
         dream = nil
+        scheduledSound = nil
         runState = .idle
         remaining = phaseDuration
         refreshAmbience()
@@ -217,6 +219,7 @@ final class TimerEngine {
         // abandoning a session is not punished here.
         sighting = nil
         dream = nil
+        scheduledSound = nil
         advance(natural: false)
     }
 
@@ -387,6 +390,51 @@ final class TimerEngine {
         }
     }
 
+    // MARK: Things heard
+
+    /// A sound scheduled for this phase, and the point in it where it lands.
+    ///
+    /// Stored as a progress fraction for the same reason a sighting is: the
+    /// tick already knows how far through the phase it is, so this needs no
+    /// timer of its own and cannot drift.
+    @ObservationIgnored private var scheduledSound: (sound: Heard, at: Double)?
+
+    /// Decide whether anything is audible this phase, and when.
+    ///
+    /// Rolled independently of the sighting and the dream — a sound isn't
+    /// competing for the screen, and hearing a whale while watching a stag is
+    /// a better session, not a busier one.
+    private func rollHeard() {
+        scheduledSound = nil
+        guard phase == .focus else { return }
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+
+        // Somewhere in the middle: the opening belongs to settling in and the
+        // last stretch belongs to the countdown.
+        let at = Double.random(in: 0.25...0.75)
+        if let forced = LaunchOptions.forcedHeard {
+            scheduledSound = (forced, at)
+            return
+        }
+        let eligible = Heard.allCases.filter {
+            $0.isEligible(place: settings.place, dayPart: part)
+        }
+        guard let sound = eligible.randomElement(),
+              Double.random(in: 0..<1) < sound.spec.chance
+        else { return }
+        scheduledSound = (sound, at)
+    }
+
+    /// Fires once, when the phase reaches the scheduled point.
+    private func playHeardIfDue() {
+        guard let scheduled = scheduledSound, progress >= scheduled.at else { return }
+        scheduledSound = nil
+        SoundPlayer.shared.playHeard(scheduled.sound)
+        // Logged on play, not on completion: unlike a sighting there is
+        // nothing to stay for. You either heard it or you didn't.
+        journal.addHeard(scheduled.sound)
+    }
+
     // MARK: Dreams
 
     /// The slice of a focus phase a dream is on screen for. Overlaps nothing:
@@ -517,6 +565,7 @@ final class TimerEngine {
         guard let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if settings.ambience == .rain { rainSeconds += 0.25 }
+        playHeardIfDue()
         pulseIfClosing()
         if remaining <= 0 {
             completePhase()

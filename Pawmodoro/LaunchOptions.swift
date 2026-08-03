@@ -14,6 +14,9 @@ enum StorageKeys {
     static let postcards = "pawmodoro.postcards"
     /// What the buddy has dreamed and you stayed to see.
     static let dreams = "pawmodoro.dreams"
+    /// Things heard and never seen. Its own key rather than part of the
+    /// journal's, so an older install decodes both halves independently.
+    static let heard = "pawmodoro.heard"
     /// The day the stray first turned up. Every stage of her arc is counted
     /// back out of the session log from here, so this one date is the whole of
     /// her progress.
@@ -24,7 +27,7 @@ enum StorageKeys {
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined, dreams,
+        strayFirstSeen, strayJoined, dreams, heard,
     ]
 }
 
@@ -152,6 +155,16 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Guarantee a sound this session, e.g. `-PawmodoroHear owlcall`. These
+    /// are the rarest things in the app and depend on both a place and an
+    /// hour; waiting for one is not a way to check a synth.
+    static let forcedHeard: Heard? = {
+        guard arguments.contains("-PawmodoroHear"),
+              let raw = UserDefaults.standard.string(forKey: "PawmodoroHear")
+        else { return nil }
+        return Heard(rawValue: raw)
+    }()
+
     /// Force a dream: `-PawmodoroDream surreal.yarn` for one in particular, or
     /// just `memory` / `travel` / `surreal` for any of that kind. Waiting for a
     /// one-in-four roll to land on the kind you wanted to look at is not a way
@@ -200,6 +213,7 @@ enum LaunchOptions {
     static let forcedStrayStage: Int? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
+    static let forcedHeard: Heard? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

@@ -301,6 +301,104 @@ def make_icon(size=1024, scale=2):
           f"{os.path.getsize(path) / 1024:.0f} KB")
 
 
+# --------------------------------------------------------------- things heard
+#
+# Five one-shots for the journal's quietest page: things that are only ever
+# heard, never seen. They play once, low, under whatever else is going —
+# headphone magic, and nearly free because nothing has to be drawn.
+#
+# All of them are *distant*, which in synthesis means three things: lowpassed
+# hard, a slow attack, and a long soft tail. A close sound in this set would
+# read as a notification.
+
+def distant(sig, cutoff=1400.0, order=3):
+    """Roll the top off so it sounds like it came from somewhere else."""
+    spectrum = np.fft.rfft(sig)
+    freq = np.fft.rfftfreq(len(sig), 1.0 / SR)
+    return np.fft.irfft(
+        spectrum / (1.0 + (freq / cutoff) ** (2 * order)) ** 0.5, len(sig)
+    )
+
+
+def envelope(n, attack, release):
+    t = np.arange(n) / SR
+    total = n / SR
+    return np.minimum(1.0, t / attack) * np.minimum(
+        1.0, np.maximum(0.0, (total - t) / release)
+    )
+
+
+def make_whalesong(dur=3.0):
+    """Harbor, after dark. One long call that bends and falls away."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    # A glide down a fifth, with the slow wobble a real call has.
+    freq = 132.0 * np.exp(-0.22 * t) + 6.0 * np.sin(2 * np.pi * 1.6 * t)
+    phase = 2 * np.pi * np.cumsum(freq) / SR
+    sig = np.sin(phase) + 0.32 * np.sin(2 * phase) + 0.12 * np.sin(3 * phase)
+    return normalize(distant(sig * envelope(n, 0.35, 1.1), 900.0), 0.34)
+
+
+def make_trainhorn(dur=2.6):
+    """From somewhere past Starfall. Two notes, because horns are chords."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    for freq, amp in ((220.0, 1.0), (277.2, 0.8), (330.0, 0.45), (440.0, 0.2)):
+        sig += amp * np.sin(2 * np.pi * freq * t)
+    # Doppler-ish sag as it goes away from you.
+    sig *= 1.0 - 0.04 * t
+    return normalize(distant(sig * envelope(n, 0.25, 0.9), 1100.0), 0.30)
+
+
+def make_owlcall(dur=2.8, seed=7):
+    """The Woods, at night. Two hoots and then nothing at all."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(seed)
+    sig = np.zeros(n)
+    # A tawny owl's call is nearly a pure tone with a breathy edge.
+    for start, length, freq in ((0.10, 0.45, 402.0), (1.05, 0.62, 388.0)):
+        begin, count = int(SR * start), int(SR * length)
+        local = np.arange(count) / SR
+        hoot = np.sin(2 * np.pi * (freq - 14.0 * local) * local)
+        hoot += 0.09 * shaped_noise(count, rng, 1.0, cutoff=900.0)
+        sig[begin:begin + count] += hoot * envelope(count, 0.06, 0.30)
+    return normalize(distant(sig, 1500.0), 0.30)
+
+
+def make_farbell(dur=3.4):
+    """Sunstone Keep, at dawn. One stroke, a long way off."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    # Bell partials are inharmonic — that ratio set is what stops it being a
+    # sine with a decay on it.
+    for ratio, amp, decay in (
+        (1.0, 1.0, 1.1), (2.01, 0.55, 1.6), (2.98, 0.32, 2.2),
+        (4.17, 0.18, 3.0), (5.43, 0.10, 3.8),
+    ):
+        sig += amp * np.sin(2 * np.pi * 196.0 * ratio * t) * np.exp(-decay * t)
+    return normalize(distant(sig * np.minimum(1.0, t / 0.008), 1800.0), 0.28)
+
+
+def make_windchime(dur=3.2, seed=11):
+    """Blossom Village. Four rods, struck in no particular order."""
+    n = int(SR * dur)
+    rng = np.random.default_rng(seed)
+    sig = np.zeros(n)
+    # A pentatonic set, so any order of strikes is consonant.
+    notes = (587.3, 659.3, 784.0, 880.0, 1046.5)
+    for start, note in zip((0.05, 0.42, 0.78, 1.35, 2.05), notes):
+        begin = int(SR * start)
+        count = min(n - begin, int(SR * 1.6))
+        local = np.arange(count) / SR
+        rod = np.sin(2 * np.pi * note * local) * np.exp(-2.4 * local)
+        rod += 0.25 * np.sin(2 * np.pi * note * 2.76 * local) * np.exp(-4.0 * local)
+        sig[begin:begin + count] += rod * rng.uniform(0.6, 1.0)
+    return normalize(distant(sig, 3200.0), 0.26)
+
+
 if __name__ == "__main__":
     print("Ambience loops:")
     write_wav("rain.wav", make_rain())
@@ -312,5 +410,11 @@ if __name__ == "__main__":
     write_wav("ocean.wav", make_ocean())
     print("Chime:")
     write_wav("chime.wav", make_chime())
+    print("Things heard:")
+    write_wav("heard_whalesong.wav", make_whalesong())
+    write_wav("heard_trainhorn.wav", make_trainhorn())
+    write_wav("heard_owlcall.wav", make_owlcall())
+    write_wav("heard_farbell.wav", make_farbell())
+    write_wav("heard_windchime.wav", make_windchime())
     print("Icon:")
     make_icon()

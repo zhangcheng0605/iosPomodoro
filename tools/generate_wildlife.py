@@ -51,6 +51,29 @@ def sepia(palette):
     return out
 
 
+def marked(palette):
+    """The pale patch that tells one individual from the rest of its kind.
+
+    A palette swap rather than a second drawing, like the ghost and the sketch.
+    Only the shade tone is lifted, so the difference is small — recognising a
+    regular should feel like something you noticed, not like the app swapping
+    in a different animal.
+    """
+    out = {}
+    for index, rgba in palette.items():
+        if index != SHADE:
+            out[index] = rgba
+            continue
+        r, g, b, a = rgba
+        out[index] = (
+            min(255, int(r * 0.42 + 152)),
+            min(255, int(g * 0.42 + 148)),
+            min(255, int(b * 0.42 + 140)),
+            a,
+        )
+    return out
+
+
 def to_png(grid, palette, name):
     arr = np.array(grid)
     height, width = arr.shape
@@ -701,4 +724,10 @@ if __name__ == "__main__":
         # The journal's two states, derived rather than drawn again.
         to_png(first, GHOST, f"wild_{name}_ghost")
         to_png(first, sepia(pal), f"wild_{name}_sketch")
-        print(f"  {name}: 2 frames + ghost + sketch")
+        # The fifth sighting turns a species into an individual; this is what
+        # the journal shows once it has. A rainbow is never an individual, so
+        # the phenomena don't get one.
+        regular = name not in ("rainbow", "meteors", "aurora")
+        if regular:
+            to_png(first, marked(sepia(pal)), f"wild_{name}_regular")
+        print(f"  {name}: 2 frames + ghost + sketch{' + regular' if regular else ''}")

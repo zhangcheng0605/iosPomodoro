@@ -13,6 +13,7 @@ final class SoundPlayer {
     private var ambiencePlayer: AVAudioPlayer?
     private var chimePlayer: AVAudioPlayer?
     private var purrPlayer: AVAudioPlayer?
+    private var heardPlayer: AVAudioPlayer?
     private var purrStopTask: Task<Void, Never>?
     private var currentAmbience: Ambience = .off
     private var sessionConfigured = false
@@ -67,6 +68,17 @@ final class SoundPlayer {
         ambiencePlayer?.numberOfLoops = -1
         ambiencePlayer?.volume = 0.55 * ambienceVolume
         ambiencePlayer?.play()
+    }
+
+    /// One of the things you can only hear, played once, quietly, under
+    /// whatever else is going. Its own player so it never interrupts the
+    /// ambience or the music — the point is that it arrives *inside* them.
+    func playHeard(_ sound: Heard) {
+        configureSessionIfNeeded()
+        guard let player = makePlayer(named: sound.fileName) else { return }
+        player.volume = 0.5
+        heardPlayer = player
+        player.play()
     }
 
     func playChime() {

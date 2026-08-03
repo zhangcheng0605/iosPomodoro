@@ -293,8 +293,13 @@ def check_switch_exhaustiveness(failures, enums):
             if owner not in enums or re.search(r"\bdefault\s*:", body):
                 continue
 
+            # `[^:]+?` rather than `[^:\n]+`: a long case list wraps onto the
+            # next line, and requiring the colon on the same line as `case`
+            # silently skipped every one of them. That is a false *negative*
+            # dressed as a false positive — the rule looked strict and was
+            # blind to exactly the arms most likely to go stale.
             named = set()
-            for arm in re.findall(r"case ([^:\n]+):", body):
+            for arm in re.findall(r"\bcase\s+([^:]+?):", blank(body)):
                 named.update(re.findall(r"\.(\w+)", arm))
             missing = [c for c in enums[owner] if c not in named]
             if missing:

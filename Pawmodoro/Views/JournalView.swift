@@ -50,7 +50,63 @@ struct JournalView: View {
                 }
                 .padding(.top, 4)
             }
+
+            heardPage
         }
+    }
+
+    /// Heard, not seen.
+    ///
+    /// The quietest page in the app, and the only one whose entries can never
+    /// be looked at — a sound has no sprite, so the row *is* the record. Kept
+    /// as rows rather than tiles for exactly that reason: a grid of five
+    /// identical ear glyphs would be pretending there was something to see.
+    private var heardPage: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Heard, not seen")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+                Spacer()
+                Text("\(journal.heardCount) / \(Heard.allCases.count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.bark.opacity(0.5))
+            }
+
+            ForEach(Heard.allCases) { sound in
+                let heard = journal.hasHeard(sound)
+                HStack(spacing: 10) {
+                    Image(systemName: heard ? "ear.fill" : "ear")
+                        .font(.footnote)
+                        .frame(width: 20)
+                        .foregroundStyle(Theme.bark.opacity(heard ? 0.75 : 0.3))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(heard ? sound.name : "Something")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.bark.opacity(heard ? 0.9 : 0.5))
+                        Text(heard ? sound.note : sound.hint)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.bark.opacity(0.55))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.surface.opacity(heard ? 0.9 : 0.4))
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    heard
+                        ? "Heard: \(sound.name). \(sound.note)"
+                        : "Not yet heard. Hint: \(sound.hint)."
+                )
+            }
+        }
+        .padding(.top, 6)
     }
 
     private func seen(in page: Journal.Page) -> Int {
@@ -60,9 +116,14 @@ struct JournalView: View {
     private func tile(for species: Species) -> some View {
         let record = journal.record(for: species)
         let seen = record != nil
+        let regular = journal.isRegular(species)
 
         return VStack(spacing: 5) {
-            Image(seen ? species.sketchAsset : species.ghostAsset)
+            // A regular gets the marked variant — the same drawing with one
+            // tone lifted, so it reads as the individual you keep meeting
+            // rather than as a different animal.
+            Image(regular ? species.regularAsset
+                  : (seen ? species.sketchAsset : species.ghostAsset))
                 .interpolation(.none)
                 .resizable()
                 .scaledToFit()
@@ -94,6 +155,9 @@ struct JournalView: View {
 
     private func caption(for species: Species, record: SightingRecord?) -> String {
         guard let record else { return species.hint }
+        // Once it's a regular the caption stops counting and starts describing:
+        // relationship over collection, which is the whole point of the page.
+        if journal.isRegular(species) { return species.regularNote }
         let date = record.firstSeen.formatted(.dateTime.day().month(.abbreviated))
         return record.count > 1 ? "\(date) · seen \(record.count)×" : date
     }

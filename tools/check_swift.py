@@ -194,6 +194,69 @@ def enum_cases():
     return found
 
 
+def blank(source):
+    """Comments and string bodies replaced by spaces, keeping every offset.
+
+    Same idea as `strip`, but length-preserving, so brace positions found here
+    still point at the right place in the original text.
+    """
+    out = list(source)
+    i, n = 0, len(source)
+    while i < n:
+        two = source[i:i + 2]
+        if two == "//":
+            while i < n and source[i] != "\n":
+                out[i] = " "
+                i += 1
+        elif two == "/*":
+            while i < n and source[i:i + 2] != "*/":
+                if source[i] != "\n":
+                    out[i] = " "
+                i += 1
+            for j in range(i, min(i + 2, n)):
+                out[j] = " "
+            i += 2
+        elif source[i] == '"':
+            out[i] = " "
+            i += 1
+            while i < n and source[i] != '"':
+                if source[i] == "\\":
+                    out[i] = " "
+                    i += 1
+                if i < n and source[i] != "\n":
+                    out[i] = " "
+                i += 1
+            if i < n:
+                out[i] = " "
+                i += 1
+        else:
+            i += 1
+    return "".join(out)
+
+
+def enclosing_scopes(code):
+    """Every `enum X { … }`'s extent, innermost last when sorted by start.
+
+    Needed because enums nest: `Dream` declares `Surreal` inside itself, and a
+    naive "most recent enum seen" rule blames the inner one for every switch in
+    the outer one after it. That produced six false failures, which is worse
+    than none — a checker nobody believes is a checker nobody runs.
+    """
+    scopes = []
+    for match in re.finditer(r"\benum (\w+)\b[^\n{]*\{", code):
+        start = match.end() - 1
+        depth = 0
+        for index in range(start, len(code)):
+            if code[index] == "{":
+                depth += 1
+            elif code[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    scopes.append((match.group(1), start, index))
+                    break
+    return scopes
+
+
 def check_switch_exhaustiveness(failures, enums):
     """A `switch self` with no `default` must name every case.
 
@@ -203,25 +266,39 @@ def check_switch_exhaustiveness(failures, enums):
     """
     for path in swift_files():
         source = open(path).read()
-        owner = None
-        for match in re.finditer(r"enum (\w+)[^\n{]*\{", source):
-            pass
-        for match in re.finditer(
-            r"(enum (\w+)[^\n{]*\{)|(switch self \{\n(.*?)\n(\s*)\})",
-            source, re.S,
-        ):
-            if match.group(2):
-                owner = match.group(2)
+        code = blank(source)
+        scopes = enclosing_scopes(code)
+
+        for match in re.finditer(r"switch self \{", code):
+            start = match.end() - 1
+            depth = 0
+            end = None
+            for index in range(start, len(code)):
+                if code[index] == "{":
+                    depth += 1
+                elif code[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end = index
+                        break
+            if end is None:
                 continue
-            body = match.group(4)
-            if owner not in enums or "default" in body:
+
+            # Innermost enum containing this switch.
+            containing = [s for s in scopes if s[1] < start and end < s[2]]
+            if not containing:
                 continue
+            owner = max(containing, key=lambda s: s[1])[0]
+            body = source[start:end]
+            if owner not in enums or re.search(r"\bdefault\s*:", body):
+                continue
+
             named = set()
             for arm in re.findall(r"case ([^:\n]+):", body):
                 named.update(re.findall(r"\.(\w+)", arm))
             missing = [c for c in enums[owner] if c not in named]
             if missing:
-                line = source[: match.start()].count("\n") + 1
+                line = source[:start].count("\n") + 1
                 failures.append(
                     f"{rel(path)}:{line}: switch over {owner} is missing "
                     f"{', '.join('.' + m for m in missing)}"

@@ -65,6 +65,7 @@ struct ContentView: View {
                         accent: Theme.accent(for: engine.phase),
                         secondary: Theme.blossom,
                         streak: engine.log.currentStreak,
+                        buddyName: engine.buddyName,
                         onDismiss: { engine.completion = nil }
                     )
                     .id(completion.id)

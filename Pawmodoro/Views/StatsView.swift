@@ -20,6 +20,7 @@ struct StatsView: View {
                     AlbumView()
                     StarAtlasView()
                     JournalView()
+                    DreamDiaryView()
                 }
                 .padding()
             }

@@ -620,6 +620,126 @@ def stray_watch(tail_up=False):
     return outline_silhouette(g)
 
 
+# --- Dreams -----------------------------------------------------------------
+#
+# The buddy sleeps through every focus session, and sleeping creatures dream.
+# Almost every dream is recycled — a species out of the field journal, a
+# vignette off the journey — so these six are the only art the diary needs:
+# the things that could only happen in a dream.
+#
+# Drawn small and in sepia to sit beside `wild_*_sketch`, which is what the
+# memory dreams use. A dream should look pressed rather than photographed.
+
+DREAM_PALETTE = {
+    T: (0, 0, 0, 0),
+    OUTLINE: (96, 76, 58, 255),
+    BODY: (176, 150, 118, 255),
+    SHADE: (138, 114, 88, 255),
+    CREAM: (226, 210, 188, 255),
+    PINK: (198, 168, 140, 255),
+    EYE: (72, 58, 46, 255),
+    GLINT: (240, 230, 212, 255),
+    NOSE: (120, 98, 76, 255),
+    ACCENT: (206, 182, 150, 255),
+}
+
+D = 20      # the dream sprites' canvas
+
+
+def dream_fishballoon():
+    """A fish holding the balloon's string. Nobody asked it to."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([6, 1, 14, 9], fill=BODY)              # the balloon
+    d.line([(10, 9), (10, 13)], fill=OUTLINE)        # its string
+    d.ellipse([4, 13, 14, 18], fill=SHADE)           # fish
+    d.polygon([(14, 13), (18, 11), (17, 18)], fill=SHADE)   # tail
+    d.point((7, 15), fill=GLINT)
+    return outline_silhouette(g)
+
+
+def dream_yarn():
+    """An enormous ball of yarn. Enormous is the dream part."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([2, 4, 17, 18], fill=BODY)
+    for offset in (-4, 0, 4):
+        d.arc([2 + offset, 4, 17 + offset, 18], 200, 340, fill=SHADE)
+    d.line([(16, 8), (19, 4)], fill=SHADE)           # the loose end
+    return outline_silhouette(g)
+
+
+def dream_tub():
+    """Tofu's tub, out at sea, which is not where a tub goes."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([6, 3, 13, 9], fill=SHADE)             # a capybara in it
+    d.rounded_rectangle([3, 8, 16, 15], radius=2, fill=BODY)
+    for x in (7, 12):
+        d.line([(x, 9), (x, 14)], fill=SHADE)        # staves
+    for y, x0 in ((17, 1), (19, 4)):                 # water
+        d.line([(x0, y), (x0 + 12, y)], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def dream_meadow():
+    """The meadow, going on rather further than it does awake."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for index, top in enumerate((6, 10, 14)):
+        fill = (BODY, SHADE, CREAM)[index]
+        d.ellipse([-8 + index * 5, top, 16 + index * 5, top + 12], fill=fill)
+    d.rectangle([0, 17, 19, 19], fill=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_train():
+    """The night train, with exactly one window still lit."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.rounded_rectangle([1, 7, 18, 14], radius=2, fill=SHADE)
+    d.rectangle([13, 5, 17, 8], fill=SHADE)          # the cab
+    for x in (3, 7, 11):
+        d.rectangle([x, 9, x + 2, 11], fill=OUTLINE)
+    d.rectangle([15, 9, 17, 11], fill=GLINT)         # the lit one
+    for x in (4, 10, 15):
+        d.ellipse([x, 14, x + 3, 17], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def dream_moonrabbit():
+    """A rabbit-shaped shadow on the moon — dreamed long before it is ever
+    seen, which is the point of it being in here."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 18, 18], fill=CREAM)
+    # The rabbit is a hole in the moon, not a thing on top of it. The ears have
+    # to stand clear of the head or the whole thing reads as a thumbprint.
+    # Seen side-on, ears swept back: upright, the head, body and ears merge
+    # into one blob at ten pixels tall and it reads as a thumbprint.
+    d.ellipse([7, 9, 15, 16], fill=SHADE)            # haunches
+    d.ellipse([4, 8, 10, 14], fill=SHADE)            # head, facing left
+    d.line([(9, 8), (13, 3)], fill=SHADE, width=2)   # the long ears
+    d.line([(10, 9), (16, 6)], fill=SHADE, width=2)
+    return outline_silhouette(g)
+
+
+def fx_bubble(shift=0):
+    """The thought bubble the dream sits inside.
+
+    A flat silhouette, exported as a template: the app draws it twice — once
+    slightly larger in `Theme.bark` for a rim, once in `Theme.cream` for the
+    fill — so one asset gives a two-tone bubble that follows every theme. The
+    two frames differ only in the trailing bubbles, which is the shimmer.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([4, 2, 36, 26], fill=OUTLINE)
+    d.ellipse([9, 27 + shift, 15, 33 + shift], fill=OUTLINE)
+    d.ellipse([4, 34 - shift, 8, 38 - shift], fill=OUTLINE)
+    return g
+
+
 def fx_heart():
     """A 7x7 pixel heart, centred."""
     g = new_grid()
@@ -994,6 +1114,15 @@ if __name__ == "__main__":
     to_png(stray_distant(), STRAY_PALETTE, "stray_distant")
     to_png(stray_watch(), STRAY_PALETTE, "stray_watch_0")
     to_png(stray_watch(tail_up=True), STRAY_PALETTE, "stray_watch_1")
+    print("Dreams:")
+    for name, draw in (
+        ("fishballoon", dream_fishballoon), ("yarn", dream_yarn),
+        ("tub", dream_tub), ("meadow", dream_meadow),
+        ("train", dream_train), ("moonrabbit", dream_moonrabbit),
+    ):
+        to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")
     to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
     to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)
+    to_png(fx_bubble(), FX_PALETTE, "fx_bubble_0", template=True)
+    to_png(fx_bubble(shift=1), FX_PALETTE, "fx_bubble_1", template=True)

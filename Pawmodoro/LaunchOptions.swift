@@ -12,6 +12,8 @@ enum StorageKeys {
     static let tipsGiven = "pawmodoro.tipsGiven"
     static let journal = "pawmodoro.journal"
     static let postcards = "pawmodoro.postcards"
+    /// What the buddy has dreamed and you stayed to see.
+    static let dreams = "pawmodoro.dreams"
     /// The day the stray first turned up. Every stage of her arc is counted
     /// back out of the session log from here, so this one date is the whole of
     /// her progress.
@@ -22,7 +24,7 @@ enum StorageKeys {
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined,
+        strayFirstSeen, strayJoined, dreams,
     ]
 }
 
@@ -150,6 +152,15 @@ enum LaunchOptions {
         return UserDefaults.standard.string(forKey: "PawmodoroTrack")
     }()
 
+    /// Force a dream: `-PawmodoroDream surreal.yarn` for one in particular, or
+    /// just `memory` / `travel` / `surreal` for any of that kind. Waiting for a
+    /// one-in-four roll to land on the kind you wanted to look at is not a way
+    /// to check a bubble.
+    static let forcedDream: String? = {
+        guard arguments.contains("-PawmodoroDream") else { return nil }
+        return UserDefaults.standard.string(forKey: "PawmodoroDream")
+    }()
+
     /// Seed the log with n sessions finished after dark, e.g.
     /// `-PawmodoroNightSessions 12`. The atlas is 45 nights of content and the
     /// wandering stars run to 145; neither is reachable by hand.
@@ -188,6 +199,7 @@ enum LaunchOptions {
     static let forcedTrack: String? = nil
     static let forcedStrayStage: Int? = nil
     static let nightSessions: Int? = nil
+    static let forcedDream: String? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

@@ -11,6 +11,9 @@ struct CelebrationView: View {
     let accent: Color
     let secondary: Color
     let streak: Int
+    /// Passed in rather than read from the engine, like `streak`: this view
+    /// stays free of the timer so it can be previewed with any completion.
+    let buddyName: String
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -116,6 +119,19 @@ struct CelebrationView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.7))
                     .multilineTextAlignment(.center)
+            } else if let dream = completion.dreamed {
+                // Quieter than a sighting and rarer than a cycle: the buddy
+                // did something while you weren't looking, and you get told.
+                DreamBubble(dream: dream, phase: 0.5)
+                    .frame(width: 62, height: 62)
+                Text("\(buddyName) dreamed of \(dream.subject)")
+                    .font(.title3.bold())
+                    .foregroundStyle(Theme.bark)
+                    .multilineTextAlignment(.center)
+                Text(dream.line)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .multilineTextAlignment(.center)
             } else if let figure = completion.completedFigure {
                 // Rarer than a sighting: seven of these exist, ever. The figure
                 // draws itself rather than using an asset — it is layout, and
@@ -175,6 +191,9 @@ struct CelebrationView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             completion.saw.map { "You saw a \($0.name). \($0.note)" }
+                ?? completion.dreamed.map {
+                    "\(buddyName) dreamed of \($0.subject). \($0.line)"
+                }
                 ?? completion.completedFigure.map {
                     "\($0.name) is complete. Look up tonight."
                 }

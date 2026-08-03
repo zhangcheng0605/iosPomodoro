@@ -58,6 +58,16 @@ struct BuddyView: View {
         return .idle
     }
 
+    /// How far through the dream's slice of the session we are, so the bubble
+    /// can fade in and out at its own edges. A pure function of progress, like
+    /// a sighting: no timer, and it is always gone before the chime.
+    private var dreamPhase: Double {
+        let window = TimerEngine.dreamWindow
+        let span = window.upperBound - window.lowerBound
+        guard span > 0 else { return 0.5 }
+        return min(1, max(0, (engine.progress - window.lowerBound) / span))
+    }
+
     /// From stage four the stray sits beside your buddy through a break — the
     /// first time the two of them are in the same frame, and the beat that
     /// makes her joining feel inevitable rather than granted.
@@ -84,6 +94,16 @@ struct BuddyView: View {
                     if isNapping {
                         zzz
                             .offset(x: spriteSize * 0.36, y: -spriteSize * 0.30)
+                            .transition(.opacity)
+                    }
+
+                    // The `isNapping` gate is the whole of the "only while
+                    // asleep" rule, and it is why Luna dreams through her
+                    // daytime naps rather than her night watch — no special
+                    // case, just the pose she is already in.
+                    if isNapping, let dream = engine.visibleDream {
+                        DreamBubble(dream: dream, phase: dreamPhase)
+                            .offset(x: -spriteSize * 0.42, y: -spriteSize * 0.52)
                             .transition(.opacity)
                     }
 

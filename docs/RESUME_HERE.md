@@ -1,10 +1,10 @@
 # Resume here
 
-Last session built **the stray** (item 11) and **the star atlas** (item 12) on
-a machine with no Xcode. Working tree clean, everything pushed.
+Last session built **the stray** (item 11), **the star atlas** (item 12) and
+**the dream diary** (item 13's first half) on a machine with no Xcode. Working tree clean, everything pushed.
 
-**Neither has ever been compiled.** That is the standing risk; see the
-simulator pass below.
+**None of the three has ever been compiled.** That is the standing risk; see
+the simulator pass below.
 
 ## How this project is actually built
 
@@ -31,12 +31,13 @@ https://code.claude.com/docs/en/claude-code-on-the-web.
 ## The one line to paste
 
 > read docs/RESUME_HERE.md, then continue the build order in
-> docs/CONTENT_PLAN.md from item 13 (S, the dream diary, plus L wave 3)
+> docs/CONTENT_PLAN.md from L wave 3 (regulars, things heard), then item 14
 
 ## Do this first — it is fifteen minutes and it unblocks judgement
 
-The stray has **never been compiled and never been seen running.** The whole
-feature was written on Linux. Before building anything on top of it:
+The stray, the atlas and the dream diary have **never been compiled and never
+been seen running.** All three were written on Linux. Before building anything
+on top of them:
 
 ```sh
 tools/run-sim.sh --demo --headless
@@ -80,6 +81,20 @@ forced to 22 it counts as a night — and the eighth star should land and the
 celebration card should say *"The Sleeping Cat is complete."* Try 47 and 145
 too: 47 finishes all seven, 145 is every wandering star.
 
+Then the dreams, which need the buddy asleep and so ride any focus session:
+
+```sh
+xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo \
+    -PawmodoroFillJournal -PawmodoroDream memory
+```
+
+The bubble should rise over the sleeping buddy between 40% and 70% of the
+phase and be gone before the chime. Then `-PawmodoroBuddy owl -PawmodoroClock
+22 -PawmodoroDream memory`: Luna keeps watch at night rather than sleeping, so
+**no bubble should appear at all** — that is the one behaviour in this phase
+that is a rule rather than a look. Finish a session to see it land in the
+diary at the bottom of the stats screen.
+
 The figures and their sky layout are already checked (no overlaps, nothing
 below 0.319 of screen height against a ring starting at 0.335). What has never
 been checked is whether they read as *faint enough* over real scenery — they
@@ -87,7 +102,7 @@ are drawn at 0.22–0.85 opacity of `Theme.bark`, and that number is a guess.
 
 ## Where the build order stands
 
-Items 1–11 are done. `docs/CONTENT_PLAN.md` has the authoritative table with
+Items 1–13a are done. `docs/CONTENT_PLAN.md` has the authoritative table with
 the finished rows struck through; this is the summary:
 
 | # | Scope | State |
@@ -96,15 +111,16 @@ the finished rows struck through; this is the summary:
 | 2–10 | places, cast, journal, Sound Almanac, themes, postcards, almanac | done |
 | 11 | U the stray | done — **unverified on a device, see above** |
 | 12 | T star atlas | done — **unverified on a device, see above** |
-| **13** | **S dream diary + L wave 3 (regulars, things heard)** | **next** |
+| 13a | S dream diary | done — **unverified on a device** |
+| **13b** | **L wave 3 — regulars, things heard** | **next** |
 | 14 | J toys, seasons, alternate icons | after |
 | 15 | P gentle streaks + Q settle-in + R expeditions/Action Button | after |
 | 16 | E bond & accessories + second-wave buddies (Pip, Bramble) | after |
 
-Specs for 12 and 13 are Phases T and S in `docs/CONTENT_PLAN.md`, each written
-to implementation grade with persistence keys, debug flags and done-when
-criteria. Phase U now has an **As built** section recording where the plan and
-the code diverged — read it before touching her.
+The remaining specs are in `docs/CONTENT_PLAN.md`, each written to
+implementation grade with persistence keys, debug flags and done-when criteria.
+Phases U, T and S each now carry an **As built** section recording where the
+plan and the code diverged — read the relevant one before touching that code.
 
 ## The one thing only you can do
 
@@ -127,6 +143,10 @@ rest is code — the recipe is already written in `docs/LIVE_ACTIVITY.md`.
   dark. Completed figures are drawn into the night sky of every place, with
   their lore in an atlas on the stats screen. No new state: it is arithmetic
   over the hour each session ended at.
+- **A dream diary.** The napping buddy sometimes dreams mid-session — of a
+  species you both saw, a vignette you travelled with, or one of six things
+  that only happen asleep. Stay to the end and it is kept; leave and it just
+  fades. A session gets a dream *or* a sighting, never both.
 - **8 places** with a boat/balloon/train whose position *is* the countdown,
   four times of day each, lit windows after dark.
 - **41 journal species** including a moon rabbit gated on the real moon, plus

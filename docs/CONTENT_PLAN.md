@@ -478,7 +478,7 @@ remembers), and across days (who is watching you from the hedge).
 
 ---
 
-## Phase S — The Dream Diary (the journal, pointed inward)
+## Phase S — The Dream Diary (the journal, pointed inward) ✅ built
 
 > Your buddy sleeps through every focus session. Sleeping creatures dream.
 > **What Mochi dreams about is your shared journey.**
@@ -528,6 +528,34 @@ The signature sentence: *"my cat just dreamed about the whale we saw."*
 **Done when:** a forced memory-dream appears over a napping buddy, survives
 completion into the diary with the right caption, never appears over a
 watching owl at night, and the diary reads correctly in both appearances.
+
+### As built
+
+Shipped as specced. Four notes:
+
+- **Journey dreams are the three vignettes, not the eight places.** The spec's
+  parenthetical said to reuse `vignette_*`, and there is no small sketch of a
+  place to reuse — a scene is 396×858. Rather than draw eight more sprites
+  against a spec that called the surreal six "the only new art", a travel dream
+  is the sailboat, the balloon or the night train, gated on having reached the
+  place it belongs to.
+- **The owl needs no special case, exactly as predicted.** The bubble is drawn
+  inside `BuddyView` behind its existing `isNapping` check, so Luna dreams
+  through her daytime naps and never through her night watch, because that is
+  simply the pose she is in.
+- **One asset makes the whole bubble.** `fx_bubble` is a flat silhouette
+  rendered as a template and drawn twice — slightly larger in `Theme.bark` for
+  a rim, then in `Theme.cream` for the fill. Two-tone and theme-correct without
+  a second sprite or a literal colour.
+- **`CelebrationView` gained a `buddyName` parameter** rather than an engine
+  dependency, so it stays previewable with any completion — same reasoning as
+  the `streak` it already took.
+
+The moon rabbit was redrawn twice. Upright, a rabbit ten pixels tall merges
+head, ears and body into one shape and reads as a thumbprint; it is a side
+profile with the ears swept back for that reason.
+
+**Not yet seen running** — written on Linux, never compiled.
 
 ---
 

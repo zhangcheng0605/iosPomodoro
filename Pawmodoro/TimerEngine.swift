@@ -62,10 +62,16 @@ final class TimerEngine {
     /// sighting is — a per-frame decision would have her flicker.
     private(set) var strayCameo = false
 
+    /// What the buddy is dreaming this focus phase, if the roll went that way.
+    /// A session gets a dream *or* a sighting, never both competing for the
+    /// same quiet middle stretch.
+    private(set) var dream: Dream?
+
     let log: SessionLog
     let journal: Journal
     let album: Album
     let stray: Stray
+    let dreams: DreamDiary
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -79,7 +85,8 @@ final class TimerEngine {
         log: SessionLog = SessionLog(),
         journal: Journal = Journal(),
         album: Album = Album(),
-        stray: Stray = Stray()
+        stray: Stray = Stray(),
+        dreams: DreamDiary = DreamDiary()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -87,6 +94,7 @@ final class TimerEngine {
         self.journal = journal
         self.album = album
         self.stray = stray
+        self.dreams = dreams
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -152,6 +160,7 @@ final class TimerEngine {
         if runState == .idle {
             rainSeconds = 0
             rollSighting()
+            rollDream()
             rollStrayCameo()
         }
 
@@ -192,6 +201,7 @@ final class TimerEngine {
         NotificationManager.shared.cancelPending()
         endDate = nil
         sighting = nil
+        dream = nil
         runState = .idle
         remaining = phaseDuration
         refreshAmbience()
@@ -202,9 +212,11 @@ final class TimerEngine {
         stopTicker()
         NotificationManager.shared.cancelPending()
         endDate = nil
-        // Whatever was out there simply leaves. Nothing is logged and nothing
-        // is said about it — abandoning a session is not punished here.
+        // Whatever was out there simply leaves, and whatever was being dreamed
+        // is not kept. Nothing is logged and nothing is said about it —
+        // abandoning a session is not punished here.
         sighting = nil
+        dream = nil
         advance(natural: false)
     }
 
@@ -375,6 +387,68 @@ final class TimerEngine {
         }
     }
 
+    // MARK: Dreams
+
+    /// The slice of a focus phase a dream is on screen for. Overlaps nothing:
+    /// a sighting owns 0.32–0.70 and the two are mutually exclusive anyway.
+    static let dreamWindow: ClosedRange<Double> = 0.40...0.70
+
+    /// The dream on screen right now, if there is one. `BuddyView` adds the
+    /// last condition — the buddy has to actually be asleep — which is what
+    /// makes Luna dream through her daytime naps rather than her night watch,
+    /// with no special case anywhere.
+    var visibleDream: Dream? {
+        guard isRunning, phase == .focus, let dream else { return nil }
+        return Self.dreamWindow.contains(progress) ? dream : nil
+    }
+
+    /// Decide whether the buddy dreams this phase, and of what.
+    ///
+    /// Only when nothing else is turning up: a dream and a sighting in the same
+    /// session would be two quiet things competing, and the sighting is the
+    /// rarer one.
+    private func rollDream() {
+        dream = nil
+        guard phase == .focus, sighting == nil else { return }
+
+        if let forced = LaunchOptions.forcedDream {
+            dream = Dream.from(id: forced) ?? pool().first { $0.id.hasPrefix(forced) }
+            return
+        }
+        guard Double.random(in: 0..<1) < 0.25 else { return }
+        dream = pool().randomElement()
+    }
+
+    /// Weighted memory > travel > surreal, by simple repetition — a species you
+    /// actually saw is three times likelier than a fish holding a balloon. The
+    /// surreal six are always in the pool so that a brand-new buddy, whose
+    /// journal is empty, still has something to dream about.
+    private func pool() -> [Dream] {
+        var pool: [Dream] = []
+        for species in Species.allCases where journal.hasSeen(species) {
+            pool.append(contentsOf: repeatElement(.memory(species), count: 3))
+        }
+        for place in Place.journey where hasReached(place) {
+            if let vignette = place.vignette {
+                pool.append(contentsOf: repeatElement(.travel(vignette), count: 2))
+            }
+        }
+        pool.append(contentsOf: Dream.Surreal.allCases.map(Dream.surreal))
+        return pool
+    }
+
+    /// How long ago you met the thing being dreamed about, so the diary can
+    /// write the relationship rather than just the fact.
+    private func daysSinceMeeting(_ dream: Dream) -> Int? {
+        guard case .memory(let species) = dream,
+              let record = journal.record(for: species)
+        else { return nil }
+        return Calendar.current.dateComponents(
+            [.day], from: Calendar.current.startOfDay(for: record.firstSeen),
+            to: Calendar.current.startOfDay(for: Date())
+        ).day
+    }
+
     /// Roughly one phase in four, once she lives here and somebody else is on
     /// duty. Never while she *is* the buddy — she can't do her rounds and keep
     /// you company at the same time.
@@ -494,6 +568,11 @@ final class TimerEngine {
                Species.rainbow.spec.places.contains(settings.place) {
                 sighting = Sighting(species: .rainbow)
             }
+            // Same rule as a sighting: leave early and the dream just fades,
+            // unrecorded. Dreams are like that.
+            if let dream {
+                dreams.add(dream, daysAfter: daysSinceMeeting(dream))
+            }
             // You only keep what you stayed for.
             if let sighting {
                 seen = sighting.species
@@ -539,9 +618,11 @@ final class TimerEngine {
             isCycleComplete: finished == .focus && phase == .longBreak,
             arrivedAt: arrival,
             saw: seen,
-            completedFigure: figure
+            completedFigure: figure,
+            dreamed: finished == .focus ? dream : nil
         )
         sighting = nil
+        dream = nil
     }
 
     private func advance(natural: Bool) {

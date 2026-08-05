@@ -38,7 +38,7 @@ enrolment you'd need for the App Store, so it isn't wasted if you go further.
 ### 2. Set the team in Xcode
 
 **Pawmodoro target → Signing & Capabilities → Team** → your new team (not
-"Personal Team" any more). Bundle ID is already `com.zhangcheng.pawmodoro`.
+"Personal Team" any more). Bundle ID is already `com.pawmodoro.zhangcheng`.
 
 ### 3. Create the app record
 

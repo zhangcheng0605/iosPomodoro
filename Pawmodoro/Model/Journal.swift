@@ -131,7 +131,7 @@ final class Journal {
 
     /// Debug only — fills the journal so the seen state can be looked at
     /// without finding twelve animals by hand.
-    func fillForDebug() {
+    func fillForDebug(count: Int = 1) {
         let now = Date()
         for sound in Heard.allCases where heard[sound.rawValue] == nil {
             heard[sound.rawValue] = now
@@ -141,7 +141,7 @@ final class Journal {
             records[species.rawValue] = SightingRecord(
                 firstSeen: now,
                 lastSeen: now,
-                count: 1,
+                count: max(1, count),
                 place: (species.places.first ?? .meadow).rawValue,
                 dayPart: (species.dayParts.first ?? .day).rawValue
             )

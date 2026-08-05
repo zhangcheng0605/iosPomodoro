@@ -56,8 +56,11 @@ enum Heard: String, Codable, CaseIterable, Identifiable {
     var name: String { spec.name }
     var note: String { spec.note }
 
-    /// Matches the files written by tools/generate_assets.py.
-    var fileName: String { "heard_\(rawValue).wav" }
+    /// Matches the files written by tools/generate_assets.py — base name only,
+    /// because `SoundPlayer.makePlayer` appends the extension itself. Carrying
+    /// the ".wav" here made it look for `heard_owlcall.wav.wav`, and every one
+    /// of these five sounds silently failed to play.
+    var fileName: String { "heard_\(rawValue)" }
 
     /// The clue shown before you've heard it. Same job as a species hint: it
     /// has to be enough to act on without being a recipe.

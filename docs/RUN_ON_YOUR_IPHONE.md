@@ -30,7 +30,7 @@ re-signing every week, and you need it for the App Store anyway.
 
 ### 1. Give the app its own bundle identifier
 
-**Already done** — the project ships as `com.zhangcheng.pawmodoro`, and the
+**Already done** — the project ships as `com.pawmodoro.zhangcheng`, and the
 in-app purchase identifiers were renamed to match. Nothing to do here.
 
 It used to be `com.example.pawmodoro`, which would have failed: Apple reserves
@@ -40,7 +40,7 @@ You only need to touch this if Xcode complains that the identifier is
 unavailable — someone else got there first. In that case: select the
 **Pawmodoro** project in the left sidebar → the **Pawmodoro** target →
 **Signing & Capabilities** → edit **Bundle Identifier** to something more
-specific, like `com.zhangcheng.pawmodoro.app`.
+specific, like `com.pawmodoro.zhangcheng.app`.
 
 ### 2. Sign in and pick your team
 

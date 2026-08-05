@@ -46,7 +46,7 @@ cozy pixel-art games.
 - [ ] Build and run on a real iPhone (see `docs/XCODE_WORKFLOW.md`)
 - [ ] Follow `docs/APP_STORE_LAUNCH_GUIDE.md` step by step
 - [ ] Enroll in the Apple Developer Program ($99/yr, 1–2 days to approve)
-- [x] Bundle ID set to `com.zhangcheng.pawmodoro` (change it if Apple says it's taken)
+- [x] Bundle ID set to `com.pawmodoro.zhangcheng` (change it if Apple says it's taken)
 - [ ] TestFlight beta with a few friends first
 - [ ] Screenshots (⌘S in the simulator, then AppMockUp for captions/frames)
 - [ ] Publish a privacy policy page (GitHub Pages is fine — the app collects nothing)

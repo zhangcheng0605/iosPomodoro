@@ -136,8 +136,7 @@ struct DreamDiaryView: View {
             }
 
             Text(dreamed.isEmpty
-                 ? "\(engine.buddyName) sleeps through every session. Stay to the "
-                   + "end of one and you'll find out what about."
+                 ? emptyCaption
                  : "What \(engine.buddyName) dreams about is where you've been "
                    + "together.")
                 .font(.footnote)
@@ -154,6 +153,18 @@ struct DreamDiaryView: View {
                 }
             }
         }
+    }
+
+    /// Nocturnal buddies keep watch after dark and never dream at night, so
+    /// "sleeps through every session" would be a lie for them.
+    private var emptyCaption: String {
+        if engine.settings.buddy.isNocturnal {
+            return "\(engine.buddyName) keeps watch at night and dozes through "
+                + "the daylight sessions. Finish one of those to find out "
+                + "what the dreams are about."
+        }
+        return "\(engine.buddyName) sleeps through every session. Stay to the "
+            + "end of one and you'll find out what about."
     }
 
     /// Enough to fill the row out and hint at more, never the whole catalogue.

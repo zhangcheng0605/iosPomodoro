@@ -37,7 +37,7 @@ The short version:
 1. Click the project → **Signing & Capabilities** tab.
 2. Set **Team** to your (now paid) developer account.
 3. Set **Bundle Identifier** to something you own, reverse-DNS style:
-   e.g. `com.zhangcheng.pawmodoro`. This is permanent once published — choose carefully.
+   e.g. `com.pawmodoro.zhangcheng`. This is permanent once published — choose carefully.
 4. Check the app name: "Pawmodoro" must be unique on the App Store. Search the store first;
    the display name is set in App Store Connect later and can differ from the project name.
 
@@ -81,7 +81,7 @@ You'll need:
 - **Guideline 4.2 (minimum functionality)**: a bare timer can be flagged as "too simple."
   The buddy, paw prints, stats, streaks, ambience, and onboarding are what lift Pawmodoro
   above that bar — don't strip them back to just a countdown.
-- **Placeholder identifiers**: the repo ships `com.zhangcheng.pawmodoro` and an empty
+- **Placeholder identifiers**: the repo ships `com.pawmodoro.zhangcheng` and an empty
   `DEVELOPMENT_TEAM`. Both must be yours before you archive (see Step 3).
 - **Missing privacy policy URL**: see Step 5.
 - **Screenshots that don't match the app**: keep captions honest.

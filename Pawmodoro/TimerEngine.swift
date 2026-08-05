@@ -109,7 +109,7 @@ final class TimerEngine {
             ThemeManager.shared.theme = forced
         }
         if LaunchOptions.fillJournal {
-            journal.fillForDebug()
+            journal.fillForDebug(count: LaunchOptions.fillJournalCount)
         }
         stray.seedForDebug()
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
@@ -432,6 +432,12 @@ final class TimerEngine {
     private func rollEncounter() {
         encounter = nil
         guard phase == .focus else { return }
+
+        if let forced = LaunchOptions.forcedEncounter {
+            encounter = forced
+            return
+        }
+
         let part = LaunchOptions.forcedDayPart ?? DayPart.current()
         let season = Season.current()
 

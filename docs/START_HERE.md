@@ -57,8 +57,8 @@ Click the project in the left sidebar → the **Pawmodoro** target →
 
 - Tick **Automatically manage signing**
 - **Team**: your Apple ID (a free one works until the paid account is approved)
-- **Bundle Identifier**: change `com.zhangcheng.pawmodoro` to something yours, like
-  `com.zhangcheng.pawmodoro`. This is permanent once published — choose carefully.
+- **Bundle Identifier**: change `com.pawmodoro.zhangcheng` to something yours, like
+  `com.pawmodoro.zhangcheng`. This is permanent once published — choose carefully.
 
 ### 6. Update the purchase IDs to match
 Because you just changed the bundle ID, update the product identifiers in **two

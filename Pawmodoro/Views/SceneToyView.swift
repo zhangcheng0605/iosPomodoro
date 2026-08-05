@@ -73,6 +73,10 @@ struct SceneToyView: View {
     @State private var firefly: Firefly?
     @State private var lastRipple = Date.distantPast
 
+    /// How long she takes to dim out after being let go. Shared by the fade
+    /// maths and the reaper, so the canvas unmounts exactly when she vanishes.
+    private static let fireflyFade: TimeInterval = 2.2
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -94,6 +98,10 @@ struct SceneToyView: View {
             // during focus — a shake is not a fiddle, it is something you do
             // once and then go back to work.
             .onReceive(NotificationCenter.default.publisher(for: .pawmodoroShake)) { _ in
+                // Reduce Motion turns the whole toy layer off rather than
+                // slowing it: every effect here *is* motion, so there is no
+                // still version of it worth drawing.
+                guard !reduceMotion else { return }
                 swirl(in: geometry.size)
             }
         }
@@ -103,13 +111,18 @@ struct SceneToyView: View {
 
     // MARK: The finger
 
+    /// The toy, unless the reader has asked for less movement — in which case
+    /// there isn't one. The finger is still *tracked* either way, because the
+    /// buddy's glance is a two-pixel pupil shift rather than an animation.
+    private var activeToy: SceneToy? { reduceMotion ? nil : toy }
+
     private func gesture(in size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 // Tracked first and unconditionally: the eyes follow a finger
                 // even in a place with nothing to stir.
                 TouchTracker.shared.x = value.location.x / max(size.width, 1)
-                switch toy {
+                switch activeToy {
                 case .firefly:
                     follow(value.location)
                 case .water:
@@ -125,7 +138,7 @@ struct SceneToyView: View {
             .onEnded { value in
                 TouchTracker.shared.x = nil
                 let travel = hypot(value.translation.width, value.translation.height)
-                switch toy {
+                switch activeToy {
                 case .water where travel > 40:
                     skipStone(from: value.startLocation, to: value.location, in: size)
                 case .water:
@@ -137,6 +150,7 @@ struct SceneToyView: View {
                 case .firefly:
                     // Let go and she wanders off, which is the whole joke.
                     firefly?.releasedAt = Date()
+                    reapFirefly()
                 }
             }
     }
@@ -211,6 +225,21 @@ struct SceneToyView: View {
         }
         firefly?.target = point
         firefly?.releasedAt = nil
+    }
+
+    /// Clears her once she has faded, so the 30fps canvas can unmount.
+    ///
+    /// Without this the mount condition (`firefly != nil`) latched on the
+    /// first touch and the timeline ticked for the rest of the app's life,
+    /// drawing nothing — the effects array has always been reaped this way,
+    /// and she was the one thing that wasn't.
+    private func reapFirefly() {
+        guard let released = firefly?.releasedAt else { return }
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(Self.fireflyFade * 1_000_000_000))
+            // Only if she hasn't been picked up again in the meantime.
+            if firefly?.releasedAt == released { firefly = nil }
+        }
     }
 
     private func add(_ effect: Effect) {
@@ -289,7 +318,7 @@ struct SceneToyView: View {
             let gone = now.timeIntervalSince(released)
             point.x += sin(gone * 1.4) * 34 + gone * 12
             point.y -= gone * 26
-            glow *= max(0, 1 - gone / 2.2)
+            glow *= max(0, 1 - gone / Self.fireflyFade)
         }
         guard glow > 0.02 else { return }
 

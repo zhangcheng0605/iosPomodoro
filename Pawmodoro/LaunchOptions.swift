@@ -38,7 +38,7 @@ enum StorageKeys {
 /// interrupts the first start, and the Plus content needs a purchase. These
 /// flags collapse all of it, so a change can be seen in seconds.
 ///
-///     xcrun simctl launch booted com.zhangcheng.pawmodoro -PawmodoroDemo
+///     xcrun simctl launch booted com.pawmodoro.zhangcheng -PawmodoroDemo
 ///
 /// They are compiled out of Release builds: outside `DEBUG` every flag is a
 /// `false` constant, so the branches reading them fold away and nothing about
@@ -98,7 +98,7 @@ enum LaunchOptions {
     /// Pin the sky to one time of day. Takes an hour, in the `-Key value` form
     /// `UserDefaults` parses for free:
     ///
-    ///     xcrun simctl launch booted com.zhangcheng.pawmodoro -PawmodoroClock 22
+    ///     xcrun simctl launch booted com.pawmodoro.zhangcheng -PawmodoroClock 22
     ///
     /// Checking all four skies otherwise means waiting for the day to go round.
     static let forcedDayPart: DayPart? = {
@@ -139,8 +139,26 @@ enum LaunchOptions {
         return Species(rawValue: raw)
     }()
 
+    /// Guarantee a micro-encounter this session, e.g.
+    /// `-PawmodoroEncounter butterfly`. One-in-twelve odds are not a way to
+    /// check a landing.
+    static let forcedEncounter: MicroEncounter? = {
+        guard arguments.contains("-PawmodoroEncounter"),
+              let raw = value(after: "-PawmodoroEncounter")
+        else { return nil }
+        return MicroEncounter(rawValue: raw)
+    }()
+
     /// Mark every species as already seen, for looking at the journal.
     static let fillJournal = isSet("-PawmodoroFillJournal")
+
+    /// `-PawmodoroFillJournal 5` writes that many sightings per species —
+    /// five is enough to make every one a named regular, which no other flag
+    /// could reach.
+    static let fillJournalCount: Int = {
+        guard fillJournal else { return 1 }
+        return value(after: "-PawmodoroFillJournal").flatMap(Int.init) ?? 1
+    }()
 
     /// Start in a theme, e.g. `-PawmodoroTheme ink`. Eight themes times two
     /// appearances is sixteen looks to check.
@@ -243,7 +261,9 @@ enum LaunchOptions {
     static let unlockPlaces = false
     static let forcedBuddy: Buddy? = nil
     static let forcedSighting: Species? = nil
+    static let forcedEncounter: MicroEncounter? = nil
     static let fillJournal = false
+    static let fillJournalCount = 1
     static let postcard = false
     static let unlockMusic = false
     static let forcedMoon: Bool? = nil

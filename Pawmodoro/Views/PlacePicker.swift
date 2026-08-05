@@ -71,6 +71,9 @@ struct PlacePicker: View {
                     .font(.caption2.weight(selected ? .bold : .regular))
                     .foregroundStyle(Theme.bark.opacity(available ? 0.9 : 0.55))
                     .lineLimit(1)
+                    // "Whispering Woods" is wider than the 92pt card; shrink
+                    // rather than truncate to "Whispering Wo…".
+                    .minimumScaleFactor(0.7)
 
                 Text(caption(for: place, reached: reached, owned: owned))
                     .font(.system(size: 10))

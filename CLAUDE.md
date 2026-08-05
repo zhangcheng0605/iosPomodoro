@@ -38,7 +38,7 @@ views render as `?` boxes in the pane (the app itself no longer uses any).
 ## Running it
 
 The app builds for the iOS Simulator with no signing setup — the bundle ID is
-`com.zhangcheng.pawmodoro` and `DEVELOPMENT_TEAM` is empty — the team only
+`com.pawmodoro.zhangcheng` and `DEVELOPMENT_TEAM` is empty — the team only
 matters for a device, and is set in Xcode rather than here.
 
 ```sh
@@ -56,7 +56,7 @@ xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Debug \
     -destination "id=$UDID" -derivedDataPath build/simulator \
     CODE_SIGNING_ALLOWED=NO build
 xcrun simctl install "$UDID" build/simulator/Build/Products/Debug-iphonesimulator/Pawmodoro.app
-xcrun simctl launch "$UDID" com.zhangcheng.pawmodoro -PawmodoroDemo
+xcrun simctl launch "$UDID" com.pawmodoro.zhangcheng -PawmodoroDemo
 ```
 
 ## Launch options — use these, the app is slow to check without them
@@ -79,7 +79,8 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroUnlockPlaces` | Treat every place as reached, without seeding history |
 | `-PawmodoroBuddy <id>` | Start with one buddy, e.g. `-PawmodoroBuddy owl` |
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
-| `-PawmodoroFillJournal` | Mark every species as already seen |
+| `-PawmodoroEncounter <id>` | Guarantee a micro-encounter this session: `butterfly`, `robin`, `snowflake` |
+| `-PawmodoroFillJournal [n]` | Mark every species as seen; `5` makes them all named regulars |
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
 | `-PawmodoroTheme <id>` | Start in a theme, e.g. `-PawmodoroTheme ink` |
 | `-PawmodoroPostcard` | Put one postcard in the album on launch |

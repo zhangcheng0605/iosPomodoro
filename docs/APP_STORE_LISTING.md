@@ -5,6 +5,35 @@ Character counts are against Apple's limits, checked.
 
 ---
 
+## ⚠️ First: sign Xcode in, or none of this can be uploaded
+
+This Mac has **no Apple ID in Xcode and no signing certificate** — checked
+with `security find-identity -v -p codesigning`, which returns "0 valid
+identities found", and the provisioning-profile folder is empty.
+
+That is why the target looked empty: with no account signed in, the Team
+dropdown has nothing to offer and Xcode gives up on the signing panel.
+
+Fix it in this order:
+
+1. **Xcode → Settings (⌘,) → Accounts → "+" → Apple ID.** Sign in with the
+   Apple ID that owns the App Store Connect account — the one that created
+   the Paawmodoro record. If it says you have no membership, that Apple ID
+   is not the one enrolled in the Developer Program.
+2. Open `Pawmodoro.xcodeproj`. In the left sidebar click the **blue project
+   icon** at the very top (named "Pawmodoro"). The editor then shows a
+   PROJECT and a TARGETS list — click **"Pawmodoro" under TARGETS**, not
+   under PROJECT. That is the target; it does exist.
+3. **Signing & Capabilities** tab → tick "Automatically manage signing" →
+   pick your team in the **Team** dropdown.
+4. Xcode writes your Team ID into the project. Send me the resulting diff,
+   or just the ID (10 characters, like `A1B2C3D4E5`), and I'll commit it.
+
+Until step 3 is done, **Product → Archive is greyed out or fails**, so there
+is nothing to upload no matter how complete this page is.
+
+---
+
 ## Promotional Text  (limit 170)
 
 ```
@@ -19,7 +48,7 @@ build — use it for seasonal notes later.)*
 ## Description  (limit 4,000)
 
 ```
-Pawmodoro is a Pomodoro timer with somewhere to be.
+Paawmodoro is a Pomodoro timer with somewhere to be.
 
 Set a focus session and a pixel-art companion curls up and sleeps through it. Finish, and something happens: an animal you have never seen wanders past, a star lands in a constellation you have been building for weeks, your buddy dreams about a place you went together. Quit halfway and none of it does. That is the whole design — the app never nags you, it just quietly has more to show the people who stay.
 
@@ -48,9 +77,9 @@ ALSO INSIDE
 50 gapless lo-fi tracks with a radio mode, 8 themes that all pass real contrast measurement in light and dark, postcards, an almanac, a travelogue, expedition presets, and an Action Button shortcut to start focusing without unlocking your phone.
 
 QUIET BY DEFAULT
-No account. No sign-up. No tracking, no analytics, no ads, and no network calls at all — Pawmodoro has never sent a byte anywhere and cannot. Everything stays on your device. It works in aeroplane mode, forever.
+No account. No sign-up. No tracking, no analytics, no ads, and no network calls at all — Paawmodoro has never sent a byte anywhere and cannot. Everything stays on your device. It works in aeroplane mode, forever.
 
-Pawmodoro Plus is one payment, no subscription: eight more companions, every ambience, every theme. Everything else — the journal, the sky, the stray, the streaks, the timer itself — is free and always will be.
+Paawmodoro Plus is one payment, no subscription: eight more companions, every ambience, every theme. Everything else — the journal, the sky, the stray, the streaks, the timer itself — is free and always will be.
 ```
 
 *(~2,470 characters, well inside the limit.)*
@@ -63,22 +92,21 @@ Pawmodoro Plus is one payment, no subscription: eight more companions, every amb
 pomodoro,focus,timer,study,deep work,cat,pixel,cozy,productivity,adhd,pet,journal,quiet
 ```
 
-*(86 characters. Don't add "Pawmodoro" — Apple already indexes the app name,
+*(86 characters. Don't add "Paawmodoro" — Apple already indexes the app name,
 so spending characters on it is waste.)*
 
 ---
 
-## Support URL  (required — see note below)
+## Support URL  (required)
 
 ```
 https://github.com/zhangcheng0605/iosPomodoro
 ```
 
-**This only works if that repo is public.** If it is private, Apple's reviewer
-will hit a 404 and the submission gets rejected. Options, cheapest first:
-1. Make the repo public.
-2. Turn on GitHub Pages and point this at the pages URL.
-3. Any page you control with a working contact address on it.
+Confirmed public, so a reviewer can reach it. One thing worth doing before
+you submit: make sure the README has a visible way to contact you (an email
+address is enough). "Support URL" means support — a reviewer who finds no
+way to ask for help can reject on Guideline 1.5.
 
 ---
 
@@ -119,7 +147,7 @@ Not applicable. This is only for apps that give driving directions. Skip it.
 **Notes:**
 
 ```
-Pawmodoro is a Pomodoro focus timer. No account, no sign-in, no network access — the app makes no network calls at all, so it can be reviewed fully in aeroplane mode.
+Paawmodoro is a Pomodoro focus timer. No account, no sign-in, no network access — the app makes no network calls at all, so it can be reviewed fully in aeroplane mode.
 
 Two things worth knowing so nothing looks broken during review:
 
@@ -127,7 +155,9 @@ Two things worth knowing so nothing looks broken during review:
 
 2. MOST CONTENT UNLOCKS OVER TIME BY DESIGN. The field journal, constellations, the stray cat and the travel map fill in as focus sessions are completed — a fresh install is deliberately close to empty. This is the core of the app, not missing content.
 
-IN-APP PURCHASES: one non-consumable ("Pawmodoro Plus", unlocks 8 additional companions, ambience sounds and themes) and three consumable tips that unlock nothing. There is no subscription. A "Restore purchase" button is in Settings > Pawmodoro Plus.
+IN-APP PURCHASES: one non-consumable ("Paawmodoro Plus", unlocks 8 additional companions, ambience sounds and themes) and three consumable tips that unlock nothing. There is no subscription. A "Restore purchase" button is in Settings > Pawmodoro Plus.
+
+NOTE ON THE NAME: the App Store listing is "Paawmodoro"; the app's own interface calls itself "Pawmodoro". This is deliberate — the shorter spelling was unavailable on the App Store.
 
 All artwork, music and sound in the app is originally generated for it — there is no third-party or licensed content.
 ```
@@ -136,11 +166,25 @@ All artwork, music and sound in the app is originally generated for it — there
 
 ## App Store Version Release
 
-Recommended: **Manually release this version.**
+**Automatic is fine — with one condition.**
 
-The default is "Automatically release", which puts the app live the moment
-review passes — possibly at 4am while you are asleep, with no chance to look
-at it first. Manual costs you one button press and gives you the choice.
+The generic "always release manually" advice is weak, and for a first app
+with no launch plan, getting it live sooner is worth more than controlling
+the minute. Automatic release is a reasonable default.
+
+The condition is your in-app purchases. If the app goes live *before* the
+four IAPs are approved, the paywall shows its "store isn't available" state
+to every real user who taps Plus — the app looks broken, and early reviews
+are the ones that stick. So:
+
+- **Submitting the IAPs with this build?** Automatic is fine. Apple reviews
+  them together, and they go live together.
+- **Submitting the app alone and adding IAPs later?** Choose manual, or
+  accept that Plus is dead until the next review round.
+
+The other, smaller argument for manual: you cannot see the live product page
+before customers do. If you want to check how the screenshots and
+description actually look before anyone finds them, manual buys you that.
 
 ---
 

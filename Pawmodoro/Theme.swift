@@ -76,7 +76,8 @@ enum Theme {
 enum DayPart: String, CaseIterable {
     case dawn, day, dusk, night
 
-    static func current(at date: Date = Date(), calendar: Calendar = .current) -> DayPart {
+    static func current(at date: Date = WorldCalendar.now,
+                        calendar: Calendar = WorldCalendar.calendar) -> DayPart {
         from(hour: calendar.component(.hour, from: date))
     }
 

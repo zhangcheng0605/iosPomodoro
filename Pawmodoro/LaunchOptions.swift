@@ -25,9 +25,13 @@ enum StorageKeys {
     /// default name stores no override at all.
     static let strayJoined = "pawmodoro.strayJoined"
 
+    /// Everything that happened, in order. Append-only, and read by nothing
+    /// yet — see `Chronicle`.
+    static let chronicle = "pawmodoro.chronicle"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined, dreams, heard,
+        strayFirstSeen, strayJoined, dreams, heard, chronicle,
     ]
 }
 
@@ -208,6 +212,28 @@ enum LaunchOptions {
         return Season(rawValue: raw)
     }()
 
+    /// Pin the world's calendar day: `-PawmodoroDate 2026-12-21`.
+    ///
+    /// Everything date-driven reads `WorldCalendar`, so this one flag moves
+    /// the season, the moon, and — as they arrive — the weather, the tide,
+    /// the migrations and the snail, all at once and in agreement. The clock
+    /// keeps running inside the pinned day; `-PawmodoroClock` still owns the
+    /// hour.
+    static let pinnedDay: Date? = {
+        guard arguments.contains("-PawmodoroDate"),
+              let raw = value(after: "-PawmodoroDate")
+        else { return nil }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.timeZone = Calendar.current.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: raw).map { Calendar.current.startOfDay(for: $0) }
+    }()
+
+    /// Six weeks of plausible world events, for building anything that reads
+    /// the chronicle before the chronicle has had six weeks to fill up.
+    static let seedChronicle = isSet("-PawmodoroSeedChronicle")
+
     /// Seed a history with a one-day hole in it, so both streak states can be
     /// looked at without waiting for a bad week.
     static let seedGap = isSet("-PawmodoroSeedGap")
@@ -274,6 +300,8 @@ enum LaunchOptions {
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil
     static let seedGap = false
+    static let pinnedDay: Date? = nil
+    static let seedChronicle = false
     static let forcedSeason: Season? = nil
     static let bondSessions: Int? = nil
 #endif
@@ -310,6 +338,52 @@ enum LaunchOptions {
         if let bondSessions {
             seedSessionCount(bondSessions, into: defaults)
         }
+        if seedChronicle {
+            seedChronicleEvents(into: defaults)
+        }
+    }
+
+    /// Six weeks of world events, thinning out toward the past the way a real
+    /// one would — most species are met early, then the pace slows because
+    /// there is less left to meet.
+    private static func seedChronicleEvents(into defaults: UserDefaults) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var events: [ChronicleEvent] = []
+
+        func add(_ kind: ChronicleEvent.Kind, _ subject: String, daysAgo: Int, hour: Int) {
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: today),
+                  let at = calendar.date(byAdding: .hour, value: hour, to: day)
+            else { return }
+            events.append(ChronicleEvent(at: at, kind: kind, subject: subject))
+        }
+
+        let species = Species.allCases.map(\.rawValue)
+        for index in 0..<26 {
+            // Sightings thin out: day 41 down to day 1, front-loaded.
+            let daysAgo = 42 - Int(pow(Double(index), 1.35))
+            guard daysAgo > 0 else { break }
+            add(.sighting, species[index % species.count], daysAgo: daysAgo, hour: 9 + index % 10)
+        }
+        for (index, sound) in Heard.allCases.enumerated() {
+            add(.heard, sound.rawValue, daysAgo: 38 - index * 7, hour: 21)
+        }
+        for (index, place) in Place.journey.prefix(4).enumerated() {
+            add(.arrival, place.rawValue, daysAgo: 40 - index * 12, hour: 11)
+        }
+        for (index, level) in Bond.allCases.prefix(3).enumerated() {
+            add(.bond, String(level.rawValue), daysAgo: 39 - index * 14, hour: 18)
+        }
+        add(.figure, ConstellationAtlas.all[0].id, daysAgo: 20, hour: 22)
+        add(.stray, String(Stray.Stage.watching.rawValue), daysAgo: 16, hour: 17)
+        add(.stray, String(Stray.Stage.beside.rawValue), daysAgo: 4, hour: 17)
+        for (index, dream) in Dream.Surreal.allCases.prefix(4).enumerated() {
+            add(.dream, "surreal.\(dream.rawValue)", daysAgo: 30 - index * 8, hour: 14)
+        }
+
+        let ordered = events.sorted { $0.at < $1.at }
+        guard let data = try? JSONEncoder().encode(ordered) else { return }
+        defaults.set(data, forKey: StorageKeys.chronicle)
     }
 
     /// Exactly `count` completed sessions, spread back over the past fortnight

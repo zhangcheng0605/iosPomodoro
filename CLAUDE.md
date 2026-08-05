@@ -150,6 +150,30 @@ There are no tests. A change is verified by building and looking at it:
 
 ## Conventions worth keeping
 
+- **Nothing decays. Ever.** Bond, trees, trust, candles, the forgiving
+  streak — every counter in this app only goes up or stays put. One decaying
+  stat would teach people to open the app afraid, and no later patch could
+  un-teach that. When retention pressure eventually argues for a wilting
+  plant or an expiring streak, this line is the answer.
+- **One opinion about "today".** `WorldCalendar` owns the calendar, the
+  hemisphere policy, and `seed(day:place:)`. Anything date-driven goes
+  through it — never `Date()` and `Calendar.current` directly — so that
+  `-PawmodoroDate` moves the whole world at once and the sky can never
+  disagree with the tide. Its seed is a written-out FNV-1a, deliberately not
+  Swift's `Hasher` (whose output is randomised per process); changing that
+  function silently rewrites everybody's past, so don't.
+- **No calendar-window notification, ever.** Migrations, festivals and
+  anniversaries are one `UNUserNotificationCenter` call away from being FOMO
+  machinery. Missing them has to stay free.
+- **Audio is pre-mixed and single-node.** Every audible variant is rendered
+  offline by the generators to a loop-exact file and played on the existing
+  decode-once `.loops` path. No runtime layering, no second engine graph:
+  that is the crash class that made all fifty tracks unplayable on device.
+- **Every feature lands with two or three dream entries.** The dream pool is
+  the cheapest depth in the app — captions and palette transforms over art
+  that already exists. A feature that adds nothing to it has left money on
+  the table.
+
 - **Colours go through `Theme`**, never literal `Color` values. That is what
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.

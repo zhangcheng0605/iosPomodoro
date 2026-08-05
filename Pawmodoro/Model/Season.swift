@@ -7,7 +7,10 @@ import Foundation
 /// you open it one morning in late October and there are leaves.
 ///
 /// Date-driven and derived, so there is no state: `Season.current()` is a
-/// function of the calendar and nothing else.
+/// function of the calendar and nothing else — and of `WorldCalendar`'s
+/// calendar specifically, so `-PawmodoroDate` moves the season along with
+/// everything else the date decides. The windows are northern; that policy
+/// lives in `WorldCalendar.hemisphere`, with its reasoning.
 enum Season: String, CaseIterable, Identifiable {
     case sakura
     case fireflies
@@ -68,7 +71,8 @@ enum Season: String, CaseIterable, Identifiable {
 
     /// The last week of October gets bats. This is the only thing in the app
     /// that is a joke, and it is a small one.
-    static func hasBats(on date: Date = Date(), calendar: Calendar = .current) -> Bool {
+    static func hasBats(on date: Date = WorldCalendar.now,
+                        calendar: Calendar = WorldCalendar.calendar) -> Bool {
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)
         return month == 10 && (24...31).contains(day)
@@ -76,7 +80,8 @@ enum Season: String, CaseIterable, Identifiable {
 
     /// The season today falls in, or nil for most of the year — which is the
     /// point. If it were always some season, none of them would register.
-    static func current(on date: Date = Date(), calendar: Calendar = .current) -> Season? {
+    static func current(on date: Date = WorldCalendar.now,
+                        calendar: Calendar = WorldCalendar.calendar) -> Season? {
         if let forced = LaunchOptions.forcedSeason { return forced }
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)

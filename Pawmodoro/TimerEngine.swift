@@ -72,6 +72,8 @@ final class TimerEngine {
     let album: Album
     let stray: Stray
     let dreams: DreamDiary
+    /// Written to, never read from — yet. See `Chronicle`.
+    let chronicle: Chronicle
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -86,7 +88,8 @@ final class TimerEngine {
         journal: Journal = Journal(),
         album: Album = Album(),
         stray: Stray = Stray(),
-        dreams: DreamDiary = DreamDiary()
+        dreams: DreamDiary = DreamDiary(),
+        chronicle: Chronicle = Chronicle()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -95,6 +98,7 @@ final class TimerEngine {
         self.album = album
         self.stray = stray
         self.dreams = dreams
+        self.chronicle = chronicle
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -493,6 +497,7 @@ final class TimerEngine {
         // Logged on play, not on completion: unlike a sighting there is
         // nothing to stay for. You either heard it or you didn't.
         journal.addHeard(scheduled.sound)
+        chronicle.add(.heard, scheduled.sound.rawValue)
     }
 
     // MARK: Dreams
@@ -670,6 +675,7 @@ final class TimerEngine {
             // by the one session that actually finished it.
             let nightsBefore = log.nightSessions
             let sessionsBefore = log.totalSessions
+            let strayBefore = stray.stage(log: log)
             log.add(minutes: settings.focusMinutes)
             bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
             figure = ConstellationAtlas.justCompleted(
@@ -705,6 +711,8 @@ final class TimerEngine {
             // Checked after the log is written, so this session counts toward
             // the threshold it might have just crossed.
             arrival = newlyReachedPlace()
+            recordToChronicle(seen: seen, dream: dream, bond: bond, figure: figure,
+                              arrival: arrival, strayBefore: strayBefore)
             if let arrival, !arrival.isPlus {
                 // Free arrivals move you there; the Far Isles wait behind the
                 // paywall rather than switching to a place you can't keep.
@@ -744,6 +752,32 @@ final class TimerEngine {
         )
         sighting = nil
         dream = nil
+    }
+
+    /// Writes this session's episodes to the chronicle.
+    ///
+    /// Everything here is already known by the time it is called — this adds
+    /// no rolls and no decisions, it only remembers. Deliberately the last
+    /// thing to touch the stores, so a chronicle entry can never exist for
+    /// something the journal or diary refused to keep.
+    private func recordToChronicle(
+        seen: Species?,
+        dream: Dream?,
+        bond: Bond?,
+        figure: Constellation?,
+        arrival: Place?,
+        strayBefore: Stray.Stage
+    ) {
+        if let seen { chronicle.add(.sighting, seen.rawValue) }
+        if let dream { chronicle.add(.dream, dream.id) }
+        // Bond and stage are Int-raw; their numbers are the stable key.
+        if let bond { chronicle.add(.bond, String(bond.rawValue)) }
+        if let figure { chronicle.add(.figure, figure.id) }
+        if let arrival { chronicle.add(.arrival, arrival.rawValue) }
+        let strayAfter = stray.stage(log: log)
+        if strayAfter != strayBefore {
+            chronicle.add(.stray, String(strayAfter.rawValue))
+        }
     }
 
     private func advance(natural: Bool) {

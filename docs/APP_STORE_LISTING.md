@@ -260,3 +260,40 @@ Drag them into the **6.9" display** slot in Media Manager (the page you
 screenshotted was showing the 6.5" slot — use "View All Sizes in Media
 Manager" to find 6.9"). Apple scales down for smaller devices automatically,
 so this one set covers every iPhone.
+
+---
+
+## The seven "Unable to Add for Review" blockers — answers
+
+| # | Blocker | Where | Answer |
+|---|---|---|---|
+| 1 | Primary category | App Information | **Productivity** (secondary: Health & Fitness) |
+| 2 | Age rating questions | App Information → Age Rating → Edit | Answer **None / No** to every question → rates **4+** |
+| 3 | App Privacy practices | App Privacy → Get Started | **"Data Not Collected"** — the app has no networking code at all |
+| 4 | Price tier | Pricing and Availability | **Free** (in-app purchases are separate) |
+| 5 | Privacy Policy URL | App Privacy | `https://github.com/zhangcheng0605/iosPomodoro/blob/claude/pawmodoro-ios-simulator-sf815f/PRIVACY.md` |
+| 6 | Choose a build | Version page → Build | Upload the archive — see below |
+| 7 | Content Rights | App Information | **"No, it does not contain, show, or access third-party content"** |
+
+### Uploading the build
+
+An archive is already built and signed, sitting in Xcode's Organizer folder:
+
+    ~/Library/Developer/Xcode/Archives/2026-08-06/
+
+Bundle ID `com.pawmodoro.zhangcheng`, version 1.0, build 1.
+
+In Xcode: **Window → Organizer** → select the Pawmodoro archive →
+**Distribute App** → **App Store Connect** → **Upload**. Xcode re-signs it with
+an Apple Distribution certificate at that point (the archive itself is
+development-signed, which is normal and not a problem).
+
+Processing then takes 5–30 minutes before the build is selectable on the
+version page.
+
+**Do not archive from Xcode's own Product → Archive menu.** This repo lives on
+the Desktop, which iCloud Drive syncs, and the sync service stamps
+`com.apple.FinderInfo` on the built bundle — `codesign` then fails with
+"resource fork, Finder information, or similar detritus not allowed". The
+archive above was built with its intermediates outside the synced folder to
+avoid exactly that.

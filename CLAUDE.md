@@ -34,6 +34,14 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > process. The Simulator could never show it. Anything touching
 > `AVAudioEngine` gets tried on a device before it ships.
 
+> ## ⏸ Stopped 6 Aug 2026 at a session token limit — Phase 0 half done
+>
+> `WorldCalendar` and the `Chronicle` are built, verified on device and
+> pushed. Three items of Phase 0 remain — the dream backfill, the AlbumView
+> rasterization fix, and the iPad decision — and **all three can be done
+> without a Mac**. The next session is on a Windows laptop with no Xcode and
+> no simulator: `docs/RESUME_HERE.md` is written for exactly that.
+
 **Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.

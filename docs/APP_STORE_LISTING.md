@@ -5,32 +5,31 @@ Character counts are against Apple's limits, checked.
 
 ---
 
-## ⚠️ First: sign Xcode in, or none of this can be uploaded
+## ⚠️ Pick the right signing team — there are two accounts, one paid
 
-This Mac has **no Apple ID in Xcode and no signing certificate** — checked
-with `security find-identity -v -p codesigning`, which returns "0 valid
-identities found", and the provisioning-profile folder is empty.
+Two Apple IDs are signed into Xcode, and only one carries the membership:
 
-That is why the target looked empty: with no account signed in, the Team
-dropdown has nothing to offer and Xcode gives up on the signing panel.
+| Apple ID | Team | Can it ship? |
+|---|---|---|
+| `xkrazylovex@hotmail.com` | **Cheng Zhang** (role: Admin) | ✅ **yes — use this** |
+| `zhangcheng1997@gmail.com` | Personal Team | ❌ no — sideload only, 7-day profiles |
 
-Fix it in this order:
+The gmail address is the *contact* on the App Store Connect record, which is
+easy to mistake for the account owner. It isn't. The paid membership is on
+the hotmail ID.
 
-1. **Xcode → Settings (⌘,) → Accounts → "+" → Apple ID.** Sign in with the
-   Apple ID that owns the App Store Connect account — the one that created
-   the Paawmodoro record. If it says you have no membership, that Apple ID
-   is not the one enrolled in the Developer Program.
-2. Open `Pawmodoro.xcodeproj`. In the left sidebar click the **blue project
-   icon** at the very top (named "Pawmodoro"). The editor then shows a
-   PROJECT and a TARGETS list — click **"Pawmodoro" under TARGETS**, not
-   under PROJECT. That is the target; it does exist.
-3. **Signing & Capabilities** tab → tick "Automatically manage signing" →
-   pick your team in the **Team** dropdown.
-4. Xcode writes your Team ID into the project. Send me the resulting diff,
-   or just the ID (10 characters, like `A1B2C3D4E5`), and I'll commit it.
+Steps:
 
-Until step 3 is done, **Product → Archive is greyed out or fails**, so there
-is nothing to upload no matter how complete this page is.
+1. Open `Pawmodoro.xcodeproj`. Left sidebar → **blue project icon** at the
+   top → in the editor, click **"Pawmodoro" under TARGETS** (not under
+   PROJECT — that's the row people miss).
+2. **Signing & Capabilities** → tick "Automatically manage signing".
+3. In the **Team** dropdown pick **"Cheng Zhang"** — the entry *without*
+   "(Personal Team)" after it. Xcode creates the signing certificate at that
+   moment; there is none on this Mac yet.
+
+Until that is done, **Product → Archive** produces nothing uploadable, and
+"Add for Review" stays greyed out because no build has arrived.
 
 ---
 
@@ -198,13 +197,38 @@ description actually look before anyone finds them, manual buys you that.
 | **Content Rights** | No third-party content. |
 | **Export Compliance** | Already answered in the build: `ITSAppUsesNonExemptEncryption = NO` is set in the project, so App Store Connect should not ask again. If it does: **No**, the app uses no encryption. |
 | **Price** | Free, with in-app purchases. |
-| **In-App Purchases** | Must be created separately, with IDs matching `Pawmodoro/Store/StoreIDs.swift` exactly — see the table below. |
+| **In-App Purchases** | Created under MONETIZATION → In-App Purchases, not on the version page — see below. IDs must match `Pawmodoro/Store/StoreIDs.swift` exactly. |
+
+### You can't pick IAPs on the version page any more — that's not a bug
+
+The blue notice on your screenshot says it: Apple moved in-app purchases off
+the version page. There is no picker there now. The flow is:
+
+1. Left sidebar → **MONETIZATION → In-App Purchases** → **"+"**
+2. Create all four products using the exact IDs in the table below. Each
+   needs: a reference name (internal), a display name and description
+   (customer-facing), a price tier, and a **review screenshot** — Apple
+   requires one image per product showing where it appears in the app.
+   `store-screenshots/` has one you can reuse for all four, or take a fresh
+   shot of the paywall.
+3. Set each product's status to **"Ready to Submit"**.
+4. Go back to the version page. Once products are Ready to Submit, they
+   appear in the submission dialog when you press **Add for Review**, and
+   get reviewed alongside the build.
+
+Apple's own note on your screen — *"Your first in-app purchase must be
+submitted with a new app version"* — means the four products can only go
+through review attached to version 1.0. They cannot be submitted alone.
+
+**Note "Add for Review" is greyed out** in your screenshot. That is expected:
+it stays disabled until a build has been uploaded. It will light up once
+the archive lands and finishes processing.
 
 ### In-App Purchase product IDs (must match exactly)
 
 | Product | Type | ID |
 |---|---|---|
-| Pawmodoro Plus | Non-Consumable | `com.pawmodoro.zhangcheng.plus` |
+| Paawmodoro Plus | Non-Consumable | `com.pawmodoro.zhangcheng.plus` |
 | Tip — small | Consumable | `com.pawmodoro.zhangcheng.tip.small` |
 | Tip — medium | Consumable | `com.pawmodoro.zhangcheng.tip.medium` |
 | Tip — large | Consumable | `com.pawmodoro.zhangcheng.tip.large` |

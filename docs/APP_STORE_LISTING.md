@@ -8,10 +8,10 @@ Character counts are against Apple's limits, checked.
 ## Promotional Text  (limit 170)
 
 ```
-A focus timer with a small world behind it. Your buddy naps while you work, wildlife turns up only if you stay to the end, and every night session puts one more star in the sky.
+A focus timer with a small world behind it. Your buddy naps while you work, wildlife turns up only if you stay, and every night session puts one more star in the sky.
 ```
 
-*(169 characters. This is the one field you can change any time without a new
+*(164 characters. This is the one field you can change any time without a new
 build — use it for seasonal notes later.)*
 
 ---

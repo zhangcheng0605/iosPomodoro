@@ -21,6 +21,19 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > ear. The feature table in `docs/RESUME_HERE.md` records the outcome of
 > every row.
 
+> ## 📮 The app is on the App Store — read `docs/NEXT_UPDATE.md` before coding
+>
+> Version 1.0 is submitted (bundle `com.pawmodoro.zhangcheng`, store name
+> **Paawmodoro**). `docs/NEXT_UPDATE.md` is the list of what must reach users
+> in the next release: fixes already in the repo, known-and-unfixed issues,
+> and the surfaces nobody has ever verified. Start there, not here.
+>
+> The one that matters most: **all fifty music tracks were unplayable on every
+> real device** until build 2 — the player nodes were wired at the hardware's
+> format while the tracks are mono 22.05 kHz, and `scheduleBuffer` killed the
+> process. The Simulator could never show it. Anything touching
+> `AVAudioEngine` gets tried on a device before it ships.
+
 **Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.

@@ -38,8 +38,10 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.
 
-**Current focus:** two plan documents, worked phase by phase, and **both are
-now built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
+**Current focus:** `docs/DEEP_TIME_PLAN.md` — the fourth plan document,
+phases V-Z (weather, sound, the open hour, the long now, widgets). **Build
+Phase 0 first and alone**: the Chronicle, the world calendar, the conventions
+commit, the listening pass. The two earlier plan documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
 running, D (Live Activity) written but needing a one-time Xcode target step,
 E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers
 content and its build order is finished except alternate app icons. Each phase

@@ -278,6 +278,16 @@ There are no tests. A change is verified by building and looking at it:
   that proves: the text capsules composite last at 70–82 %, so they dominate
   the result and the check confirms the veils are safe rather than standing
   guard over them. See `Palette.weatherMix`, which says so with the numbers.
+- **The Sunday Post is the aggregation surface, and forgetting it is silent.**
+  Small systems are meant to get a weekly *sentence* rather than a screen of
+  their own. A system that never gets one has quietly got no surface at all,
+  and the letter reads perfectly well without it — nothing would ever show
+  the absence. `tools/check_post.py` therefore requires every
+  `ChronicleEvent.Kind` to be either handled in `SundayPost.eventLines` or
+  named in `SundayPost.silentKinds` with a reason. It also fences the letter's
+  voice: no congratulating, no instructing, no comparison with another week,
+  no exclamation marks. That is the one surface in the app addressed *to* the
+  reader, which makes it the one most likely to drift.
 - **A checker that restates the values it checks has proved nothing.** Twice
   now: `check_weather.py` parsed the weights and then verified the roll
   against them, so swapping two weights passed cleanly; `check_yearring.py`

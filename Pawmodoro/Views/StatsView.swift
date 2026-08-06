@@ -12,6 +12,9 @@ struct StatsView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     AlmanacView()
+                    // Above everything: it is the one surface here that is
+                    // addressed to you rather than describing you.
+                    SundayPostView()
                     bondCard
                     summaryGrid
                     weekChart

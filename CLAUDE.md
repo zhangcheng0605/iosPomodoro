@@ -34,22 +34,31 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > process. The Simulator could never show it. Anything touching
 > `AVAudioEngine` gets tried on a device before it ships.
 
-> ## ⏸ Stopped 6 Aug 2026 at a session token limit — Phase 0 half done
+> ## ⏳ Phase 0 is code-complete and two commits of it have never compiled
 >
-> `WorldCalendar` and the `Chronicle` are built, verified on device and
-> pushed. Three items of Phase 0 remain — the dream backfill, the AlbumView
-> rasterization fix, and the iPad decision — and **all three can be done
-> without a Mac**. The next session is on a Windows laptop with no Xcode and
-> no simulator: `docs/RESUME_HERE.md` is written for exactly that.
+> `WorldCalendar` and the `Chronicle` were built on a Mac and verified on
+> device. The **dream-pool backfill** and the **`AlbumView` rasterization
+> fix** were written on a Windows laptop with no Xcode and no simulator: both
+> pass `check_swift.py`, every new sprite was rendered and looked at, and
+> neither has been through a compiler. Expect a handful of errors on the next
+> Mac build and don't be alarmed — `docs/RESUME_HERE.md` lists the likely ones
+> in order, with the fix for each.
+>
+> Two things are still open: the **iPad decision**
+> (`TARGETED_DEVICE_FAMILY`, which is the owner's call) and **0e's Mac-and-
+> device sitting** — above all the listening pass, which gates every one of
+> Phase W's sounds.
 
 **Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.
 
 **Current focus:** `docs/DEEP_TIME_PLAN.md` — the fourth plan document,
-phases V-Z (weather, sound, the open hour, the long now, widgets). **Build
-Phase 0 first and alone**: the Chronicle, the world calendar, the conventions
-commit, the listening pass. The two earlier plan documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
+phases V-Z (weather, sound, the open hour, the long now, widgets). **Phase 0
+is built except 0e**: the Chronicle, the world calendar, the conventions and
+the dream backfill are in; the listening pass and the widget-target step are
+the Mac sitting that is left, and Phase W does not start until the listening
+pass has notes. The two earlier plan documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
 running, D (Live Activity) written but needing a one-time Xcode target step,
 E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers
 content and its build order is finished except alternate app icons. Each phase

@@ -167,6 +167,84 @@ and the stray's later stages. Cheapest depth-per-byte in the app.
 **Release 1.1 is Phase 0 + the first slice of V.** Nothing in 0 is a
 screenshot; all of it is load-bearing.
 
+### As built
+
+0b, 0c and the conventions half of 0d landed in one session on a Mac and are
+verified on device. 0d's dream backfill and 0a's rasterization fix landed in a
+second session on Linux, unbuilt — `check_swift.py` is green and every sprite
+was looked at, but nothing here has been through a compiler. 0e is untouched
+and still needs the Mac sitting.
+
+**The dream backfill grew a sixth source and split bond off from it.** The
+plan asked for 2–3 entries each for bond, regulars, heard things, seasons and
+the stray's later stages. The previous session's recorded design was a single
+`case companion(Buddy)`, on the reasoning that gating it on ownership would
+let "bond and the stray's arc feed it for free". Half of that held and half
+did not. The stray does arrive free — Soot becomes ownable only at the end of
+her arc — but a dream about *another animal in the house* says nothing about
+how well the two of you know each other, so bond was not fed at all. Built as
+six cases instead:
+
+| Case | Comes from | Gate | Art |
+|---|---|---|---|
+| `regular(Species)` | the regulars | `journal.isRegular` | `wild_<id>_regular`, already a sepia sketch with the marking |
+| `companion(Buddy)` | the roster | bond ≥ acquainted, minus whoever is on duty | the asleep sprite, as a silhouette |
+| `visitor(Visitor)` | the stray, stages 2–4 | her stage, and only while she is still outside | her three scene sprites, as silhouettes |
+| `sound(Heard)` | the five you never see | `journal.hasHeard` | 5 new |
+| `season(Season)` | the seasons | only during that season | 5 new |
+| `yours(Yours)` | the bond, and nothing else | bond ≥ friendly / close / devoted | 3 new |
+
+Four decisions inside that are worth knowing before touching it:
+
+- **The stray gets her own String-raw `Visitor` enum** rather than reusing
+  `Stray.Stage`, which is `Int`-raw. The diary is keyed on `Dream.id`, and
+  `"visitor.3"` is a key nobody can read and nothing can safely renumber. It
+  is the same trap that produced `chronicle.add(.bond, bond.rawValue)` — an
+  `Int` raw value handed to a `String` parameter — on the day the Chronicle
+  was written.
+- **The five sounds are drawn as sounds, not as their sources.** A whale you
+  can look at is not what the journal promised. The sprites are the swell that
+  reached you, the horn going away, two calls and then nothing, one stroke
+  spreading in every direction, four hanging notes. "Heard and never seen"
+  survives the dream.
+- **A season can only be dreamed while it *is* that season.** A dream of snow
+  in July would say the seasons mean nothing, which is the opposite of what
+  they are for.
+- **No caption names a buddy.** They can all be renamed and a model type
+  cannot reach `settings.displayName(for:)`, so a companion is described by
+  what it is — "the otter", "the cat who came in".
+
+**The diary's total went 50 → 116, and nothing anywhere shows it.** The page
+prints how many have been dreamed and never what is left, which is the
+no-hidden-count-shaming anti-goal already holding at four times the size.
+
+**`-PawmodoroFillDreams` was not in the plan and had to be.** The page now
+draws on five gated systems at once, and the honest route to a full one is a
+hundred and fifty sessions, five sightings of forty species, all five seasons
+of a year, and a cat who takes twelve days to come in. `-PawmodoroFillJournal`
+does not reach it: that fills the journal, and a dream still has to be rolled
+and stayed for.
+
+**`check_swift.py` gained two rules on the way through**, both verified by
+deliberately breaking the code:
+
+1. Dream sprites are checked. It reads each `case .sound(let sound):
+   "dream_heard_\(sound.rawValue)"` arm, resolves the associated type from the
+   case's own declaration, and demands one imageset per member — so a missing
+   sprite fails on Linux instead of drawing an empty bubble on a screen that
+   takes months to reach.
+2. `switch self` inside an `extension` is checked at all. It never was. Half
+   the app's tables live in one, so adding a buddy broke four switches and the
+   checker reported three — which reads as "you're done", the worst answer a
+   checker can give.
+
+**0a's rasterization fix is `Transferable`, as recommended**, and it is the
+one thing here likely to need a signature fixed on the next Mac build:
+`DataRepresentation`, `SharePreview` and `ShareLink` are precisely the
+argument-label-and-inference class `check_swift.py` is blind to. The share
+preview lost its image on purpose — every `SharePreview` that carries one
+wants that image up front, which is the thing being fixed.
+
 ---
 
 ## Phase V — Weatherfronts (the sky has moods)
@@ -547,6 +625,7 @@ Homestead as the follow-up.
 | `-PawmodoroWeather <id>` | Pin today's weather at every place |
 | `-PawmodoroTide <low\|high\|springlow>` | Pin the Harbor's tide |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events |
+| `-PawmodoroFillDreams` | Every dream marked as dreamed, for looking at the diary |
 | `-PawmodoroUnlockSounds` | Treat every found ambience as found |
 | `-PawmodoroVariant <n>` | Pin the rain-ledger variant |
 | `-PawmodoroBell` | An hour strike 5 s after launch |

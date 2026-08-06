@@ -1,5 +1,29 @@
 # Tonight, at the MacBook
 
+> ## ✅ Done — 6 Aug 2026, on the Mac
+>
+> Nine blind commits produced **eight compile errors** (six of them two
+> repeated mistakes) and Release found a ninth. Four real faults were found
+> by looking, three of which no checker could have caught:
+>
+> | | |
+> |---|---|
+> | **The tide was inside out** | Mud drawn *below* the waterline and only at high water. Both fractions run downward, so the high-water mark is the smaller number. Fixed and seen both ways. |
+> | **The hundred-hour wood stood on black** | `HomesteadScene` left the ground to its callers; the stats card drew one, the postcard did not. Ground moved inside the shared view. |
+> | **The lynx had no ears** | Tufts drawn upward from a grid with no room above the head — three of their four pixels clipped. Grid 15→19 rows. |
+> | **A Debug-only symbol named from Release code** | `SnapshotSeed`. `check_swift.py` now has a rule for it, verified by reintroducing the bug. |
+>
+> The treats work — tap *and* drag, right reception table. The apparent
+> failure was mine: taps landing on the ambience row, and a 3.5-second
+> caption that is shorter than a screenshot round-trip. **Use
+> `simctl launch --console-pty` for anything transient; screenshots cannot
+> see it.**
+>
+> Everything else in Step 2 walked clean: greeting, panorama, tide curve,
+> flyway absence, shelf of hours, graded homestead, sprite legibility.
+> Debug and Release both build; all 20 checkers green; installed on the phone.
+
+
 **Written 6 Aug 2026 from a Windows laptop, at the end of a long Linux day.**
 Nine commits went onto `claude/phase-0-dream-backfill-j9sbmo` today and **none
 of them has been near a compiler.** This is the running order for the evening.

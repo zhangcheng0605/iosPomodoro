@@ -275,15 +275,22 @@ def blank(source):
 
 
 def enclosing_scopes(code):
-    """Every `enum X { … }`'s extent, innermost last when sorted by start.
+    """Every `enum X { … }` and `extension X { … }`'s extent, innermost last
+    when sorted by start.
 
     Needed because enums nest: `Dream` declares `Surreal` inside itself, and a
     naive "most recent enum seen" rule blames the inner one for every switch in
     the outer one after it. That produced six false failures, which is worse
     than none — a checker nobody believes is a checker nobody runs.
+
+    Extensions count because half the app's tables live in one — `Buddy`'s
+    dream lines, `Heard`'s and `Season`'s, `Place`'s. Before this they were
+    invisible here: a new buddy broke four switches and the checker reported
+    three of them, which reads as "you're done" and is the worst answer a
+    checker can give.
     """
     scopes = []
-    for match in re.finditer(r"\benum (\w+)\b[^\n{]*\{", code):
+    for match in re.finditer(r"\b(?:enum|extension) (\w+)\b[^\n{]*\{", code):
         start = match.end() - 1
         depth = 0
         for index in range(start, len(code)):

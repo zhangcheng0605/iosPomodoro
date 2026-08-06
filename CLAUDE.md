@@ -111,11 +111,14 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
 | `-PawmodoroNightSessions <n>` | Seed n sessions finished after dark, for the star atlas |
-| `-PawmodoroDream <id\|kind>` | Force a dream, e.g. `surreal.yarn` or just `memory` |
+| `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `yours`, `surreal` |
+| `-PawmodoroFillDreams` | Mark every dream as dreamed, for looking at the diary |
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
 | `-PawmodoroBond <n>` | Seed n completed sessions, to preview every bond level |
+| `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
+| `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -143,10 +146,13 @@ closes the mechanical error classes a compiler would catch instantly:
 unbalanced brackets, `#if DEBUG`/`#else` drift in `LaunchOptions` (a flag
 missing its Release stand-in builds fine in Debug and only fails the Release
 build), asset names with no imageset, `StorageKeys` missing from `.all`,
-`Theme.` and `LaunchOptions.` members that don't exist, and non-exhaustive
-switches over the app's own enums. Each of those seven is verified to actually
-fail the checker, not just assumed to. It is **not** a type checker and cannot
-become one: argument labels, inference and SwiftUI misuse still need Xcode.
+`Theme.` and `LaunchOptions.` members that don't exist, dream sprites whose
+imageset was never generated, and non-exhaustive switches over the app's own
+enums — **including the ones inside an `extension`**, which is where half the
+app's tables actually live. Every one of those rules is verified by
+deliberately breaking the code and watching it fail, never by assuming. It is
+**not** a type checker and cannot become one: argument labels, inference and
+SwiftUI misuse still need Xcode.
 
 There are no tests. A change is verified by building and looking at it:
 
@@ -180,7 +186,14 @@ There are no tests. A change is verified by building and looking at it:
 - **Every feature lands with two or three dream entries.** The dream pool is
   the cheapest depth in the app — captions and palette transforms over art
   that already exists. A feature that adds nothing to it has left money on
-  the table.
+  the table. The shape is settled now: a case on `Dream`, its own String-raw
+  nested enum if the thing it comes from is `Int`-raw (the diary is keyed on
+  `id`, and `"visitor.3"` is a key nobody can read), a `reachedAt` saying what
+  earns it, and one arm in each of the six tables in `Dream.swift`. Gate it in
+  `TimerEngine.pool()` on the system it belongs to rather than on a second
+  unlock table — the journal, the bond, the stray's arc and the calendar
+  already know. And no caption may name a buddy: they can all be renamed, and
+  a model type cannot reach `settings.displayName(for:)`.
 
 - **Colours go through `Theme`**, never literal `Color` values. That is what
   makes theme switching redraw and what keeps the measured contrast honest —

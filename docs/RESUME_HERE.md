@@ -33,6 +33,8 @@ of what the next release owes users.
 | 0a `AlbumView` rasterization | **built, never compiled** — today |
 | 0a the iPad decision | **made** — `"1"`, iPhone only, see below |
 | 0e the Mac-and-device sitting, four gates | **open** — tonight |
+| **V-slice-1** — weather: veils, particles, the suggestion glow | **built, never compiled** |
+| **V5** — the old snail | **built, never compiled** |
 
 ### What today added, in one paragraph each
 
@@ -52,10 +54,36 @@ the stats sheet rasterised every postcard twice at export size on the main
 thread, before anybody tapped anything. `Postcard` now conforms to
 `Transferable`; the PNG is drawn once, on demand, after a tap.
 
-**Two new `check_swift.py` rules.** Dream sprite names are expanded from the
-enum and checked against the catalog. And `switch self` inside an `extension`
-is now checked at all — it never was, and half the app's tables live in one.
-Both were verified by deliberately breaking the code, per the house rule.
+**Three new `check_swift.py` rules.** Dream sprite names are expanded from the
+enum and checked against the catalog; `Dream.id` and `Dream.from(id:)` must
+name the same prefixes (they drift silently and the diary just stops decoding);
+and `switch self` inside an `extension` is now checked at all — it never was,
+and half the app's tables live in one. All verified by deliberately breaking
+the code, per the house rule.
+
+**Weather — V-slice-1 (V1, V2, the suggestion glow).** Nine weathers, rolled
+once per calendar day per place out of `WorldCalendar.seed`. Never real
+weather: no location permission, no network, the meadow has its own sky.
+Drawn as a theme-aware veil plus a particle layer, so the scene pipeline stays
+8 places × 4 hours instead of becoming × 9. The chip that suits today's sky
+gets a ring and three words; tapping is still the only thing that changes what
+plays. Three dream entries came with it, because the convention now says a
+feature ships with them rather than owing them.
+
+**The old snail (V5).** Six months to cross a place, then six months
+elsewhere; her position is a pure function of the date, about two points a
+day. Five places — Cloudspire, Harbor and the Onsen have no continuous ground,
+which was measured rather than decided.
+
+**Two new checkers, and one of them found a real bug before any compiler saw
+the code.** `check_weather.py` runs a decade of every place through a Python
+port of `WorldCalendar.seed`. Golden was written exactly as the plan's table
+says — "if yesterday stormed, today is golden" — and that turns out to show
+**golden on both days when two storms run together**, and to **never show the
+second storm at all**. The rarest weather in the app, eaten by the
+second-rarest, about thirty times a decade, invisible from inside the app
+forever. `check_snail.py` is `check_stray.py`'s harder sibling and is what
+ruled three places out of her route.
 
 ---
 
@@ -75,6 +103,10 @@ xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Debug \
 `check_swift.py` is not a type checker. **A handful of errors here is the
 expected outcome, not a sign something is wrong.** In likelihood order:
 
+0. **`Pawmodoro/Views/WeatherView.swift` and `SnailView.swift`** are new
+   SwiftUI files and have never been compiled. `Canvas`, `TimelineView` and
+   `GeometryReader` are all shapes the app already uses elsewhere, so these
+   should be quiet, but they are the newest code here.
 1. **`Pawmodoro/Views/PostcardExport.swift`.** `Transferable`,
    `DataRepresentation`, `SharePreview` and `ShareLink` are exactly the
    argument-label-and-inference class the checker is blind to. If one line has
@@ -154,7 +186,39 @@ obvious from the code:
   `-PawmodoroStray 5` they should be gone, and `companion` should have gained
   "the cat who came in" instead.
 
-### 3. Share a postcard
+### 3. The weather, and the snail
+
+Both are new since the last Mac session and neither has been compiled.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroWeather storm      # the darkest veil, plus the flash
+$S -PawmodoroWeather mist       # the lightest, and the fog banks
+$S -PawmodoroWeather golden     # only ever follows a storm, so it needs the flag
+$S -PawmodoroWeather rain       # then tap the rain ambience chip — it should be ringed
+$S -PawmodoroSeason winter -PawmodoroWeather rain    # should come out as snow
+$S -PawmodoroSnail 50           # the old snail, halfway across
+$S -PawmodoroDate 2026-12-21    # everything date-driven at once, honestly
+```
+
+What to look at:
+
+- **The veil in all eight themes and both appearances.** The contrast numbers
+  say it is safe (922k measurements) but the numbers are dominated by the text
+  capsules — what a bad veil actually costs is the *place* disappearing behind
+  its own weather, and only an eye sees that. `storm` and `mist` are the two
+  to judge.
+- **The storm flash.** Eleven seconds apart, a third of a second long, soft.
+  If it reads as a strobe at all, lower the opacity in `WeatherView.flash` —
+  do not shorten the period.
+- **The snail.** `tools/check_snail.py --preview /tmp/snail.png` draws her
+  whole crossing on one strip from Linux, and it looked right; the thing to
+  confirm on a phone is that eighteen points is big enough to notice and small
+  enough not to be a mascot.
+- **The almanac's today line**, which is the one place the weather is named in
+  words.
+
+### 4. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -162,7 +226,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 4. The four gates of 0e — the actual reason for a Mac evening
+### 5. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 
@@ -207,14 +271,21 @@ Revisit when Phase Y's Homestead panorama earns a big canvas.
 
 ```sh
 python3 tools/check_swift.py             # every session, Mac or not
+python3 tools/check_weather.py           # any date-rolled feature
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
+python3 tools/check_snail.py             # after moving her or redrawing a scene
 tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All three were green when this was written: 102,832 contrast pairs, 20,736
-stray pairs, 68 Swift files and 382 imagesets.
+All five were green when this was written: 922,032 contrast pairs, 20,736
+stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 72 Swift files
+and 387 imagesets. `check_snail.py` takes about 18 seconds; the rest are quick.
+
+Two of these are new, and the reason to keep running them is that one of them
+paid for itself immediately: `check_weather.py` found a logic bug in the
+golden-day rule on its very first run, before any of this had been compiled.
 
 ---
 

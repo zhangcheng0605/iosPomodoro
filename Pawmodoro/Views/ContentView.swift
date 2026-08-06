@@ -91,6 +91,15 @@ struct ContentView: View {
                     pawPrints
                         .padding(.top, 14)
 
+                    // Only when nothing is counting down. A treat offered
+                    // mid-focus would be a reason to touch the screen during
+                    // the one stretch of time this app exists to leave alone.
+                    if engine.runState != .running || engine.phase.isBreak {
+                        TreatTray()
+                            .padding(.top, 8)
+                            .transition(.opacity)
+                    }
+
                     Spacer(minLength: 12)
 
                     ambienceRow

@@ -116,6 +116,69 @@ def stick():
     return outline_silhouette(g)
 
 
+# --- The three treats -------------------------------------------------------
+#
+# Drawn here rather than in a file of their own: they are the same kind of
+# object as a keepsake — small, plain, sitting on a desk — and they share the
+# palette exactly. A separate generator would be a second set of colours to
+# keep in step for three sprites.
+
+
+def biscuit():
+    """A round biscuit with a bite out of it and four holes.
+
+    The bite is what stops it being a coin. Drawn as a notch in the outline
+    rather than as a dark wedge on top, because a wedge reads as a slice mark
+    and a notch reads as *somebody has had some of this already*.
+    """
+    g = new_grid(12, 12); d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 10, 10], fill=BODY)
+    d.ellipse([2, 2, 9, 9], fill=GLINT)
+    d.ellipse([3, 3, 8, 8], fill=BODY)
+    # The bite: a transparent circle cut back out of the top-right.
+    d.ellipse([7, 0, 12, 5], fill=T)
+    for x, y in ((4, 5), (6, 4), (5, 7), (7, 6)):
+        d.point((x, y), fill=SHADE)                       # the fork holes
+    return outline_silhouette(g)
+
+
+def berry():
+    """Three lobes and a stem — a raspberry rather than a dot.
+
+    One circle would be a full stop. What makes a berry a berry at ten pixels
+    is that its edge is *lumpy*, so it is drawn as three overlapping circles
+    and the outline does the rest.
+    """
+    g = new_grid(11, 12); d = ImageDraw.Draw(g)
+    for cx, cy in ((3, 6), (7, 6), (5, 9)):
+        d.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=PINK)
+    for cx, cy in ((3, 5), (7, 5)):
+        d.point((cx, cy), fill=GLINT)                     # two small highlights
+    d.line([(5, 4), (5, 1)], fill=EYE)                    # the stem
+    d.polygon([(3, 2), (5, 3), (7, 2)], fill=EYE)         # and its hull
+    return outline_silhouette(g)
+
+
+def fish():
+    """A small fish, side on, with a fork in its tail.
+
+    Deliberately *small* — the note calls it a small fish and a big one on a
+    desk beside a biscuit reads as a meal rather than as a treat.
+    """
+    g = new_grid(14, 9); d = ImageDraw.Draw(g)
+    d.ellipse([3, 2, 11, 7], fill=ACCENT)                 # the body
+    d.ellipse([4, 4, 9, 7], fill=CREAM)                   # the pale belly
+    d.polygon([(3, 4), (0, 1), (0, 7)], fill=ACCENT)      # the forked tail
+    d.point((1, 4), fill=T)                               # the fork itself
+    d.polygon([(6, 2), (8, 0), (9, 2)], fill=SHADE)       # dorsal
+    d.point((10, 4), fill=EYE)
+    d.point((12, 4), fill=NOSE)                           # the mouth
+    return outline_silhouette(g)
+
+
+TREATS = {"biscuit": biscuit, "berry": berry, "fish": fish}
+
+
 KEEPSAKES = {
     "leaf": leaf, "feather": feather, "pebble": pebble,
     "ribbon": ribbon, "bottlecap": bottlecap, "stick": stick,
@@ -126,3 +189,6 @@ if __name__ == "__main__":
     print("Keepsakes:")
     for name, draw in KEEPSAKES.items():
         to_png(draw(), KEEPSAKE_PALETTE, f"keepsake_{name}")
+    print("Treats:")
+    for name, draw in TREATS.items():
+        to_png(draw(), KEEPSAKE_PALETTE, f"treat_{name}")

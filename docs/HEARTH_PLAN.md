@@ -604,10 +604,10 @@ ends up with four ribbons and no stick.
 
 **Divergences:**
 
-- **Tier 2 is a quarter built.** The greeting is in — see below. Treats,
-  brushing and tucking in are three separate interactions with their own art
+- **Tier 2 is half built.** The greeting and the treats are in — see below.
+  Brushing and tucking in are two separate interactions with their own art
   and state, and shipping half of *each* would be worse than shipping none;
-  shipping one of them whole is a different thing entirely.
+  shipping two of them whole is a different thing entirely.
 - **Petting is not counted anywhere.** No stroke total, no affection meter, no
   contribution to the bond. The fences at the top of `TouchSpot.swift` are
   written before the feature for that reason.
@@ -665,6 +665,58 @@ also precisely the sentence somebody would write meaning to be tender.
   the decision to be written down, which is exactly what that rule is for —
   it caught this key on the first run after it was added.
 - **Nothing is granted and nothing is announced.** It is a hello.
+
+### As built — Phase 5, tier 2's treats
+
+Three things on the desk — a biscuit, a berry, a small fish — offered by
+dragging up to the buddy or by tapping. Every buddy has one it is delighted by
+and one it politely nudges back, and the third is simply eaten. That is the
+whole mechanic and there is no meter behind it.
+
+**This is the feature in the app closest to a Tamagotchi**, which is exactly
+why its fences are code rather than prose. No hunger, no `lastFed` date, no
+bond bump, no acorn cost, no notification. Every one of those is a small,
+reasonable-looking edit that would pass review, and together they turn the one
+gesture in this app that is purely generous into a chore with a payout — at
+which point somebody works out the optimal feeding schedule inside a week.
+`tools/check_treats.py` is the twentieth checker: ten forbidden mechanics
+scoped to the treat's own files, twelve forbidden phrasings, and the table
+rules. Eleven rules, all break-tested.
+
+**The table rules turned out to be the ones that would break by accident.**
+Every buddy must have a favourite *and* a decline and they must differ — a
+buddy that both loves and refuses the same treat is a table edited in one
+place, and since `reception(of:)` checks the favourite first the decline
+becomes dead code that nothing on screen would ever reveal. Every buddy also
+needs a third treat left over, or its ordinary `accepted` line can never be
+read. And every treat must be somebody's favourite and somebody's refusal: a
+treat nobody wants is a sprite that exists to be declined, and one everybody
+wants is not a preference.
+
+**The preferences are chosen to be guessable but not obvious.** The otter and
+the penguin want the fish, which anybody would predict; the fox wants the
+berry, which almost nobody would. A table where every answer is predictable is
+a table nobody bothers to explore.
+
+**Divergences:**
+
+- **A tap does the same thing as the drag, and that is not a hedge.** The drag
+  is the gesture that makes it feel like handing something over rather than
+  picking from a menu, and it is also unreachable by VoiceOver and by Switch
+  Control. This is a gesture of affection — the last feature in the app that
+  should be dexterity-gated. `check_treats.py` fails if the tap goes away.
+- **The drop test is `translation.height < -30` and nothing else.** "Did it
+  land on the buddy" needs the buddy's frame in the tray's coordinate space,
+  which is the kind of thing that breaks quietly on a different screen size.
+  The tray sits directly under the buddy, so *upward, far enough* is the same
+  question and cannot be got wrong — which matters, because this was written
+  where no geometry could be checked.
+- **`Pouch.hasFedFavourite` is per buddy**, under a `fed!` prefix in the same
+  set as the worn and settled marks. Finding that the fox wants a berry says
+  nothing about the penguin, and the "that is the one, then" line is said once
+  per animal in a lifetime.
+- **Only the favourite gets a bounce.** A bounce for everything would make the
+  favourite unfindable, which is the entire feature.
 
 ## Phase 6 — The Scrapbook (where you actually were)
 

@@ -171,6 +171,12 @@ struct BuddyView: View {
             guard hello != nil else { return }
             playGreetingIfOwed()
         }
+        // The bounce only for the favourite. A bounce for everything would
+        // make the favourite unfindable, which is the whole feature.
+        .onChange(of: engine.offered?.reception) { _, reception in
+            guard reception?.isDelighted == true, !isNapping else { return }
+            animator.play(.happy, for: buddy)
+        }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
         .onChange(of: engine.completion) { _, completion in
             // The payoff for *finishing* a focus session: the buddy opens its
@@ -394,6 +400,12 @@ struct BuddyView: View {
         // off. Cleared as soon as the caption has had a turn.
         if let wearing = engine.justWore {
             return "\(name) \(wearing.firstWornLine)"
+        }
+        // What you just handed over. Above the touch spots because a treat is
+        // a bigger thing to have done than a stroke, and both are replies to
+        // something that happened a second ago.
+        if let given = engine.offered {
+            return "\(name) \(given.treat.line(for: given.reception, isFirstFavourite: given.isFirstFavourite))"
         }
         // What your hand just found. Above the quirk poses because it is a
         // reply to something you did a second ago, and below the sleeping

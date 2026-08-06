@@ -354,6 +354,33 @@ final class TimerEngine {
         foundFavourite = spot != nil && spot == settings.buddy.favouriteSpot
     }
 
+    /// The treat just offered and how it went, for one caption's worth of
+    /// time. Not persisted: it is a remark about a thing that happened five
+    /// seconds ago, and `Pouch.hasFedFavourite` is the only part worth
+    /// remembering.
+    private(set) var offered: (treat: Treat, reception: Treat.Reception,
+                               isFirstFavourite: Bool)?
+
+    /// Offer a treat. Nothing is spent, nothing is counted, nothing is
+    /// unlocked — see the fences on `Treat`.
+    func offer(_ treat: Treat) {
+        let buddy = settings.buddy
+        let reception = buddy.reception(of: treat)
+        let first = reception == .favourite && !pouch.hasFedFavourite(buddy)
+        if first { pouch.noteFedFavourite(buddy) }
+        offered = (treat, reception, first)
+        // The delighted one gets the purr the favourite touch spot already
+        // uses; the other two get the same soft detent as any other tap.
+        // Deliberately not `complete()` — a treat is not an achievement.
+        if reception.isDelighted {
+            HapticsDirector.shared.purr()
+        } else {
+            HapticsDirector.shared.detent()
+        }
+    }
+
+    func clearOffer() { offered = nil }
+
     func clearTouch() {
         touchedSpot = nil
         foundFavourite = false
@@ -479,6 +506,7 @@ final class TimerEngine {
             residentArrived = nil
             justWore = nil
             clearTouch()
+            clearOffer()
         }
 
         let end = Date().addingTimeInterval(remaining)

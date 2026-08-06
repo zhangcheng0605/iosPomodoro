@@ -120,6 +120,23 @@ final class Pouch {
 
     private static func settledMark(_ den: Den) -> String { "slept!\(den.rawValue)" }
 
+    /// Whether this buddy has ever been offered the treat it loves.
+    ///
+    /// Per buddy, because the discovery is per buddy — finding that the fox
+    /// wants a berry says nothing about the penguin. Same set, same prefix
+    /// trick and the same law: it only ever grows, so the "that is the one,
+    /// then" line is said exactly once per animal and never again.
+    func hasFedFavourite(_ buddy: Buddy) -> Bool {
+        owned.contains(Self.fedMark(buddy))
+    }
+
+    func noteFedFavourite(_ buddy: Buddy) {
+        owned.insert(Self.fedMark(buddy))
+        save()
+    }
+
+    private static func fedMark(_ buddy: Buddy) -> String { "fed!\(buddy.rawValue)" }
+
     /// Deliberately in the same set, under a prefix no `CatalogItem.id` uses,
     /// so it needs no second storage key and `-PawmodoroResetState` clears it
     /// with everything else. `spent` ignores it: `CatalogItem.from(id:)`

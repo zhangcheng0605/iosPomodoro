@@ -70,6 +70,12 @@ enum Theme {
         palette.weather(weather)?.color
     }
 
+    /// A time of day as its own colour, for the year ring's wedges. Not the
+    /// sky wash — see `Palette.ringTint(_:)` for why they must differ.
+    static func ringTint(for part: DayPart) -> Color {
+        palette.ringTint(part).color
+    }
+
     static func accent(for phase: TimerEngine.Phase) -> Color {
         switch phase {
         case .focus: blossom

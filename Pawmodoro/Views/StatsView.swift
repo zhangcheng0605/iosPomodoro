@@ -18,6 +18,7 @@ struct StatsView: View {
                     if log.totalSessions == 0 {
                         emptyState
                     }
+                    YearRingView()
                     AlbumView()
                     StarAtlasView()
                     JournalView()

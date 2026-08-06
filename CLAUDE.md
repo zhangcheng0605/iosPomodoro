@@ -153,7 +153,8 @@ first-launch notification prompt, and the paywall's locked state.
 
 ## Verifying a change
 
-**Run `python3 tools/check_swift.py` and `check_weather.py` before ending any
+**Run `python3 tools/check_swift.py`, `check_weather.py` and
+`check_yearring.py` before ending any
 session written without
 a Mac.** Most of this app is written on Linux and compiled days later, so a
 typo costs Mac time — which is the scarce resource here, not Linux time. It
@@ -277,6 +278,13 @@ There are no tests. A change is verified by building and looking at it:
   that proves: the text capsules composite last at 70–82 %, so they dominate
   the result and the check confirms the veils are safe rather than standing
   guard over them. See `Palette.weatherMix`, which says so with the numbers.
+- **A checker that restates the values it checks has proved nothing.** Twice
+  now: `check_weather.py` parsed the weights and then verified the roll
+  against them, so swapping two weights passed cleanly; `check_yearring.py`
+  kept the ring's ladder as its own constant, so flattening all four steps in
+  the Swift — the exact bug it exists to catch — passed cleanly too. The fix
+  is the same both times: **parse the real values out of the Swift**, and for
+  anything that is a promise about the past, add a stored fixture on top.
 - **Anything rolled from a date is a promise about the past, and gets a stored
   fixture.** `tools/check_weather.py` runs a decade of every place through a
   Python port of `WorldCalendar.seed` — the distribution, the golden-after-

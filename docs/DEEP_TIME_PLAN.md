@@ -388,6 +388,78 @@ South (autumn). `SightingRecord` gains an optional `weather` field (optional
 dark." The stray shelters under the eaves in rain — a `Stage.x` lookup that
 `check_stray.py` already knows how to judge.
 
+### As built — V3, wave 4
+
+Built on Linux, never compiled. The journal goes 41 → 63: nineteen animals,
+three phenomena, three sounds. `tools/check_species.py` is new.
+
+**The gate.** `Spec.weathers` — empty means any sky, which is every species
+that shipped before the weather existed — checked against `Weather.at(place)`.
+Never against the ambience loop: wanting to see a snow hare is not the same as
+arranging one. The rainbow keeps the rule it shipped with (half a session of
+*listening* to rain) because people have rainbows and a rainbow you got by
+choosing the rain loop is a fair rainbow.
+
+`needsRain` became `awardedLate` and `TimerEngine.lateAward()` generalises what
+was the rainbow's special case. Three more use it: the Sun Shower, the Fogbow,
+and First Thunder — one chance a year, only if you are sitting down for the
+first storm of spring, gated on the journal's own record of whether it has
+already happened rather than on a second flag. One award per session, rarest
+first: two phenomena in one sitting would make both ordinary.
+
+**What the checker found, on its first run.**
+
+- **The Grey Heron has been letterboxed since wave 2.** Drawn 19×18 by the
+  shared `songbird` builder, laid out inside a 34×40 frame — so every heron
+  anybody has ever seen had eight points of dead space under it. Two of the
+  new rows had the same bug. Nothing in the app could have shown this: the
+  sprite is correct, the frame is correct, and `scaledToFit` quietly does the
+  right thing with the wrong numbers.
+- **`meteors` and `aurora` are phenomena that are correctly rolled normally**,
+  because what gates them — where you are, what hour it is — is knowable when
+  the session starts. That killed a rule written the wrong way round. The rule
+  that survives is one-directional: everything `awardedLate` must be a
+  phenomenon, and must name the sky it waits for.
+- **The snow group is a December affair.** `Season.winter` runs 1–31 December
+  and snow is rain-or-drizzle inside that window, so the three snow species are
+  reachable about nine days a year across two places each — just over the
+  floor. That is the design, and it is now measured rather than assumed.
+- **`check_stray.py` had to get stronger.** She shelters in the wet by moving
+  to whichever side she is not usually on, so a stage can now stand at either
+  column; the checker tested each at its own. It cross-tests all of them now.
+  Its own first version included the 0.5 column, which belongs to the indoor
+  stages, and reported the cat standing in the Onsen's hot spring — a true
+  statement about a position nothing ever draws her at.
+
+**Divergences from the roster.**
+
+- **No Kite Spider.** A ballooning spider is a lovely idea and cannot be drawn
+  at this scale. Four drafts: eight legs at eleven pixels is a lattice, six is
+  a basket, four on a bigger body is a box with a lid, three bent ones per side
+  weld into two wings and the thing reads as a moth. Leg *count* is not legible
+  at any size this app draws at; splay is what the eye reads, and splay is what
+  makes it a moth. The subject changed rather than the drawing — the wind gets
+  a **Red Kite**, which soars, only turns up in wind, and has a silhouette.
+- **No Snow Hare.** It would have been the third hare, and a snow hare is a
+  mountain hare in a winter coat — the app already has the mountain hare.
+  **Snow Fox** instead. Big Frog and Little Frog stayed, three frogs and all,
+  because two of them are a joke ("the two are never seen together") and the
+  app's own Hare/Mountain Hare sets the precedent.
+- **Grey Wagtail rather than Grey Heron** for overcast, for the same reason.
+- **The stray's shelter is a side, not a position.** The plan asked for her
+  under the eaves; there is no eave in any of these scenes, and inventing a
+  third column would have needed a fresh proof that it is ground everywhere.
+  Both existing columns are already proven, so she takes the other one. Her
+  dwell window *widens* in the wet — she is there for the shelter rather than
+  for you, and leaving means getting wet. Nothing about her ever shrinks.
+- **`SightingRecord.weather` is optional and nothing backfills it.** "Seen in
+  clear weather" invented for a sighting from last March would be a memory the
+  app made up.
+
+**Still owed by V3:** nothing. The three new sounds are generated and
+structurally checked and, like the other five, have never been listened to —
+they join the listening pass in 0e.
+
 ### V4. The Flyway (migrants on the world calendar) [8/9/6/10]
 
 Eight to ten species that pass through only during real calendar windows —

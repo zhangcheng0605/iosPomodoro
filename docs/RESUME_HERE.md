@@ -7,7 +7,7 @@ of Clocks, and all four altitudes of the Long Now — the Homestead included,
 both its halves.
 
 **None of it has been through a compiler.** That is not a warning about
-quality — ten checkers are green and every sprite was rendered and looked at —
+quality — eleven checkers are green and every sprite was rendered and looked at —
 it is a statement about what tonight is for. Expect a handful of errors, fix
 them, and then look at the things no checker can judge.
 
@@ -48,6 +48,7 @@ of what the next release owes users.
 | **Y2** — the Sunday Post | **built, never compiled** |
 | **Y4** — the Homestead: the grove *and* the residents | **built, never compiled** |
 | **X2** — the Cabinet of Clocks | **built, never compiled** |
+| **V3** — wave 4: the journal 41 → 63 species, gated on the sky | **built, never compiled** |
 
 ### What today added
 
@@ -89,6 +90,7 @@ compiler saw any of this:
 | `check_clocks.py` | The candle and the incense **ran backwards** on their last frame, because the flame counted as "the part that grows" |
 | `check_yearring.py` | The plan's own tinting made a night session's day measure ΔE 1.3 from a day nobody focused — indistinguishable, in one theme, forever |
 | `check_residents.py` | Every homestead resident was **80–100 % buried** once the grove hit capacity — the beehive at 0 %. Invisible until a hundred and twenty hours of focus |
+| `check_species.py` | The **Grey Heron has been letterboxed since wave 2** — drawn 19×18 inside a 34×40 frame, so eight points of every heron shipped as dead space. Two new rows had it too |
 
 **And four the checkers missed**, all caught by rendering the thing and looking
 at it: the grove came out in diagonal stripes at thirty trees, the water clock
@@ -343,7 +345,45 @@ what a checker cannot ask:
   when you start the next session. Nothing else should announce it — no card,
   no confetti, no notification.
 
-### 8. The clock faces
+### 8. Wave 4 — the sky's own animals
+
+Twenty-two new species and three new sounds, all gated on the world's weather.
+`check_species.py` has proved every one is reachable more than eight days a
+year, that no two unarrangeable gates are stacked, and that every frame now
+matches the art in it. What is left is what an eye and an ear have to judge.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroWeather rain  -PawmodoroSighting gardensnail
+$S -PawmodoroWeather mist  -PawmodoroSighting roedeer      # the palest sprite
+$S -PawmodoroWeather storm -PawmodoroSighting stormpetrel
+$S -PawmodoroWeather snow  -PawmodoroSighting ermine       # white on a white veil
+$S -PawmodoroWeather breeze -PawmodoroSighting redkite
+$S -PawmodoroWeather rain  -PawmodoroStray 3               # she shelters
+$S -PawmodoroFillJournal                                   # all 63 tiles at once
+```
+
+- **The white ones over the weather veil.** Ermine, Snow Fox, Ghost Slug and
+  Fog Moth are all near-white by design, and they are shown *under a veil of
+  their own weather* — a white animal in a mist veil is the one combination
+  `check_contrast.py` does not cover, because it measures text capsules rather
+  than sprites. If any of the four vanishes, the fix is a darker outline in
+  `generate_wildlife.py`, not a lighter veil.
+- **The stray in the rain.** `-PawmodoroWeather rain -PawmodoroStray 3`: she
+  should be on the *left* rather than her usual right, facing in, and should
+  already be there when the phase starts. Both columns are proven ground
+  everywhere she goes; what nobody has seen is whether the swap reads as her
+  moving or as a bug.
+- **The three new sounds**, with the other five, in the listening pass. Thunder
+  is shaped noise under a 400 Hz cutoff with two swells; the foghorn is one
+  held note; the geese are fourteen scattered calls. All three are the
+  furthest this generator has gone from a tone, and none has been heard.
+- **First Thunder.** Not verifiable tonight unless it is spring — it is gated
+  on the month, one chance a year. `-PawmodoroDate 2027-04-02
+  -PawmodoroWeather storm` will do it, and the journal tile should then stay
+  filled and not offer a second one until next April.
+
+### 9. The clock faces
 
 Settings → The cabinet of clocks. Two of the six are earned by places that
 take a hundred sessions, so use the flag.
@@ -366,7 +406,7 @@ If a face is too busy under the digits, the fix is
 `.frame(height: diameter * 0.46)` in `TimerRingView`, not the art — the art is
 measured and the size is not.
 
-### 9. Share a postcard
+### 10. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -374,7 +414,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 10. The four gates of 0e — the actual reason for a Mac evening
+### 11. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 
@@ -424,6 +464,7 @@ python3 tools/check_yearring.py          # after touching a palette or the ring
 python3 tools/check_post.py              # after any Chronicle kind or letter copy
 python3 tools/check_grove.py             # after touching the grove layout
 python3 tools/check_residents.py         # after moving a resident or its art
+python3 tools/check_species.py           # after any roster or weather-gate change
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"

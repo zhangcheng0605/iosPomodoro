@@ -117,7 +117,7 @@ def imagesets():
 
 
 ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_",
-                  "dream_")
+                  "dream_", "snail_")
 
 
 def check_assets(failures):

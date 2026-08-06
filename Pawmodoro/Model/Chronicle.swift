@@ -50,6 +50,10 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// A found sound — reserved for Phase W, recorded from the day the
         /// first one is findable.
         case sound
+        /// A session finished while the old snail was crossing. The subject is
+        /// the place, because where you were standing is the whole of what
+        /// there is to say about it.
+        case snail
     }
 }
 

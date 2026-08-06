@@ -32,6 +32,8 @@ struct ContentView: View {
 
                 scenery
 
+                snail
+
                 toys
 
                 stray
@@ -283,6 +285,19 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.8), value: place)
         }
         .allowsHitTesting(false)
+    }
+
+    /// The old snail, if she is crossing here this month.
+    ///
+    /// Above the scenery and below everything a finger can reach, which is
+    /// where she belongs: she is part of the place rather than part of the
+    /// app. Re-read once a minute like the sky, which is roughly two thousand
+    /// times more often than she moves.
+    @ViewBuilder
+    private var snail: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            SnailView(place: engine.settings.place, x: engine.snailX)
+        }
     }
 
     /// What a finger does to the place you're in.

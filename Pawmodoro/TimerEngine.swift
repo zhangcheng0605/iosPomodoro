@@ -161,6 +161,16 @@ final class TimerEngine {
     /// `-PawmodoroDate` along with the season and the moon.
     var weather: Weather { Weather.at(settings.place) }
 
+    /// Where the old snail has got to here today, or nil if she is crossing
+    /// somewhere else this month. See `Snail` — she is six months across.
+    var snailX: Double? {
+        if let forced = LaunchOptions.forcedSnail {
+            guard forced >= 0, settings.place.snailVisits else { return nil }
+            return 0.04 + forced * 0.92
+        }
+        return Snail.x(at: settings.place)
+    }
+
     /// How far the stray has come. Counted out of the log every time it's read
     /// rather than stored, which is what makes it impossible to get out of step
     /// with the history it describes.
@@ -857,6 +867,9 @@ final class TimerEngine {
         if let bond { chronicle.add(.bond, String(bond.rawValue)) }
         if let figure { chronicle.add(.figure, figure.id) }
         if let arrival { chronicle.add(.arrival, arrival.rawValue) }
+        // Nothing is shown and nothing is unlocked. It is written down, and in
+        // a year the Sunday Post will be able to say you were both out.
+        if snailX != nil { chronicle.add(.snail, settings.place.rawValue) }
         let strayAfter = stray.stage(log: log)
         if strayAfter != strayBefore {
             chronicle.add(.stray, String(strayAfter.rawValue))

@@ -412,6 +412,51 @@ screen-positioned art, the proven floating-hazard class) and
 `-PawmodoroSnailDay` (an alias into `-PawmodoroDate`) land **in the same
 commit as her first sprite**.
 
+### As built — V5, the Old Snail
+
+Built, unbuilt by a compiler, and shipped with `check_snail.py` and
+`-PawmodoroSnail` in the same commit as her sprite, as the plan required.
+
+**She crosses five places, not eight, and that was measured rather than
+decided.** `check_snail.py` walks every hundredth of the screen at her ground
+line, on a tall phone and a short one, and asks what is under her feet. Three
+places have no answer: **Cloudspire** is a city on clouds and its best row is
+62 % solid; **Harbor Isle** is an island in open sea — the exact hazard that
+once had the stray sitting on the water; and **the Onsen** has a hot spring
+across its middle, with three of fifty-six candidate ground lines clearing it,
+all of them one redraw from failing. `Place.snailVisits` follows
+`Place.strayVisits`'s precedent and says so.
+
+**Her ground line is 0.79 — the stray's exact value**, and that fell out of the
+search rather than being chosen. It is the only band that is solid ground at
+every x of all five places on both device aspects. That it is also where the
+cat sits is the nice part: it is the same ground.
+
+**Six months across, six months away, on a 364-day cycle.** The odd number is
+deliberate — she comes back at *about* the same time of year rather than on an
+anniversary, and nothing in this app is allowed to feel like a schedule. Each
+place gets its own phase offset from `WorldCalendar.seed`, so she is not in
+lockstep across the world. She moves roughly two points a day: invisible
+between one session and the next, unmistakable between one month and the next.
+
+**Divergences:**
+
+- **`-PawmodoroSnail <0-100>`, not an alias into `-PawmodoroDate`.** The plan
+  asked for the alias. Her phase offset is *per place*, so the date that puts
+  her mid-crossing at the meadow puts her somewhere else entirely at the
+  woods — and the place is not known in `LaunchOptions`, before the engine
+  exists. This overrides the derived value the way `-PawmodoroWeather` does.
+  `-PawmodoroDate` still moves her honestly, along with everything else.
+- **The journal notes her in the Chronicle, not the field journal.** "Finish a
+  session while she's visible and the journal quietly notes it" — the field
+  journal is keyed on species and she is not one. `ChronicleEvent.Kind.snail`
+  records the place. Nothing is shown, nothing is unlocked, and in a year the
+  Sunday Post will be able to say the two of you were both out.
+- **She is not hidden from VoiceOver**, unlike the rest of the scenery. She is
+  eighteen points wide and moves two points a day; if she is not announced she
+  is only discoverable by people who can see her, and the whole point of her
+  is being noticed.
+
 ### V6. Tidewater (the moon pulls the Harbor) [9/7/7/9]
 
 The Harbor gains a real tide: a pure function of date and the moon phase the

@@ -130,6 +130,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
+| `-PawmodoroSnail <0-100>` | Put the old snail that far across her crossing; `-1` sends her away |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -251,6 +252,11 @@ There are no tests. A change is verified by building and looking at it:
 - **The stray stands on the ground, and that is checked, not eyeballed.** She
   is the only art placed by fractions of the *screen* rather than drawn into a
   scene, so nothing else in the pipeline can catch her floating.
+  `tools/check_snail.py` is the same file's harder sibling: the stray stands
+  at three fixed x positions, so her line only has to be ground three times,
+  while the **snail crosses the whole width** over six months and hers has to
+  be ground everywhere. That is what ruled Cloudspire, Harbor and the Onsen
+  out of `Place.snailVisits` — measured, not chosen.
   `tools/check_stray.py` composites what the app composites — scene, veil, sky
   wash — behind each stage sprite at its shipping position and asserts two
   things: she is standing on something, and her silhouette clears 2:1 against

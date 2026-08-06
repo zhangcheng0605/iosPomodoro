@@ -1126,6 +1126,63 @@ def dream_sky_afterglow():
     return outline_silhouette(g)
 
 
+# --- The old snail ----------------------------------------------------------
+#
+# Drawn on a grid matched to her own aspect rather than a square one, the way
+# the stray's stage sprites are: `scaledToFit` letterboxes a square into a wide
+# frame and she would end up smaller than she is meant to be.
+#
+# Her palette is the stray's problem in miniature. She is fourteen points wide
+# on a screen that can be a night scene in a dark theme, so the shell carries a
+# pale band for the same reason the cat carries a pale outline — one strong
+# edge is all a silhouette needs. `tools/check_snail.py` measures whether it
+# works, at every x of every place she crosses.
+
+SNAIL_PALETTE = {
+    T: (0, 0, 0, 0),
+    OUTLINE: (74, 58, 44, 255),
+    BODY: (198, 182, 156, 255),     # the foot, pale enough to read at night
+    SHADE: (150, 130, 104, 255),
+    CREAM: (236, 226, 206, 255),    # the band across the shell
+    PINK: (198, 182, 156, 255),
+    EYE: (52, 42, 34, 255),
+    GLINT: (252, 248, 238, 255),
+    NOSE: (150, 130, 104, 255),
+    ACCENT: (168, 146, 118, 255),
+}
+
+# Eighteen by thirteen. Fourteen by nine was tried first and produced a blot:
+# shell, foot and stalks all landed on top of one another, and every shape ran
+# to the border, so `outline_silhouette` — which rings the union of everything
+# drawn — had nothing to draw a line between and nowhere to draw it. Four more
+# rows and an inset on every shape is what separates a snail from a bean.
+SNAIL_W, SNAIL_H = 18, 13
+
+
+def snail(stretched=False):
+    """Two frames, and the difference between them is not travel.
+
+    She moves about two points a *day*; a walk cycle would be a lie told sixty
+    times a second. What changes is how far the eye stalks reach. That is the
+    whole animation, and at this size it is enough."""
+    g = new_grid(SNAIL_W, SNAIL_H)
+    d = ImageDraw.Draw(g)
+    reach = 1 if stretched else 0
+
+    d.ellipse([1, 9, 16, 11], fill=BODY)                 # the foot, long and low
+    d.ellipse([1, 6, 6, 11], fill=BODY)                  # the head, facing left
+    d.ellipse([6, 1, 15, 10], fill=SHADE)                # the shell
+    # A shell is a spiral, and two open arcs say so. A closed ring at this
+    # size reads as a doughnut instead.
+    d.arc([8, 3, 13, 8], 200, 60, fill=CREAM)
+    d.arc([9, 4, 12, 7], 30, 250, fill=CREAM)
+    d.line([(3, 7), (2, 3 - reach)], fill=BODY)          # eye stalks
+    d.line([(5, 6), (6, 2 - reach)], fill=BODY)
+    d.point((2, 2 - reach), fill=EYE)
+    d.point((6, 1 - reach), fill=EYE)
+    return outline_silhouette(g)
+
+
 def fx_bubble(shift=0):
     """The thought bubble the dream sits inside.
 
@@ -1526,6 +1583,9 @@ if __name__ == "__main__":
     print("Sprites:")
     for species, palette, awake, asleep, stretch, quirks in BUDDIES:
         build_frames(species, palette, awake, asleep, stretch, quirks)
+    print("The snail:")
+    to_png(snail(), SNAIL_PALETTE, "snail_0")
+    to_png(snail(stretched=True), SNAIL_PALETTE, "snail_1")
     print("The stray:")
     to_png(stray_eyes(), STRAY_PALETTE, "stray_eyes")
     to_png(stray_distant(), STRAY_PALETTE, "stray_distant")

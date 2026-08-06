@@ -243,6 +243,27 @@ enum LaunchOptions {
         return Weather(rawValue: raw)
     }()
 
+    /// Put the old snail at a point of her crossing, `-PawmodoroSnail 0` to
+    /// `100`, as a percentage. `-PawmodoroSnail -1` sends her away.
+    ///
+    /// The plan asked for this to be an alias into `-PawmodoroDate`, and it
+    /// isn't, for a concrete reason: her phase offset is *per place*, derived
+    /// from `WorldCalendar.seed`, so the date that puts her mid-crossing at
+    /// the meadow puts her somewhere else entirely at the woods — and the
+    /// place isn't known here, before the engine exists. This overrides the
+    /// derived value instead, exactly as `-PawmodoroWeather` does.
+    /// `-PawmodoroDate` still moves her honestly, along with everything else.
+    ///
+    /// Without it, checking the far end of her crossing means waiting about
+    /// six months.
+    static let forcedSnail: Double? = {
+        guard arguments.contains("-PawmodoroSnail"),
+              let raw = value(after: "-PawmodoroSnail"),
+              let percent = Double(raw)
+        else { return nil }
+        return percent < 0 ? -1 : min(100, percent) / 100
+    }()
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -333,6 +354,7 @@ enum LaunchOptions {
     static let seedChronicle = false
     static let forcedSeason: Season? = nil
     static let forcedWeather: Weather? = nil
+    static let forcedSnail: Double? = nil
     static let bondSessions: Int? = nil
 #endif
 

@@ -21,6 +21,7 @@ struct StatsView: View {
                     if log.totalSessions == 0 {
                         emptyState
                     }
+                    GroveView()
                     YearRingView()
                     ShelfOfHoursView()
                     AlbumView()

@@ -243,9 +243,32 @@ def check_members(failures, launch_options):
                 failures.append(f"{rel(path)}: LaunchOptions.{name} does not exist")
 
 
+def check_duplicate_enums(failures, duplicates):
+    """Two enums with the same simple name make this file blind.
+
+    `enum_cases` keys on the bare name, so `Grove.Stage` and `Stray.Stage`
+    merge into one case list — and every `switch self` over either is then
+    checked against the union. That produces confident, wrong failures in one
+    direction and silent blindness in the other, which is worse. Renaming one
+    is a two-minute fix and the alternative is a checker nobody believes.
+    """
+    for name, owners in sorted(duplicates.items()):
+        failures.append(
+            f"two enums are both called '{name}' ({', '.join(sorted(owners))})"
+            f" — check_swift.py matches on the simple name, so it cannot tell "
+            f"their switches apart. Rename one."
+        )
+
+
 def enum_cases():
-    """Every CaseIterable enum the app owns, and its cases."""
+    """Every CaseIterable enum the app owns, and its cases.
+
+    Returns the map and, separately, any name declared more than once — see
+    `check_duplicate_enums`, which turns that into a failure rather than
+    letting the two quietly merge.
+    """
     found = {}
+    duplicates = {}
     for path in swift_files():
         source = open(path).read()
         for match in re.finditer(
@@ -263,8 +286,10 @@ def enum_cases():
                     if listed:
                         cases.extend(n.strip() for n in listed.group(1).split(","))
             if cases:
+                if name in found and found[name] != cases:
+                    duplicates.setdefault(name, set()).add(rel(path))
                 found[name] = cases
-    return found
+    return found, duplicates
 
 
 def blank(source):
@@ -431,7 +456,14 @@ def main():
     check_storage_keys(failures)
     check_assets(failures)
     check_members(failures, launch_options)
-    enums = enum_cases()
+    enums, duplicate_enums = enum_cases()
+    check_duplicate_enums(failures, duplicate_enums)
+    # An ambiguous name is dropped rather than checked against a merged case
+    # list. Reporting "switch over Stage is missing .home" in a file that has
+    # never heard of the stray is a confident wrong answer, and a wall of them
+    # buries the one message that says what to actually do.
+    for name in duplicate_enums:
+        enums.pop(name, None)
     check_dream_ids(failures)
     check_dream_assets(failures, enums)
     check_switch_exhaustiveness(failures, enums)

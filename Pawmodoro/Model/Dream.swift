@@ -15,7 +15,7 @@ import Observation
 /// journal makes a rich dream life, which quietly makes the journal itself
 /// worth more.
 ///
-/// Six of the twelve cases arrived together, in Phase 0d of the Deep Time plan,
+/// Six of the thirteen cases arrived together, in Phase 0d of the Deep Time plan,
 /// to pay a debt: the pool had not been fed since it was written, so five whole
 /// systems — the bond, the regulars, the things you can only hear, the seasons
 /// and the stray's arc — could be lived through without the buddy ever dreaming
@@ -48,6 +48,8 @@ enum Dream: Hashable, Identifiable {
     case adrift(Adrift)
     /// An hour of the clock you have actually been awake in.
     case hour(Hour)
+    /// The wood behind the house, once there is one.
+    case wood(Wood)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -225,6 +227,44 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The grove, dreamed by the one who sleeps under it.
+    ///
+    /// No new art again: the grove's own tree sprites as silhouettes. Gated on
+    /// trees actually standing there, so the first is available after an hour
+    /// and the second after a small wood.
+    enum Wood: String, CaseIterable, Hashable {
+        case firstone, canopy
+
+        /// Trees that have to be standing.
+        var reachedAt: Int {
+            switch self {
+            case .firstone: 1
+            case .canopy: 25
+            }
+        }
+
+        var asset: String {
+            switch self {
+            case .firstone: "grove_sapling"
+            case .canopy: "grove_full"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .firstone: "the first tree"
+            case .canopy: "the whole wood"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .firstone: "Still mostly a stick. It does not know that."
+            case .canopy: "Under all of it at once, and nowhere near an edge."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -273,6 +313,7 @@ enum Dream: Hashable, Identifiable {
         case .sky(let sky): "sky.\(sky.rawValue)"
         case .adrift(let adrift): "adrift.\(adrift.rawValue)"
         case .hour(let hour): "hour.\(hour.rawValue)"
+        case .wood(let wood): "wood.\(wood.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -292,6 +333,7 @@ enum Dream: Hashable, Identifiable {
         case "sky": return Sky(rawValue: parts[1]).map(Dream.sky)
         case "adrift": return Adrift(rawValue: parts[1]).map(Dream.adrift)
         case "hour": return Hour(rawValue: parts[1]).map(Dream.hour)
+        case "wood": return Wood(rawValue: parts[1]).map(Dream.wood)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -312,6 +354,7 @@ enum Dream: Hashable, Identifiable {
         case .sky(let sky): "dream_sky_\(sky.rawValue)"
         case .adrift(let adrift): "dream_adrift_\(adrift.rawValue)"
         case .hour(let hour): hour.asset
+        case .wood(let wood): wood.asset
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -322,7 +365,7 @@ enum Dream: Hashable, Identifiable {
     /// here instead, so everything inside a bubble is a sketch.
     var isSilhouette: Bool {
         switch self {
-        case .travel, .companion, .visitor, .hour: true
+        case .travel, .companion, .visitor, .hour, .wood: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -347,6 +390,7 @@ enum Dream: Hashable, Identifiable {
         case .sky(let sky): sky.subject
         case .adrift(let adrift): adrift.subject
         case .hour(let hour): hour.subject
+        case .wood(let wood): wood.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -365,6 +409,7 @@ enum Dream: Hashable, Identifiable {
         case .sky(let sky): sky.line
         case .adrift(let adrift): adrift.line
         case .hour(let hour): hour.line
+        case .wood(let wood): wood.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -388,6 +433,7 @@ enum Dream: Hashable, Identifiable {
             + Sky.allCases.map(Dream.sky)
             + Adrift.allCases.map(Dream.adrift)
             + Hour.allCases.map(Dream.hour)
+            + Wood.allCases.map(Dream.wood)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

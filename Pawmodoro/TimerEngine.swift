@@ -835,6 +835,13 @@ final class TimerEngine {
         where ShelfOfHours.isLit(hour.reachedAt, in: shelf) {
             pool.append(contentsOf: repeatElement(.hour(hour), count: 2))
         }
+        // The wood behind the house, once trees are actually standing in it.
+        let trees = Grove.trees(
+            forMinutes: log.records.reduce(0) { $0 + $1.minutes }
+        ).count
+        for wood in Dream.Wood.allCases where trees >= wood.reachedAt {
+            pool.append(contentsOf: repeatElement(.wood(wood), count: 2))
+        }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
         }
@@ -868,7 +875,7 @@ final class TimerEngine {
         case .sound(let sound):
             met = journal.firstHeard(sound)
         case .travel, .companion, .visitor, .season, .sky, .adrift, .hour,
-             .yours, .surreal:
+             .wood, .yours, .surreal:
             met = nil
         }
         guard let met else { return nil }

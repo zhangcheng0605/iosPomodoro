@@ -1151,6 +1151,69 @@ def dream_adrift_nomap():
     return outline_silhouette(g)
 
 
+# --- The grove -------------------------------------------------------------
+#
+# One tree per completed focus hour, at three growth stages. Drawn here rather
+# than in a generator of their own because they are sprites in the sprite
+# style, not scenery: `generate_scenes.py` draws whole places into palette
+# grids, and a tree is fourteen pixels of trunk.
+#
+# The three sizes are drawn separately rather than scaled from one. A scaled
+# sapling is a full tree with fewer pixels, which reads as a distant tree
+# instead of a young one — and the wood has to say "this grew", not "this is
+# further away".
+
+GROVE_PALETTE = {
+    T: (0, 0, 0, 0),
+    OUTLINE: (58, 48, 38, 255),
+    BODY: (108, 142, 88, 255),      # canopy
+    SHADE: (78, 108, 66, 255),      # its underside
+    CREAM: (140, 172, 112, 255),    # the lit top
+    PINK: (108, 142, 88, 255),
+    EYE: (58, 48, 38, 255),
+    GLINT: (140, 172, 112, 255),
+    NOSE: (96, 74, 52, 255),        # trunk
+    ACCENT: (96, 74, 52, 255),
+}
+
+
+def grove_sapling():
+    """One hour. Two leaves and a stick, and it never gets smaller."""
+    g = new_grid(10, 12)
+    d = ImageDraw.Draw(g)
+    d.line([(5, 5), (5, 11)], fill=NOSE)
+    d.ellipse([1, 3, 5, 7], fill=BODY)
+    d.ellipse([5, 2, 9, 6], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def grove_young():
+    """Six hours. A trunk with a shape to it."""
+    g = new_grid(16, 20)
+    d = ImageDraw.Draw(g)
+    d.rectangle([7, 11, 9, 19], fill=NOSE)
+    d.line([(8, 13), (4, 10)], fill=NOSE)
+    d.line([(8, 14), (12, 11)], fill=NOSE)
+    d.ellipse([2, 5, 10, 13], fill=SHADE)
+    d.ellipse([6, 2, 14, 11], fill=BODY)
+    d.ellipse([5, 1, 11, 6], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def grove_full():
+    """Twenty-six hours. Done growing, and it stays done."""
+    g = new_grid(24, 30)
+    d = ImageDraw.Draw(g)
+    d.rectangle([10, 17, 14, 29], fill=NOSE)
+    d.line([(12, 20), (6, 15)], fill=NOSE, width=2)
+    d.line([(12, 21), (18, 16)], fill=NOSE, width=2)
+    d.ellipse([1, 8, 13, 20], fill=SHADE)
+    d.ellipse([10, 7, 22, 19], fill=SHADE)
+    d.ellipse([4, 2, 20, 16], fill=BODY)
+    d.ellipse([7, 1, 17, 9], fill=CREAM)
+    return outline_silhouette(g)
+
+
 # --- The old snail ----------------------------------------------------------
 #
 # Drawn on a grid matched to her own aspect rather than a square one, the way
@@ -1640,6 +1703,10 @@ if __name__ == "__main__":
     print("The snail:")
     to_png(snail(), SNAIL_PALETTE, "snail_0")
     to_png(snail(stretched=True), SNAIL_PALETTE, "snail_1")
+    print("The grove:")
+    for name, draw in (("sapling", grove_sapling), ("young", grove_young),
+                       ("full", grove_full)):
+        to_png(draw(), GROVE_PALETTE, f"grove_{name}")
     print("The stray:")
     to_png(stray_eyes(), STRAY_PALETTE, "stray_eyes")
     to_png(stray_distant(), STRAY_PALETTE, "stray_distant")

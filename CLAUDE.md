@@ -175,10 +175,10 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are fifteen now (`swift`, `contrast`, `grove`,
+without a Mac** — there are sixteen now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
-`weather`, `yearring`, `clocks`, `stray`, `snail`), they
-take about fifteen seconds between them, and each one exists because
+`weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`), they
+take about twenty seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
 Most of this app is written on Linux and compiled days later, so a
@@ -209,7 +209,24 @@ There are no tests. A change is verified by building and looking at it:
   streak — every counter in this app only goes up or stays put. One decaying
   stat would teach people to open the app afraid, and no later patch could
   un-teach that. When retention pressure eventually argues for a wilting
-  plant or an expiring streak, this line is the answer.
+  plant or an expiring streak, this line is the answer. It has since bought
+  something nobody was aiming at: because every store is monotonic, merging
+  two devices' worlds is `union` and `max` and never has to decide which of
+  two disagreeing values was later. `tools/check_crossing.py` now guards the
+  law itself — it walks all nine store classes and fails on any shrinking
+  operation not on an allowlist with a written reason, because a decaying
+  counter added in two years would make the merge silently wrong and nothing
+  else in the toolchain could see it.
+- **A merge is idempotent or it is a bug.** The one place this app's
+  arithmetic can be wrong *silently*, on a device nobody is holding, with no
+  undo. `Crossing.swift`'s first draft added journal counts across devices —
+  obviously right, well argued in its own doc comment, and wrong, because a
+  sync that retries after a dropped connection then doubles every count.
+  Three properties, all cheap to test and all worth testing: `merge(a,b) ==
+  merge(b,a)`, `merge(a,a) == a`, and nothing smaller than either input. Any
+  tie broken by argument order fails the first; any counter that accumulates
+  fails the second. Prefer a bounded undercount to an unbounded overcount
+  every time.
 - **One opinion about "today".** `WorldCalendar` owns the calendar, the
   hemisphere policy, and `seed(day:place:)`. Anything date-driven goes
   through it — never `Date()` and `Calendar.current` directly — so that

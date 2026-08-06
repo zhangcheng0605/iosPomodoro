@@ -840,6 +840,84 @@ migration — it ships behind a Settings toggle, off by default, like every
 migration this app has ever survived, and it ships **last**, after
 everything it would sync exists.
 
+### As built
+
+**The arithmetic shipped without the transport, deliberately.**
+`Pawmodoro/Model/Crossing.swift` is the merge and nothing else: no CloudKit,
+no `NSUbiquitousKeyValueStore`, no network call of any kind. The split is the
+whole point of doing this phase on Linux. Every other half of sync fails
+loudly — a container that won't provision, a push that won't authenticate, a
+record type that won't save — and gets fixed in an afternoon on a Mac. The
+merge fails **silently**, on a device nobody is holding, by eating a memory
+somebody made in March, with no undo and nothing on screen that looks wrong.
+So it was written first, on the machine that can't test the other half
+anyway, and tested to death before there is anything to move.
+
+**The plan's table was right and the first draft of the code wasn't.** The
+table above says *max count*. The first version of `merge(journal:)` **added**
+the counts instead, with a confident four-paragraph doc comment explaining
+that two devices used on different days have genuinely seen the heron that
+many times between them and that taking the max would quietly drop
+sightings. Every sentence of that is true and the conclusion is wrong, for a
+reason the prose never reached: **adding is not idempotent.** Merge the same
+two worlds twice — which is exactly what a sync that retries after a dropped
+connection does — and every count in the journal doubles, then quadruples.
+`tools/check_crossing.py` failed on its very first run, on this and nothing
+else. The choice is between a bounded undercount and an unbounded overcount
+and it is not close. The genuinely correct answer is a per-device counter
+(count per install, merge by per-key max, sum for display); that is a change
+to `SightingRecord`'s stored shape plus a new per-install id, and it belongs
+to whoever builds the transport, where it can actually be exercised. The note
+saying so is in the Swift.
+
+**A second bug the properties found: same-second first sightings.** Two
+devices that first saw a species in the same second, in different places,
+kept whichever record the merge happened to be handed first — so the phone
+and the Mac each remembered a different afternoon, forever. Fixed with a
+deterministic tie-break on the facts of the meeting. Arbitrary is fine;
+disagreeing is not. Neither bug is one anybody would have found by using the
+app: both need two devices, a coincidence, and somebody who remembers what
+the journal said last month.
+
+**Records now carry a total order, not just a sort key.** `Dictionary.values`
+has no order at all and two devices running the same binary do not agree
+about it, so both list merges sort by a written-out total order (date, then
+content, then id) rather than by date alone. The shelf gets the same
+treatment for a sharper reason: arrival order is the one thing two devices
+genuinely cannot agree about — they met the same six keepsakes in different
+weeks — so a merged shelf is rebuilt in `Keepsake.allCases` order, an order
+neither device had.
+
+**`tools/check_crossing.py` is in three parts, and the first is the one that
+matters.** The merge is four lines of `union` and `max` *because nothing
+decays* — and that law lives in ten other files, not in `Crossing.swift`. So
+part 1 walks all nine store classes and fails on any shrinking operation not
+on a written allowlist with a reason (`cap`, `hand`, `local`). Add a wilting
+plant in two years and the merge silently becomes wrong; this is the only
+thing in the toolchain that would notice. Part 2 requires every key in
+`StorageKeys.all` to be either merged or named in `NEEDS_NO_MERGE` with a
+reason — `check_post.py`'s shape, because forgetting to merge a store is
+equally invisible. Part 3 runs a Python port over 400 pairs of generated
+worlds asserting commutative, idempotent and growing, with each Swift merge
+body's operator-shape fingerprinted against a stored table so the port cannot
+drift from the Swift unnoticed. All twelve rules were break-tested; two of the
+twelve had to be rewritten because the first attempt passed for the wrong
+reason.
+
+**Two divergences from the table.** *Settings* are excused rather than
+last-writer-wins per key: the phone and the Mac may legitimately want
+different phase lengths and a different buddy on screen, and LWW would make
+changing a setting on one reach over and change the other. *Postcards* joined
+the deferred list with the snapshots — both are metadata pointing at pictures,
+and moving pictures is the transport's problem.
+
+**The checker's own first two runs were wrong, both times by generating a
+world no device can hold**: an unsorted session log and an unsorted
+chronicle, both of which the merge correctly re-sorts and which therefore
+looked like idempotence failures. A fault in the generator reported as a
+fault in the code under test is the most expensive kind of red, and it is
+worth knowing that this checker has already produced two.
+
 ---
 
 ## Build order, and what waits for what

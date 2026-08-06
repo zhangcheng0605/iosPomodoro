@@ -662,6 +662,36 @@ same shape as the widget extension in Phase Z.
 
 ---
 
+### 18. The Crossing — arithmetic only, and nothing to look at
+
+`Pawmodoro/Model/Crossing.swift` is the **merge**, with no transport behind
+it: no CloudKit, no `NSUbiquitousKeyValueStore`, no network call. There is
+nothing to drive in a simulator and nothing on screen changes. What tonight
+owes it is one thing only: **that it compiles.** It is model code with no
+SwiftUI in it, so if it builds it is almost certainly right — everything else
+about it is already tested by `tools/check_crossing.py`, which runs 400 pairs
+of generated worlds through a Python port of it.
+
+Two compile risks worth knowing before you look at the error list:
+
+- `Dictionary.values.sorted(by:)` with a `(T, T) -> Bool` method reference —
+  `sorted(by: inOrder)` passes a static function where a closure is wanted.
+  It should infer, but this is the kind of thing that needs a `{ inOrder($0,
+  $1) }` if it doesn't.
+- `SightingRecord`'s memberwise initialiser is called with all six labels in
+  declaration order, including the optional `weather`. If a field is ever
+  added to that struct this call breaks, which is the correct outcome.
+
+**When you do build the transport** — a separate sitting, and the plan says
+last — read the doc comment on `merge(journal:)` first. It records a decision
+that is deliberately conservative (counts take the max, so a two-device user
+undercounts rather than a retried sync overcounting) and names the correct
+replacement: a per-device counter, which needs a stored-shape change to
+`SightingRecord` and a per-install id. That is transport-phase work, and the
+note in the Swift is addressed to whoever does it.
+
+---
+
 ## Verification loop (every session)
 
 ```sh
@@ -680,18 +710,27 @@ python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene
+python3 tools/check_crossing.py          # after ANY new store, storage key or merge
 tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All ten were green when this was written: 922,032 contrast pairs, 20,736
-stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 84 Swift files
-and 470 imagesets. `check_snail.py` takes about 18 seconds; the rest are quick.
+All sixteen were green when this was written: 922,032 contrast pairs, 20,736
+stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 400 pairs of
+merged worlds, 105 Swift files and 625 imagesets. `check_snail.py` takes about
+18 seconds; the rest are quick.
 
-Six of these are new, and the reason to keep running them is that two paid for
-themselves on their very first run — `check_weather.py` found a logic bug in
-the golden-day rule, and `check_residents.py` found every homestead resident
-buried under a grown wood. Neither had been compiled at the time.
+The reason to keep running them is that several paid for themselves on their
+very first run — `check_weather.py` found a logic bug in the golden-day rule,
+`check_residents.py` found every homestead resident buried under a grown wood,
+and `check_crossing.py` found the journal merge double-counting every sighting
+on a retried sync. None of the three had been compiled at the time.
+
+`check_crossing.py` is the one to run after work that looks unrelated to it.
+Its first part is not about the merge at all: it walks every store class in
+the app and fails on any operation that makes a store smaller without a
+written reason. A new feature with a counter that goes down passes every other
+checker here.
 
 ---
 

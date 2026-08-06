@@ -97,6 +97,30 @@ struct UnlockSheet: View {
             }
             .frame(height: 84)
             .clipShape(RoundedRectangle(cornerRadius: 16))
+        case .accessory(let accessory):
+            // On its own, not on a head: the sheet is about the object.
+            Image(accessory.asset)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 96)
+        case .den(let den):
+            // Frame 0 — the still one. A den's second frame is its breathing.
+            Image(den.frames[0])
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 120)
+        case .film(let film):
+            // A film stock has no sprite; what it *is* is what it does to a
+            // picture, so show it doing it.
+            Image("scene_meadow_day")
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 120)
+                .filmStock(film)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 

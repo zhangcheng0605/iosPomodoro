@@ -180,10 +180,17 @@ extension ChronicleEvent {
         case .bond: Int(subject).flatMap(Bond.init(rawValue:)).map { $0.name.lowercased() }
         case .figure: "a constellation finished"
         case .stray: Int(subject).flatMap(Stray.Stage.init(rawValue:))?.rimLabel
+        case .resident: Resident(rawValue: subject).map { "the \($0.rawValue) arrived" }
+        // The night in it, not the buying of it — the same distinction the
+        // two kinds were split for.
+        case .settledIn: Den(rawValue: subject).map { "first night in \($0.name.lowercased())" }
+        case .panorama: Int(subject).map { "\($0) hours, and a wood to show for it" }
         // Sightings, dreams, sounds and the snail happen often enough that
         // marking every first would ring the whole circle. They are the
-        // Sunday Post's material, not the rim's.
-        case .sighting, .dream, .heard, .sound, .snail: nil
+        // Sunday Post's material, not the rim's. Trades, keepsakes and
+        // snapshots are the same: things you do often, by choice.
+        case .sighting, .dream, .heard, .sound, .snail,
+             .trade, .keepsake, .snapshot: nil
         }
     }
 }

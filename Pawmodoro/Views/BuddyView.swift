@@ -208,8 +208,8 @@ struct BuddyView: View {
                     buddy: buddy,
                     assetName: frameName(at: context.date),
                     size: spriteSize,
-                    outfit: outfit,
-                    sleeping: isNapping
+                    sleeping: isNapping,
+                    outfit: outfit
                 )
             }
             // A `TimelineView` keeps the schedule it was built with, so without

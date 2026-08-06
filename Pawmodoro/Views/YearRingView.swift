@@ -135,8 +135,8 @@ struct YearRingView: View {
                 )
                 let radius = outer + 4
                 let point = CGPoint(
-                    x: centre.x + cos(angle.radians) * radius,
-                    y: centre.y + sin(angle.radians) * radius
+                    x: centre.x + CGFloat(cos(angle.radians)) * radius,
+                    y: centre.y + CGFloat(sin(angle.radians)) * radius
                 )
                 context.fill(
                     Path(ellipseIn: CGRect(x: point.x - 2, y: point.y - 2,

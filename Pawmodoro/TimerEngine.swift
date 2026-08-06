@@ -1157,9 +1157,11 @@ final class TimerEngine {
             pool.append(contentsOf: repeatElement(.adrift(adrift), count: 2))
         }
         // The hours you have actually been awake in, off the shelf.
-        let shelf = ShelfOfHours.build(from: log.records)
+        // Named `candles`, not `shelf`: the engine already has a `shelf` and
+        // it is a different thing entirely — the desk, not the hours.
+        let candles = ShelfOfHours.build(from: log.records)
         for hour in Dream.Hour.allCases
-        where ShelfOfHours.isLit(hour.reachedAt, in: shelf) {
+        where ShelfOfHours.isLit(hour.reachedAt, in: candles) {
             pool.append(contentsOf: repeatElement(.hour(hour), count: 2))
         }
         // The wood behind the house, once trees are actually standing in it.
@@ -1258,7 +1260,8 @@ final class TimerEngine {
         case .sound(let sound):
             met = journal.firstHeard(sound)
         case .travel, .companion, .visitor, .season, .sky, .adrift, .hour,
-             .wood, .yours, .surreal:
+             .wood, .yours, .surreal, .neighbour, .flight, .tidal, .magpie,
+             .finery, .den, .brought, .snapshot:
             met = nil
         }
         guard let met else { return nil }
@@ -1522,7 +1525,9 @@ final class TimerEngine {
         // odds, against the session rather than against anything done in it —
         // there is no way to make a keepsake likelier and nothing to
         // optimise, which is what keeps a stick a gift rather than a drop.
-        if bond >= Keepsake.reachedAt,
+        // `bond` the parameter is the level *just crossed* and is usually
+        // nil; the gate wants the level you are actually at.
+        if self.bond >= Keepsake.reachedAt,
            Double.random(in: 0..<1) < Keepsake.chance {
             let keepsake = Keepsake.next(after: shelf.count)
             shelf.add(keepsake)

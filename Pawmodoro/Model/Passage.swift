@@ -99,15 +99,18 @@ enum Passage: String, CaseIterable, Identifiable, Codable {
     /// makes the world feel observed rather than scheduled.
     func afterword(early: Bool) -> String {
         let when = early ? "early" : "late"
+        // Explicit returns: the `let` above makes this body multi-statement,
+        // so the switch is a statement rather than an expression and Swift
+        // will not imply them.
         switch self {
-        case .swans: "The swans went over \(when) this spring."
-        case .cuckoo: "The cuckoo was \(when) this year."
-        case .paintedladies: "The painted ladies came through \(when)."
-        case .salmon: "The run was \(when) this autumn."
-        case .redwings: "The redwings arrived \(when)."
-        case .snowgeese: "The geese went south \(when) this year."
-        case .waxwings: "The waxwings came \(when) this winter."
-        case .comet: "The comet has gone."
+        case .swans: return "The swans went over \(when) this spring."
+        case .cuckoo: return "The cuckoo was \(when) this year."
+        case .paintedladies: return "The painted ladies came through \(when)."
+        case .salmon: return "The run was \(when) this autumn."
+        case .redwings: return "The redwings arrived \(when)."
+        case .snowgeese: return "The geese went south \(when) this year."
+        case .waxwings: return "The waxwings came \(when) this winter."
+        case .comet: return "The comet has gone."
         }
     }
 

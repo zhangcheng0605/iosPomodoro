@@ -26,12 +26,17 @@ enum Heard: String, Codable, CaseIterable, Identifiable {
         let note: String
         let place: Place
         let dayPart: DayPart
-        /// Which skies this can reach you through. Empty means any sky, which
-        /// is the five that shipped before the weather existed.
-        var weathers: [Weather] = []
         /// Odds per eligible session. Rarer than any sighting: a sound you
         /// can't go and look at wants to feel like luck.
         let chance: Double
+        /// Which skies this can reach you through. Empty means any sky, which
+        /// is the five that shipped before the weather existed.
+        ///
+        /// Last, because it is the only defaulted field and the memberwise
+        /// init takes its arguments in declaration order — a defaulted field
+        /// in the middle means every row that supplies it must also thread it
+        /// through the middle.
+        var weathers: [Weather] = []
     }
 
     var spec: Spec {

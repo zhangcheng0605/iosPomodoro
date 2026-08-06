@@ -125,10 +125,12 @@ final class Stray {
         /// getting wet. There is no weather that makes her come less.
         func x(in weather: Weather) -> Double {
             guard Self.shelters(from: weather) else { return x }
+            // Explicit returns: the guard above makes this multi-statement,
+            // so the switch is a statement and Swift will not imply them.
             switch self {
-            case .eyes: 0.900
-            case .edge, .watching: 0.105
-            case .away, .beside, .home: 0.5
+            case .eyes: return 0.900
+            case .edge, .watching: return 0.105
+            case .away, .beside, .home: return 0.5
             }
         }
 

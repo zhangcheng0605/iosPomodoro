@@ -368,7 +368,7 @@ SPECIES = {
 # two shapes covers eighteen species, so "more sightings" stays a table edit.
 
 def songbird(step, *, crest=0, beak=2, tail=5, legs=3, breast=False,
-             wing=True, width=18, height=15, plump=0):
+             wing=True, width=18, height=15, plump=0, flank=False):
     """Perched small bird. Two frames differ by a leg shift and a wing lift."""
     g = grid(width, height)
     d = ImageDraw.Draw(g)
@@ -379,6 +379,12 @@ def songbird(step, *, crest=0, beak=2, tail=5, legs=3, breast=False,
     d.ellipse([4, body_y, 12 + plump, body_y + 8], fill=MAIN)
     if breast:
         d.ellipse([5, body_y + 3, 11, body_y + 8], fill=ACCENT)
+    # A patch under the wing rather than a whole coloured front. Added for the
+    # redwing, whose rust is on the flank — given `breast` it came out as a
+    # robin in slightly different browns, and two thrushes nobody can tell
+    # apart is two journal entries doing one entry's work.
+    if flank:
+        d.ellipse([7, body_y + 4, 11 + plump, body_y + 7], fill=ACCENT)
     d.ellipse([2, top, 9, top + 7], fill=MAIN)
     if crest:
         d.polygon([(4, top), (6, top - crest), (8, top + 1)], fill=SHADE)
@@ -948,6 +954,198 @@ def thunderhead(flash):
     return outline(g)
 
 
+# --- The Flyway: things that only pass through ------------------------------
+#
+# Four of these are *movements* rather than animals, and that is the drawing
+# problem. A single goose is a goose; the thing you actually notice in November
+# is a line of them, and one bird drawn large would be a portrait of something
+# nobody ever sees that close. So the skein, the run and the swarm are drawn as
+# several small shapes going the same way, and the two that genuinely are one
+# creature — the cuckoo and the waxwing — are drawn perched.
+
+
+def skein(step, *, count=5, neck=3, width=25, height=14, tipped=False, span=2):
+    """Birds in a ragged line, seen from underneath.
+
+    The wingbeat is deliberately **out of phase across the line**: birds in a
+    skein do not flap together, and drawing them synchronised read as one
+    object with a lot of legs. Each bird's phase comes from its index, which
+    also means the two frames differ everywhere rather than in one place.
+    """
+    g = grid(width, height)
+    d = ImageDraw.Draw(g)
+    # A ragged line, not a tidy V: the spacing is uneven on purpose, because a
+    # regular V at this scale reads as a decoration rather than as birds.
+    slots = ((1, 7), (6, 4), (10, 8), (15, 3), (19, 6), (22, 9), (3, 11))
+    for index, (x, y) in enumerate(slots[:count]):
+        up = (index + (1 if step else 0)) % 2 == 0
+        rise = 1 if up else -1
+        body = x + neck
+        # The neck is the whole of what tells a swan from a goose at this size,
+        # so it is a parameter and it is drawn first, under the wings.
+        d.line([(x, y + 1), (body, y + 1)], fill=LIGHT)
+        d.ellipse([body - 1, y, body + 2, y + 3], fill=MAIN)
+        left = (body - span, y + 1 - rise)
+        right = (body + 1 + span, y + 1 + rise)
+        d.line([(body, y + 1), left], fill=MAIN)
+        d.line([(body + 1, y + 1), right], fill=SHADE)
+        if tipped:
+            # Black wingtips: the one marking that says snow goose rather than
+            # "a white bird". Two pixels, not one — at this scale a single
+            # dark pixel at the end of a two-pixel wing reads as the outline
+            # the whole sprite already has, and the first render showed
+            # nothing at all.
+            d.point(left, fill=ACCENT)
+            d.point((left[0] + 1, left[1]), fill=ACCENT)
+            d.point(right, fill=ACCENT)
+            d.point((right[0] - 1, right[1]), fill=ACCENT)
+    return outline(g)
+
+
+def run(step):
+    """Fish breaking the surface, all going upstream.
+
+    Three drafts. The first drew a continuous waterline under four fish, and
+    a solid bar across the bottom of a frame is a *shelf* — the fish came out
+    standing on a plank, four brown blobs on a board. What makes water read as
+    water at thirteen pixels is that it is **broken**: short dashes at two
+    heights, with gaps. And what makes a fish read as leaping is the tail
+    still in the water while the head is out, so each one is drawn as a body
+    tilted nose-up with its tail crossing the surface rather than as an
+    ellipse hovering above it.
+    """
+    g = grid(22, 13)
+    d = ImageDraw.Draw(g)
+    surface = 8
+    # The water first, so every fish is drawn over it and genuinely crosses it.
+    for x, drop in ((0, 0), (5, 1), (9, 0), (13, 1), (18, 0)):
+        d.line([(x, surface + drop), (x + 3, surface + drop)], fill=SHADE)
+    for x in (2, 8, 15, 20):
+        d.point((x, surface + 2), fill=LIGHT)
+
+    for index, (x, top) in enumerate(((2, 3), (9, 1), (16, 4))):
+        lift = 1 if (index % 2 == 0) == step else 0
+        y = top - lift
+        # Nose up and to the right: the body is a slanted lozenge rather than
+        # a level ellipse, which is the whole difference between leaping and
+        # floating.
+        d.polygon([(x + 4, y), (x + 5, y + 3), (x + 1, y + 6), (x, y + 3)],
+                  fill=MAIN)
+        d.polygon([(x + 1, y + 4), (x + 4, y + 2), (x + 4, y + 4)], fill=LIGHT)
+        d.point((x + 4, y + 1), fill=EYE)
+        # The tail, still down in the broken water.
+        d.polygon([(x + 1, y + 5), (x - 2, surface + 2), (x + 2, surface + 1)],
+                  fill=SHADE)
+    return outline(g)
+
+
+def migrant_butterfly(up):
+    """Not one butterfly — three, all going the same way.
+
+    Two drafts died before this one, and both died the same death. Drawn from
+    above with wings spread, a butterfly is a **symmetric shape with a dark
+    body up the middle**; put any bright mark on each wing near the top and
+    the eye assembles a face out of it instantly. The first draft's white
+    wing-spots were eyes and the dark leading corners were ears, and the
+    contact sheet was two rows of foxes. Moving the spots did not fix it —
+    the symmetry is the problem, not the spots.
+
+    So this changed subject the way the Red Kite did. What anybody actually
+    sees of a painted lady passage is not one butterfly: it is a few of them
+    an hour, all week, all crossing the same way. Three side-on, at different
+    heights, going right. No symmetry, no face, and truer to the note than the
+    portrait was.
+    """
+    g = grid(14, 11)
+    d = ImageDraw.Draw(g)
+    # Three at five pixels each read as orange crumbs; two at seven read as
+    # butterflies. "A few at a time" is satisfied by two, and legibility wins
+    # the tie — at the size this is drawn on screen, a shape nobody can name
+    # is decoration rather than a sighting.
+    for index, (x, y) in enumerate(((0, 4), (7, 0))):
+        high = (index + (0 if up else 1)) % 2 == 0
+        base = y + 3
+        d.line([(x + 3, base - 1), (x + 3, base + 2)], fill=ACCENT)   # body
+        # The near wing is a tall triangle from the body, the far wing a short
+        # one behind it — the three-quarter view a butterfly crossing a field
+        # actually presents, rather than the flat-from-above portrait that
+        # kept turning into a face.
+        tip = y if high else base + 3
+        far = y + 1 if high else base + 2
+        d.polygon([(x + 3, base + 1), (x, tip), (x + 3, base - 1)], fill=MAIN)
+        d.polygon([(x + 4, base + 1), (x + 6, far), (x + 4, base - 1)],
+                  fill=SHADE)
+        d.point((x + 1, tip + (1 if high else -1)), fill=LIGHT)
+    return outline(g)
+
+
+def comet(bright):
+    """A head and a tail, low in the sky, and nothing else in the frame.
+
+    The two frames differ only in the brightness of the coma — a comet does
+    not move visibly in an evening, and animating it would be the one thing
+    about this that isn't true.
+    """
+    g = grid(33, 19)
+    d = ImageDraw.Draw(g)
+    # The tail is three tapering strokes rather than one wedge: a solid
+    # triangle read as a paper aeroplane in the first draft.
+    for index, (drop, length, tone) in enumerate(
+        ((0, 26, MAIN), (-2, 20, SHADE), (2, 22, SHADE))
+    ):
+        d.line([(26, 7 + drop), (26 - length, 7 + drop - length // 5)], fill=tone)
+    d.ellipse([25, 4, 31, 10], fill=LIGHT if bright else MAIN)
+    d.ellipse([26, 5, 30, 9], fill=GLINT if bright else LIGHT)
+    # A few grains along the tail, so it has texture rather than being three
+    # clean lines.
+    for x, y in ((20, 6), (14, 5), (9, 4), (17, 9), (11, 8)):
+        d.point((x, y), fill=LIGHT)
+    return outline(g)
+
+
+FLYWAY = {
+    # Late February. Three or four, very high, and the necks are the whole
+    # silhouette — hence neck=5 against the goose's 3.
+    "whooperswan": (lambda s: skein(s, count=3, neck=5, width=27, height=15),
+                    palette((252, 252, 254), (214, 220, 230), (255, 255, 255),
+                            (242, 196, 74))),
+    # Late April. Never seen well, which is the joke: it perches high, stays
+    # put (`.linger`), and the long tail is all anybody gets.
+    "cuckoo": (lambda s: songbird(s, tail=9, width=20, height=15, legs=2),
+               palette((146, 150, 158), (110, 114, 124), (240, 240, 244),
+                       (216, 190, 96))),
+    # Mid June. A butterfly, but the migrating kind — orange going to brick,
+    # with the white spots at the wingtip that name it.
+    "paintedlady": (migrant_butterfly,
+                    palette((226, 138, 74), (186, 102, 52), (252, 246, 238),
+                            (74, 52, 44))),
+    # Late September, in the shallows.
+    "salmonrun": (run, palette((186, 118, 96), (146, 88, 72), (238, 214, 198),
+                               (108, 132, 148))),
+    # Late October, in overnight. The rusty flank under the wing is the only
+    # thing that separates it from every other thrush.
+    "redwing": (lambda s: songbird(s, tail=5, width=14, height=12, flank=True,
+                                   legs=2),
+                palette((122, 106, 84), (92, 78, 62), (240, 232, 214),
+                        (192, 88, 54))),
+    # Early November. Five of them, ragged, with the black wingtips.
+    "snowgoose": (lambda s: skein(s, count=5, neck=3, width=25, height=14,
+                                  tipped=True, span=3),
+                  palette((250, 250, 252), (208, 214, 224), (255, 255, 255),
+                          (58, 56, 62))),
+    # January, and not every year in the real world — here it is annual and
+    # short, because a species nobody can meet is not a species. The crest is
+    # the whole bird.
+    "waxwing": (lambda s: songbird(s, crest=3, tail=4, width=15, height=13,
+                                   breast=True, legs=2, plump=1),
+                palette((196, 160, 130), (158, 126, 100), (244, 232, 216),
+                        (206, 78, 58))),
+    # August, every fourth year, for six weeks.
+    "comet": (comet, palette((228, 232, 246), (150, 162, 200), (250, 252, 255),
+                             (108, 124, 172))),
+}
+
+
 WAVE4 = {
     # Rain and drizzle
     "gardensnail": (snail, palette((188, 150, 96), (150, 116, 68), (226, 208, 186), (94, 74, 52))),
@@ -996,7 +1194,7 @@ WAVE4 = {
                      palette((104, 108, 126), (72, 76, 94), (198, 202, 216), (248, 226, 138))),
 }
 
-for wave in (WAVE2, WAVE4):
+for wave in (WAVE2, WAVE4, FLYWAY):
     SPECIES.update({name: draw for name, (draw, _) in wave.items()})
     P.update({name: pal for name, (_, pal) in wave.items()})
 
@@ -1015,7 +1213,7 @@ if __name__ == "__main__":
         # the journal shows once it has. A rainbow is never an individual, so
         # the phenomena don't get one.
         regular = name not in ("rainbow", "meteors", "aurora",
-                               "sunshower", "fogbow", "firstthunder")
+                               "sunshower", "fogbow", "firstthunder", "comet")
         if regular:
             to_png(first, marked(sepia(pal)), f"wild_{name}_regular")
         print(f"  {name}: 2 frames + ghost + sketch{' + regular' if regular else ''}")

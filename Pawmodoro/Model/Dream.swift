@@ -52,6 +52,8 @@ enum Dream: Hashable, Identifiable {
     case wood(Wood)
     /// One of the neighbours, once they have moved in.
     case neighbour(Neighbour)
+    /// Something that only passes through, remembered afterwards.
+    case flight(Flight)
     /// The bird who keeps the cart, once you have met her.
     case magpie(Magpie)
     /// Wearing something, somewhere it does not matter.
@@ -328,6 +330,57 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The Flyway, dreamed about afterwards.
+    ///
+    /// Three, and the tense is the point: a passage is a fortnight and the
+    /// dream is available for the whole year after it. That is deliberate and
+    /// it is the only place in this app where a dream outlives its subject by
+    /// eleven months. It is also the closest thing the Flyway has to a
+    /// consolation — you cannot get the swans back, but the buddy remembers
+    /// them until they come again, which is what remembering is for.
+    ///
+    /// No new art. `going` and `gone` reuse the skein sprites the passages
+    /// already have; `high` is the comet's own frame. All three as
+    /// silhouettes, like the vignettes.
+    enum Flight: String, CaseIterable, Hashable {
+        case going, gone, high
+
+        /// The species whose sighting opens it. Written as the *passage*
+        /// rather than the species, because the passage is the thing that
+        /// happened and the species is only how you noticed.
+        var reachedAt: Passage {
+            switch self {
+            case .going: .snowgeese
+            case .gone: .swans
+            case .high: .comet
+            }
+        }
+
+        var asset: String {
+            switch self {
+            case .going: "wild_snowgoose_0"
+            case .gone: "wild_whooperswan_1"
+            case .high: "wild_comet_0"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .going: "a line of something, going"
+            case .gone: "the sky the morning after"
+            case .high: "the light that came back"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .going: "Still going when the dream ended."
+            case .gone: "Empty, and quieter than it had been for a fortnight."
+            case .high: "It had been there before. Nobody remembered when."
+            }
+        }
+    }
+
     /// The magpie, and the one thing in her cart the buddy actually wants.
     ///
     /// The era's dream pair, and it is deliberately *hers* rather than the
@@ -546,6 +599,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): "hour.\(hour.rawValue)"
         case .wood(let wood): "wood.\(wood.rawValue)"
         case .neighbour(let neighbour): "neighbour.\(neighbour.rawValue)"
+        case .flight(let flight): "flight.\(flight.rawValue)"
         case .magpie(let magpie): "magpie.\(magpie.rawValue)"
         case .finery(let finery): "finery.\(finery.rawValue)"
         case .den(let home): "den.\(home.rawValue)"
@@ -572,6 +626,7 @@ enum Dream: Hashable, Identifiable {
         case "hour": return Hour(rawValue: parts[1]).map(Dream.hour)
         case "wood": return Wood(rawValue: parts[1]).map(Dream.wood)
         case "neighbour": return Neighbour(rawValue: parts[1]).map(Dream.neighbour)
+        case "flight": return Flight(rawValue: parts[1]).map(Dream.flight)
         case "magpie": return Magpie(rawValue: parts[1]).map(Dream.magpie)
         case "finery": return Finery(rawValue: parts[1]).map(Dream.finery)
         case "den": return Home(rawValue: parts[1]).map(Dream.den)
@@ -599,6 +654,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.asset
         case .wood(let wood): wood.asset
         case .neighbour(let neighbour): neighbour.asset
+        case .flight(let flight): flight.asset
         case .magpie(let magpie): magpie.asset
         case .finery(let finery): finery.asset
         case .den(let home): home.asset
@@ -615,7 +671,7 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor, .hour, .wood, .neighbour,
-             .magpie, .finery, .den, .brought, .snapshot: true
+             .magpie, .finery, .den, .brought, .snapshot, .flight: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -642,6 +698,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.subject
         case .wood(let wood): wood.subject
         case .neighbour(let neighbour): neighbour.subject
+        case .flight(let flight): flight.subject
         case .magpie(let magpie): magpie.subject
         case .finery(let finery): finery.subject
         case .den(let home): home.subject
@@ -667,6 +724,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.line
         case .wood(let wood): wood.line
         case .neighbour(let neighbour): neighbour.line
+        case .flight(let flight): flight.line
         case .magpie(let magpie): magpie.line
         case .finery(let finery): finery.line
         case .den(let home): home.line
@@ -697,6 +755,7 @@ enum Dream: Hashable, Identifiable {
             + Hour.allCases.map(Dream.hour)
             + Wood.allCases.map(Dream.wood)
             + Neighbour.allCases.map(Dream.neighbour)
+            + Flight.allCases.map(Dream.flight)
             + Magpie.allCases.map(Dream.magpie)
             + Finery.allCases.map(Dream.finery)
             + Home.allCases.map(Dream.den)

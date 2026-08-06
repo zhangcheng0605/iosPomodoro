@@ -1096,6 +1096,17 @@ final class TimerEngine {
         where neighbours.contains(neighbour.reachedAt) {
             pool.append(contentsOf: repeatElement(.neighbour(neighbour), count: 2))
         }
+        // The flyway, once you have actually been under it. Gated on the
+        // journal rather than on the date, which is the whole difference
+        // between this and the season: a season dream is available *while* it
+        // is that season and a flight dream is available for the year after
+        // the passage, because the fortnight is over and remembering it is
+        // the only thing left to do with it.
+        for flight in Dream.Flight.allCases {
+            guard let species = flight.reachedAt.species,
+                  journal.hasSeen(species) else { continue }
+            pool.append(contentsOf: repeatElement(.flight(flight), count: 2))
+        }
         // Her cart is one tap inside Settings and always has been open, so
         // the gate is having sat at all rather than having traded — a dream
         // you can only have after spending would be the app rewarding the

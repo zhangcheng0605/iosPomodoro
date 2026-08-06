@@ -155,7 +155,20 @@ enum SundayPost {
 
         let seen = events.filter { $0.kind == .sighting }
             .compactMap { Species(rawValue: $0.subject) }
-        if let line = sightingLine(seen) { lines.append(line) }
+        // A passage is lifted out of the ordinary sighting list and given its
+        // own sentence. "We saw a snow goose" is true and says nothing; the
+        // thing that happened is that the geese went over, once, and will not
+        // again for a year. No new `ChronicleEvent.Kind` for it — the sighting
+        // already records everything, and a second kind would be a second
+        // thing to keep in step.
+        let passing = seen.compactMap(\.spec.passage)
+        if let passage = passing.first {
+            lines.append("\(passage.name) came through. "
+                         + "We were outside for it.")
+        }
+        if let line = sightingLine(seen.filter { $0.spec.passage == nil }) {
+            lines.append(line)
+        }
 
         let heard = events.filter { $0.kind == .heard }
             .compactMap { Heard(rawValue: $0.subject) }

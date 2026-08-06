@@ -285,6 +285,22 @@ enum LaunchOptions {
         return percent < 0 ? -1 : min(100, percent) / 100
     }()
 
+    /// Hold one migration window open, e.g. `-PawmodoroPassage swans`.
+    ///
+    /// The only practical way to see the Flyway. A window is a fortnight
+    /// whose dates move every year, so `-PawmodoroDate` can reach one but
+    /// only after computing where it landed — and the comet's is four years
+    /// wide. This forces the named passage open and, deliberately, **holds
+    /// every other one shut**: seeing that the swans and the snow geese
+    /// cannot both be over the meadow in February is half of what there is to
+    /// check.
+    static let forcedPassage: Passage? = {
+        guard arguments.contains("-PawmodoroPassage"),
+              let raw = value(after: "-PawmodoroPassage")
+        else { return nil }
+        return Passage(rawValue: raw)
+    }()
+
     /// Cast off an open hour on launch, instead of an idle countdown.
     static let drift = isSet("-PawmodoroDrift")
 
@@ -461,6 +477,7 @@ enum LaunchOptions {
     static let forcedSeason: Season? = nil
     static let forcedWeather: Weather? = nil
     static let forcedSnail: Double? = nil
+    static let forcedPassage: Passage? = nil
     static let drift = false
     static let driftLaps: Int? = nil
     static let forcedClockFace: ClockFace? = nil

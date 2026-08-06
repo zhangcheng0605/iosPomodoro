@@ -471,6 +471,82 @@ passages read kindly next year ("the swans went over early this spring").
 No notification, ever — the rule above. Sightings roll through the existing
 engine with the window as one more eligibility gate.
 
+### As built — V4, the Flyway
+
+Eight passages, eight species, one launch flag, one checker with fourteen
+break-tested rules, and three dreams. `Passage.swift` owns the windows;
+`Spec.passage` is the gate and `Species.isEligible` asks it **first**, because
+it is the only condition in the table that can be shut on 350 days of the year.
+
+**The plan's roster changed in two places.** *Swifts* were already a Far Isles
+species (`Species.swift` has had `.swift` since wave 2), so a swift passage
+would have been one animal in two rows of the journal doing different things.
+The early-summer slot went to the **Painted Ladies** instead, which are the
+better migrant anyway — they genuinely cross a continent — and three more were
+added to fill the year: the **Cuckoo** in late April, the **Redwings** in
+October and the **Waxwings** in January.
+
+**Four of the eight are drawn as movements rather than as animals.** A single
+goose is a portrait of something nobody ever sees that close; what you notice
+in November is a *line* of them. So the swans and the geese are a `skein` (out
+of phase across the line — birds drawn flapping in unison read as one object
+with a lot of legs), the salmon are a `run`, and the painted ladies are two
+butterflies at different heights going the same way. Only the cuckoo and the
+waxwing are single birds, and both are drawn perched.
+
+**The painted lady took three drafts and the first two failed the same way.**
+Drawn from above with wings spread, a butterfly is a symmetric shape with a
+dark body up the middle; any bright mark near the top of each wing and the eye
+assembles a **face** out of it. The white wing-spots were eyes, the dark
+leading corners were ears, and the contact sheet was two rows of foxes. Moving
+the spots did not help — the symmetry is the problem. It changed subject the
+way the Red Kite did in V3, and is a passage rather than a portrait now. (The
+existing meadow butterfly has the same face-read, which is worth knowing and
+not worth changing: it has shipped.)
+
+**The comet is four-year but not thin, and that is arithmetic rather than
+taste.** `check_species.py`'s reachability floor is 8 days a year and a
+once-every-four-years fortnight is 3.5. Rather than write an exemption, the
+comet is overhead for **forty days** when it comes — which is both what a
+great comet actually does and 10 days a year averaged, clearing the floor
+honestly. The floor did its job: it forced the design to be right instead of
+being told to look away.
+
+**`check_flyway.py` found one real bug on its first run.** The waxwings'
+nominal opening was 8 January with ±10 days of drift, so in about a quarter of
+years the window opened on day 0 or day −2 — and `Calendar.ordinality` has
+nothing to say about the −2nd of January. Moved to the 18th rather than
+clamped: a clamped window silently stops drifting in exactly the years it was
+meant to be earliest.
+
+**And the checker had two holes of its own, both found by break-testing it.**
+Its `enum Flight` regex matched a *renamed* enum, so deleting the Flyway's
+dreams passed cleanly. And its Python port hardcoded the seed's salt, so
+changing the salt in the Swift — which moves every date this feature has ever
+produced — passed cleanly too. The salt and the place are parsed out of the
+`WorldCalendar.roll` call now. That is the third time this repo has paid for
+the same lesson and the first time the rule caught it before the commit.
+
+**Divergences:**
+
+- **The almanac has no future tense at all.** The plan said it lists only what
+  has been seen; the built version goes further and never mentions a passage
+  that is *coming*. No countdown, no "opens in nine days", no greyed-out card
+  — this is the second exception to "locked content shows a padlock", after
+  Soot, and for the same reason: the surprise is the content. A passage is
+  happening or it has happened.
+- **The afterword shows one, not a list.** Six things that already happened is
+  an inventory; the point is that the world went on while you were busy.
+- **The Sunday Post lifts a passage out of the sighting list** and gives it
+  its own sentence, without a new `ChronicleEvent.Kind` — the sighting already
+  records everything, and a second kind would be a second thing to keep in
+  step.
+- **Nothing stacks a second unarrangeable gate on a window.** No passage
+  species has a weather requirement, a full moon, or `awardedLate`; the places
+  and hours are deliberately generous. `check_flyway.py` rule 6 enforces it —
+  a fortnight is already the hardest condition in the app and multiplying two
+  things nobody can arrange makes a species theoretical.
+
 ### V5. The Old Snail (ships quietly alongside V) [10/6/7/10]
 
 A snail crosses each scene at a pace measured in **months** — her position a

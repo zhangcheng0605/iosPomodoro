@@ -17,6 +17,7 @@ struct AlmanacView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             travelogue
+            flyway
             aboutNow
             elsewhere
         }
@@ -193,6 +194,56 @@ struct AlmanacView: View {
             return "\(possibleHere.count) about — you've met them all here."
         }
         return "\(possibleHere.count) about, \(unseen) you haven't met."
+    }
+
+    // MARK: The Flyway
+
+    /// What is going over, and what already went.
+    ///
+    /// Two hard rules, both of them about what is *absent* — see `Passage` for
+    /// why they are the whole design:
+    ///
+    /// 1. **A passage you have never seen is not mentioned.** No countdown, no
+    ///    greyed-out row, no "opens in nine days". Every other locked thing in
+    ///    this app shows a padlock; this is the one exception, for the same
+    ///    reason Soot is: the surprise is the content. You find out there are
+    ///    swans by looking up one February.
+    /// 2. **Nothing is ever in the future tense here.** A passage is happening
+    ///    or it has happened. The moment this section can say *the geese are
+    ///    due next week*, the app has started making appointments for people,
+    ///    and the next obvious step is a notification about one.
+    private var flyway: some View {
+        let seen = { (passage: Passage) in
+            passage.species.map(engine.journal.hasSeen) ?? false
+        }
+        let open = Passage.open().filter(seen)
+        let gone = Passage.closed().filter { seen($0.0) }
+        return VStack(alignment: .leading, spacing: 4) {
+            if !open.isEmpty || !gone.isEmpty {
+                Text("On the flyway")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+            }
+            ForEach(open) { passage in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(passage.name)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.bark)
+                    Text(passage.line)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.65))
+                }
+            }
+            // Past tense, and only the most recent — a list of six things that
+            // already happened is an inventory, and the point of the afterword
+            // is that the world went on while you were busy, not that you can
+            // audit it.
+            if let (passage, early) = gone.last, open.isEmpty {
+                Text(passage.afterword(early: early))
+                    .font(.footnote.italic())
+                    .foregroundStyle(Theme.bark.opacity(0.6))
+            }
+        }
     }
 
     // MARK: Everywhere else

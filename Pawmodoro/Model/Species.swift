@@ -33,9 +33,13 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     case redkite, dandelionmouse
     case snowfox, ermine, winterwren
     case greywagtail, mushroomvole
+    // The Flyway — things that only pass through. See `Passage`.
+    case whooperswan, cuckoo, paintedlady, salmonrun
+    case redwing, snowgoose, waxwing
     // Phenomena.
     case rainbow, meteors, aurora
     case sunshower, fogbow, firstthunder
+    case comet
 
     var id: String { rawValue }
 
@@ -67,6 +71,12 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         /// ordinary roll and awarded by `TimerEngine.lateAward()` instead.
         var awardedLate: Bool = false
         var isPhenomenon: Bool = false
+        /// The migration window this only turns up inside, if any.
+        ///
+        /// The one gate in this table a player cannot arrange, wait for, or
+        /// read off a clock — and the only one that closes. See `Passage` for
+        /// the three fences that stop that being cruel.
+        var passage: Passage? = nil
     }
 
     // MARK: The table
@@ -296,6 +306,38 @@ enum Species: String, Codable, CaseIterable, Identifiable {
             weathers: [.overcast])
 
         // --- Phenomena
+        // --- The Flyway. Every one of these is gated on a fortnight that
+        // moves from year to year, so the places and hours are kept generous
+        // on purpose: the window is the whole of the difficulty and stacking a
+        // second unarrangeable condition on top would make it unmeetable.
+        case .whooperswan: Spec(name: "Whooper Swan", note: "Going over very high, in threes and fours.",
+            places: [.meadow, .harbor, .peaks], dayParts: [.day, .dusk], rarity: .uncommon,
+            motion: .flutter, altitude: 0.115, size: .init(width: 54, height: 30),
+            passage: .swans)
+        case .cuckoo: Spec(name: "Cuckoo", note: "Heard from three different directions and seen from none.",
+            places: [.woods, .meadow, .keep], dayParts: [.dawn, .day], rarity: .rare,
+            motion: .linger, altitude: 0.330, size: .init(width: 32, height: 24),
+            passage: .cuckoo)
+        case .paintedlady: Spec(name: "Painted Lady", note: "Came up from the south and kept going north.",
+            places: [.meadow, .blossom, .keep, .onsen], dayParts: [.day], rarity: .common,
+            motion: .flutter, altitude: 0.205, size: .init(width: 28, height: 22),
+            passage: .paintedladies)
+        case .salmonrun: Spec(name: "Salmon Run", note: "The water kept breaking over nothing at all.",
+            places: [.harbor, .woods, .onsen], dayParts: [.dawn, .day, .dusk], rarity: .uncommon,
+            motion: .arc, altitude: 0.720, size: .init(width: 44, height: 26),
+            passage: .salmon)
+        case .redwing: Spec(name: "Redwing", note: "In overnight, and none of them are staying.",
+            places: [.woods, .meadow, .blossom], dayParts: [.dawn, .day], rarity: .common,
+            motion: .hop, altitude: 0.610, size: .init(width: 28, height: 24),
+            passage: .redwings)
+        case .snowgoose: Spec(name: "Snow Goose", note: "A long ragged line, and then another one.",
+            places: [.meadow, .harbor, .peaks, .cloudspire], dayParts: [.day, .dusk], rarity: .uncommon,
+            motion: .flutter, altitude: 0.135, size: .init(width: 50, height: 28),
+            passage: .snowgeese)
+        case .waxwing: Spec(name: "Waxwing", note: "Stripped one tree bare and left together.",
+            places: [.blossom, .woods, .meadow], dayParts: [.day], rarity: .rare,
+            motion: .hop, altitude: 0.470, size: .init(width: 30, height: 26),
+            passage: .waxwings)
         case .rainbow: Spec(name: "Rainbow", note: "The rain stopped before you did.",
             places: [.meadow, .woods, .harbor, .blossom, .keep, .cloudspire, .peaks, .onsen],
             dayParts: [.day], rarity: .uncommon,
@@ -324,6 +366,14 @@ enum Species: String, Codable, CaseIterable, Identifiable {
             dayParts: [], rarity: .mythic,
             motion: .linger, altitude: 0.180, size: .init(width: 70, height: 50),
             weathers: [.storm], awardedLate: true, isPhenomenon: true)
+        // The sky's own migrant. Four-year cycle, six weeks when it comes, and
+        // no weather gate — a comet is above the weather and gating it on a
+        // clear sky would make a once-in-four-years thing miss its own window.
+        case .comet: Spec(name: "Comet", note: "A little further along the sky every evening.",
+            places: [.meadow, .woods, .harbor, .blossom, .keep, .cloudspire, .peaks, .onsen],
+            dayParts: [.dusk, .night], rarity: .uncommon,
+            motion: .linger, altitude: 0.120, size: .init(width: 66, height: 38),
+            isPhenomenon: true, passage: .comet)
         }
     }
 
@@ -358,13 +408,14 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .robin, .swallow, .gull, .heron, .woodpecker, .tawnyowl, .crane,
              .kingfisher, .dove, .peacock, .swift, .ptarmigan,
-             .stormpetrel, .weathercrow, .winterwren, .greywagtail, .redkite:
+             .stormpetrel, .weathercrow, .winterwren, .greywagtail, .redkite,
+             .whooperswan, .cuckoo, .redwing, .snowgoose, .waxwing:
             "a pale feather"
         case .butterfly, .bee, .moth, .dragonfly, .firefly,
-             .fogmoth, .dragonswarm, .rainbeetle:
+             .fogmoth, .dragonswarm, .rainbeetle, .paintedlady:
             "a torn wing"
         case .dolphin, .whale, .seal, .otter, .turtle, .koi, .crab, .frog,
-             .bigfrog, .littlefrog, .earthworm, .ghostslug:
+             .bigfrog, .littlefrog, .earthworm, .ghostslug, .salmonrun:
             "a pale scar"
         // Its own arm rather than folded into the scars: a snail is told apart
         // by its shell, and "the garden snail with a pale scar" is a sentence
@@ -376,7 +427,8 @@ enum Species: String, Codable, CaseIterable, Identifiable {
              .roedeer, .suncat, .dandelionmouse, .snowfox, .ermine,
              .mushroomvole:
             "a notched ear"
-        case .rainbow, .meteors, .aurora, .sunshower, .fogbow, .firstthunder:
+        case .rainbow, .meteors, .aurora, .sunshower, .fogbow, .firstthunder,
+             .comet:
             // A rainbow is never an individual, and never becomes a regular.
             ""
         }
@@ -405,6 +457,11 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         weather: Weather
     ) -> Bool {
         guard !spec.awardedLate else { return false }
+        // The passage gate goes first: it is the only one that can be shut on
+        // 350 days of the year, so asking it first is both cheaper and the
+        // honest reading — the swans are not "eligible but unlucky" in July,
+        // they are in Iceland.
+        if let passage = spec.passage, !Passage.isOpen(passage) { return false }
         return spec.places.contains(place)
             && (spec.dayParts.isEmpty || spec.dayParts.contains(dayPart))
             && focusMinutes >= spec.minimumMinutes
@@ -418,6 +475,13 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         if spec.awardedLate {
             let sky = spec.weathers.first?.hintPhrase ?? "the weather"
             return "After focusing through \(sky)"
+        }
+        // A passage names its month and nothing else. It is the one hint in
+        // the journal that cannot be acted on today, so it says the least of
+        // any of them: no dates, no countdown, no "in 9 days" — only the time
+        // of year, which is what somebody standing in a field would know.
+        if let passage = spec.passage {
+            return "Some years, around \(passage.hintMonth)"
         }
         let where_ = spec.places.count > 3
             ? "anywhere"

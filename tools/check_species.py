@@ -81,6 +81,8 @@ def parse_specs():
                 text).groups()),
             "awardedLate": "awardedLate: true" in text,
             "isPhenomenon": "isPhenomenon: true" in text,
+            "passage": (re.search(r"passage: \.(\w+)", text)
+                        or _None()).group(1),
             "needsFullMoon": "needsFullMoon: true" in text,
             "minimumMinutes": int((re.search(r"minimumMinutes: (\d+)", text)
                                    or _Zero()).group(1)),
@@ -93,6 +95,11 @@ def parse_specs():
 class _Zero:
     def group(self, _):
         return "0"
+
+
+class _None:
+    def group(self, _):
+        return None
 
 
 def _field(text, key):
@@ -141,14 +148,41 @@ def main():
                 number, place, weights, rollable, month_day, winter
             )
 
+    # The Flyway's windows, as a set of (year, day-of-year) pairs per passage.
+    #
+    # Read through `check_flyway.py` rather than re-derived, so there is one
+    # port of the window arithmetic in the toolchain instead of two that can
+    # disagree. Without this a fortnight would be counted as 365 days and the
+    # reachability floor — the whole point of this file — would be blind to
+    # the one gate in the app that is genuinely shut most of the year.
+    import check_flyway
+    passages, salt, place_of_roll = check_flyway.parse_passages()
+    open_days = {}
+    for name, passage in passages.items():
+        span = set()
+        for year in range(start.year, start.year + YEARS):
+            found = check_flyway.window(passage, year, salt, place_of_roll)
+            if found:
+                span |= {(year, day) for day in range(found[0], found[1] + 1)}
+        open_days[name] = span
+
     thinnest = (10_000.0, None)
     for name, spec in sorted(specs.items()):
         wanted = set(spec["weathers"])
+        window = open_days.get(spec["passage"]) if spec["passage"] else None
+        if window is not None and not window:
+            failures.append(f"{name} is gated on Passage.{spec['passage']}, "
+                            f"which never opens — see check_flyway.py")
+        candidates = [
+            date for date in days
+            if window is None
+            or (date.year, date.timetuple().tm_yday) in window
+        ]
         if not wanted:
-            reachable = len(days)          # any sky will do
+            reachable = len(candidates)   # any sky will do
         else:
             reachable = sum(
-                1 for date in days
+                1 for date in candidates
                 if any(skies[((date - epoch).days, place)] in wanted
                        for place in spec["places"])
             )

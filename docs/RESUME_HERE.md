@@ -62,6 +62,7 @@ of what the next release owes users.
 | **Y4** — the Homestead: the grove *and* the residents | **built, never compiled** |
 | **X2** — the Cabinet of Clocks | **built, never compiled** |
 | **V3** — wave 4: the journal 41 → 63 species, gated on the sky | **built, never compiled** |
+| **V4** — the Flyway: 8 migration windows, 63 → 71 species | **built, never compiled** |
 
 ### What today added
 
@@ -662,7 +663,52 @@ same shape as the widget extension in Phase Z.
 
 ---
 
-### 18. The Crossing — arithmetic only, and nothing to look at
+### 18. The Flyway — eight fortnights a year, so bring the flag
+
+Nothing about this is visible on an ordinary day, which is the point and also
+the problem: on 6 August the only passage open is the comet, and only in a
+year divisible by four with remainder two. **`-PawmodoroPassage <id>` is the
+only practical way to see any of it** — it holds one window open and every
+other one shut.
+
+```sh
+tools/run-sim.sh --demo --headless \
+    --args "-PawmodoroPassage snowgeese -PawmodoroSighting snowgoose \
+            -PawmodoroPlace meadow -PawmodoroClock 14"
+```
+
+Ids: `swans`, `cuckoo`, `paintedladies`, `salmon`, `redwings`, `snowgeese`,
+`waxwings`, `comet`.
+
+What to look at, in order:
+
+1. **The sprites in the scene**, which is the only place four of them are
+   *movements* rather than animals. The skeins (swans, geese), the salmon run
+   and the painted ladies are drawn as several small shapes going one way, and
+   they are the first sprites in this app that have to read as a group at
+   sighting size. `-PawmodoroSighting <species>` puts one on screen; the
+   species ids are `whooperswan`, `cuckoo`, `paintedlady`, `salmonrun`,
+   `redwing`, `snowgoose`, `waxwing`, `comet`.
+2. **The almanac's "On the flyway" section**, which is the whole design and is
+   defined by what it does *not* say. With the flag set and the species seen,
+   it should name the passage and print its present-tense line. With the
+   species **never** seen it must print **nothing at all** — no row, no
+   padlock, no countdown. That absence is the feature; check it deliberately,
+   because a bug here looks exactly like an empty section.
+3. **The afterword.** Harder to reach: it needs a passage that is closed *and*
+   whose species has been seen. `-PawmodoroFillJournal` plus
+   `-PawmodoroDate 2026-12-15` should give a past-tense line about the geese.
+4. **The journal hint** under an unseen migrant: "Some years, around late
+   February" and nothing more precise. If it ever names a date, the fence has
+   moved.
+5. **The dream**, `-PawmodoroDream flight.going`.
+
+One compile risk specific to this: `Passage.window` uses
+`Calendar.ordinality(of: .day, in: .year, for:)`, which returns `Int?`. Both
+call sites unwrap it in a `guard`; if the compiler complains it will be about
+the `DateComponents` build above it rather than the ordinality itself.
+
+### 19. The Crossing — arithmetic only, and nothing to look at
 
 `Pawmodoro/Model/Crossing.swift` is the **merge**, with no transport behind
 it: no CloudKit, no `NSUbiquitousKeyValueStore`, no network call. There is
@@ -711,11 +757,12 @@ python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene
 python3 tools/check_crossing.py          # after ANY new store, storage key or merge
+python3 tools/check_flyway.py            # after any passage, window or migrant species
 tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All sixteen were green when this was written: 922,032 contrast pairs, 20,736
+All seventeen were green when this was written: 922,032 contrast pairs, 20,736
 stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 400 pairs of
 merged worlds, 105 Swift files and 625 imagesets. `check_snail.py` takes about
 18 seconds; the rest are quick.

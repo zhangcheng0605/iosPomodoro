@@ -125,6 +125,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroBuddy <id>` | Start with one buddy, e.g. `-PawmodoroBuddy owl` |
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
 | `-PawmodoroWeather <id>` + `-PawmodoroSighting` | The only way to see a wave-4 species on demand — half the roster is gated on the sky |
+| `-PawmodoroPassage <id>` | Hold one migration window open, e.g. `swans` — and hold every other one shut. The only practical way to see the Flyway |
 | `-PawmodoroEncounter <id>` | Guarantee a micro-encounter this session: `butterfly`, `robin`, `snowflake` |
 | `-PawmodoroFillJournal [n]` | Mark every species as seen; `5` makes them all named regulars |
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
@@ -134,7 +135,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
 | `-PawmodoroNightSessions <n>` | Seed n sessions finished after dark, for the star atlas |
-| `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `sky`, `adrift`, `hour`, `wood`, `yours`, `surreal` |
+| `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `sky`, `adrift`, `hour`, `wood`, `neighbour`, `magpie`, `finery`, `den`, `brought`, `snapshot`, `yours`, `surreal` |
 | `-PawmodoroFillDreams` | Mark every dream as dreamed, for looking at the diary |
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
@@ -175,9 +176,9 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are sixteen now (`swift`, `contrast`, `grove`,
+without a Mac** — there are seventeen now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
-`weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`), they
+`weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`), they
 take about twenty seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.

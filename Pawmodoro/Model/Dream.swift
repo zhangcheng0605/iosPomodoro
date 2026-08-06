@@ -60,6 +60,8 @@ enum Dream: Hashable, Identifiable {
     case den(Home)
     /// Something it brought you, dreamed about again.
     case brought(Brought)
+    /// A place *you* sat, seen from slightly above.
+    case snapshot(Snapshot)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -464,6 +466,36 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// A place you sat once, dreamed by somebody who was there.
+    ///
+    /// The only dream family about the *real* world — your desk rather than
+    /// the meadow — which is exactly what the Scrapbook is for. Costs no new
+    /// art: the vignette sprites, as silhouettes, standing in for a room.
+    enum Snapshot: String, CaseIterable, Hashable {
+        case fromabove, thewindow
+
+        var asset: String {
+            switch self {
+            case .fromabove: "dream_yours_desk"
+            case .thewindow: "dream_yours_doorway"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .fromabove: "a place you sat"
+            case .thewindow: "the window table"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .fromabove: "Seen from slightly above, and further off than it was."
+            case .thewindow: "The light was doing that thing again."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -518,6 +550,7 @@ enum Dream: Hashable, Identifiable {
         case .finery(let finery): "finery.\(finery.rawValue)"
         case .den(let home): "den.\(home.rawValue)"
         case .brought(let brought): "brought.\(brought.rawValue)"
+        case .snapshot(let snapshot): "snapshot.\(snapshot.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -543,6 +576,7 @@ enum Dream: Hashable, Identifiable {
         case "finery": return Finery(rawValue: parts[1]).map(Dream.finery)
         case "den": return Home(rawValue: parts[1]).map(Dream.den)
         case "brought": return Brought(rawValue: parts[1]).map(Dream.brought)
+        case "snapshot": return Snapshot(rawValue: parts[1]).map(Dream.snapshot)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -569,6 +603,7 @@ enum Dream: Hashable, Identifiable {
         case .finery(let finery): finery.asset
         case .den(let home): home.asset
         case .brought(let brought): brought.asset
+        case .snapshot(let snapshot): snapshot.asset
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -580,7 +615,7 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor, .hour, .wood, .neighbour,
-             .magpie, .finery, .den, .brought: true
+             .magpie, .finery, .den, .brought, .snapshot: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -611,6 +646,7 @@ enum Dream: Hashable, Identifiable {
         case .finery(let finery): finery.subject
         case .den(let home): home.subject
         case .brought(let brought): brought.subject
+        case .snapshot(let snapshot): snapshot.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -635,6 +671,7 @@ enum Dream: Hashable, Identifiable {
         case .finery(let finery): finery.line
         case .den(let home): home.line
         case .brought(let brought): brought.line
+        case .snapshot(let snapshot): snapshot.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -664,6 +701,7 @@ enum Dream: Hashable, Identifiable {
             + Finery.allCases.map(Dream.finery)
             + Home.allCases.map(Dream.den)
             + Brought.allCases.map(Dream.brought)
+            + Snapshot.allCases.map(Dream.snapshot)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

@@ -128,6 +128,8 @@ final class TimerEngine {
     let pouch: Pouch
     /// What the buddy has left on the desk.
     let shelf: Shelf
+    /// Photographs of where you actually were.
+    let scrapbook: Scrapbook
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -147,7 +149,8 @@ final class TimerEngine {
         dreams: DreamDiary = DreamDiary(),
         chronicle: Chronicle = Chronicle(),
         pouch: Pouch = Pouch(),
-        shelf: Shelf = Shelf()
+        shelf: Shelf = Shelf(),
+        scrapbook: Scrapbook = Scrapbook()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -159,6 +162,7 @@ final class TimerEngine {
         self.chronicle = chronicle
         self.pouch = pouch
         self.shelf = shelf
+        self.scrapbook = scrapbook
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -186,6 +190,10 @@ final class TimerEngine {
         if let den = LaunchOptions.forcedDen {
             self.settings.buddy = den.buddy
         }
+        // A file left behind by a crash between writing the JPEG and saving
+        // its row is storage nobody can reach. One directory listing.
+        scrapbook.prune()
+        if LaunchOptions.seedScrapbook { SnapshotSeed.fill(scrapbook) }
         for accessory in LaunchOptions.forcedWear {
             self.settings.wear(accessory, on: self.settings.buddy, in: accessory.slot)
         }
@@ -275,6 +283,24 @@ final class TimerEngine {
             return max(0, forced - pouch.spent)
         }
         return Acorns.balance(minutes: log.totalMinutes, spent: pouch.spent)
+    }
+
+    /// Keep a photograph, stamped with everything the world already knew.
+    ///
+    /// Nothing here is asked for and there is nowhere to type: the date, the
+    /// place, the buddy, the sky and the length all come from state the app is
+    /// already holding. A memory feature that opens a text box has become a
+    /// journal, and this app has one of those.
+    func keepSnapshot(file: String) {
+        scrapbook.add(Snapshot(
+            date: WorldCalendar.now,
+            file: file,
+            place: settings.place.rawValue,
+            buddy: settings.buddy.rawValue,
+            weather: weather.rawValue,
+            minutes: settings.focusMinutes
+        ))
+        chronicle.add(.snapshot, settings.place.rawValue)
     }
 
     /// Where you last touched the buddy, and what it made of it.
@@ -1086,6 +1112,10 @@ final class TimerEngine {
         // Dressed up, once you actually own the thing. Asked of the pouch
         // rather than of a second unlock table, so the gate can never
         // disagree with what is in the wardrobe.
+        // A place you sat once, once there is a picture of one.
+        if !scrapbook.isEmpty {
+            pool.append(contentsOf: Dream.Snapshot.allCases.map(Dream.snapshot))
+        }
         // The things it brought you, once it actually has. Asked of the
         // shelf rather than of a threshold, so the gate cannot disagree with
         // what is on the desk.

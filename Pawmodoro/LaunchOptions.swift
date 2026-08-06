@@ -40,10 +40,14 @@ enum StorageKeys {
     /// Things the buddy has left on the desk, in the order they arrived.
     static let keepsakes = "pawmodoro.keepsakes"
 
+    /// The scrapbook's metadata. The photographs themselves are files in
+    /// Documents/Snapshots — `Scrapbook.prune()` keeps the two in step.
+    static let snapshots = "pawmodoro.snapshots"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
-        owned, keepsakes,
+        owned, keepsakes, snapshots,
     ]
 }
 
@@ -336,6 +340,15 @@ enum LaunchOptions {
     ///
     /// The honest way to get one is a one-in-twenty-five roll after a session,
     /// which is not a thing anybody can drive a simulator through.
+    /// Put three sample photographs in the scrapbook on launch.
+    ///
+    /// The simulator has no camera and its photo library is three stock
+    /// wallpapers, so without this the whole feature is unreachable in a pane.
+    /// The samples are generated at launch rather than bundled: three
+    /// flat-coloured rectangles are enough to judge a filter by, and shipping
+    /// real photographs inside the app would be shipping somebody's data.
+    static let seedScrapbook = arguments.contains("-PawmodoroSeedScrapbook")
+
     static let seedKeepsakes: Int? = {
         guard arguments.contains("-PawmodoroKeepsakes") else { return nil }
         return value(after: "-PawmodoroKeepsakes").flatMap(Int.init)
@@ -458,6 +471,7 @@ enum LaunchOptions {
     static let forcedWear: [Accessory] = []
     static let forcedDen: Den? = nil
     static let seedKeepsakes: Int? = nil
+    static let seedScrapbook = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

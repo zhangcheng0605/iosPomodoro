@@ -146,6 +146,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroWear <ids>` | Dress the buddy on launch, e.g. `sunhat,bow` — two at once is what catches a bad anchor |
 | `-PawmodoroDen <id>` | Grant a den and switch to its owner, e.g. `igloo` |
 | `-PawmodoroKeepsakes <n>` | Seed the shelf of things the buddy brought you |
+| `-PawmodoroSeedScrapbook` | Three generated sample photographs — the pane has no camera |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
@@ -174,9 +175,9 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are fourteen now (`swift`, `contrast`, `grove`,
-`residents`, `species`, `catalog`, `accessories`, `touch`, `post`, `weather`,
-`yearring`, `clocks`, `stray`, `snail`), they
+without a Mac** — there are fifteen now (`swift`, `contrast`, `grove`,
+`residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
+`weather`, `yearring`, `clocks`, `stray`, `snail`), they
 take about fifteen seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
@@ -247,6 +248,21 @@ There are no tests. A change is verified by building and looking at it:
   the catalogue is Plus, whole, once), nothing is ever removed from the pouch,
   Soot is never for sale, and the Sunday Post never itemises what you bought.
   `docs/HEARTH_PLAN.md` has the reasoning for all eight.
+- **A photograph is never modified, and never leaves the device.** The
+  Scrapbook writes exactly what was imported and applies a film stock at *draw*
+  time, so changing the light is free and reversible forever. Import goes
+  through `SnapshotImport.prepare` and nothing else: re-encoding through a
+  renderer is the whole of the EXIF strip, and a scrapbook of the desks
+  somebody works at is a map of where they live. The app still makes no
+  network calls — `docs/PRIVACY.md` says so, and that sentence has to stay
+  true.
+- **A film stock is the world's own light, and that is checkable.** The three
+  time-of-day stocks are the same three numbers `tools/generate_scenes.py`
+  grades the scene art with, and "Pressed" is the same transform
+  `generate_wildlife.py` presses the journal's sketches with.
+  `tools/check_film.py` parses both generators and fails if the Swift drifts —
+  which nothing else could notice, because a filter that has quietly stopped
+  matching the world looks completely fine.
 - **Colours go through `Theme`**, never literal `Color` values. That is what
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.

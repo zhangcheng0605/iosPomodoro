@@ -66,6 +66,10 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         case settledIn
         /// Something the buddy left on the desk.
         case keepsake
+        /// A picture kept of where you were. The subject is the place the
+        /// *world* was at the time, which is the joke the whole feature runs
+        /// on: a photo of a kitchen table, filed under Harbor Isle.
+        case snapshot
     }
 }
 

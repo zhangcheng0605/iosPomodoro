@@ -84,6 +84,11 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   wide, which is the padded stats sheet on the *narrowest* phone. A wider
   screen only spreads them out, so this is the safe direction — but it has
   never been drawn at any width.
+- **The Scrapbook's Info.plist strings.** The photo picker needs no
+  permission, so no usage string is strictly required today — but the moment
+  anybody adds a camera path, `NSCameraUsageDescription` becomes mandatory and
+  App Review rejects a build without it. The privacy nutrition label stays
+  "data not collected": photographs are used, never collected.
 - **The whole Deep Time build — nine phases written on Linux and never
   compiled.** Weather, the snail, the Drift, the Cabinet of Clocks, and all
   four altitudes of the Long Now (the shelf, the Sunday Post, the year ring,

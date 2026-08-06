@@ -666,6 +666,55 @@ slightly above." / "The window table. The light was doing that thing."
 **Flags:** `-PawmodoroSeedScrapbook` (bundle three sample photos so the
 simulator can drive the whole feature — the pane has no camera).
 
+### As built — Phase 6, the Scrapbook
+
+Built on Linux, never compiled. Capture, the film stocks, the store and the
+two screens. Stickers are **not** built.
+
+**There is no LUT file, and the plan's request for one was wrong.**
+`generate_scenes.py` grades a palette with three numbers — a tint to pull
+toward, how far, and a brightness multiplier — which is a per-channel affine
+transform. A colour cube would have been a lossy hundred-kilobyte copy of six
+numbers. Keeping it as arithmetic also made the claim *checkable*:
+`check_film.py` parses `GRADE` out of the scene generator and the sepia
+coefficients out of the wildlife generator, and fails if `FilmStock`
+disagrees with either. A filter that has quietly stopped being the world's own
+light looks completely fine, so nothing else could ever notice.
+
+**Everything on the stamp was already known.** Date, place, buddy, weather,
+length — all of it comes from state the app is holding, and there is nowhere
+to type. A memory feature that opens a text box has become a journal, and this
+app has one of those. The caption is deliberately about the *world*: a photo
+of your kitchen table reading "Harbor Isle, in the mist — 50 minutes" is the
+two halves of the app shaking hands.
+
+**Privacy is structural, not a setting.** Import goes through
+`SnapshotImport.prepare` and nothing else; re-encoding through a renderer
+drops every EXIF tag including location, which is a stronger guarantee than a
+list of tags somebody has to keep in step. `PhotosPicker` needs no permission
+dialog at all, which is why it is the primary path — a memory feature whose
+first act is an access prompt has asked for something before giving anything.
+
+**The photograph on disk is never modified.** The stock is applied at draw
+time, so changing it is free and reversible forever, and `check_film.py`
+refuses to let `setStock` disappear.
+
+**Divergences:**
+
+- **No stickers.** The buddy-in-current-pose, the species seen, paw prints and
+  weather glyphs are a drag-pinch-rotate editor with its own gesture state,
+  export path and hit-testing — a feature the size of the wardrobe, not a
+  detail of this one. The film stocks are the half that carries the idea and
+  the half with the checkable claim in it.
+- **Two storage halves, and a `prune()` to keep them honest.** Images are
+  files (a few hundred kilobytes each has no business in `UserDefaults`),
+  metadata is a defaults key (tiny, and `-PawmodoroResetState` already knows
+  how to wipe one). A crash between the two leaves an orphan file, which is
+  storage nobody can reach; `prune()` sweeps at launch.
+- **The samples are generated, not bundled.** Three flat two-tone fields show
+  a per-channel grade more honestly than a photograph does, and shipping real
+  photographs inside the app would be shipping somebody's data in the binary.
+
 ## Phase 7 — The second desk (macOS)
 
 A real Mac app, not a phone window. Native SwiftUI macOS target sharing the

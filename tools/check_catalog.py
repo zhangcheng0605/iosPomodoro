@@ -53,6 +53,7 @@ FIXTURE_PRICES = {
     "theme": 40,
     "accessory": 15,
     "den": 35,
+    "film": 15,
 }
 
 # What a steady user earns in a day, for the sanity sums below: two hours of
@@ -170,6 +171,20 @@ def main():
     # Every accessory is for sale — there is no free one and none the app
     # withholds for a story — so the whole enum is the shelf.
     accessories = parse_cases("Accessory.swift", "Accessory")
+    # Only the stocks that are not free. Capture, the ungraded photograph and
+    # the journal's press are free forever — fence 6, the memory is never the
+    # product — and `FilmStock.isFree` is where that is decided.
+    film_source = open(os.path.join(MODEL, "FilmStock.swift")).read()
+    free_body = film_source.split("var isFree: Bool {")[1].split("\n    }")[0]
+    free = set()
+    for labels, value in re.findall(r"case ((?:\.\w+,? ?)+): (true|false)", free_body):
+        if value == "true":
+            free.update(re.findall(r"\.(\w+)", labels))
+    film = [f for f in parse_cases("FilmStock.swift", "FilmStock") if f not in free]
+    if not free:
+        failures.append(
+            "no film stock is free — a scrapbook whose every light costs "
+            "acorns has priced the memory, which fence 6 forbids")
     # Every den except Soot's, which arrives with her and has no price.
     dens = [d for d in parse_cases("Den.swift", "Den") if d != "chimney"]
     den_source = open(os.path.join(MODEL, "Den.swift")).read()
@@ -217,7 +232,8 @@ def main():
     # --- 3. The two fences that are arithmetic ------------------------------
     per_day = DAILY_MINUTES / divisor
     counts = {"buddy": len(buddies), "place": len(places), "theme": len(themes),
-              "accessory": len(accessories), "den": len(dens)}
+              "accessory": len(accessories), "den": len(dens),
+              "film": len(film)}
     total = sum(prices[kind] * count for kind, count in counts.items()
                 if kind in prices)
 

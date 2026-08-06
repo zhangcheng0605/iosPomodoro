@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var showPaywall = false
     @State private var showTipJar = false
     @State private var showCart = false
+    @State private var showScrapbook = false
     /// The locked thing somebody just tapped, if the cart sells it.
     @State private var unlocking: CatalogItem?
 
@@ -109,6 +110,7 @@ struct SettingsView: View {
                          + "no battery.")
                 }
 
+                scrapbookSection
                 cartSection
                 plusSection
 
@@ -133,6 +135,7 @@ struct SettingsView: View {
             }
             .sheet(item: $unlocking) { UnlockSheet(item: $0) }
             .sheet(isPresented: $showCart) { CartView() }
+            .sheet(isPresented: $showScrapbook) { ScrapbookView() }
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
@@ -142,6 +145,33 @@ struct SettingsView: View {
     /// The way into the one commercial room, and the only mention of the
     /// economy anywhere outside it and the stats sheet. Never badged, never
     /// with a count on it — fence 8: the balance does not follow you around.
+    /// The way into the scrapbook. In Settings beside the cart rather than on
+    /// the timer, for the same reason: nothing goes between somebody and the
+    /// countdown.
+    private var scrapbookSection: some View {
+        Section {
+            Button {
+                showScrapbook = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .foregroundStyle(Theme.blossom)
+                        .frame(width: 22)
+                    Text("Where you were")
+                        .foregroundStyle(Theme.bark)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.bark.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text("Keep a picture of wherever you are sitting. They stay on this "
+                 + "device — the app has no way to send them anywhere.")
+        }
+    }
+
     private var cartSection: some View {
         Section {
             Button {

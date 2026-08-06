@@ -29,6 +29,7 @@ enum CatalogItem: Hashable, Identifiable {
     case theme(AppTheme)
     case accessory(Accessory)
     case den(Den)
+    case film(FilmStock)
 
     /// Stable across launches: purchases are stored as these strings.
     ///
@@ -41,6 +42,7 @@ enum CatalogItem: Hashable, Identifiable {
         case .theme(let theme): "theme.\(theme.rawValue)"
         case .accessory(let accessory): "wear.\(accessory.rawValue)"
         case .den(let den): "den.\(den.rawValue)"
+        case .film(let film): "film.\(film.rawValue)"
         }
     }
 
@@ -53,6 +55,7 @@ enum CatalogItem: Hashable, Identifiable {
         case "theme": return AppTheme(rawValue: parts[1]).map(CatalogItem.theme)
         case "wear": return Accessory(rawValue: parts[1]).map(CatalogItem.accessory)
         case "den": return Den(rawValue: parts[1]).map(CatalogItem.den)
+        case "film": return FilmStock(rawValue: parts[1]).map(CatalogItem.film)
         default: return nil
         }
     }
@@ -83,6 +86,10 @@ enum CatalogItem: Hashable, Identifiable {
         // buddy: a den is the thing you buy *for* a buddy you already have,
         // and pricing it like a second buddy would make it feel like one.
         case .den: 35
+        // The same as an accessory: small, optional dress-up. Capture and
+        // enough stocks to make a photo feel like it belongs here are free
+        // forever — fence 6, the memory is never the product.
+        case .film: 15
         }
     }
 
@@ -93,6 +100,7 @@ enum CatalogItem: Hashable, Identifiable {
         case .theme(let theme): theme.displayName
         case .accessory(let accessory): accessory.name
         case .den(let den): den.name
+        case .film(let film): film.name
         }
     }
 
@@ -104,11 +112,12 @@ enum CatalogItem: Hashable, Identifiable {
         case .theme: .themes
         case .accessory: .wardrobe
         case .den: .dens
+        case .film: .film
         }
     }
 
     enum Shelf: String, CaseIterable, Identifiable {
-        case wardrobe, dens, buddies, places, themes
+        case wardrobe, dens, film, buddies, places, themes
 
         var id: String { rawValue }
 
@@ -116,6 +125,7 @@ enum CatalogItem: Hashable, Identifiable {
             switch self {
             case .wardrobe: "Things to wear"
             case .dens: "Somewhere to sleep"
+            case .film: "Light to keep it in"
             case .buddies: "Someone to sit with"
             case .places: "Somewhere to sit"
             case .themes: "How it looks"
@@ -129,6 +139,7 @@ enum CatalogItem: Hashable, Identifiable {
             switch self {
             case .wardrobe: "Small, and none of it does anything."
             case .dens: "One each. She did not build any of them."
+            case .film: "For the pictures. She does not understand them."
             case .buddies: "They came on their own. I only made room."
             case .places: "Further out than you have been. I have been."
             case .themes: "The same world, in a different light."
@@ -149,6 +160,7 @@ enum CatalogItem: Hashable, Identifiable {
     static var all: [CatalogItem] {
         Accessory.allCases.map(CatalogItem.accessory)
             + Den.allCases.filter(\.isForSale).map(CatalogItem.den)
+            + FilmStock.allCases.filter { !$0.isFree }.map(CatalogItem.film)
             + Buddy.allCases.filter { $0.isPlus }.map(CatalogItem.buddy)
             + Place.allCases.filter { $0.isPlus }.map(CatalogItem.place)
             + AppTheme.allCases.filter { $0.isPlus }.map(CatalogItem.theme)

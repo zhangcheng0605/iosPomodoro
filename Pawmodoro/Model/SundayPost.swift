@@ -184,6 +184,10 @@ enum SundayPost {
                          + "along than last time.")
         }
 
+        if events.contains(where: { $0.kind == .snapshot }) {
+            lines.append("We kept a picture of one of the afternoons.")
+        }
+
         if let left = events.last(where: { $0.kind == .keepsake }),
            let keepsake = Keepsake(rawValue: left.subject) {
             lines.append(keepsake.postLine)

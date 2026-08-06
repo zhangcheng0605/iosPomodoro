@@ -13,11 +13,11 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **five of its eight phases are already built**: the acorn pouch,
-the Magpie's Cart, the Wardrobe, the Dens, and the interaction era's touch
-vocabulary and keepsakes. They are blind like everything else here, and
-sections 12 to 15 are their walkthroughs. The Scrapbook and macOS have not
-started.
+macOS) — and **six of its eight phases are already built**: the acorn pouch,
+the Magpie's Cart, the Wardrobe, the Dens, the interaction era's touch
+vocabulary and keepsakes, and the Scrapbook. They are blind like everything
+else here, and sections 12 to 16 are their walkthroughs. macOS and the iCloud
+crossing have not started.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -589,6 +589,41 @@ is left:
   anywhere should badge or announce them — if there is a "new" dot on the
   stats button, it goes.
 
+### 16. The Scrapbook
+
+Settings → *Where you were*. The first feature in this app that touches the
+filesystem, the photo library and Core-Image-shaped colour work, so it is the
+one most likely to have a compile error in it.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroSeedScrapbook                       # three generated samples
+$S -PawmodoroSeedScrapbook -PawmodoroOwnEverything   # every stock unlocked
+$S                                               # empty, and the + button
+```
+
+The simulator has no camera and its library is three wallpapers, hence the
+seed flag. `check_film.py` has proved the stocks *are* the world's own light —
+the three time-of-day grades match `generate_scenes.py` coefficient for
+coefficient and "Pressed" matches the journal's sepia — plus nine fixture rows.
+What is left:
+
+- **Does `filmStock(_:)` actually look like the grade?** It is built from
+  `.saturation`, `.colorMultiply` and a `.plusLighter` overlay, which is the
+  SwiftUI approximation of the affine transform the checker verifies
+  arithmetically. If a stock looks washed out or blown, that modifier is where
+  it is wrong — not `FilmStock`, whose numbers are proved.
+- **The swatch row.** Each swatch previews the stock on *that photograph*. If
+  they all look identical the `.compositingGroup()` is in the wrong place.
+- **Import a real photograph** from the library and check the orientation. A
+  portrait photo coming back sideways means the renderer draw in
+  `SnapshotImport` is not baking the EXIF rotation.
+- **The permission flow.** `PhotosPicker` should show the system sheet with
+  *no* prompt of its own. If iOS asks for library access, the picker has been
+  swapped for something else somewhere.
+- **Remove one, then relaunch.** The file should be gone and the grid should
+  not show a gap — and `prune()` should quietly clear anything orphaned.
+
 ---
 
 ## Verification loop (every session)
@@ -604,6 +639,7 @@ python3 tools/check_species.py           # after any roster or weather-gate chan
 python3 tools/check_catalog.py           # after any price, earn rate or fence
 python3 tools/check_accessories.py       # after any buddy sprite or wardrobe change
 python3 tools/check_touch.py             # after any anchor or touch-region change
+python3 tools/check_film.py              # after any scene grade or film stock
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"

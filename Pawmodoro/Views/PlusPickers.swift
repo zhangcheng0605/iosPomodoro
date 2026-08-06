@@ -107,7 +107,9 @@ struct AmbiencePicker: View {
     }
 
     private func row(for option: Ambience) -> some View {
-        let unlocked = store.isUnlocked(option)
+        // A found loop is free but not given: Plus does not open it and the
+        // cart does not stock it. Both roads have to agree it is yours.
+        let unlocked = store.isUnlocked(option) && engine.hasFound(option)
         let selected = engine.settings.ambience == option
         let suggested = unlocked && !selected && engine.weather.suggests == option
 

@@ -1442,6 +1442,7 @@ final class TimerEngine {
             // Checked after the log is written, so this session counts toward
             // the threshold it might have just crossed.
             arrival = newlyReachedPlace()
+            recordFoundSounds()
             recordToChronicle(seen: seen, dream: dream, bond: bond, figure: figure,
                               arrival: arrival, strayBefore: strayBefore)
             if let arrival, !arrival.isPlus {
@@ -1514,6 +1515,38 @@ final class TimerEngine {
     /// no rolls and no decisions, it only remembers. Deliberately the last
     /// thing to touch the stores, so a chronicle entry can never exist for
     /// something the journal or diary refused to keep.
+    /// Whether the buddy has recorded a found loop for you.
+    ///
+    /// Asked of the chronicle rather than of a store of its own: the
+    /// chronicle already exists, already survives a reinstall's worth of
+    /// backup, and is already cleared by `-PawmodoroResetState`. A second
+    /// place to keep "has this happened" is a second place for it to
+    /// disagree with itself.
+    func hasFound(_ ambience: Ambience) -> Bool {
+        guard ambience.isFound else { return true }
+        if LaunchOptions.unlockSounds { return true }
+        return chronicle.firstTime(.sound, subject: ambience.rawValue) != nil
+    }
+
+    /// Records any found loop this session just earned.
+    ///
+    /// Weather is asked of the sky the session actually ran under, and the
+    /// night count of the log *after* this session is written — so the fifth
+    /// night session is the one that finds the crickets, not the sixth.
+    private func recordFoundSounds() {
+        var earned: [Ambience] = []
+        switch weather {
+        case .storm: earned.append(.storm)
+        case .snow: earned.append(.snowhush)
+        case .clear, .overcast, .breeze, .drizzle, .rain, .mist, .golden:
+            break
+        }
+        if log.nightSessions >= 5 { earned.append(.crickets) }
+        for sound in earned where !hasFound(sound) {
+            chronicle.add(.sound, sound.rawValue)
+        }
+    }
+
     private func recordToChronicle(
         seen: Species?,
         dream: Dream?,

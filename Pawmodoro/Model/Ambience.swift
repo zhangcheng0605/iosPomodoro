@@ -34,8 +34,39 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
     var isPlus: Bool {
         switch self {
         case .off, .rain, .purr, .fireplace, .drizzle, .wind: false
-        case .forest, .cafe, .ocean, .creek, .library, .snowhush, .temple,
-             .storm, .crickets, .cicadas, .nighttrain, .raintent, .emberslate: true
+        // The three found ones are not Plus. They cannot be bought at all —
+        // see `isFound`. Marking them Plus would put a padlock on them and a
+        // price beside it, which is the opposite of what they are for.
+        case .storm, .snowhush, .crickets: false
+        case .forest, .cafe, .ocean, .creek, .library, .temple,
+             .cicadas, .nighttrain, .raintent, .emberslate: true
+        }
+    }
+
+    /// Loops nobody can buy: the buddy records them for you, and only if you
+    /// were actually out in it.
+    ///
+    /// Soot's rule applied to sound. Plus buys convenience everywhere else in
+    /// this app; it does not buy having sat through a storm. A Plus owner and
+    /// a free one earn these on exactly the same terms.
+    var isFound: Bool {
+        switch self {
+        case .storm, .snowhush, .crickets: true
+        case .off, .rain, .purr, .fireplace, .forest, .cafe, .ocean,
+             .drizzle, .wind, .creek, .library, .temple,
+             .cicadas, .nighttrain, .raintent, .emberslate: false
+        }
+    }
+
+    /// What has to happen for the buddy to record it.
+    var findingLine: String {
+        switch self {
+        case .storm: "Finish a session while a storm is over you."
+        case .snowhush: "Finish a session in the snow."
+        case .crickets: "Finish five sessions after dark."
+        case .off, .rain, .purr, .fireplace, .forest, .cafe, .ocean,
+             .drizzle, .wind, .creek, .library, .temple,
+             .cicadas, .nighttrain, .raintent, .emberslate: ""
         }
     }
 

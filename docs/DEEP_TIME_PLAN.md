@@ -712,6 +712,55 @@ December 31 mints the Year Postcard through the existing pipeline. Past
 years stack behind the current one like tree rings; the stack is Plus, the
 current year always free and complete.
 
+### As built — Y3, the Year Ring
+
+Built on Linux, never compiled. Six checkers green.
+
+**It ships already old, exactly as the plan predicted** — and that is the
+return on 0b. No new storage, no migration: `YearRing.build` is a pure
+re-reading of `SessionLog.records`, every one of which has always carried a
+full `endedAt`.
+
+**The plan's tinting could not carry it, and only a checker could have known.**
+Y3 says each day should be tinted "from the same `Palette.sky` tables the
+scenes use". `tools/check_yearring.py` recomputes every wedge from the
+palettes and measures each pair in CIE Lab, and the sky tables failed **61 of
+320 pairs** — worst of all, in Cocoa, a night session's day measured ΔE 1.3
+from a day nobody focused at all. The reason is structural and worth keeping
+in mind for anything else that reuses a wash: `Palette.skyMix` pulls each hue
+most of the way to `cream` *on purpose*, because a wash goes behind text and
+its luminance has to stay near the background's. A wedge has nothing written
+on it and needs the exact opposite.
+
+Four separate palette hues were the second attempt and failed 18 pairs:
+`sunshine` and `blossom` are both warm and sit close in several palettes, and
+pulling them toward `bark` barely separates them in dark appearance, where
+`bark` is also light. Ink's dark palette has no four distinguishable hues in
+it at all.
+
+What ships is a **lightness ladder** from the page colour to the text colour
+(0.26 / 0.48 / 0.70 / 0.92) with the theme's accent riding on top at 20 %.
+Lightness is the one axis every palette has four of; the steps are even by
+construction; and it reads as the day going on, so a year of mornings is a
+pale ring and a year of late nights a dark one — which was the claim all
+along. Worst separation across 320 pairs: ΔE 10.4 against a bar of 8.
+
+**Other divergences:**
+
+- **No opacity ramp by session count.** One was written ("more sessions, more
+  colour") and removed: it washed a one-session day out by 40 % and undid the
+  separation the ladder guarantees. It was also answering the wrong question —
+  the ring is about *when* you sat, and a day with one session is not a
+  fainter kind of day.
+- **The rim marks only firsts, and only some kinds.** Places reached, bond
+  levels, the first session, and the two stray days worth remembering.
+  Sightings, dreams, sounds and the snail are excluded: a rim with every heron
+  you ever met on it is a smear, and those are the Sunday Post's material.
+- **Not built:** the Year Postcard on 31 December, the anniversary scene props
+  and the solstice sky dressing. All three want a surface that notices a date
+  *while the timer is running*, which is a different piece of plumbing from
+  the ring and belongs with Y2's letter grammar.
+
 ### Y4. The lifetime — the Homestead (Grove ∪ Understory, merged)
 
 The two highest-soul proposals of the panel are one instinct — accumulation

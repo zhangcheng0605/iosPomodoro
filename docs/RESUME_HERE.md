@@ -37,6 +37,7 @@ of what the next release owes users.
 | **V-slice-1** — weather: veils, particles, the suggestion glow | **built, never compiled** |
 | **V5** — the old snail | **built, never compiled** |
 | **X1** — the Drift, the open hour | **built, never compiled** |
+| **Y3** — the year ring | **built, never compiled** |
 
 ### What today added, in one paragraph each
 
@@ -248,7 +249,27 @@ What to check:
 - **A sighting at the top of a lap.** `-PawmodoroSighting stag -PawmodoroDrift`
   and wait through two laps: the stag should come round twice.
 
-### 5. Share a postcard
+### 5. The year ring
+
+It sits in the stats sheet, above the postcards.
+
+```sh
+tools/run-sim.sh --demo --headless -PawmodoroSeedStats -PawmodoroSeedChronicle
+tools/run-sim.sh --demo --headless -PawmodoroSeedStats -PawmodoroClock 22
+```
+
+The second one forces every seeded session to read as a night session, which
+paints the whole ring at the dark end of the ladder — the fastest way to see
+that the ladder is doing what it claims.
+
+`check_yearring.py` says the four steps are separable in all sixteen
+theme/appearance combinations (worst ΔE 10.4 against a bar of 8), so what is
+left for an eye is whether 365 one-pixel wedges look like a year or like
+noise. If they look like noise, widen the wedge gap (`+ 0.35` in
+`YearRingView.wheel`) before touching any colour — the colours are measured
+and the gap is not.
+
+### 6. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -256,7 +277,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 6. The four gates of 0e — the actual reason for a Mac evening
+### 7. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 
@@ -302,6 +323,7 @@ Revisit when Phase Y's Homestead panorama earns a big canvas.
 ```sh
 python3 tools/check_swift.py             # every session, Mac or not
 python3 tools/check_weather.py           # any date-rolled feature
+python3 tools/check_yearring.py          # after touching a palette or the ring
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene

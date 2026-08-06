@@ -288,6 +288,13 @@ There are no tests. A change is verified by building and looking at it:
   voice: no congratulating, no instructing, no comparison with another week,
   no exclamation marks. That is the one surface in the app addressed *to* the
   reader, which makes it the one most likely to drift.
+- **A green checker is not a look.** `check_grove.py` passed every rule it had
+  — bounds, spacing, spread, the stored fixture — while the wood came out in
+  visible diagonal stripes, because two multiplied-and-wrapped sequences form
+  a lattice and no rule anybody had thought to write could see it. It was
+  found by rendering a thirty-tree forest and looking at the picture. Every
+  generator in `tools/` can composite its output; do that before believing
+  the exit code.
 - **A checker that restates the values it checks has proved nothing.** Twice
   now: `check_weather.py` parsed the weights and then verified the roll
   against them, so swapping two weights passed cleanly; `check_yearring.py`

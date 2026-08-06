@@ -40,6 +40,7 @@ of what the next release owes users.
 | **Y3** — the year ring | **built, never compiled** |
 | **Y1** — the shelf of hours | **built, never compiled** |
 | **Y2** — the Sunday Post | **built, never compiled** |
+| **Y4** — the grove (trees only; residents not built) | **built, never compiled** |
 
 ### What today added, in one paragraph each
 
@@ -349,6 +350,7 @@ python3 tools/check_swift.py             # every session, Mac or not
 python3 tools/check_weather.py           # any date-rolled feature
 python3 tools/check_yearring.py          # after touching a palette or the ring
 python3 tools/check_post.py              # after any Chronicle kind or letter copy
+python3 tools/check_grove.py             # after touching the grove layout
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene

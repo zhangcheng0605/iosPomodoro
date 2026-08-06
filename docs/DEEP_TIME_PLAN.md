@@ -851,6 +851,59 @@ never hidden. `-PawmodoroGroveHours <n>` jumps to any density.
 
 ---
 
+### As built — Y4's grove (the trees half)
+
+Built on Linux, never compiled. The **residents** — the pond, the beehive, the
+birdhouse, the hedge that flowers — are not built; nor are the four
+time-of-day grades or the hundred-hour panoramic postcard. The trees are the
+half that carries the idea, and they are the half with a compatibility
+contract in it, which is why they went first.
+
+**Two bugs, found two different ways, and the second is the more useful
+story.**
+
+`check_grove.py` found the first before anything was rendered. The layout used
+φ−1 for x and √5−2 for y — and √5−2 *is* φ−1 squared, so both axes were
+golden-ratio-derived and the sequences came back into phase at Fibonacci
+intervals. Trees *n* and *n+89* landed 0.0097 apart: one tree drawn twice.
+Invisible until ninety hours of focus, which is months. √2−1 takes the closest
+pair to 0.0686.
+
+The checker **missed** the second. Rendering a thirty-tree wood and looking at
+it showed obvious diagonal stripes — two multiplied-and-wrapped sequences form
+a lattice however irrational the multipliers are, and no rule about bounds,
+spacing or spread can see that. A deterministic splitmix32 jitter of 0.06
+breaks it: the worst 15° direction bucket falls from 53 % of near pairs to
+24 %. The checker now measures near-neighbour directions, which is the thing
+the eye was measuring. **A generator's output needs looking at even when its
+checker is green** — the checker only knows the questions somebody thought to
+ask it.
+
+**The layout is frozen.** `Grove.position(of:)` and `Grove.hash` are both
+written out, and `check_grove.py` carries a stored fixture. Everything above
+that fixture parses the real constants out of the Swift, which is
+self-consistent by construction; only the fixture notices a coefficient
+moving. Same two halves as `check_weather.py`.
+
+**`check_swift.py` grew a rule here too.** `Grove.Stage` and `Stray.Stage`
+shared a simple name, which is what the checker matches on, so it merged their
+case lists and reported three confident wrong failures — this file's switches
+blamed for the cat's trust arc. Duplicate enum names are now a single failure
+asking for a rename, and the ambiguous name is dropped rather than checked
+against a merged list. The better fix was still the better name: `Growth`.
+
+**Other decisions:**
+
+- **A cap of 120 trees**, which is not a cap on anything earned — the hours
+  keep counting everywhere else. Past that the canopy has closed and more
+  sprites make a green rectangle.
+- **Trees are positioned by their base**, like the stray and the snail, for
+  the reason `Stray.groundLine` records: anchoring a centre puts a tall tree's
+  roots lower than a short one's, and the error grows with the art.
+- **The only number near it** is "the next is about 38 minutes away", phrased
+  as an observation rather than a countdown. No percentage, no next milestone,
+  no trees-to-go.
+
 ## Phase Z — The Window Sill (presence, and the one dangerous migration)
 
 Deliberately last: the only phase that cannot ship from the command line,

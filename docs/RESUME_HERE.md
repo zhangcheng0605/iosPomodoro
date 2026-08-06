@@ -11,6 +11,12 @@ quality — eleven checkers are green and every sprite was rendered and looked a
 it is a statement about what tonight is for. Expect a handful of errors, fix
 them, and then look at the things no checker can judge.
 
+**A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
+monetization era (currency, cart, accessories, dens, interactions, photos,
+macOS). It is not tonight's problem: nothing in it starts before this
+backlog has been through the compiler. It is mentioned here so it isn't
+discovered mid-era.
+
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
 

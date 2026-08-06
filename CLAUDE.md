@@ -54,6 +54,14 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.
 
+**The next era is planned:** `docs/HEARTH_PLAN.md` — the fifth plan document
+— covers the owner's monetization brief: the acorn currency, the Magpie's
+Cart, accessories (closing DELIGHT's E2), dens, the interaction era, the
+Scrapbook, and macOS. It deliberately overrides one old anti-goal (monuments,
+not meters) and records the terms — eight binding fences. **It does not start
+until the Mac evening has compiled the Deep Time backlog.** Hand it to the
+builder whole; every decision is pre-made in it.
+
 **Current focus:** `docs/DEEP_TIME_PLAN.md` — the fourth plan document,
 phases V-Z (weather, sound, the open hour, the long now, widgets). **Phase 0
 is built except 0e**: the Chronicle, the world calendar, the conventions and

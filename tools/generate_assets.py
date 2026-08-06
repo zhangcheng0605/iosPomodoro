@@ -74,6 +74,38 @@ def encode(wav_path, m4a_path):
         check=True, capture_output=True)
 
 
+def graded(sig, part):
+    """One loop, at one time of day, by deterministic transform.
+
+    The same idea `generate_scenes.py` applies to a place: draw it once, then
+    grade it four ways rather than authoring four. A grade here is two knobs —
+    a spectral tilt and a level — because those are what the ear actually
+    reads as "later". Night is darker and quieter; dawn is thin and bright;
+    dusk sits between. Day is the recipe unchanged, so the existing six sound
+    exactly as they always have at noon.
+    """
+    if part == "day":
+        return sig
+    # A one-pole tilt: mix the signal with a smoothed copy of itself. More
+    # smoothing is a darker sound, and it costs one pass.
+    tilt, level = {
+        "dawn": (0.25, 0.92),
+        "dusk": (0.55, 0.86),
+        "night": (0.80, 0.72),
+    }[part]
+    smoothed = np.copy(sig)
+    # Two passes of a simple lowpass; coefficient from the tilt.
+    a = 0.35 + 0.55 * tilt
+    for _ in range(2):
+        out = np.empty_like(smoothed)
+        acc = 0.0
+        for i in range(len(smoothed)):
+            acc = acc + a * (smoothed[i] - acc)
+            out[i] = acc
+        smoothed = out
+    return (sig * (1.0 - tilt) + smoothed * tilt) * level
+
+
 def write_loop(name, sig):
     """A looping ambience: WAV out, AAC in, and the exact frame count kept.
 
@@ -83,14 +115,18 @@ def write_loop(name, sig):
     every time round. The app trims the decoded buffer to the number below
     before scheduling it, which is why the number has to travel with the file.
     """
-    wav_path = os.path.join(RES, name + ".wav")
-    m4a_path = os.path.join(RES, name + ".m4a")
-    write_wav(name + ".wav", sig)
-    encode(wav_path, m4a_path)
-    os.remove(wav_path)
     LOOP_FRAMES[name] = len(sig)
-    kb = os.path.getsize(m4a_path) / 1024
-    print(f"  {name}.m4a: {len(sig) / SR:.1f}s, {kb:.0f} KB, {len(sig)} frames")
+    total = 0
+    for part in ("dawn", "day", "dusk", "night"):
+        stem = name if part == "day" else f"{name}_{part}"
+        wav_path = os.path.join(RES, stem + ".wav")
+        m4a_path = os.path.join(RES, stem + ".m4a")
+        write_wav(stem + ".wav", graded(sig, part))
+        encode(wav_path, m4a_path)
+        os.remove(wav_path)
+        total += os.path.getsize(m4a_path)
+    print(f"  {name}: 4 grades, {len(sig) / SR:.1f}s, "
+          f"{total / 1024:.0f} KB, {len(sig)} frames")
 
 
 LOOP_FRAMES = {}

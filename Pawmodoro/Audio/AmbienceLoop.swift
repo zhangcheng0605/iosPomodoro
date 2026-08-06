@@ -29,6 +29,8 @@ final class AmbienceLoop {
     private let player = AVAudioPlayerNode()
     private var buffers: [String: AVAudioPCMBuffer] = [:]
     private var current: Ambience = .off
+    /// Which grade is loaded, so a session that crosses dusk can reload.
+    private var currentPart: DayPart?
     private var attached = false
     private var connectedFormat: AVAudioFormat?
     private var configObserver: NSObjectProtocol?
@@ -40,10 +42,13 @@ final class AmbienceLoop {
     private init() {}
 
     func play(_ ambience: Ambience) {
-        guard ambience != current || !engine.isRunning else { return }
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+        guard ambience != current || part != currentPart || !engine.isRunning
+        else { return }
         current = ambience
+        currentPart = part
 
-        guard ambience != .off, let buffer = buffer(for: ambience) else {
+        guard ambience != .off, let buffer = buffer(for: ambience, part: part) else {
             player.stop()
             return
         }
@@ -74,6 +79,7 @@ final class AmbienceLoop {
         let wanted = current
         guard wanted != .off else { return }
         current = .off
+        currentPart = nil
         play(wanted)
     }
 
@@ -117,6 +123,7 @@ final class AmbienceLoop {
             let wanted = self.current
             guard wanted != .off else { return }
             self.current = .off
+            self.currentPart = nil
             self.play(wanted)
         }
     }
@@ -127,9 +134,10 @@ final class AmbienceLoop {
     /// crossfade between two of them, so there is nothing to keep a second
     /// decoded buffer for. Eighteen of these resident would be most of a
     /// hundred megabytes.
-    private func buffer(for ambience: Ambience) -> AVAudioPCMBuffer? {
-        if let cached = buffers[ambience.rawValue] { return cached }
-        guard let name = ambience.fileName,
+    private func buffer(for ambience: Ambience, part: DayPart) -> AVAudioPCMBuffer? {
+        guard let name = ambience.assetName(for: part) else { return nil }
+        if let cached = buffers[name] { return cached }
+        guard
               let url = Bundle.main.url(forResource: name, withExtension: "m4a")
                 ?? Bundle.main.url(forResource: name, withExtension: "m4a",
                                    subdirectory: "Resources"),
@@ -161,7 +169,7 @@ final class AmbienceLoop {
                 result = trimmed
             }
         }
-        buffers = [ambience.rawValue: result]
+        buffers = [name: result]
         return result
     }
 }

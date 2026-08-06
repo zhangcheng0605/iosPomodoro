@@ -118,6 +118,23 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
+    /// The bundled loop for a time of day.
+    ///
+    /// Four grades per loop, derived from one recipe by the generator the way
+    /// `generate_scenes.py` grades a place — so the hour you *hear* and the
+    /// hour you *see* come from the same clock, and `-PawmodoroClock 22` pins
+    /// both. Day is the ungraded recipe, which is why the original six sound
+    /// at noon exactly as they always have.
+    func assetName(for part: DayPart) -> String? {
+        guard let base = fileName else { return nil }
+        switch part {
+        case .day: return base
+        case .dawn: return base + "_dawn"
+        case .dusk: return base + "_dusk"
+        case .night: return base + "_night"
+        }
+    }
+
     /// Base name of the bundled loop, or nil when no sound should play.
     var fileName: String? {
         switch self {

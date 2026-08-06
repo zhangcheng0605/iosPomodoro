@@ -1,9 +1,13 @@
-# The Sound Almanac — fifty tracks, zero licenses
+# The Sound Almanac — sixty-five tracks, zero licenses
 
-> **Status: built.** All fifty tracks generate, the gapless AVAudioEngine
+> **Status: built.** All sixty-five tracks generate, the gapless AVAudioEngine
 > player and the Sound Studio ship, and radio mode works. Outstanding from
 > this spec: the pixel cassette icons for the shelf (§1) and the buddy's
 > bpm-synced ear twitch (§4).
+>
+> The last fifteen are Deep Time's **Phase W5** and are in §6, below —
+> three mixtapes behind a third kind of gate that is neither free, nor bought,
+> nor travelled to.
 
 This supersedes the five-loop version of Phase G in
 [CONTENT_PLAN.md](CONTENT_PLAN.md). The ask grew: **fifty lo-fi/ambient
@@ -212,3 +216,106 @@ Plus = 50 tracks, the mixer, radio. Update `PaywallView` copy and
 
 Debug flags: `-PawmodoroTrack <id>` (start with a track playing),
 `-PawmodoroUnlockMusic` (all mixtapes, without Plus). Add to CLAUDE.md's table.
+
+---
+
+## 6. Music III — fifteen found tracks (Deep Time, phase W5)
+
+Catalog 50 → 65. The new gate is `MusicGate.found(MusicFinding)`, and the
+whole point of it is in the name: these three tapes are earned by a **way of
+playing**, not by paying and not by travelling. Plus does not open them.
+The cart does not stock them. A Plus owner and a free one earn them on
+identical terms, which is `Ambience.isFound`'s rule carried from sound to
+music.
+
+None of the three needed a new store. Two ask counters the app has kept for
+years — `SessionLog.nightSessions` and `Stray.hasJoined` — and the third
+keeps its tally in the Chronicle under `ChronicleEvent.Kind.tape`, capped at
+five rows in a lifetime because rows stop being written the moment the tape is
+found.
+
+### Rainy Day Tapes — `found(.rainyday)`
+
+Five sessions finished with a rain-family loop playing (`Ambience.isRain`:
+rain, drizzle, storm, tent). Written to be heard **with** something else, which
+is the only set in the catalogue that is, and three rules follow:
+
+- **no texture bed** — the rain loop *is* the bed, and a second one is mud;
+- **brush kit, never a hat or a shaker** — both live exactly where rain does
+  and both lose;
+- **the `rain` room** — the master chain scoops 42 % out of 1.15–3 kHz and
+  rolls off at 5.2 kHz, so the loop sits in the gap and the treble is given
+  away rather than fought over.
+
+| # | Track | bpm | key | lead | space |
+|---|---|---|---|---|---|
+| 51 | Windowpane Study | 66 | C | ep + brush | 0.78 |
+| 52 | Gutter Song | 62 | Am | pad + sub | 0.72 |
+| 53 | Second Umbrella | 70 | F | marimba + brush | 0.80 |
+| 54 | Wet Pavement | 64 | Dm | ep + pad | 0.70 |
+| 55 | Nothing Urgent | 68 | G | musicbox + pad + brush | 0.74 |
+
+### Night Shift — `found(.nightshift)`
+
+Ten sessions finished after dark — twice the crickets' five, deliberately, so
+the two finds are separate evenings instead of arriving together and one of
+them going unnoticed. Sub, pad and music box; the `night` room rolls off at
+4.3 kHz, darker than anything else here.
+
+| 56 | Third Coffee | 64 | C | ep + pad + sub | 0.76 |
+|---|---|---|---|---|---|
+| 57 | The Building Is Empty | 60 | Em | pad + musicbox | 0.68 |
+| 58 | Corridor Light | 66 | Am | musicbox + sub + pad | 0.72 |
+| 59 | Small Hours | 62 | F | pad + ep | 0.70 |
+| 60 | Nobody Is Awake | 68 | Dm | pad + sub + marimba | 0.66 |
+
+### Soot's Tape — `found(.soot)`
+
+The stray's trust arc, completed. Music box over a pad throughout — the box is
+nearly all fundamental, so the `lullaby` room barely grades it at all.
+
+**Hidden until found**, which makes it the second exception to "locked content
+is shown with a padlock, never hidden" and the same exception for the same
+reason: a greyed-out row called *Soot's Tape* on day one tells somebody there
+is a cat coming, and that is a two-week story spoiled in order to advertise
+nothing.
+
+| 61 | The Hedge | 56 | Am | musicbox + pad | 0.62 |
+|---|---|---|---|---|---|
+| 62 | Fence Post | 60 | C | musicbox + pad | 0.66 |
+| 63 | Six Feet Away | 54 | Em | musicbox + pad | 0.58 |
+| 64 | She Stayed | 58 | F | musicbox + pad | 0.64 |
+| 65 | Indoor Cat | 52 | C | musicbox + pad + sub | 0.60 |
+
+### Two knobs added to the engine
+
+`Track` gained `space` and `room`, and neither is a rewrite of anything.
+
+**`space`** is a density multiplier on the melody and chord-repeat rolls.
+`energy` already said how busy a track is *rhythmically*; this says how often a
+note is played at all, and the two are genuinely different — all fifteen of
+these are energy 1 or 2 and would still have been far too full at the density
+the first fifty were written at. Sparse is not the same as slow. Default 1.0
+multiplies the existing constants by exactly one, so the original fifty render
+bit-identically; that was checked rather than assumed.
+
+**`room`** picks a row of the `ROOMS` table — one lowpass and an optional
+`scoop(low, high, depth)` applied in the master chain. `None` is the old
+behaviour (lowpass 7200), which is why nothing that shipped moved.
+
+### Radio
+
+`radioPick` gained a third input. Place affinity alone would have hidden all
+fifteen forever: `here` is non-empty at seven of the eight places and the pool
+is `here` whenever it is. Found tapes now join the pool when their *occasion*
+is on — rain in the sky or in the speaker, night or dusk, and Soot's always,
+because hers has no occasion but her. That makes radio the surface where a
+find is most audible: the app starts playing it back to you unprompted.
+
+### Size
+
+65 tracks ≈ 12.4 MB of AAC (was 9.5 MB for 50). Release `.app` went
+**37.9 MB → 40.5 MB** against a 45 MB ceiling. That leaves ~4.5 MB, which is
+not much: the next thing to add audio should measure before it writes recipes,
+and the generator's `TOTAL_BUDGET_MB` assertion now projects over
+`len(TRACKS)` rather than a hard-coded 50.

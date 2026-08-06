@@ -61,6 +61,7 @@ STORES = {
     "Shelf": "Keepsake.swift",
     "Scrapbook": "Snapshot.swift",
     "Stray": "Stray.swift",
+    "ClockRing": "HourBell.swift",
 }
 
 # Anything that can make a store smaller.
@@ -172,6 +173,13 @@ MERGED_BY = {
     "chronicle": "chronicle",
     "owned": "ids",
     "keepsakes": "keepsakes",
+    # The clock ring is the same shape as the heard list — an id to the first
+    # date it happened — so it is merged by the same function rather than by a
+    # copy of it. Two devices that were each sitting through a different small
+    # hour end up having sat through both, and the earlier date wins for any
+    # hour they share. No new port and no new fingerprint: there is no new
+    # arithmetic to be wrong about.
+    "clockRing": "heard",
 }
 
 

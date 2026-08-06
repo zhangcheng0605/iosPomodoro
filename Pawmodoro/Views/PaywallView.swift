@@ -74,8 +74,12 @@ struct PaywallView: View {
             )
             feature(
                 icon: "speaker.wave.2.fill",
-                title: "The whole Sound Almanac",
-                detail: "All fifty lo-fi tracks at once, the mixer that layers a sound under a track, and radio — which picks for you, matched to where you are and the hour."
+                // Deliberately no longer "all fifty": the catalogue is
+                // sixty-five and three of its mixtapes are not for sale at any
+                // price. Claiming the whole shelf here would be the paywall
+                // taking credit for the things it cannot give you.
+                title: "The Sound Almanac",
+                detail: "Fifty lo-fi tracks the moment you tap, the mixer that layers a sound under a track, and radio — which picks for you, matched to where you are and the hour."
             )
             feature(
                 icon: "paintpalette.fill",

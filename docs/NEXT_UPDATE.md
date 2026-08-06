@@ -73,10 +73,25 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   `-PawmodoroFillJournal <n>` were added for exactly this and have now been
   used once each; the *organic* paths (1-in-12 odds, five real sightings)
   still have not run.
-- **Everything audio, by ear.** Fifty music tracks and five one-shots have been
+- **Everything audio, by ear.** Sixty-five music tracks and five one-shots have
+  been
   verified structurally and never listened to. Given that all fifty tracks were
   silently unplayable on device until build 2, this is the single biggest
-  untested surface in the app.
+  untested surface in the app. **The four hour bells join this list** — sixteen
+  WAVs whose levels `tools/check_bell.py` measures and whose *voices* nobody
+  has heard. They fail soft: a bad file is a quiet hour and nothing on screen
+  looks wrong. Play all four on a device, at night and at noon, before the
+  release that carries them.
+  **The fifteen W5 tracks are the newest entry, and one of them needs a
+  particular listen:** the Rainy Day Tapes are the only music in this app
+  written to be played *alongside* something, and the whole claim is that a
+  42 % scoop at 1.15–3 kHz leaves room for the rain loop. That is a claim
+  about two files heard together and no measurement made on either one
+  separately can settle it. Turn on Rain, play Windowpane Study, and listen
+  for whether either is fighting the other. The other ten want an ordinary
+  ear-pass; the Soot's Tape five are the sparsest things in the catalogue and
+  the failure mode to listen for is a music box that reads as a sine with a
+  decay on it.
 - **iPhone SE layout** — no SE runtime installed here. If the stray or the
   constellations collide with a control, move `Stage.x`, never
   `Stray.groundLine`. The homestead is the new entry here: its residents are

@@ -49,6 +49,17 @@ struct PomodoroSettings: Codable, Equatable {
     /// been a second thing to remember.
     var clockFace: ClockFace = .ring
 
+    /// One soft strike at the top of each real hour, while a phase is running.
+    ///
+    /// On by default, and this is the one default worth defending: the strike
+    /// is three seconds, it arrives at most once a session, and off by default
+    /// would mean a feature almost nobody ever meets. It is also the only
+    /// sound in the app that arrives *unasked* while you are working, which is
+    /// why it gets a switch of its own rather than riding on the ambience
+    /// volume — somebody who wants silence has to be able to say so in one
+    /// tap, without also giving up the rain.
+    var hourBellEnabled: Bool = true
+
     init() {}
 
     private enum CodingKeys: String, CodingKey {
@@ -56,7 +67,7 @@ struct PomodoroSettings: Codable, Equatable {
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames, worn
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
-        case liveActivityEnabled, clockFace
+        case liveActivityEnabled, clockFace, hourBellEnabled
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -107,6 +118,9 @@ struct PomodoroSettings: Codable, Equatable {
         clockFace = try container.decodeIfPresent(
             ClockFace.self, forKey: .clockFace
         ) ?? fallback.clockFace
+        hourBellEnabled = try container.decodeIfPresent(
+            Bool.self, forKey: .hourBellEnabled
+        ) ?? fallback.hourBellEnabled
     }
 
     // MARK: Naming

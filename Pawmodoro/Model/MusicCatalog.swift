@@ -34,6 +34,9 @@ enum MusicCatalog {
         MusicCollection(id: "nighttrain", title: "Night Train", blurb: "Rail rhythm at half speed.", gate: .plus),
         MusicCollection(id: "onsen", title: "Moonlit Onsen", blurb: "Mallets and plucks over water.", gate: .plus),
         MusicCollection(id: "starfall", title: "Starfall", blurb: "The sparsest set. Space between notes.", gate: .plus),
+        MusicCollection(id: "rainyday", title: "Rainy Day Tapes", blurb: "Written to leave room for the rain.", gate: .found(.rainyday)),
+        MusicCollection(id: "nightshift", title: "Night Shift", blurb: "For the hours nobody else is up for.", gate: .found(.nightshift)),
+        MusicCollection(id: "soot", title: "Soot's Tape", blurb: "Five lullabies. Nobody knows where she got them.", gate: .found(.soot)),
     ]
 
     static let tracks: [MusicTrack] = [
@@ -87,6 +90,21 @@ enum MusicCatalog {
         MusicTrack(id: "ridge_light", title: "Ridge Light", collection: "starfall", gate: .plus, bpm: 58, energy: 1, loopFrames: 729928),
         MusicTrack(id: "perseid_tape", title: "Perseid Tape", collection: "starfall", gate: .plus, bpm: 56, energy: 1, loopFrames: 756000),
         MusicTrack(id: "hello_moon", title: "Hello, Moon", collection: "starfall", gate: .plus, bpm: 46, energy: 1, loopFrames: 460172),
+        MusicTrack(id: "windowpane_study", title: "Windowpane Study", collection: "rainyday", gate: .found(.rainyday), bpm: 66, energy: 1, loopFrames: 641456),
+        MusicTrack(id: "gutter_song", title: "Gutter Song", collection: "rainyday", gate: .found(.rainyday), bpm: 62, energy: 1, loopFrames: 682840),
+        MusicTrack(id: "second_umbrella", title: "Second Umbrella", collection: "rainyday", gate: .found(.rainyday), bpm: 70, energy: 2, loopFrames: 604800),
+        MusicTrack(id: "wet_pavement", title: "Wet Pavement", collection: "rainyday", gate: .found(.rainyday), bpm: 64, energy: 1, loopFrames: 661504),
+        MusicTrack(id: "nothing_urgent", title: "Nothing Urgent", collection: "rainyday", gate: .found(.rainyday), bpm: 68, energy: 2, loopFrames: 622592),
+        MusicTrack(id: "third_coffee", title: "Third Coffee", collection: "nightshift", gate: .found(.nightshift), bpm: 64, energy: 1, loopFrames: 661504),
+        MusicTrack(id: "the_building_is_empty", title: "The Building Is Empty", collection: "nightshift", gate: .found(.nightshift), bpm: 60, energy: 1, loopFrames: 705600),
+        MusicTrack(id: "corridor_light", title: "Corridor Light", collection: "nightshift", gate: .found(.nightshift), bpm: 66, energy: 1, loopFrames: 641456),
+        MusicTrack(id: "small_hours", title: "Small Hours", collection: "nightshift", gate: .found(.nightshift), bpm: 62, energy: 1, loopFrames: 682840),
+        MusicTrack(id: "nobody_is_awake", title: "Nobody Is Awake", collection: "nightshift", gate: .found(.nightshift), bpm: 68, energy: 1, loopFrames: 622592),
+        MusicTrack(id: "the_hedge", title: "The Hedge", collection: "soot", gate: .found(.soot), bpm: 56, energy: 1, loopFrames: 756000),
+        MusicTrack(id: "fence_post", title: "Fence Post", collection: "soot", gate: .found(.soot), bpm: 60, energy: 1, loopFrames: 705600),
+        MusicTrack(id: "six_feet_away", title: "Six Feet Away", collection: "soot", gate: .found(.soot), bpm: 54, energy: 1, loopFrames: 784000),
+        MusicTrack(id: "she_stayed", title: "She Stayed", collection: "soot", gate: .found(.soot), bpm: 58, energy: 1, loopFrames: 729928),
+        MusicTrack(id: "indoor_cat", title: "Indoor Cat", collection: "soot", gate: .found(.soot), bpm: 52, energy: 1, loopFrames: 814152),
     ]
 
     static func tracks(in collection: String) -> [MusicTrack] {

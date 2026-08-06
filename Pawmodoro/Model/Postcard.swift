@@ -40,6 +40,14 @@ struct Postcard: Codable, Equatable, Identifiable {
         /// a postcard with a blank field is a bug waiting to be found by
         /// somebody's decoder.
         case panorama
+        /// Every hour on the dial, at least once. The one card that is about
+        /// a *time* rather than a place — `place` still records where you
+        /// happened to be when the last hour landed, because a postcard with
+        /// a blank field is a bug waiting for somebody's decoder.
+        ///
+        /// Minted once and never again: the ring cannot un-fill, so a second
+        /// one could only ever be a duplicate.
+        case belltower
     }
 
     var resolvedPlace: Place { Place(rawValue: place) ?? .meadow }

@@ -13,6 +13,9 @@ final class SoundPlayer {
     private var chimePlayer: AVAudioPlayer?
     private var purrPlayer: AVAudioPlayer?
     private var heardPlayer: AVAudioPlayer?
+    /// Held for the same reason `heardPlayer` is: an `AVAudioPlayer` that goes
+    /// out of scope stops playing, and a three-second bell would be a click.
+    private var bellPlayer: AVAudioPlayer?
     private var purrStopTask: Task<Void, Never>?
     private var currentAmbience: Ambience = .off
     private var sessionConfigured = false
@@ -68,6 +71,24 @@ final class SoundPlayer {
         guard let player = makePlayer(named: sound.fileName) else { return }
         player.volume = 0.5
         heardPlayer = player
+        player.play()
+    }
+
+    /// The top of the hour, in the voice of wherever you are sitting.
+    ///
+    /// Exactly the same shape as `playHeard`: one pre-rendered file, one
+    /// `AVAudioPlayer` of its own, played once over whatever else is going.
+    /// The hour's grade is *in the file* — there is no filtering, ducking or
+    /// layering here, and there must not be, because that is the class of
+    /// change that once made the whole app unlaunchable on a real device.
+    ///
+    /// Quieter than the chime and a shade under a found sound. The chime is
+    /// the app telling you something; this is only the world going on.
+    func playBell(_ voice: BellVoice, part: DayPart) {
+        configureSessionIfNeeded()
+        guard let player = makePlayer(named: voice.fileName(for: part)) else { return }
+        player.volume = 0.45
+        bellPlayer = player
         player.play()
     }
 

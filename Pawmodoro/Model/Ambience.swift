@@ -150,6 +150,21 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
+    /// Whether this is rain of some kind.
+    ///
+    /// Currently the same four as `hasVariants`, and deliberately not written
+    /// as `hasVariants`: that one is a fact about how many files exist, this
+    /// one is a fact about what the sound *is*. A fifth rendering of the cafe
+    /// would silently make the Rainy Day Tapes findable by sitting in a cafe.
+    var isRain: Bool {
+        switch self {
+        case .rain, .drizzle, .storm, .raintent: true
+        case .off, .purr, .fireplace, .forest, .cafe, .ocean, .wind, .creek,
+             .library, .snowhush, .temple, .crickets, .cicadas, .nighttrain,
+             .emberslate: false
+        }
+    }
+
     /// Which of the three today is, at this place. Deterministic, so the rain
     /// you sat in this morning is the rain you sit in this afternoon — and a
     /// different one tomorrow.

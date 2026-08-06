@@ -220,6 +220,18 @@ enum Weather: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// Whether there is water coming out of the sky.
+    ///
+    /// Snow is not rain here, and that is a decision rather than an oversight:
+    /// what this answers is "does the rain family belong right now", and snow
+    /// is the weather that *replaces* the rain family for a season.
+    var isRain: Bool {
+        switch self {
+        case .drizzle, .rain, .storm: true
+        case .clear, .overcast, .breeze, .mist, .golden, .snow: false
+        }
+    }
+
     /// Why that chip is glowing, in three words. Nil exactly when `suggests`
     /// is nil, so the glow and its explanation cannot drift apart — a chip
     /// that lights up for no stated reason is a chip people learn to ignore.

@@ -762,6 +762,81 @@ however many weeks that takes. No count is shown anywhere; the dark hours
 are visible only by looking. Completing the ring mints one postcard: the
 buddy beneath a bell tower.
 
+### As built — W4, the Bell of Hours
+
+Built and driven on a Mac. Both configurations compile; the dial, the
+bell-tower card, the Settings toggle and the strike itself were all seen on
+screen. **Nobody has heard it** — simulator audio comes out of the Mac and
+this session had no ears. That is the one row of this phase still owed a
+listen, and the recipes are the kind that go wrong quietly (a bell that reads
+as a sine with a decay on it is a bell nobody notices is bad).
+
+**The strike is two mechanisms kept apart, and that is the whole design.**
+The *sound* is an event with a switch on it and no consequences. The *ring* is
+a collection of having-been-present. Wiring them into one thing would have
+made the switch cost you a collection, which is the shape of a dark pattern
+however gently it is worded.
+
+**Four voices, not eight.** `BellVoice.at(_:)` maps eight places onto church,
+buoy, bowl and clock — a bell at that distance is a bell, and eight recipes
+would have been eight chances to write a dull one. The Keep deliberately gets
+the *clock* rather than the church bell: `Heard.farbell` is already "one
+stroke from the Keep, before anyone is up", and an hourly bell in that voice
+would have turned the rarest findable sound in the app into wallpaper. Peaks
+gets the clock too, on the grounds that it already has a viaduct and a train,
+and a station clock is what that place would have.
+
+**The hour's grade is baked, not applied.** Sixteen WAVs — four voices at four
+times of day — through the same `graded()` the ambience loops use, but with a
+second table (`BELL_GRADES`) that turns both knobs much further: night is 0.30
+of the day level against the loops' 0.72. A loop at 0.72 is a quieter room; a
+*strike* at 0.72 at three in the morning is an interruption, which is the one
+thing this feature may never be. Measured off the shipped files, peak and RMS
+both come out monotonic — night < dawn < dusk < day — and `check_bell.py`
+asserts it so a recipe change cannot quietly invert it.
+
+**Presence is a five-second window, and that is the feature.** `strikeHourIfDue`
+compares `WorldCalendar.now` against the top of its own hour; it records the
+hour as *dealt with* whether or not it rings, and only rings if the tick landed
+within five seconds of the turn. An app suspended across midnight comes back
+to its first tick minutes late, falls outside the window, and neither rings nor
+records — because you were not there. No extra state, no foreground hook, and
+nothing to keep in step: the rule and its enforcement are the same three lines.
+
+**Divergences from the plan:**
+
+- **A new `ChronicleEvent.Kind.bell`, written only on firsts.** Reusing
+  `.heard` was the cheaper option and it is a lie: that kind's subject is a
+  `Heard` id, its one consumer turns subjects back into `Heard` values, and an
+  hour number in it is a row every reader silently drops. The new case costs
+  two switch arms — the year ring's `rimLabel` and the Sunday Post's coverage —
+  and both are demanded by checkers rather than by memory. It writes at most
+  twenty-five rows in a lifetime: one per position, plus `"ring"` on the day
+  the dial closes.
+- **The ring keeps its own store rather than being read out of the chronicle.**
+  The chronicle is capped at 4000 events and drops its oldest, so a dial
+  derived from it would go dark again after enough years — a decaying
+  collection, arrived at by accident. `StorageKeys.clockRing`, merged by
+  `Crossing.merge(heard:)` because it is the identical shape and deserves no
+  second copy of one line.
+- **The bell tower on the postcard is drawn, not sprited.** Four shapes and a
+  ring of marks through `Theme`, for the same reason the ring clock face is
+  drawn: a pixel-art tower would need redrawing against eight places at four
+  times of day to stand in front of any of them. Drawn, it is a silhouette,
+  which is what a tower is at that distance anyway.
+- **`ClockRing` has no `clear()`.** Every other store has one because some
+  surface calls it; nothing would call this one, and an uncalled wipe is a
+  shrink that `check_crossing.py` would have to forgive for a reason that
+  isn't true.
+- **`-PawmodoroBell` takes an optional hour** (`-PawmodoroBell 3`), so the
+  night grade and the small-hours end of the dial are reachable without
+  waiting for 3 a.m., and it deliberately ignores the Settings toggle — a
+  silent run then means the audio is wrong rather than the switch being off.
+  `-PawmodoroClockRing [n]` fills the dial outward from the ordinary working
+  day; `23` leaves exactly one position dark, which is the state worth
+  looking at, because a dial one short of closed must still say nothing about
+  how many are missing.
+
 ### W5. Music III — fifteen tracks, three gates that are ways of playing
 
 - **Rainy Day Tapes** — five sparse pieces voiced to duet with the
@@ -775,6 +850,67 @@ buddy beneath a bell tower.
 
 Radio folds unlocked tracks into its filters, so every find audibly widens
 the world. Catalog 50 → 65; recipes in SOUND_ALMANAC style appended there.
+
+### As built — W5, Music III
+
+Built and driven on a Mac; both configurations compile and the shelf, the
+gates and the earn path were all seen on screen. **Nobody has heard any of the
+fifteen** — the same row W4 is owed, and for the same reason. The recipes are
+in `tools/generate_music.py` and the full spec is `docs/SOUND_ALMANAC.md` §6.
+
+**The gate is a fourth case, not a fourth store.** `MusicGate.found(
+MusicFinding)`, and `TimerEngine.isUnlocked` answers it by asking the world:
+`log.nightSessions`, `stray.hasJoined`, and a tally in the Chronicle. Only the
+rain had to be remembered at all, because the app already counts the other
+two — and remembering it in the chronicle rather than in a key of its own is
+`hasFound(_ ambience:)`'s argument repeated: the chronicle already survives a
+reinstall, is already cleared by `-PawmodoroResetState`, and is already merged
+across devices by union of ids.
+
+**One new `ChronicleEvent.Kind.tape`, carrying two subjects.** The same shape
+`.bell` uses for `"ring"`: a bare `MusicFinding.rawValue` is one rainy session
+that counted, and `"soot.found"` is the day a tape turned up. Progress rows
+stop the moment the tape is found, so the kind adds at most eight rows in a
+lifetime. The Sunday Post and the year ring read only the arrivals — four
+rainy sessions are steps toward something and the fifth is the thing itself,
+and a letter that said "you sat through the rain for a third time" would be a
+progress bar written out in words.
+
+**Divergences from the plan:**
+
+- **The night set needs ten sessions, not the crickets' five.** Landing both
+  finds on the same evening would have made one of them invisible.
+- **Soot's Tape is hidden until it arrives**, which makes it the app's second
+  exception to "locked content is shown with a padlock, never hidden" — and
+  the same exception, for the same reason, as Soot herself. The other two
+  shelves are shown greyed with a line saying what kind of hour finds them,
+  and deliberately **no count of how many are left**, unlike the arrival
+  shelves right above them. An arrival is a distance and a number is the
+  honest way to say one; "two more rainy sessions" would turn sitting through
+  the rain into an errand, and the errand would be to wait for bad weather.
+- **Radio needed fixing, not extending.** Folding found tracks in was not
+  enough on its own: `radioPick` prefers tracks whose collection id matches
+  the current place, and that filter is non-empty at seven of the eight
+  places, so all fifteen would have been unreachable forever. They now join
+  the pool on *occasion* — rain in the sky or in the speaker, night or dusk,
+  Soot's always.
+- **Two new knobs in the composition engine**, `space` (note density,
+  separate from `energy`'s rhythmic business) and `room` (a master-chain
+  lowpass plus an optional band scoop). The Rainy Day room takes 42 % out of
+  1.15–3 kHz so the tapes *duet* with the rain loop rather than being mixed
+  against it — the whole "leave the midrange open" instruction expressed as a
+  filter rather than as mixing advice nobody would follow. Both default to
+  the old behaviour exactly, and the original fifty were verified to
+  re-render byte-identically (the only diff in the 50 `.m4a` files was the
+  three MP4 timestamp atoms, which were reverted).
+- **`-PawmodoroFindTapes` earns the tapes rather than unlocking them** —
+  five rainy rows in the chronicle, ten after-dark sessions in the log, a
+  joined stray. `-PawmodoroUnlockMusic` lies to `isUnlocked` and leaves the
+  world untouched, which exercises the shelf and nothing behind it: not the
+  arrival rows, not the letter's sentence, not the rim of the year ring.
+
+**Size.** Release `.app` 37.9 MB → **40.5 MB** against the 45 MB ceiling.
+About 4.5 MB left. Anything that adds audio after this measures first.
 
 ### W6. Flags
 

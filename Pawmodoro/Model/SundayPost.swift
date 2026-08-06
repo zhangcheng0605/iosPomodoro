@@ -177,6 +177,30 @@ enum SundayPost {
                          + "and neither of us went to look.")
         }
 
+        // The bell writes a row only the first time an hour of the clock is
+        // filled, so this sentence appears in the handful of weeks somebody
+        // sat through an hour they had never sat through before — and it
+        // names *which* hour, never how many are left. "Three more to go"
+        // would turn a dial you fill by accident into an errand, and the
+        // errand would be to be awake at four in the morning.
+        let struck = events.filter { $0.kind == .bell }.compactMap { Int($0.subject) }
+        if let oddest = struck.max(by: {
+            ClockRing.strangeness($0) < ClockRing.strangeness($1)
+        }) {
+            lines.append("The bell caught us sitting at "
+                         + "\(HourWords.spoken(oddest)), which it had not "
+                         + "done before.")
+        }
+
+        // A mixtape that turned up. Only the arrival rows are read — the rainy
+        // tally's rows share the kind and say nothing, because "you sat
+        // through the rain for a third time" is a progress bar written out in
+        // words, which is the one thing the letter is not allowed to be.
+        if let tape = events.filter({ $0.kind == .tape })
+            .compactMap({ MusicFinding(foundSubject: $0.subject) }).first {
+            lines.append(tape.postLine)
+        }
+
         if let dream = events.first(where: { $0.kind == .dream }),
            let subject = Dream.from(id: dream.subject)?.subject {
             lines.append("I dreamed about \(subject).")

@@ -48,10 +48,18 @@ enum StorageKeys {
     /// greeting stores — see `GreetingLog`.
     static let greeted = "pawmodoro.greeted"
 
+    /// Which hours of the clock you have been sitting for when they struck.
+    ///
+    /// Its own key rather than being read back out of the `Chronicle`,
+    /// because the chronicle is capped and drops its oldest events: a dial
+    /// derived from it would quietly go dark again after a few years, and
+    /// nothing in this app is allowed to decay.
+    static let clockRing = "pawmodoro.clockRing"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
-        owned, keepsakes, snapshots, greeted,
+        owned, keepsakes, snapshots, greeted, clockRing,
     ]
 }
 
@@ -442,6 +450,17 @@ enum LaunchOptions {
     /// heard without waiting for a storm.
     static let unlockSounds = isSet("-PawmodoroUnlockSounds")
 
+    /// Earn all three found mixtapes, rather than unlocking them.
+    ///
+    /// Deliberately different from `-PawmodoroUnlockMusic`, which lies to
+    /// `isUnlocked` and leaves the world untouched. This writes the world the
+    /// honest way — five rainy sessions in the chronicle, ten after-dark
+    /// sessions in the log, a joined stray — so everything downstream of a
+    /// find is exercised too: the arrival rows, the Sunday Post's sentence,
+    /// the year ring's rim, and radio actually reaching for the new tracks.
+    /// The unlock flag reaches none of that.
+    static let findTapes = isSet("-PawmodoroFindTapes")
+
     /// Pin which of the rain family's three renderings plays.
     static let forcedVariant: Int? = {
         guard arguments.contains("-PawmodoroVariant") else { return nil }
@@ -451,6 +470,34 @@ enum LaunchOptions {
     /// Seed a history with a one-day hole in it, so both streak states can be
     /// looked at without waiting for a bad week.
     static let seedGap = isSet("-PawmodoroSeedGap")
+
+    /// Ring the hour bell five seconds after launch, once a phase is running.
+    ///
+    /// The honest way to hear one is to be mid-session at the top of an hour,
+    /// which is up to fifty-nine minutes of waiting for a three-second sound.
+    /// Deliberately ignores the Settings toggle, so the flag always makes a
+    /// noise and a silent run means the audio is wrong rather than the switch.
+    static let bell = isSet("-PawmodoroBell")
+
+    /// Which hour to pretend it is when `-PawmodoroBell` fires, e.g.
+    /// `-PawmodoroBell 3` for the night grade and the small-hours position on
+    /// the dial. Without a number it uses the hour it actually is.
+    static let bellHour: Int? = {
+        guard arguments.contains("-PawmodoroBell") else { return nil }
+        return value(after: "-PawmodoroBell").flatMap(Int.init).map { max(0, min(23, $0)) }
+    }()
+
+    /// Fill the clock ring, so the completed dial and the bell-tower card can
+    /// be looked at without living through twenty-four different hours.
+    ///
+    /// Takes an optional count — `-PawmodoroClockRing 23` leaves exactly one
+    /// position dark, which is the state worth checking: a dial one short of
+    /// closed must still say nothing about how many are missing.
+    static let clockRingHours: Int? = {
+        guard arguments.contains("-PawmodoroClockRing") else { return nil }
+        let count = value(after: "-PawmodoroClockRing").flatMap(Int.init) ?? 24
+        return max(0, min(24, count))
+    }()
 
     /// Guarantee a sound this session, e.g. `-PawmodoroHear owlcall`. These
     /// are the rarest things in the app and depend on both a place and an
@@ -533,6 +580,7 @@ enum LaunchOptions {
     static let pinnedDay: Date? = nil
     static let seedChronicle = false
     static let unlockSounds = false
+    static let findTapes = false
     static let forcedVariant: Int? = nil
     static let forcedSeason: Season? = nil
     static let forcedWeather: Weather? = nil
@@ -553,6 +601,9 @@ enum LaunchOptions {
     static let forcedDen: Den? = nil
     static let seedKeepsakes: Int? = nil
     static let seedScrapbook = false
+    static let bell = false
+    static let bellHour: Int? = nil
+    static let clockRingHours: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -590,6 +641,83 @@ enum LaunchOptions {
         if seedChronicle {
             seedChronicleEvents(into: defaults)
         }
+        if let clockRingHours {
+            seedClockRing(clockRingHours, into: defaults)
+        }
+        // Last, and after `seedChronicle` on purpose: that one *replaces* the
+        // event array, so anything appended before it would vanish.
+        if findTapes {
+            seedFoundTapes(into: defaults)
+        }
+    }
+
+    /// Earn all three found mixtapes the way the app would.
+    ///
+    /// Three separate writes, because the three gates ask three different
+    /// parts of the world — which is the design, and a flag that faked one
+    /// number would prove nothing about the other two.
+    private static func seedFoundTapes(into defaults: UserDefaults) {
+        let calendar = Calendar.current
+
+        // The rainy tally: five `.tape` rows, appended to whatever is there.
+        var events: [ChronicleEvent] = []
+        if let data = defaults.data(forKey: StorageKeys.chronicle),
+           let decoded = try? JSONDecoder().decode([ChronicleEvent].self, from: data) {
+            events = decoded
+        }
+        for index in 0..<MusicFinding.rainSessions {
+            let daysAgo = (MusicFinding.rainSessions - index) * 3
+            guard let at = calendar.date(byAdding: .day, value: -daysAgo, to: Date())
+            else { continue }
+            events.append(ChronicleEvent(
+                at: at, kind: .tape, subject: MusicFinding.rainyday.rawValue
+            ))
+        }
+        if let data = try? JSONEncoder().encode(events.sorted(by: { $0.at < $1.at })) {
+            defaults.set(data, forKey: StorageKeys.chronicle)
+        }
+
+        // The after-dark counter. Skipped when `-PawmodoroNightSessions` is
+        // also on, which has already written its own and would otherwise get
+        // ten more than it asked for.
+        if nightSessions == nil {
+            seedNightSessions(MusicFinding.nightSessions, into: defaults)
+        }
+
+        // And the cat, in the door. `strayFirstSeen` too: her stage is counted
+        // back from it, and a cat who has joined but never arrived is a state
+        // the app cannot otherwise be in.
+        if defaults.object(forKey: StorageKeys.strayFirstSeen) == nil,
+           let start = calendar.date(byAdding: .day, value: -14, to: Date()) {
+            defaults.set(start, forKey: StorageKeys.strayFirstSeen)
+        }
+        defaults.set(Date(), forKey: StorageKeys.strayJoined)
+    }
+
+    /// Fill the first `count` hours of the dial, working outward from the
+    /// ordinary working day so that a partial ring looks like somebody's
+    /// actual life rather than the numbers 0 to n.
+    ///
+    /// Compiled out of Release with the rest of this block, and it writes the
+    /// same `[String: Date]` shape `ClockRing` reads — see its `save()`.
+    private static func seedClockRing(_ count: Int, into defaults: UserDefaults) {
+        // Furthest from one in the afternoon last, which is `ClockRing`'s own
+        // idea of strange: the small hours are the ones you fill by accident,
+        // years in.
+        let order = (0..<24).sorted {
+            ClockRing.strangeness($0) < ClockRing.strangeness($1)
+        }
+        let calendar = Calendar.current
+        var flat: [String: Date] = [:]
+        for (index, hour) in order.prefix(count).enumerated() {
+            let daysAgo = 3 + index * 4
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: Date()),
+                  let at = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day)
+            else { continue }
+            flat[String(hour)] = at
+        }
+        guard let data = try? JSONEncoder().encode(flat) else { return }
+        defaults.set(data, forKey: StorageKeys.clockRing)
     }
 
     /// Six weeks of world events, thinning out toward the past the way a real

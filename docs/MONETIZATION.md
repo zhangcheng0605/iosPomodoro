@@ -19,7 +19,10 @@ own, which matters for App Review.
 
 > **This section is out of date.** It describes the app as of Phase G. Since
 > then the cast has grown to nine buddies, the wardrobe to eight themes and the
-> music to fifty tracks. The current split is the M section of
+> music to sixty-five tracks — fifty of which Plus opens, and fifteen of which
+> nothing does: the Rainy Day Tapes, Night Shift and Soot's Tape are found by
+> playing, on identical terms for a Plus owner and a free one. The current
+> split is the M section of
 > [CONTENT_PLAN.md](CONTENT_PLAN.md), which is authoritative; rewriting this
 > table is part of that phase's remaining work, not the stray's.
 

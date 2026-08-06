@@ -75,6 +75,37 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// if there is ever one, and there does not have to be — reuses the
         /// kind rather than needing another.
         case panorama
+        /// An hour of the clock struck while you were sitting for it, written
+        /// **only the first time** that hour is filled — so this kind can add
+        /// at most twenty-five rows to the log in a lifetime, not one an hour.
+        /// The subject is the hour as a number, or `"ring"` for the day the
+        /// dial closed.
+        ///
+        /// Its own kind rather than borrowing `.heard`: that kind's subject is
+        /// a `Heard` id and its one reader turns subjects back into `Heard`
+        /// values, so an hour number in it would be a row that every consumer
+        /// silently drops — a lie that reads perfectly well. The cost of the
+        /// new case is two switch arms, both of which the checkers demand.
+        case bell
+        /// A mixtape you play your way into, rather than buying or travelling
+        /// to. Two subjects share the kind, the way `.bell` shares one between
+        /// an hour number and `"ring"`:
+        ///
+        /// - a `MusicFinding.rawValue` — one session that counted toward the
+        ///   rainy-day tapes. Written **only while that tape is still
+        ///   unfound**, so the kind is capped by the tape's own threshold at
+        ///   five rows in a lifetime rather than one a session.
+        /// - a `MusicFinding.foundSubject` (`"soot.found"`) — the day a tape
+        ///   turned up, written once each. A note for the letter and the year
+        ///   ring, never the authority: `TimerEngine.hasFound(_:)` reads the
+        ///   world — the tally, the night counter, the stray — and never this.
+        ///
+        /// The rainy tally lives here rather than in a store of its own for
+        /// the reason `hasFound(_ ambience:)` gives: the chronicle already
+        /// survives a reinstall, is already cleared by `-PawmodoroResetState`,
+        /// and is already merged across devices by union. A second place to
+        /// keep "has this happened" is a second place for it to disagree.
+        case tape
     }
 }
 
@@ -141,6 +172,16 @@ final class Chronicle {
 
     func count(of kind: ChronicleEvent.Kind) -> Int {
         events.count { $0.kind == kind }
+    }
+
+    /// How many times one particular thing has been written down.
+    ///
+    /// Only ever asked of kinds whose rows are capped by the thing that writes
+    /// them — a count over an append-only log that drops its oldest at 4000
+    /// would otherwise be a number that can go *down*, which is the one shape
+    /// this app does not allow.
+    func count(of kind: ChronicleEvent.Kind, subject: String) -> Int {
+        events.count { $0.kind == kind && $0.subject == subject }
     }
 
     func clear() {

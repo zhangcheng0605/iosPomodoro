@@ -74,7 +74,29 @@ def encode(wav_path, m4a_path):
         check=True, capture_output=True)
 
 
-def graded(sig, part):
+# A bed you stop hearing, graded so that later sounds later.
+LOOP_GRADES = {
+    "dawn": (0.25, 0.92),
+    "dusk": (0.55, 0.86),
+    "night": (0.80, 0.72),
+}
+
+# An *event*, graded much harder, and deliberately not the table above.
+#
+# A loop at 0.72 is a quieter room; a bell at 0.72 at three in the morning is
+# an interruption, which is the one thing the hour strike may never be. So the
+# strike's night level is under a third of its noon level and its tilt is
+# almost all the way over — at 3 a.m. it is felt more than heard, which is
+# what "near-subliminal" has to mean for something that arrives without being
+# asked for.
+BELL_GRADES = {
+    "dawn": (0.40, 0.55),
+    "dusk": (0.55, 0.72),
+    "night": (0.85, 0.30),
+}
+
+
+def graded(sig, part, grades=LOOP_GRADES):
     """One loop, at one time of day, by deterministic transform.
 
     The same idea `generate_scenes.py` applies to a place: draw it once, then
@@ -83,16 +105,15 @@ def graded(sig, part):
     reads as "later". Night is darker and quieter; dawn is thin and bright;
     dusk sits between. Day is the recipe unchanged, so the existing six sound
     exactly as they always have at noon.
+
+    `grades` picks the table. Ambience uses the default; the hour bells pass
+    `BELL_GRADES`, which is the same two knobs turned much further.
     """
     if part == "day":
         return sig
     # A one-pole tilt: mix the signal with a smoothed copy of itself. More
     # smoothing is a darker sound, and it costs one pass.
-    tilt, level = {
-        "dawn": (0.25, 0.92),
-        "dusk": (0.55, 0.86),
-        "night": (0.80, 0.72),
-    }[part]
+    tilt, level = grades[part]
     smoothed = np.copy(sig)
     # Two passes of a simple lowpass; coefficient from the tilt.
     a = 0.35 + 0.55 * tilt
@@ -865,6 +886,129 @@ def make_windchime(dur=3.2, seed=11):
     return normalize(distant(sig, 3200.0), 0.26)
 
 
+# ----------------------------------------------------------- the hour bells
+#
+# Four voices, one per kind of place, each rendered at the four times of day
+# through `graded(..., BELL_GRADES)`. Nothing is layered or filtered at
+# runtime: a strike is a file, chosen by place and by the hour it strikes,
+# and played once on its own `AVAudioPlayer` exactly the way a "heard" sound
+# is. Sixteen small WAVs is the whole cost of the feature.
+#
+# They are all deliberately quieter and further away than `make_farbell`,
+# which is a *findable* sound and wants to be noticed. These are not findable
+# and must not be noticed — they mark the hour for somebody who is already
+# sitting, and the best outcome is that most of them go by unremarked.
+
+
+def make_bell_church(dur=3.2):
+    """Meadow, Woods, Blossom. A parish bell a field or two away.
+
+    `make_farbell`'s inharmonic partial set at a lower fundamental and a
+    slower attack — the attack is what puts distance on a bell, more than the
+    filter does.
+    """
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    for ratio, amp, decay in (
+        (1.0, 1.0, 0.9), (2.02, 0.48, 1.4), (2.97, 0.26, 2.0),
+        (4.21, 0.14, 2.8), (5.51, 0.07, 3.6),
+    ):
+        sig += amp * np.sin(2 * np.pi * 165.0 * ratio * t) * np.exp(-decay * t)
+    # A hint of the second stroke a real tower gives you, well under the first.
+    # The head is copied first: `sig[late:] += sig[:n - late]` reads samples it
+    # has already overwritten, which numpy does not promise anything about.
+    late = int(SR * 1.45)
+    sig[late:] += 0.22 * sig[:n - late].copy()
+    return normalize(distant(sig * np.minimum(1.0, t / 0.012), 1500.0), 0.24)
+
+
+def make_bell_buoy(dur=3.2):
+    """Harbor Isle, and Cloudspire. A bell on something that is moving.
+
+    Two uneven strikes rather than one, because a bell buoy is rung by the
+    swell and the swell is not a metronome. Lower, flatter partials: this is a
+    struck iron cage, not a cast bell.
+    """
+    n = int(SR * dur)
+    sig = np.zeros(n)
+    for start_s, gain in ((0.04, 1.0), (1.18, 0.62)):
+        begin = int(SR * start_s)
+        count = n - begin
+        local = np.arange(count) / SR
+        strike = np.zeros(count)
+        for ratio, amp, decay in (
+            (1.0, 1.0, 1.6), (2.44, 0.60, 2.4), (3.71, 0.30, 3.4), (6.10, 0.12, 5.0),
+        ):
+            strike += amp * np.sin(2 * np.pi * 232.0 * ratio * local) * np.exp(-decay * local)
+        sig[begin:] += strike * np.minimum(1.0, local / 0.004) * gain
+    return normalize(distant(sig, 2400.0), 0.24)
+
+
+def make_bell_bowl(dur=3.6):
+    """Moonlit Onsen. A standing bowl, struck once, still going.
+
+    One near-pure fundamental with a beat on it — two partials a fraction of a
+    hertz apart is what gives a bowl its slow shimmer, and it is the reason
+    this one does not need a second strike to stay interesting.
+    """
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    for ratio, amp, decay, detune in (
+        (1.0, 1.0, 0.55, 0.7), (2.76, 0.34, 0.95, 1.3), (5.40, 0.11, 1.8, 2.1),
+    ):
+        base = 261.6 * ratio
+        sig += amp * np.exp(-decay * t) * (
+            np.sin(2 * np.pi * base * t) + 0.9 * np.sin(2 * np.pi * (base + detune) * t)
+        )
+    # The mallet, not the metal: a short knock under the first tenth of a second.
+    knock = shaped_noise(n, np.random.default_rng(41), 0.8, cutoff=1800.0)
+    sig += 0.20 * knock * np.exp(-38.0 * t)
+    return normalize(distant(sig * np.minimum(1.0, t / 0.003), 2600.0), 0.24)
+
+
+def make_bell_clock(dur=3.2):
+    """Sunstone Keep, and Starfall Peaks. A cased movement striking the hour.
+
+    A hammer on a coiled rod rather than a bell: a hard, dry attack, a short
+    decay, and almost no low end. Struck twice at a fixed spacing, because the
+    one thing a clock is, is regular.
+    """
+    n = int(SR * dur)
+    sig = np.zeros(n)
+    for start_s, gain in ((0.03, 1.0), (0.86, 0.86)):
+        begin = int(SR * start_s)
+        count = n - begin
+        local = np.arange(count) / SR
+        rod = np.zeros(count)
+        for ratio, amp, decay in (
+            (1.0, 1.0, 2.6), (2.71, 0.42, 3.6), (5.14, 0.20, 5.2), (8.03, 0.08, 7.0),
+        ):
+            rod += amp * np.sin(2 * np.pi * 349.2 * ratio * local) * np.exp(-decay * local)
+        # The hammer itself, which is half of what a strike sounds like indoors.
+        rod += 0.16 * shaped_noise(count, np.random.default_rng(59), 0.5,
+                                   cutoff=5200.0) * np.exp(-90.0 * local)
+        sig[begin:] += rod * gain
+    return normalize(distant(sig, 3400.0), 0.24)
+
+
+def write_bell(name, sig):
+    """One strike, four times of day, as four one-shot WAVs.
+
+    Not `write_loop`: there is nothing to loop, so nothing to keep
+    frame-exact and no reason to pay AAC's priming frames. Same file shape and
+    same naming convention as the "things heard" — the day grade keeps the
+    bare name, so the app's filename rule stays "base, or base_<part>".
+    """
+    total = 0
+    for part in ("dawn", "day", "dusk", "night"):
+        stem = name if part == "day" else f"{name}_{part}"
+        write_wav(stem + ".wav", graded(sig, part, BELL_GRADES))
+        total += os.path.getsize(os.path.join(RES, stem + ".wav"))
+    print(f"  {name}: 4 grades, {total / 1024:.0f} KB")
+
+
 def write_ambience_table():
     """The generated companion to `Ambience`, holding one number per loop."""
     path = os.path.join(ROOT, "Pawmodoro", "Model", "AmbienceLoops.swift")
@@ -927,5 +1071,10 @@ if __name__ == "__main__":
     write_wav("heard_distantthunder.wav", make_distantthunder())
     write_wav("heard_foghorn.wav", make_foghorn())
     write_wav("heard_geesesouth.wav", make_geesesouth())
+    print("The bell of hours:")
+    write_bell("bell_church", make_bell_church())
+    write_bell("bell_buoy", make_bell_buoy())
+    write_bell("bell_bowl", make_bell_bowl())
+    write_bell("bell_clock", make_bell_clock())
     print("Icon:")
     make_icon()

@@ -160,6 +160,11 @@ enum Crossing {
     }
 
     /// Things heard: union, keeping the earlier date for anything on both.
+    ///
+    /// Also the clock ring, which is the identical shape — a key to the first
+    /// date it happened — and therefore uses this rather than a second copy of
+    /// one line. Two devices each sitting through a different small hour end
+    /// up having sat through both.
     static func merge(heard a: [String: Date], _ b: [String: Date]) -> [String: Date] {
         a.merging(b) { min($0, $1) }
     }

@@ -20,6 +20,10 @@ struct AlmanacView: View {
             tide
             flyway
             aboutNow
+            // Below what is about and above where else there is, because the
+            // dial is not about today at all — it is the one thing on this
+            // page that took months and cannot be hurried.
+            ClockRingView()
             elsewhere
         }
         .padding(16)

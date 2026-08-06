@@ -157,6 +157,8 @@ final class TimerEngine {
     let dreams: DreamDiary
     /// Written to, never read from — yet. See `Chronicle`.
     let chronicle: Chronicle
+    /// Which hours of the clock you have been sitting for. See `ClockRing`.
+    let clockRing: ClockRing
     /// What has been traded for. The balance is not in here — see `Acorns`.
     let pouch: Pouch
     /// What the buddy has left on the desk.
@@ -174,6 +176,14 @@ final class TimerEngine {
     @ObservationIgnored private var rainSeconds: TimeInterval = 0
     /// Which lap the drift last rolled a sighting for, so each lap rolls once.
     @ObservationIgnored private var lastLapRolled = 0
+    /// The top of the hour the bell last dealt with — rung or missed. Nil
+    /// until the first tick of the first phase, which is what stops a session
+    /// started at 9:00:02 from claiming the nine o'clock strike.
+    @ObservationIgnored private var lastStruckHour: Date?
+    /// When this engine was built, which is when the app launched. Debug only,
+    /// and only `-PawmodoroBell` reads it.
+    @ObservationIgnored private let bornAt = Date()
+    @ObservationIgnored private var firedDebugBell = false
 
     init(
         settings: PomodoroSettings? = nil,
@@ -183,6 +193,7 @@ final class TimerEngine {
         stray: Stray = Stray(),
         dreams: DreamDiary = DreamDiary(),
         chronicle: Chronicle = Chronicle(),
+        clockRing: ClockRing = ClockRing(),
         pouch: Pouch = Pouch(),
         shelf: Shelf = Shelf(),
         scrapbook: Scrapbook = Scrapbook()
@@ -195,6 +206,7 @@ final class TimerEngine {
         self.stray = stray
         self.dreams = dreams
         self.chronicle = chronicle
+        self.clockRing = clockRing
         self.pouch = pouch
         self.shelf = shelf
         self.scrapbook = scrapbook
@@ -820,6 +832,30 @@ final class TimerEngine {
         case .free: return true
         case .arrival(let place): return hasReached(place)
         case .plus: return hasPlus
+        case .found(let finding): return hasFound(finding)
+        }
+    }
+
+    /// Whether a found mixtape has turned up.
+    ///
+    /// Deliberately *not* short-circuited by `-PawmodoroUnlockMusic` — that
+    /// belongs one level up, in `isUnlocked`, so this stays a pure question
+    /// about the world. `recordFoundTapes` writes chronicle rows off the back
+    /// of it, and a debug flag that made this true would have the flag
+    /// permanently rewrite somebody's history the first time they used it.
+    ///
+    /// Two of the three ask a counter the app has kept for years. Only the
+    /// rain had to be remembered, and it is remembered in the chronicle for
+    /// the same reasons `hasFound(_ ambience:)` gives.
+    func hasFound(_ finding: MusicFinding) -> Bool {
+        switch finding {
+        case .rainyday:
+            return chronicle.count(of: .tape, subject: finding.rawValue)
+                >= MusicFinding.rainSessions
+        case .nightshift:
+            return log.nightSessions >= MusicFinding.nightSessions
+        case .soot:
+            return stray.hasJoined
         }
     }
 
@@ -858,12 +894,37 @@ final class TimerEngine {
         let available = MusicCatalog.tracks.filter { isUnlocked($0.gate, hasPlus: hasPlus) }
         guard !available.isEmpty else { return nil }
 
+        // A found tape belongs to an *occasion*, not to a place, so place
+        // affinity alone would have hidden all fifteen of them forever:
+        // `here` is non-empty at seven of the eight places, and the pool is
+        // `here` whenever it is. They join the pool when the occasion is on —
+        // which makes radio the surface where a find is most audible, because
+        // the app starts playing it back to you unprompted.
+        let occasion = available.filter { suitsNow($0.gate, part: part) }
         let here = available.filter { $0.collection == settings.place.rawValue }
-        let pool = here.isEmpty ? available : here
+        let preferred = here + occasion
+        let pool = preferred.isEmpty ? available : preferred
         let matched = pool.filter { wanted.contains($0.energy) }
         let choices = (matched.isEmpty ? pool : matched)
             .filter { $0.id != MusicPlayer.shared.current?.id }
         return (choices.isEmpty ? pool : choices).randomElement()
+    }
+
+    /// Whether a found tape's occasion is happening right now.
+    ///
+    /// The third input the plan asked radio to learn — place, hour, and now
+    /// the sky. Everything that is not a found tape answers false: a Plus set
+    /// or an arrival set reaches the pool through `here`, and letting them
+    /// through here as well would just weight them twice.
+    private func suitsNow(_ gate: MusicGate, part: DayPart) -> Bool {
+        guard case .found(let finding) = gate else { return false }
+        switch finding {
+        // The sky or the speaker — either one is a wet afternoon.
+        case .rainyday: return weather.isRain || settings.ambience.isRain
+        case .nightshift: return part == .night || part == .dusk
+        // Always. Hers is the only tape with no occasion but her.
+        case .soot: return true
+        }
     }
 
     /// Radio needs to know the entitlement without owning a StoreManager.
@@ -1350,6 +1411,10 @@ final class TimerEngine {
     }
 
     private func tick() {
+        // Before the drift branch, because an open hour is still an hour and
+        // the person sitting through it was just as present for the strike.
+        strikeHourIfDue()
+        strikeDebugBellIfDue()
         if isDrifting { return tickDrift() }
         guard let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
@@ -1374,6 +1439,98 @@ final class TimerEngine {
         // wrapped to zero, which is exactly what a fresh sighting expects.
         rollSighting()
         HapticsDirector.shared.start()
+    }
+
+    // MARK: The bell of hours
+
+    /// How late a tick may be and still count as having been there for the
+    /// strike.
+    ///
+    /// The ticker runs at 0.25s with 0.1s of tolerance, so five seconds is
+    /// enormously generous for an app that is awake — and it is the whole
+    /// mechanism for the rule that matters: an app suspended in the
+    /// background comes back to its first tick minutes or hours after the
+    /// hour turned, lands outside this window, and neither rings nor records.
+    /// You were not there.
+    private static let strikeWindow: TimeInterval = 5
+
+    /// One strike at the top of each real hour, while a phase is running.
+    ///
+    /// Derived from an absolute `Date` and the hour it falls in, never from a
+    /// count of ticks — same rule as the countdown, and for the same reason.
+    private func strikeHourIfDue() {
+        guard runState == .running, settings.hourBellEnabled else { return }
+        let now = WorldCalendar.now
+        guard let top = WorldCalendar.calendar.dateInterval(of: .hour, for: now)?.start,
+              top != lastStruckHour
+        else { return }
+
+        // Recorded whether or not it rings, so an hour that was missed is
+        // missed exactly once and cannot ring late on the next tick.
+        let hadSeenAnHour = lastStruckHour != nil
+        lastStruckHour = top
+        guard hadSeenAnHour, now.timeIntervalSince(top) < Self.strikeWindow else { return }
+
+        strike(hour: WorldCalendar.calendar.component(.hour, from: top), at: now)
+    }
+
+    /// Ring it, and remember having been here for it.
+    ///
+    /// The hour decides the voice's grade rather than `DayPart.current()`: a
+    /// strike belongs to the hour it strikes, and at 16:59:59 those are two
+    /// different answers.
+    private func strike(hour: Int, at date: Date) {
+        SoundPlayer.shared.playBell(
+            BellVoice.at(settings.place),
+            part: LaunchOptions.forcedDayPart ?? DayPart.from(hour: hour)
+        )
+        // Only the first time an hour is ever filled reaches the chronicle —
+        // one row per position, twenty-four in a lifetime, rather than one an
+        // hour forever in a log that is capped and drops its oldest.
+        guard clockRing.note(hour: hour, at: date) else { return }
+        chronicle.add(.bell, String(hour), at: date)
+        mintBellTowerCardIfDue(at: date)
+    }
+
+    /// The one card the dial mints, the session it closes.
+    ///
+    /// The album is searched rather than a flag being stored, exactly as the
+    /// panorama does it: the album already *is* the record of what has been
+    /// sent, and a second opinion about it is a second thing to keep in step.
+    private func mintBellTowerCardIfDue(at date: Date) {
+        guard clockRing.isComplete,
+              !album.cards.contains(where: { $0.occasion == .belltower })
+        else { return }
+        album.add(Postcard(
+            id: UUID(),
+            date: date,
+            place: settings.place.rawValue,
+            dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+            buddy: settings.buddy.rawValue,
+            occasion: .belltower,
+            sessions: log.todaySessions,
+            sighting: nil,
+            minutes: nil
+        ))
+        chronicle.add(.bell, "ring", at: date)
+    }
+
+    /// `-PawmodoroBell`: one strike, five seconds after launch, once
+    /// something is actually running.
+    ///
+    /// Deliberately not routed through `strikeHourIfDue` — that function's
+    /// whole job is refusing to ring at the wrong moment, and a debug flag
+    /// that had to be threaded through it would be testing the wrong code.
+    /// Compiled away in Release, where `LaunchOptions.bell` is a `false`
+    /// constant.
+    private func strikeDebugBellIfDue() {
+        guard LaunchOptions.bell, !firedDebugBell, runState == .running,
+              Date().timeIntervalSince(bornAt) >= 5
+        else { return }
+        firedDebugBell = true
+        let hour = LaunchOptions.bellHour
+            ?? WorldCalendar.calendar.component(.hour, from: WorldCalendar.now)
+        strike(hour: hour, at: WorldCalendar.now)
     }
 
     /// One soft heartbeat per second over the last ten, tightening as the phase
@@ -1444,6 +1601,7 @@ final class TimerEngine {
             // the threshold it might have just crossed.
             arrival = newlyReachedPlace()
             recordFoundSounds()
+            recordFoundTapes()
             recordToChronicle(seen: seen, dream: dream, bond: bond, figure: figure,
                               arrival: arrival, strayBefore: strayBefore)
             if let arrival, !arrival.isPlus {
@@ -1545,6 +1703,30 @@ final class TimerEngine {
         if log.nightSessions >= 5 { earned.append(.crickets) }
         for sound in earned where !hasFound(sound) {
             chronicle.add(.sound, sound.rawValue)
+        }
+    }
+
+    /// Records progress toward the mixtapes you play your way into, and the
+    /// day each one arrives.
+    ///
+    /// Runs immediately after `recordFoundSounds()` and on the same terms: the
+    /// session is already over, the log is already written, and nothing here
+    /// rolls or decides anything.
+    private func recordFoundTapes() {
+        // The rain tally. One row per session finished with rain playing, and
+        // only while the tape is still out there — so five rows exist forever
+        // after and never a sixth. `settings.ambience` rather than the sky:
+        // the tapes are written to duet with the loop, so the thing that earns
+        // them is having had the loop on, not having been rained on.
+        if !hasFound(.rainyday), settings.ambience.isRain {
+            chronicle.add(.tape, MusicFinding.rainyday.rawValue)
+        }
+        // The arrivals. Written once each, after the tally above, so the
+        // fifth rainy session finds the tape and says so in the same breath.
+        for finding in MusicFinding.allCases where hasFound(finding) {
+            guard chronicle.firstTime(.tape, subject: finding.foundSubject) == nil
+            else { continue }
+            chronicle.add(.tape, finding.foundSubject)
         }
     }
 

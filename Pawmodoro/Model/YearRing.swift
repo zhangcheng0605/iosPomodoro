@@ -185,6 +185,16 @@ extension ChronicleEvent {
         // two kinds were split for.
         case .settledIn: Den(rawValue: subject).map { "first night in \($0.name.lowercased())" }
         case .panorama: Int(subject).map { "\($0) hours, and a wood to show for it" }
+        // The day the dial closed, and only that day. Each of the
+        // twenty-four hours also writes a `.bell` row the first time it
+        // fills, and twenty-four marks would ring the whole circle — an
+        // hour you happened to be awake for is not a day you would
+        // remember, but the one that finished the round is.
+        case .bell: subject == "ring" ? "the clock came all the way round" : nil
+        // The day a tape turned up, and only that day. The rainy tally's rows
+        // share this kind and get no mark: four of them are steps toward
+        // something and the fifth is the thing itself.
+        case .tape: MusicFinding(foundSubject: subject)?.rimLabel
         // Sightings, dreams, sounds and the snail happen often enough that
         // marking every first would ring the whole circle. They are the
         // Sunday Post's material, not the rim's. Trades, keepsakes and

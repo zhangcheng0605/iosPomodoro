@@ -101,13 +101,16 @@ struct SettingsView: View {
                     Toggle("Breathing ring on breaks", isOn: $engine.settings.breatheOnBreaks)
                     Toggle("Settle in before focus", isOn: $engine.settings.settleInBeforeFocus)
                     Toggle("Lock screen countdown", isOn: $engine.settings.liveActivityEnabled)
+                    Toggle("Bell on the hour", isOn: $engine.settings.hourBellEnabled)
                 } header: {
                     Text("Behaviour")
                 } footer: {
                     Text("Settling in takes three slow breaths before the "
                          + "countdown starts. Tap anywhere to skip it. The lock "
                          + "screen countdown is drawn by the system, so it costs "
-                         + "no battery.")
+                         + "no battery. The bell marks the top of each hour "
+                         + "while you are sitting, in the voice of wherever "
+                         + "you are, and is quieter the later it gets.")
                 }
 
                 scrapbookSection

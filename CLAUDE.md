@@ -139,12 +139,15 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroPanorama` | Put the hundred-hour panoramic postcard in the album — four months of sitting, otherwise |
 | `-PawmodoroGreet [warmth]` | Force the day's greeting: `daily`, `away`, `gladder`, `first`. The warmest needs a week away |
 | `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
+| `-PawmodoroFindTapes` | *Earn* the three found mixtapes rather than unlocking them — five rainy sessions, ten after dark, a joined stray. The only way to see what a find writes: the chronicle rows, the letter's sentence, the year ring's rim |
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
 | `-PawmodoroNightSessions <n>` | Seed n sessions finished after dark, for the star atlas |
 | `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `sky`, `adrift`, `hour`, `wood`, `neighbour`, `magpie`, `finery`, `den`, `brought`, `snapshot`, `yours`, `surreal` |
 | `-PawmodoroFillDreams` | Mark every dream as dreamed, for looking at the diary |
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
+| `-PawmodoroBell [0-23]` | Ring the hour bell 5s after launch once a phase runs; a number picks the hour, so `-PawmodoroBell 3` is the night grade |
+| `-PawmodoroClockRing [n]` | Fill n positions of the clock ring; `23` leaves one dark, which is the state worth looking at |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
 | `-PawmodoroBond <n>` | Seed n completed sessions — every bond level, every homestead resident (`200` for all eight), and a full pouch |
@@ -183,13 +186,15 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are twenty now (`swift`, `contrast`, `grove`,
+without a Mac** — there are twenty-two now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
 `weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`,
-`tide`, `greeting`, `treats`), they take about twenty-five seconds
+`tide`, `greeting`, `treats`, `bell`, `music`), they take about half a minute
 between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
-compiler; the rest each guard one system.
+compiler; the rest each guard one system. One of them needs a Mac:
+`check_music.py` shells out to `afinfo` to read the shipped `.m4a` files, so
+it only tells the truth on the Mac pass.
 Most of this app is written on Linux and compiled days later, so a
 typo costs Mac time — which is the scarce resource here, not Linux time. It
 closes the mechanical error classes a compiler would catch instantly:
@@ -315,7 +320,19 @@ There are no tests. A change is verified by building and looking at it:
   onto the head (not cut), and the file is a whole number of bars in samples.
   Both are asserted. The app then decodes the AAC once and schedules the buffer
   with `.loops` — `AVAudioPlayer` cannot loop AAC without a tick. Never edit an
-  `.m4a` or `MusicCatalog.swift`; both are generated.
+  `.m4a` or `MusicCatalog.swift`; both are generated. Re-running the generator
+  rewrites all sixty-five files and changes none of them: `afconvert` stamps
+  three MP4 timestamp atoms, so the diff is eighteen bytes per file and
+  `git checkout --` is the correct response. Check before believing it —
+  compare the bytes *outside* offsets 50-56, 166-172 and 266-272.
+  `tools/check_music.py` is the other half: it reads every shipped file with
+  `afinfo` and fails if any of them is not **1 ch, 22.05 kHz** or has drifted
+  from its `loopFrames`. That format assertion is the build-2 crash written
+  down — the Simulator cannot reproduce it, and nothing else looks.
+- **Sixty-five tracks is 12.4 MB and the app is 40.5 MB of a 45 MB ceiling.**
+  There is about four and a half megabytes left. Anything that adds audio or
+  art from here measures the Release `.app` first and says the number out
+  loud; the generator's own budget assertion only covers the music folder.
 - **A sighting is decided once, then it's pure maths.** `rollSighting()` runs
   at the start of a focus phase and stores two points on the progress bar;
   everything after is a function of `engine.progress`, so there is no timer,

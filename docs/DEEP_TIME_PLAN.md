@@ -688,6 +688,65 @@ something, swans that went over, a candle lit and a resident who moved in
 each plug in a *sentence*, not a screen. Small systems get their weekly
 paragraph instead of their own UI.
 
+### As built — Y1 and Y2
+
+Both built on Linux, never compiled, and both backfill: they are lenses on
+`SessionLog` and the Chronicle rather than anything that had to be recorded in
+advance.
+
+**Y1, the shelf.** Twenty-four candles, two sprites, both templates — so the
+only difference between lit and out is the silhouette (a flame, or two curls
+of smoke going the other way), which reads better than colour at 26pt and
+reads identically in all eight themes. Fourteen of the twenty-four hours carry
+no caption at all, which is the right amount to say about 2 p.m.
+
+Two decisions inside it:
+
+- **The shelf does not honour `-PawmodoroClock`,** unlike `nightSessions` and
+  the year ring. Those ask which *part of the day* a session belongs to and a
+  debug clock may have an opinion about that. A candle is a specific hour of a
+  specific day: forcing one would light a candle that is a lie, and candles
+  never go out.
+- **Its two dream entries cost no new art** — they are the shelf's own candles
+  as silhouettes, and the hours they key on come from `ShelfOfHours` rather
+  than being written out again, so the diary and the shelf cannot drift about
+  which candle is which.
+
+**Y2, the letter.** Built early and deliberately, because it is the
+aggregation surface the rest of the era leans on: a system that gets a
+sentence here does not need a screen.
+
+That is also the source of its one real failure mode, and it is a silent one.
+Add a `ChronicleEvent.Kind`, forget its sentence, and the letter simply never
+mentions it — forever, reading perfectly well without it. Nothing else in the
+toolchain can see the *absence* of a sentence. `tools/check_post.py` therefore
+requires every kind to be either handled in `eventLines` or listed in
+`SundayPost.silentKinds` with a reason. Only `sound` is there, waiting for
+Phase W.
+
+The other half of that file fences the letter's **voice**. This is the one
+surface in the app addressed *to* the reader rather than describing them, so
+it is the one most likely to drift into the register everything else avoids:
+no congratulating, no instructing, no comparison with another week, no
+exclamation marks. Fifteen rules, each paired with what it would actually be
+doing. Verified by writing "Well done, that is better than last week!" into a
+bond line and watching it fail four ways at once.
+
+**Divergences:**
+
+- **No stationery, stamps or album filing yet.** Y2 asks for seasonal papers,
+  a stamp per place and for letters to file into the album beside the
+  postcards. The letter is a plain card for now; the album's `Postcard` type is
+  keyed to places and occasions and would need widening to hold a letter,
+  which is a storage change and wants to be made once, with the Year Postcard
+  from Y3.
+- **One letter, the most recent.** Past letters are not kept. Nothing stores
+  them, because everything they say is recomputable from the Chronicle — and a
+  *list* of letters is a collection, which makes a missed week a hole in it.
+- **The shelf shows no count anywhere**, per the anti-goal, including in the
+  accessibility labels: an unlit candle reads as "unlit", never "not yet".
+  There is no "yet", because there is nothing anybody is working toward.
+
 ### Y3. The year — the Year Ring, with Quiet Anniversaries pinned
 
 A circular calendar in the almanac: 365 thin wedges, each day tinted with

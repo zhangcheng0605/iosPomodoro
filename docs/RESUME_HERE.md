@@ -38,6 +38,8 @@ of what the next release owes users.
 | **V5** — the old snail | **built, never compiled** |
 | **X1** — the Drift, the open hour | **built, never compiled** |
 | **Y3** — the year ring | **built, never compiled** |
+| **Y1** — the shelf of hours | **built, never compiled** |
+| **Y2** — the Sunday Post | **built, never compiled** |
 
 ### What today added, in one paragraph each
 
@@ -269,7 +271,29 @@ noise. If they look like noise, widen the wedge gap (`+ 0.35` in
 `YearRingView.wheel`) before touching any colour — the colours are measured
 and the gap is not.
 
-### 6. Share a postcard
+### 6. The shelf, and the letter
+
+Both are in the stats sheet — the letter at the very top, the shelf under the
+year ring.
+
+```sh
+tools/run-sim.sh --demo --headless -PawmodoroSeedStats -PawmodoroSeedChronicle
+```
+
+`-PawmodoroSeedStats` seeds a fortnight, so there *is* a finished week behind
+today and the letter has something to say. Without it the letter correctly
+does not appear at all — that is the design, not a missing view.
+
+- **The letter** should be five or six sentences and read like an animal wrote
+  it. If any line reads as a status report, the fix is the sentence, not the
+  layout. `check_post.py` guards the register mechanically but it cannot tell
+  you whether a sentence is any good.
+- **The shelf** should show a cluster of lit candles around whatever hours the
+  seeded history used, and a dark rim elsewhere. Check there is no count
+  anywhere on it — that is the anti-goal, and it is the kind of thing that
+  gets helpfully added back later.
+
+### 7. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -277,7 +301,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 7. The four gates of 0e — the actual reason for a Mac evening
+### 8. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 
@@ -324,6 +348,7 @@ Revisit when Phase Y's Homestead panorama earns a big canvas.
 python3 tools/check_swift.py             # every session, Mac or not
 python3 tools/check_weather.py           # any date-rolled feature
 python3 tools/check_yearring.py          # after touching a palette or the ring
+python3 tools/check_post.py              # after any Chronicle kind or letter copy
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene

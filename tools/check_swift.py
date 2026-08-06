@@ -270,21 +270,34 @@ def enum_cases():
     found = {}
     duplicates = {}
     for path in swift_files():
-        source = open(path).read()
-        for match in re.finditer(
-            r"enum (\w+):[^\n{]*CaseIterable[^\n{]*\{(.*?)\n(?:    )?\}",
-            source, re.S,
-        ):
-            name, body = match.group(1), match.group(2)
+        lines = open(path).read().splitlines()
+        for index, line in enumerate(lines):
+            header = re.match(r"^([ ]*)enum (\w+):([^{]*)\{", line)
+            if not header or "CaseIterable" not in header.group(3):
+                continue
+            outer, name = header.group(1), header.group(2)
+            indent = outer + "    "
+            # Walked line by line rather than matched with one regex, because
+            # a regex has to choose between two failures and there is no third
+            # option. Stopping at the first closing brace folds a nested
+            # enum's cases into its parent — `Accessory` came back owning
+            # `.head` and `.neck` from its own `Slot`, and the checker reported
+            # four confident, wrong non-exhaustive switches. Stopping at the
+            # *matching* brace instead swallows the nested enum whole, because
+            # `finditer` will not return overlapping matches: `Species.Rarity`
+            # silently stopped being checked at all. Walking sees both.
             cases = []
-            for line in body.splitlines():
-                arm = re.match(r"\s*case (\w+)(?: = .*)?$", line)
+            for row in lines[index + 1:]:
+                if row.startswith(outer + "}"):
+                    break
+                arm = re.match(re.escape(indent) + r"case (\w+)(?: = .*)?$", row)
                 if arm:
                     cases.append(arm.group(1))
-                else:
-                    listed = re.match(r"\s*case (\w+(?:, \w+)+)$", line)
-                    if listed:
-                        cases.extend(n.strip() for n in listed.group(1).split(","))
+                    continue
+                listed = re.match(
+                    re.escape(indent) + r"case (\w+(?:, \w+)+)$", row)
+                if listed:
+                    cases.extend(n.strip() for n in listed.group(1).split(","))
             if cases:
                 if name in found and found[name] != cases:
                     duplicates.setdefault(name, set()).add(rel(path))

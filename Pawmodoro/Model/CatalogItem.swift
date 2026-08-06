@@ -27,6 +27,7 @@ enum CatalogItem: Hashable, Identifiable {
     case buddy(Buddy)
     case place(Place)
     case theme(AppTheme)
+    case accessory(Accessory)
 
     /// Stable across launches: purchases are stored as these strings.
     ///
@@ -37,6 +38,7 @@ enum CatalogItem: Hashable, Identifiable {
         case .buddy(let buddy): "buddy.\(buddy.rawValue)"
         case .place(let place): "place.\(place.rawValue)"
         case .theme(let theme): "theme.\(theme.rawValue)"
+        case .accessory(let accessory): "wear.\(accessory.rawValue)"
         }
     }
 
@@ -47,6 +49,7 @@ enum CatalogItem: Hashable, Identifiable {
         case "buddy": return Buddy(rawValue: parts[1]).map(CatalogItem.buddy)
         case "place": return Place(rawValue: parts[1]).map(CatalogItem.place)
         case "theme": return AppTheme(rawValue: parts[1]).map(CatalogItem.theme)
+        case "wear": return Accessory(rawValue: parts[1]).map(CatalogItem.accessory)
         default: return nil
         }
     }
@@ -68,6 +71,11 @@ enum CatalogItem: Hashable, Identifiable {
         case .buddy: 120
         case .place: 150
         case .theme: 40
+        // The cheapest thing in the cart on purpose: two afternoons. The
+        // wardrobe is where somebody finds out the free road actually goes
+        // somewhere, and a first purchase three weeks away teaches the
+        // opposite lesson.
+        case .accessory: 15
         }
     }
 
@@ -76,6 +84,7 @@ enum CatalogItem: Hashable, Identifiable {
         case .buddy(let buddy): buddy.name
         case .place(let place): place.name
         case .theme(let theme): theme.displayName
+        case .accessory(let accessory): accessory.name
         }
     }
 
@@ -85,16 +94,18 @@ enum CatalogItem: Hashable, Identifiable {
         case .buddy: .buddies
         case .place: .places
         case .theme: .themes
+        case .accessory: .wardrobe
         }
     }
 
     enum Shelf: String, CaseIterable, Identifiable {
-        case buddies, places, themes
+        case wardrobe, buddies, places, themes
 
         var id: String { rawValue }
 
         var title: String {
             switch self {
+            case .wardrobe: "Things to wear"
             case .buddies: "Someone to sit with"
             case .places: "Somewhere to sit"
             case .themes: "How it looks"
@@ -106,6 +117,7 @@ enum CatalogItem: Hashable, Identifiable {
         /// buy anything.
         var blurb: String {
             switch self {
+            case .wardrobe: "Small, and none of it does anything."
             case .buddies: "They came on their own. I only made room."
             case .places: "Further out than you have been. I have been."
             case .themes: "The same world, in a different light."
@@ -124,10 +136,16 @@ enum CatalogItem: Hashable, Identifiable {
     /// the walk to Whispering Woods would undo the only progression in this
     /// app that is a story rather than a purchase.
     static var all: [CatalogItem] {
-        Buddy.allCases.filter { $0.isPlus }.map(CatalogItem.buddy)
+        Accessory.allCases.map(CatalogItem.accessory)
+            + Buddy.allCases.filter { $0.isPlus }.map(CatalogItem.buddy)
             + Place.allCases.filter { $0.isPlus }.map(CatalogItem.place)
             + AppTheme.allCases.filter { $0.isPlus }.map(CatalogItem.theme)
     }
+
+    /// Everything in the wardrobe is for sale — there is no free accessory,
+    /// because there is no accessory the app gives you and none it withholds
+    /// for a story. They are the one category where the cart is the only road
+    /// apart from Plus.
 
     static func items(on shelf: Shelf) -> [CatalogItem] {
         all.filter { $0.shelf == shelf }

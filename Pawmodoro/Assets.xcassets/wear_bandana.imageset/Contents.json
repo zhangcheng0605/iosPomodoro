@@ -1,0 +1,12 @@
+{
+  "images": [
+    {
+      "filename": "wear_bandana.png",
+      "idiom": "universal"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

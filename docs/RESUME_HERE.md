@@ -13,9 +13,10 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **its first two phases are already built**: the acorn pouch and
-the Magpie's Cart. They are blind like everything else here, and section 12
-below is their walkthrough. The rest of the era has not started.
+macOS) — and **its first three phases are already built**: the acorn pouch,
+the Magpie's Cart and the Wardrobe. They are blind like everything else here,
+and sections 12 and 13 are their walkthroughs. The rest of the era has not
+started.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -493,6 +494,38 @@ lot). What is left for an eye:
 - **Trade something, then check the four pickers.** The traded buddy should
   be selectable everywhere immediately, and the padlock gone.
 
+### 13. The wardrobe
+
+Settings → *Your buddy* → the two accessory rows.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroOwnEverything -PawmodoroWear sunhat,bow
+$S -PawmodoroOwnEverything -PawmodoroWear knittedcap,scarf -PawmodoroBuddy owl
+$S -PawmodoroOwnEverything -PawmodoroWear crown,bellcollar -PawmodoroBuddy penguin
+$S -PawmodoroAcorns 5                   # the locked state, with prices showing
+```
+
+`check_accessories.py` has cleared 1180 piece-on-frame placements: nothing
+floats, nothing clips off the top or the sides, and everything reads at 2:1
+against the fur it sits on. What is left is what only an eye settles:
+
+- **Watch a full animation cycle wearing a hat.** The anchors are measured per
+  *frame*, so the hat should ride the blink, the bounce and the stretch without
+  sliding. If it slides, the frame it slides on has the wrong anchor and the
+  fix is in `generate_accessories.py`, never in `BuddyAnchors.swift` — that
+  file is generated.
+- **The sleeping poses.** The curled-up poses are where a collar is most
+  likely to look wrong, and they are the pose the buddy holds for twenty-five
+  minutes at a time.
+- **The bounce.** `BuddySprite` pads its clip upward by 30 % so a hat survives
+  `happy_1`. Finish a focus session wearing the sun hat and watch the top of
+  it. If the brim is cut, raise `BuddySprite.headroom` — the checker parses
+  that constant, so it will follow.
+- **The one-time remark.** Put a piece on for the first time: the caption
+  should say it once, then go back to normal on the next session, and never
+  say it again for that piece even after a relaunch.
+
 ---
 
 ## Verification loop (every session)
@@ -506,6 +539,7 @@ python3 tools/check_grove.py             # after touching the grove layout
 python3 tools/check_residents.py         # after moving a resident or its art
 python3 tools/check_species.py           # after any roster or weather-gate change
 python3 tools/check_catalog.py           # after any price, earn rate or fence
+python3 tools/check_accessories.py       # after any buddy sprite or wardrobe change
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"

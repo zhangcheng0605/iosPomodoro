@@ -23,6 +23,10 @@ struct BuddyView: View {
 
     private var isAtHome: Bool { engine.settings.place == buddy.homePlace }
 
+    /// What this buddy has on. Per buddy, so switching to the owl and back
+    /// finds the cat still in her hat.
+    private var outfit: [Accessory] { engine.settings.outfit(for: buddy) }
+
     /// Whether the buddy is asleep *right now* — which the owl inverts after
     /// dark. Drives the zzz, the petting response and the caption.
     private var isNapping: Bool {
@@ -170,7 +174,8 @@ struct BuddyView: View {
                 buddy: buddy,
                 assetName: BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0),
                 size: spriteSize,
-                sleeping: isNapping
+                sleeping: isNapping,
+                outfit: outfit
             )
         } else {
             TimelineView(.periodic(from: .now, by: tickInterval)) { context in
@@ -178,6 +183,7 @@ struct BuddyView: View {
                     buddy: buddy,
                     assetName: frameName(at: context.date),
                     size: spriteSize,
+                    outfit: outfit,
                     sleeping: isNapping
                 )
             }
@@ -282,6 +288,12 @@ struct BuddyView: View {
         // every other break. It lasts the one break and is then gone for good.
         if let resident = engine.residentArrived {
             return "\(name) has noticed — \(resident.arrivalLine)"
+        }
+        // Said once, the first time a thing is worn, and then never again —
+        // an accessory that keeps being remarked on is an accessory you take
+        // off. Cleared as soon as the caption has had a turn.
+        if let wearing = engine.justWore {
+            return "\(name) \(wearing.firstWornLine)"
         }
         // Ahead of the quirk poses on purpose: a soak happens every other
         // break, and the two of them sitting together is the payoff of a

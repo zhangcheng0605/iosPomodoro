@@ -320,6 +320,20 @@ enum LaunchOptions {
     /// Open the Magpie's Cart on launch.
     static let openCart = arguments.contains("-PawmodoroCart")
 
+    /// Dress the current buddy on launch, e.g. `-PawmodoroWear sunhat,bow`.
+    ///
+    /// A list rather than one, because the interesting question is always how
+    /// two pieces sit together — a hat and a collar at once is the composite
+    /// that catches an anchor being wrong.
+    static let forcedWear: [Accessory] = {
+        guard arguments.contains("-PawmodoroWear"),
+              let raw = value(after: "-PawmodoroWear")
+        else { return [] }
+        return raw.split(separator: ",").compactMap {
+            Accessory(rawValue: String($0).trimmingCharacters(in: .whitespaces))
+        }
+    }()
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -418,6 +432,7 @@ enum LaunchOptions {
     static let forcedAcorns: Int? = nil
     static let ownEverything = false
     static let openCart = false
+    static let forcedWear: [Accessory] = []
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

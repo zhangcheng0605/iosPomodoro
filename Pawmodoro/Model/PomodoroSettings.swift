@@ -19,6 +19,13 @@ struct PomodoroSettings: Codable, Equatable {
     /// Names the user has given their buddies, keyed by species. Empty means
     /// "use the name it came with".
     var buddyNames: [String: String] = [:]
+    /// What each buddy is wearing, as `"<buddy>.<slot>" -> accessory id`.
+    ///
+    /// Per buddy rather than one global outfit: the hat belongs to the cat,
+    /// and switching to the owl and back should find her still wearing it.
+    /// Keyed by strings for the same reason `buddyNames` is — retiring a
+    /// buddy or an accessory can never make somebody's settings undecodable.
+    var worn: [String: String] = [:]
     /// The music track id, or nil for silence. Ambience and music are separate
     /// channels; free plays one at a time, Plus layers them.
     var music: String?
@@ -47,7 +54,7 @@ struct PomodoroSettings: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
-        case breatheOnBreaks, place, buddyNames
+        case breatheOnBreaks, place, buddyNames, worn
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
         case liveActivityEnabled, clockFace
     }
@@ -82,6 +89,8 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.place
         buddyNames = try container.decodeIfPresent([String: String].self, forKey: .buddyNames)
             ?? fallback.buddyNames
+        worn = try container.decodeIfPresent([String: String].self, forKey: .worn)
+            ?? fallback.worn
         music = try container.decodeIfPresent(String.self, forKey: .music)
         musicVolume = try container.decodeIfPresent(Double.self, forKey: .musicVolume)
             ?? fallback.musicVolume
@@ -110,6 +119,33 @@ struct PomodoroSettings: Codable, Equatable {
         let custom = buddyNames[buddy.rawValue]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return custom.isEmpty ? buddy.name : custom
+    }
+
+    // MARK: The wardrobe
+
+    private func wornKey(_ buddy: Buddy, _ slot: Accessory.Slot) -> String {
+        "\(buddy.rawValue).\(slot.rawValue)"
+    }
+
+    func worn(_ slot: Accessory.Slot, on buddy: Buddy) -> Accessory? {
+        worn[wornKey(buddy, slot)].flatMap(Accessory.init(rawValue:))
+    }
+
+    /// Everything this buddy has on, in slot order.
+    func outfit(for buddy: Buddy) -> [Accessory] {
+        Accessory.Slot.allCases.compactMap { worn($0, on: buddy) }
+    }
+
+    /// Passing nil takes the slot's piece off. Wearing a second thing in the
+    /// same slot replaces the first — there is no inventory to manage and no
+    /// way to end up wearing two hats.
+    mutating func wear(_ accessory: Accessory?, on buddy: Buddy, in slot: Accessory.Slot) {
+        let key = wornKey(buddy, slot)
+        if let accessory, accessory.slot == slot {
+            worn[key] = accessory.rawValue
+        } else {
+            worn.removeValue(forKey: key)
+        }
     }
 
     /// Storing an empty (or unchanged) name clears the override, so the field

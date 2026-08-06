@@ -90,6 +90,33 @@ final class TimerEngine {
     /// to find a pond than being told about one.
     private(set) var residentArrived: Resident?
 
+    /// Whether Plus is owned, as last reported by `applyEntitlement(hasPlus:)`.
+    /// Read by the dream pool and nothing else; `StoreManager.isUnlocked(_:)`
+    /// remains the one place that decides what is *available*.
+    private(set) var hasPlus = false
+
+    /// Set for one caption's worth of time when something is worn for the
+    /// first time ever.
+    ///
+    /// Not persisted and not per-buddy-per-slot: it is a remark, not a record.
+    /// `firstWorn` below is the record, and it is what stops the same line
+    /// being said twice about the same hat.
+    private(set) var justWore: Accessory?
+
+    /// Accessories that have been worn at least once, so the caption fires
+    /// exactly once each. Lives in `Pouch` rather than here because it must
+    /// survive a relaunch — a hat you put on last week is not news.
+    func wear(_ accessory: Accessory?, in slot: Accessory.Slot) {
+        settings.wear(accessory, on: settings.buddy, in: slot)
+        settingsDidChange()
+        guard let accessory, !pouch.hasWorn(accessory) else {
+            justWore = nil
+            return
+        }
+        pouch.noteWorn(accessory)
+        justWore = accessory
+    }
+
     let log: SessionLog
     let journal: Journal
     let album: Album
@@ -150,6 +177,9 @@ final class TimerEngine {
         stray.seedForDebug()
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
             self.settings.music = forced
+        }
+        for accessory in LaunchOptions.forcedWear {
+            self.settings.wear(accessory, on: self.settings.buddy, in: accessory.slot)
         }
     }
 
@@ -339,8 +369,9 @@ final class TimerEngine {
             rollStrayCameo()
             // The neighbour has been mentioned for a whole break by now. Once
             // you sit back down it is furniture, which is the entire point of
-            // the system.
+            // the system. The same goes for a new hat.
             residentArrived = nil
+            justWore = nil
         }
 
         let end = Date().addingTimeInterval(remaining)
@@ -588,6 +619,11 @@ final class TimerEngine {
     /// owned — a refund or a family-sharing change can revoke it after the fact,
     /// and the app should never be left playing a sound the user can't pick again.
     func applyEntitlement(hasPlus: Bool) {
+        // Remembered, because the dream pool has to know: Plus owns the whole
+        // cart, so a Plus buddy can dream about a crown it never traded for.
+        // The engine is told rather than asking the store — `StoreManager`
+        // imports StoreKit and nothing in the model layer should.
+        self.hasPlus = hasPlus
         guard !hasPlus else { return }
         var changed = false
         if settings.buddy.isPlus {
@@ -1000,6 +1036,13 @@ final class TimerEngine {
         // spending, which is the one thing the fences forbid.
         if log.totalSessions > 0 {
             pool.append(contentsOf: Dream.Magpie.allCases.map(Dream.magpie))
+        }
+        // Dressed up, once you actually own the thing. Asked of the pouch
+        // rather than of a second unlock table, so the gate can never
+        // disagree with what is in the wardrobe.
+        for finery in Dream.Finery.allCases
+        where pouch.owns(.accessory(finery.reachedAt)) || hasPlus {
+            pool.append(contentsOf: repeatElement(.finery(finery), count: 2))
         }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))

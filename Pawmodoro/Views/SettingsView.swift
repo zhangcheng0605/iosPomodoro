@@ -43,10 +43,12 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                         .submitLabel(.done)
                     }
+                    WardrobePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Your buddy")
                 } footer: {
-                    Text("Leave the name blank to go back to \(engine.settings.buddy.name).")
+                    Text("Leave the name blank to go back to \(engine.settings.buddy.name). "
+                         + "What they wear is remembered per buddy.")
                 }
 
                 Section {

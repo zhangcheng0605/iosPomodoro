@@ -83,6 +83,32 @@ final class Pouch {
         save()
     }
 
+    // MARK: What has been worn
+
+    /// Accessories that have been on at least once, ever.
+    ///
+    /// Stored alongside the purchases because it has the same lifetime and the
+    /// same law: it only grows. Its whole job is to make the buddy's remark
+    /// about a new hat happen exactly once, which means it has to survive a
+    /// relaunch — a hat you put on last week is not news, and being told it is
+    /// would make the remark worthless the second time.
+    func hasWorn(_ accessory: Accessory) -> Bool {
+        owned.contains(Self.wornMark(accessory))
+    }
+
+    func noteWorn(_ accessory: Accessory) {
+        owned.insert(Self.wornMark(accessory))
+        save()
+    }
+
+    /// Deliberately in the same set, under a prefix no `CatalogItem.id` uses,
+    /// so it needs no second storage key and `-PawmodoroResetState` clears it
+    /// with everything else. `spent` ignores it: `CatalogItem.from(id:)`
+    /// returns nil for a mark, and unknown ids contribute nothing.
+    private static func wornMark(_ accessory: Accessory) -> String {
+        "worn!\(accessory.rawValue)"
+    }
+
     // MARK: Persistence
 
     private func load() {

@@ -318,6 +318,77 @@ nowhere in particular.").
 **Flags:** `-PawmodoroAccessory <slot>.<id>` (dress the current buddy on
 launch), `-PawmodoroOwnEverything` covers ownership.
 
+### As built — Phase 3, the Wardrobe
+
+Built on Linux, never compiled. Ten pieces, and DELIGHT_PLAN's E2 — the oldest
+open phase in any of these documents — is closed.
+
+**The plan's architecture was wrong and the replacement is better.** It assumed
+the buddies came out of shared builders with known geometry the way the
+wildlife does; they do not, every one is hand-drawn with its own coordinates.
+But the *pixels* know where the head is, so `generate_accessories.py` measures
+each rendered frame — crown, collar line, head width — and emits
+`BuddyAnchors.swift`. A buddy redrawn tomorrow gets correct anchors from the
+next run, with nobody remembering to update anything.
+
+**And it is an overlay, not a composite.** The plan's 500+ derived composites
+would have been tens of megabytes of PNG and a full regeneration every time an
+ear moved. There are **ten** sprites and a table of 118 attachment rows; the
+app draws the piece over the buddy at runtime, scaled to that buddy's own head.
+
+**Two slots, not three.** A back slot was planned and dropped: at forty logical
+pixels anything drawn behind the buddy is four or five visible pixels poking
+out at the sides, which reads as a rendering fault rather than a cape.
+
+**What the measuring got wrong twice, and what fixed it.**
+
+- Measuring a row's full min-to-max span reads straight **across the gap
+  between two ears**. The cat's crown came out at row 1 instead of row 6 and
+  every hat balanced on thin air. Contiguous runs, not extents.
+- Scaling a collar to the run at the collar line scales it to the
+  **shoulders**. The first contact sheet was twelve animals in striped
+  blankets. `neckWidth` is capped at the head's width — a neck is never wider
+  than the head above it.
+- Deriving the collar row from the head's *width* overshot on the wide-eared
+  buddies and put the dog's collar two rows off the bottom of the canvas. It
+  comes from the figure's own height now.
+
+**`check_accessories.py` found the one nobody would have.** Every head piece
+clipped off the top of the canvas on `happy_1` — the bounce frame, which
+shifts the whole buddy up two rows. Solving it by shrinking would have taken
+the knitted cap to 0.43 of a head, which is a dot; instead `BuddySprite` pads
+its clip upward by 30 %, and the checker mirrors the asymmetry: overhang above
+is allowed, overhang below is allowed and clipped, the sides are not.
+
+Two of its own rules were wrong first and are worth recording, because both
+were the checker being stricter than the app rather than the app being wrong:
+testing a *scarf's* lower edge for overlap reported 417 floating scarves (a
+scarf hangs — it is the top edge that attaches), and testing contrast at the
+contact row compares the piece against the buddy's own one-pixel dark outline,
+which is exactly where a brim lands. 1180 placements pass now.
+
+**`check_swift.py` grew a real fix here too.** `Accessory` came back owning
+`.head` and `.neck` — the cases of the `Slot` enum nested inside it — because
+the body regex stopped at the first closing brace, and four confident wrong
+non-exhaustive switches were reported. Anchoring the closing brace to the
+opening indent fixed that and broke the other direction: `finditer` will not
+return overlapping matches, so `Species.Rarity` silently stopped being checked
+at all. It walks lines now and sees both.
+
+**Divergences:**
+
+- **No spectacles.** They belong on the face, which is a third anchor nobody
+  can measure — the eyes are drawn per buddy by a shared helper, not by a
+  shape the pixels can find.
+- **The first-worn remark lives in the pouch.** It has to survive a relaunch
+  (a hat you put on last week is not news), so it is stored beside the
+  purchases under a prefix no `CatalogItem.id` uses. `spent` ignores it
+  because unknown ids contribute nothing.
+- **Accessories are 15 acorns — the cheapest thing in the cart on purpose.**
+  Two afternoons. The wardrobe is where somebody finds out the free road
+  actually goes somewhere, and a first purchase three weeks away teaches the
+  opposite lesson.
+
 ## Phase 4 — The Dens
 
 Every buddy gets a house, in species character, and the houses live in the

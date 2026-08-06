@@ -51,6 +51,7 @@ FIXTURE_PRICES = {
     "buddy": 120,
     "place": 150,
     "theme": 40,
+    "accessory": 15,
 }
 
 # What a steady user earns in a day, for the sanity sums below: two hours of
@@ -111,6 +112,24 @@ def parse_locked(enum_file, enum_name):
     return [c for c in cases if c in plus]
 
 
+def parse_cases(enum_file, enum_name):
+    """Every case of an enum, at its own indent — nested types excluded."""
+    source = open(os.path.join(MODEL, enum_file)).read()
+    lines = source.splitlines()
+    out = []
+    for index, line in enumerate(lines):
+        if not re.match(rf"^enum {enum_name}\b", line):
+            continue
+        for row in lines[index + 1:]:
+            if row.startswith("}"):
+                break
+            arm = re.match(r"^    case (\w+(?:, \w+)*)$", row)
+            if arm:
+                out.extend(n.strip() for n in arm.group(1).split(","))
+        break
+    return out
+
+
 def imageset_exists(name):
     return os.path.isdir(os.path.join(ASSETS, f"{name}.imageset"))
 
@@ -147,6 +166,9 @@ def main():
     buddies = parse_locked("Buddy.swift", "Buddy")
     places = parse_locked("Place.swift", "Place")
     themes = parse_locked("AppTheme.swift", "AppTheme")
+    # Every accessory is for sale — there is no free one and none the app
+    # withholds for a story — so the whole enum is the shelf.
+    accessories = parse_cases("Accessory.swift", "Accessory")
 
     # Soot is Plus-gated but never for sale, and `Buddy.catalogItem` says so.
     # Parse that exclusion rather than restating it.
@@ -169,13 +191,19 @@ def main():
             failures.append(
                 f"place '{place}' is on the shelf but has no day scene to show "
                 f"in the unlock sheet")
+    for accessory in accessories:
+        if not imageset_exists(f"wear_{accessory}"):
+            failures.append(
+                f"accessory '{accessory}' is on the shelf with no sprite — run "
+                f"tools/generate_accessories.py")
     for name in ("acorn", "magpie_0", "magpie_1", "cart_0", "cart_1"):
         if not imageset_exists(name):
             failures.append(f"{name}: missing — run tools/generate_magpie.py")
 
     # --- 3. The two fences that are arithmetic ------------------------------
     per_day = DAILY_MINUTES / divisor
-    counts = {"buddy": len(buddies), "place": len(places), "theme": len(themes)}
+    counts = {"buddy": len(buddies), "place": len(places), "theme": len(themes),
+              "accessory": len(accessories)}
     total = sum(prices[kind] * count for kind, count in counts.items()
                 if kind in prices)
 

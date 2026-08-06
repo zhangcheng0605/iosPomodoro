@@ -143,6 +143,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroAcorns <n>` | Override the derived acorn total, for the cannot-afford-it half of the unlock sheet |
 | `-PawmodoroOwnEverything` | Own the whole cart without Plus and without earning it |
 | `-PawmodoroCart` | Open the Magpie's Cart on launch |
+| `-PawmodoroWear <ids>` | Dress the buddy on launch, e.g. `sunhat,bow` — two at once is what catches a bad anchor |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
@@ -171,9 +172,9 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are twelve now (`swift`, `contrast`, `grove`,
-`residents`, `species`, `catalog`, `post`, `weather`, `yearring`, `clocks`,
-`stray`, `snail`), they
+without a Mac** — there are thirteen now (`swift`, `contrast`, `grove`,
+`residents`, `species`, `catalog`, `accessories`, `post`, `weather`,
+`yearring`, `clocks`, `stray`, `snail`), they
 take about fifteen seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
@@ -273,6 +274,17 @@ There are no tests. A change is verified by building and looking at it:
   nothing. That is how a shadowed variable (`for suffix, shift in …`, over the
   module-level `shift()`) looked like a silent no-op rather than a crash. Use
   `2>&1` or run it bare.
+- **An accessory is positioned by measurement, never by hand.**
+  `tools/generate_accessories.py` reads each buddy frame's rendered pixels to
+  find the crown and the collar line and emits `BuddyAnchors.swift`, which is
+  generated — never edit it. `Accessory` then says only how big a piece is
+  *relative to that head* and which of its own edges attaches, so nothing in
+  the wardrobe knows about any particular buddy and a buddy redrawn tomorrow
+  is dressed correctly by the next run of the tool. Two traps it is worth
+  knowing about before touching it: measuring a row's full min-to-max span
+  reads straight across the gap between two ears (the cat's crown came out
+  four pixels above her skull), and scaling a collar to the run at the collar
+  line scales it to the *shoulders* (every buddy wore a striped blanket).
 - **A buddy's quirk is data, not a special case.** `Buddy` exposes
   `idleShuffleFrame`, `celebrationFrame`, `breakFrame`, `watchFrame` and
   `homeFrame`; `BuddyFrames` reads them and falls back to the ordinary pose

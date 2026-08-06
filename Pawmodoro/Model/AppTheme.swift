@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Plain colour components, 0...1 per channel.
 struct RGBComponents: Equatable {
@@ -13,8 +17,8 @@ struct RGBComponents: Equatable {
         self.blue = blue
     }
 
-    var uiColor: UIColor {
-        UIColor(red: red, green: green, blue: blue, alpha: 1)
+    var uiColor: PlatformColor {
+        PlatformColor(red: red, green: green, blue: blue, alpha: 1)
     }
 
     /// Linear blend, `amount` being how much of `other` ends up in the result.
@@ -43,13 +47,10 @@ struct DualColor: Equatable {
     }
 
     var color: Color {
-        // Resolve both up front so the dynamic provider only picks between two
-        // ready-made colours, and so the closure captures locals rather than self.
-        let lightColor = light.uiColor
-        let darkColor = dark.uiColor
-        return Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark ? darkColor : lightColor
-        })
+        // The dynamic provider lives in `Platform.swift`, because UIKit's
+        // trait-aware initialiser and AppKit's appearance-aware one are
+        // genuinely different calls rather than the same call under two names.
+        dynamicColor(light: light, dark: dark)
     }
 }
 

@@ -762,6 +762,57 @@ step. `check_swift.py` gains one rule the day the target exists: every
 be the era's least checkable from Linux, and schedule it around a real Mac
 evening.
 
+### As built — Phase 7, macOS (the writable half)
+
+Built on Linux, never compiled **on either platform** — which makes this the
+least-verified phase in the repo, and the reason is structural rather than
+sloppy: the *target does not exist yet*. Everything below is code that will
+compile once somebody creates it; nothing below has been near a compiler.
+
+**What is written:**
+
+- `Pawmodoro/Platform/Platform.swift` — the whole list of what this app needs
+  from a platform. `PlatformImage`, `PlatformColor`, `FeedbackStyle`,
+  `dynamicColor`, `renderJPEG`, and `Platform.macWindow`. Every UIKit
+  touchpoint in the app now goes through it: `AppTheme`'s dynamic colour,
+  `BuddySprite`'s image lookup, `YearRingView`'s blend, the Scrapbook's import
+  and seed, `PostcardExport`. `HapticsDirector` emits nothing on macOS and
+  `ShakeDetector` compiles out entirely.
+- `MenuBarBuddy` and `MenuBarControls` — the Mac's actual pitch. The window
+  closes and the session keeps running; the buddy sleeps in the menu bar with
+  the countdown beside it, space starts and pauses.
+- `SceneShake` — one signal, two ways in. iOS shakes the phone; macOS picks a
+  menu item. The *feature* has one implementation, which is the rule
+  `Platform.swift` states.
+- `check_swift.py` gained a platform-guard rule, break-tested both ways: an
+  unguarded `import UIKit` and a bare `UIScreen` both fail now. That class of
+  mistake compiles perfectly on iOS, so nothing else on this side of the build
+  could catch it.
+- `check_stray.py` and `check_snail.py` gained the Mac window as a third
+  device, **parsed from `Platform.macWindow`** rather than typed. Widening the
+  window to 1100x600 fails 24 rows immediately — the cat stops standing on
+  ground — which is exactly why the window is phone-proportioned and
+  `.windowResizability(.contentSize)`.
+
+**What is not written, and cannot be from here:**
+
+1. The macOS target itself (File → New → Target → App, name `Pawmodoro Mac`,
+   **same bundle identifier** — universal purchase requires it and it cannot
+   be changed after the first archive).
+2. Signing, the sandbox entitlement, and the camera/user-selected-file
+   entitlements the Scrapbook needs.
+3. The first run, and a **listening pass on real Mac output** — headphones and
+   speaker both — before any archive. `AVAudioEngine` on new hardware is the
+   exact class that shipped fifty tracks broken on iPhone while the Simulator
+   smiled. The pre-mixed single-node law is the protection; the pass is the
+   proof.
+4. `docs/APP_STORE_LAUNCH_GUIDE.md`'s Mac section.
+
+**One correction made on the way.** The Hearth work had added a second
+`hasPlus` property to `TimerEngine` while `storeHasPlus` already existed —
+two opinions about the same fact, which is the thing this codebase most
+consistently refuses. Collapsed onto the older one.
+
 ## Phase 8 — The Crossing (iCloud, last, and on purpose)
 
 Two devices now run the same world, and the owner will feel the seam within

@@ -248,6 +248,16 @@ There are no tests. A change is verified by building and looking at it:
   the catalogue is Plus, whole, once), nothing is ever removed from the pouch,
   Soot is never for sale, and the Sunday Post never itemises what you bought.
   `docs/HEARTH_PLAN.md` has the reasoning for all eight.
+- **The app builds for two platforms, and UIKit is fenced.**
+  `Pawmodoro/Platform/Platform.swift` is the entire list of what this app needs
+  from a platform — aliases, three helpers, and two deliberate no-ops — and it
+  is the only file allowed to `import UIKit` plainly. Everything else uses
+  `PlatformImage`, `PlatformColor`, `dynamicColor` or `renderJPEG`.
+  `check_swift.py` fails on an unguarded import or a bare `UIImage`/`UIScreen`,
+  because that class of mistake compiles perfectly on iOS and breaks the Mac
+  target where nothing on the Linux side can see it. There is no macOS
+  *variant* of any feature — only a macOS way in: the shake becomes a menu
+  item and both paths call the same `SceneShake`.
 - **A photograph is never modified, and never leaves the device.** The
   Scrapbook writes exactly what was imported and applies a film stock at *draw*
   time, so changing the light is free and reversible forever. Import goes

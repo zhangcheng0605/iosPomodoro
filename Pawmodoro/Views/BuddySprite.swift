@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// The buddy's pixel-art sprite at a given size.
 ///
@@ -39,15 +38,16 @@ struct BuddySprite: View {
         )
     }
 
-    private var image: UIImage? {
-        UIImage(named: assetName)
-            ?? UIImage(named: sleeping ? buddy.asleepAssetName : buddy.awakeAssetName)
+    private var image: PlatformImage? {
+        PlatformImage.asset(assetName)
+            ?? PlatformImage.asset(
+                sleeping ? buddy.asleepAssetName : buddy.awakeAssetName)
     }
 
     var body: some View {
         if let image {
             ZStack(alignment: .topLeading) {
-                Image(uiImage: image)
+                Image(platform: image)
                     .interpolation(.none)      // keep the pixel edges crisp
                     .resizable()
                     .scaledToFit()

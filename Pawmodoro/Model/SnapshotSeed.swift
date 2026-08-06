@@ -1,5 +1,6 @@
 #if DEBUG
-import UIKit
+import CoreGraphics
+import SwiftUI
 
 /// Three sample photographs, for `-PawmodoroSeedScrapbook`.
 ///
@@ -18,15 +19,15 @@ enum SnapshotSeed {
 
     static func fill(_ scrapbook: Scrapbook) {
         guard scrapbook.isEmpty, let directory = Scrapbook.directory else { return }
-        let samples: [(UIColor, UIColor, Place, Weather, Int)] = [
-            (UIColor(red: 0.86, green: 0.80, blue: 0.68, alpha: 1),
-             UIColor(red: 0.55, green: 0.44, blue: 0.33, alpha: 1),
+        let samples: [(CGColor, CGColor, Place, Weather, Int)] = [
+            (CGColor(red: 0.86, green: 0.80, blue: 0.68, alpha: 1),
+             CGColor(red: 0.55, green: 0.44, blue: 0.33, alpha: 1),
              .meadow, .clear, 25),
-            (UIColor(red: 0.72, green: 0.78, blue: 0.84, alpha: 1),
-             UIColor(red: 0.30, green: 0.36, blue: 0.44, alpha: 1),
+            (CGColor(red: 0.72, green: 0.78, blue: 0.84, alpha: 1),
+             CGColor(red: 0.30, green: 0.36, blue: 0.44, alpha: 1),
              .harbor, .mist, 50),
-            (UIColor(red: 0.90, green: 0.74, blue: 0.72, alpha: 1),
-             UIColor(red: 0.42, green: 0.30, blue: 0.34, alpha: 1),
+            (CGColor(red: 0.90, green: 0.74, blue: 0.72, alpha: 1),
+             CGColor(red: 0.42, green: 0.30, blue: 0.34, alpha: 1),
              .blossom, .golden, 40),
         ]
 
@@ -48,23 +49,18 @@ enum SnapshotSeed {
 
     /// A two-tone field with a soft edge — enough structure that a grade's
     /// effect on light and dark areas is both visible at once.
-    private static func card(_ light: UIColor, _ dark: UIColor) -> Data? {
+    /// A two-tone field with a soft edge — enough structure that a grade's
+    /// effect on light and dark areas is both visible at once.
+    private static func card(_ light: CGColor, _ dark: CGColor) -> Data? {
         let size = CGSize(width: 900, height: 1200)
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = 1
-        format.opaque = true
-        return UIGraphicsImageRenderer(size: size, format: format).image { context in
-            light.setFill()
+        return renderJPEG(size: size, quality: 0.9) { context in
+            context.setFillColor(light)
             context.fill(CGRect(origin: .zero, size: size))
-            dark.setFill()
-            context.cgContext.fillEllipse(
-                in: CGRect(x: -120, y: 620, width: 1140, height: 900)
-            )
-            UIColor(white: 1, alpha: 0.35).setFill()
-            context.cgContext.fillEllipse(
-                in: CGRect(x: 540, y: 90, width: 260, height: 260)
-            )
-        }.jpegData(compressionQuality: 0.9)
+            context.setFillColor(dark)
+            context.fillEllipse(in: CGRect(x: -120, y: 620, width: 1140, height: 900))
+            context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.35))
+            context.fillEllipse(in: CGRect(x: 540, y: 90, width: 260, height: 260))
+        }
     }
 }
 #endif

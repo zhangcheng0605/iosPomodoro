@@ -89,6 +89,12 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   anybody adds a camera path, `NSCameraUsageDescription` becomes mandatory and
   App Review rejects a build without it. The privacy nutrition label stays
   "data not collected": photographs are used, never collected.
+- **The macOS half — written, and never compiled on any platform.** The
+  target does not exist yet, so unlike everything else here this is not code
+  waiting for a compiler, it is code waiting for a *target*. See section 17 of
+  `docs/RESUME_HERE.md`. The one thing that must be right first time is the
+  bundle identifier: universal purchase requires the Mac app to share the iOS
+  app's, and it cannot be changed after the first archive.
 - **The whole Deep Time build — nine phases written on Linux and never
   compiled.** Weather, the snail, the Drift, the Cabinet of Clocks, and all
   four altitudes of the Long Now (the shelf, the Sunday Post, the year ring,

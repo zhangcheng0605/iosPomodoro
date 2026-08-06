@@ -13,11 +13,16 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **six of its eight phases are already built**: the acorn pouch,
-the Magpie's Cart, the Wardrobe, the Dens, the interaction era's touch
-vocabulary and keepsakes, and the Scrapbook. They are blind like everything
-else here, and sections 12 to 16 are their walkthroughs. macOS and the iCloud
-crossing have not started.
+macOS) — and **seven of its eight phases are built or part-built**: the acorn
+pouch, the Magpie's Cart, the Wardrobe, the Dens, the interaction era's touch
+vocabulary and keepsakes, the Scrapbook, and the writable half of macOS. They
+are blind like everything else here, and sections 12 to 17 are their
+walkthroughs. Only the iCloud crossing has not started.
+
+**macOS needs a Mac sitting of its own**, listed in section 17 — the target,
+signing and entitlements cannot be created from Linux, so that phase is code
+waiting for a compiler that does not exist yet rather than code waiting for a
+compiler that does.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -623,6 +628,37 @@ What is left:
   swapped for something else somewhere.
 - **Remove one, then relaunch.** The file should be gone and the grid should
   not show a gap — and `prune()` should quietly clear anything orphaned.
+
+### 17. The Mac target — a sitting of its own
+
+**Nothing in this section has been near a compiler on either platform**, and
+that is structural: the target does not exist. This is the one-time Xcode work,
+same shape as the widget extension in Phase Z.
+
+1. **File → New → Target → App**, name it `Pawmodoro Mac`, and give it the
+   **same bundle identifier as the iOS app**. Universal purchase requires it
+   and it cannot be changed after the first archive — get this right first
+   time.
+2. Add the whole `Pawmodoro/` group to the new target's membership. It is a
+   file-system synchronized group, so this should be one checkbox.
+3. Sandbox on; add the **user-selected file** entitlement (the Scrapbook's
+   picker) and **camera** only if a camera path is ever added.
+4. Build. Expect errors, and expect most of them in three places:
+   - `Platform.swift`'s AppKit half — `NSColor(name:dynamicProvider:)`, the
+     `CGContext` bitmap path in `renderJPEG`, and
+     `NSImage.cgImage(forProposedRect:context:hints:)` are the three calls
+     written from documentation rather than from a compiler.
+   - `MenuBarExtra` and `.menuBarExtraStyle(.menu)` in `PawmodoroApp`.
+   - Anything still reaching for UIKit that `check_swift.py`'s new guard rule
+     did not catch because it was inside an existing `#if`.
+5. **The listening pass, on real Mac output, headphones and speaker.** Before
+   any archive. `AVAudioEngine` on new hardware is the exact class that
+   shipped fifty tracks broken on iPhone while the Simulator smiled — the
+   pre-mixed single-node law is the protection, the pass is the proof.
+6. Then the things only a Mac can show: does the buddy read at sixteen points
+   in the menu bar? Does the countdown keep time after the app has been idle
+   long enough for App Nap to throttle it? (It should — the countdown derives
+   from an absolute end `Date` — but that is the claim, and this is the test.)
 
 ---
 

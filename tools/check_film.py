@@ -191,12 +191,25 @@ def main():
     if "func setStock" not in snapshot:
         failures.append("Snapshot has no setStock — the grade must be a display "
                         "choice, changeable forever")
+    # The EXIF strip lives in `renderJPEG` — one function, on both platforms —
+    # and the import path has to go through it. Checked in two halves because
+    # it moved once already, when the Mac target needed the renderer to be
+    # platform-neutral: an importer that stopped calling it, or a `renderJPEG`
+    # that stopped re-encoding, are different bugs with the same consequence.
     importer = open(os.path.join(MODEL, "SnapshotImport.swift")).read()
-    if "jpegData" not in importer or "UIGraphicsImageRenderer" not in importer:
+    if "renderJPEG(" not in importer:
         failures.append(
-            "SnapshotImport no longer re-encodes through a renderer — that "
-            "re-encode is the whole of the EXIF strip, and a scrapbook of "
-            "desks with GPS in it is a map of where somebody lives")
+            "SnapshotImport no longer goes through renderJPEG — that re-encode "
+            "is the whole of the EXIF strip, and a scrapbook of desks with GPS "
+            "in it is a map of where somebody lives")
+    platform = open(os.path.join(
+        ROOT, "Pawmodoro", "Platform", "Platform.swift")).read()
+    body = platform.split("func renderJPEG(")[1] if "func renderJPEG(" in platform else ""
+    if "jpegData" not in body or "representation(using: .jpeg" not in body:
+        failures.append(
+            "renderJPEG no longer re-encodes on both platforms — it is the "
+            "single place the EXIF strip happens, and it has to happen on the "
+            "Mac too")
 
     print(f"checked {len(FROM_SCENES)} shared grades, the press, "
           f"{len(FIXTURE)} fixture rows and {len(free)} free stocks")

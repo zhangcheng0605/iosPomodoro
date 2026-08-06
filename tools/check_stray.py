@@ -62,9 +62,27 @@ UNSTANDABLE = {
 # The screens the layout has to survive. The short one is the real test: its
 # aspect is far from the artwork's, so `scaledToFill` crops the scene hard and
 # every fraction lands somewhere different.
+def _mac_window():
+    """`Platform.macWindow`, out of the real Swift."""
+    source = open(os.path.join(
+        ROOT, "Pawmodoro", "Platform", "Platform.swift")).read()
+    found = re.search(
+        r"static let macWindow = CGSize\(width: ([\d.]+), height: ([\d.]+)\)",
+        source)
+    if not found:
+        raise SystemExit("could not parse Platform.macWindow")
+    return (int(float(found.group(1))), int(float(found.group(2))))
+
+
 DEVICES = (
     ("iPhone 16", 393, 852),
     ("iPhone SE", 375, 667),
+    # The Mac window, parsed rather than typed — `Platform.macWindow` decides
+    # it and this has to follow. The app now runs on a second platform where
+    # she is placed by the same fractions of a differently-shaped screen, and
+    # a ground line that holds on two phones and fails on a laptop would be
+    # invisible from here.
+    ("Mac window",) + _mac_window(),
 )
 
 

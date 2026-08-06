@@ -20,7 +20,7 @@ struct PawmodoroApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environment(engine)
                 .environment(store)
@@ -34,6 +34,15 @@ struct PawmodoroApp: App {
                     engine.applyEntitlement(hasPlus: store.hasPlus)
                 }
         }
+        #if os(macOS)
+        // Phone-proportioned, and resizable only within bounds that keep the
+        // art honest: every scene is exported at a phone's aspect, and the
+        // buddy, the stray and the snail are placed by fractions of the
+        // screen. A wide window would slide the ground line out from under
+        // the cat — `check_stray.py` carries this aspect as a fixture row.
+        .defaultSize(Platform.macWindow)
+        .windowResizability(.contentSize)
+        #endif
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
@@ -50,5 +59,30 @@ struct PawmodoroApp: App {
                 break
             }
         }
+
+        #if os(macOS)
+        menuBar
+        #endif
     }
+
+    #if os(macOS)
+    /// The Mac's actual reason to exist: the window can be closed entirely and
+    /// the session keeps running.
+    ///
+    /// `.menuBarExtraStyle(.menu)` rather than `.window`, because this is a
+    /// glance and a keystroke — a second floating copy of the app would be a
+    /// worse version of the window that is already one click away.
+    @SceneBuilder
+    private var menuBar: some Scene {
+        MenuBarExtra {
+            MenuBarControls()
+                .environment(engine)
+                .environment(store)
+        } label: {
+            MenuBarBuddy()
+                .environment(engine)
+        }
+        .menuBarExtraStyle(.menu)
+    }
+    #endif
 }

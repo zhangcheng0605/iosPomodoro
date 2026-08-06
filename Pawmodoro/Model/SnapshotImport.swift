@@ -1,6 +1,6 @@
-import ImageIO
-import UIKit
-import UniformTypeIdentifiers
+import CoreGraphics
+import Foundation
+import SwiftUI
 
 /// Turning somebody's photograph into something this app will keep.
 ///
@@ -23,7 +23,7 @@ enum SnapshotImport {
     /// JPEG data ready to write, or nil if it was not an image at all.
     static func prepare(_ data: Data, longEdge: CGFloat = Scrapbook.longEdge)
         -> Data? {
-        guard let image = UIImage(data: data) else { return nil }
+        guard let image = PlatformImage(data: data) else { return nil }
         let size = image.size
         guard size.width > 0, size.height > 0 else { return nil }
 
@@ -31,15 +31,20 @@ enum SnapshotImport {
         let target = CGSize(width: (size.width * scale).rounded(),
                             height: (size.height * scale).rounded())
 
-        let format = UIGraphicsImageRendererFormat.default()
-        // 1, not the screen's scale: `target` is already the pixel size wanted,
-        // and a 3x renderer would quietly produce a nine-times-larger file.
-        format.scale = 1
-        format.opaque = true
-        let renderer = UIGraphicsImageRenderer(size: target, format: format)
-        let flattened = renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: target))
+        guard let source = cgImage(of: image) else { return nil }
+        return renderJPEG(size: target) { context in
+            context.draw(source, in: CGRect(origin: .zero, size: target))
         }
-        return flattened.jpegData(compressionQuality: 0.82)
+    }
+
+    /// The bitmap inside a platform image. `UIImage` hands one over directly;
+    /// `NSImage` is a container of representations and has to be asked.
+    private static func cgImage(of image: PlatformImage) -> CGImage? {
+        #if canImport(UIKit)
+        return image.cgImage
+        #else
+        var rect = CGRect(origin: .zero, size: image.size)
+        return image.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+        #endif
     }
 }

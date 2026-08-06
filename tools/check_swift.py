@@ -228,6 +228,47 @@ def check_dream_assets(failures, enums):
                 )
 
 
+def check_platform_guards(failures):
+    """Every `import UIKit` must be behind a `canImport` or an `os(macOS)` fence.
+
+    The app builds for two platforms now, and an unguarded UIKit import is the
+    single most likely way to break the Mac target — it compiles perfectly on
+    iOS, so nothing on this side of the build notices. `Platform.swift` is the
+    one file allowed to import it plainly, because it *is* the fence.
+
+    The same goes for the UIKit-only types the app still names: `UIImage`,
+    `UIColor` and the feedback generators all have `Platform*` aliases now, and
+    reaching for the concrete one is how the aliases quietly stop being used.
+    """
+    allowed = {"Pawmodoro/Platform/Platform.swift"}
+    banned = ("UIImage", "UIColor", "UIScreen", "UIApplication", "UIDevice",
+              "UIImpactFeedbackGenerator", "UINotificationFeedbackGenerator",
+              "UIGraphicsImageRenderer")
+
+    for path in swift_files():
+        name = rel(path)
+        if name in allowed:
+            continue
+        source = open(path).read()
+        stripped = strip(source)
+        guarded = "#if canImport(UIKit)" in source or "#if os(macOS)" in source \
+            or "#if os(iOS)" in source
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            if re.match(r"^import UIKit\s*$", line) and not guarded:
+                failures.append(
+                    f"{name}:{index}: `import UIKit` with no #if guard — this "
+                    f"compiles on iOS and breaks the Mac target, which nothing "
+                    f"on this side of the build can notice")
+        if guarded:
+            continue
+        for symbol in banned:
+            if re.search(rf"\b{symbol}\b", stripped):
+                failures.append(
+                    f"{name}: uses `{symbol}` with no platform guard — there is "
+                    f"a `Platform`-prefixed alias for it in Platform.swift")
+                break
+
+
 def check_members(failures, launch_options):
     """`Theme.x` and `LaunchOptions.x` that were never declared."""
     theme = open(os.path.join(SOURCE, "Theme.swift")).read()
@@ -469,6 +510,7 @@ def main():
     check_storage_keys(failures)
     check_assets(failures)
     check_members(failures, launch_options)
+    check_platform_guards(failures)
     enums, duplicate_enums = enum_cases()
     check_duplicate_enums(failures, duplicate_enums)
     # An ambiguous name is dropped rather than checked against a merged case

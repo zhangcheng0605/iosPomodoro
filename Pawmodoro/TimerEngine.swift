@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import UIKit
 
 /// The Pomodoro state machine.
 ///
@@ -89,11 +88,6 @@ final class TimerEngine {
     /// away when it landed you find the pond yourself, which is a better way
     /// to find a pond than being told about one.
     private(set) var residentArrived: Resident?
-
-    /// Whether Plus is owned, as last reported by `applyEntitlement(hasPlus:)`.
-    /// Read by the dream pool and nothing else; `StoreManager.isUnlocked(_:)`
-    /// remains the one place that decides what is *available*.
-    private(set) var hasPlus = false
 
     /// Set for one caption's worth of time when something is worn for the
     /// first time ever.
@@ -330,7 +324,7 @@ final class TimerEngine {
     /// rather than special-cased here, so there is one opinion about it.
     func ownsDen(_ den: Den) -> Bool {
         guard den.isForSale else { return stray.hasJoined }
-        return hasPlus || pouch.owns(.den(den))
+        return storeHasPlus || pouch.owns(.den(den))
     }
 
     /// The den standing in the homestead right now, if any. One at a time:
@@ -691,11 +685,11 @@ final class TimerEngine {
     /// owned — a refund or a family-sharing change can revoke it after the fact,
     /// and the app should never be left playing a sound the user can't pick again.
     func applyEntitlement(hasPlus: Bool) {
-        // Remembered, because the dream pool has to know: Plus owns the whole
-        // cart, so a Plus buddy can dream about a crown it never traded for.
-        // The engine is told rather than asking the store — `StoreManager`
-        // imports StoreKit and nothing in the model layer should.
-        self.hasPlus = hasPlus
+        // `storeHasPlus` is the engine's one record of this and predates the
+        // Hearth era — the dream pool and `ownsDen` read it rather than a
+        // second copy. Set here as well as at the two call sites, so an
+        // entitlement change that arrives through this path is not missed.
+        storeHasPlus = hasPlus
         guard !hasPlus else { return }
         var changed = false
         if settings.buddy.isPlus {
@@ -1127,7 +1121,7 @@ final class TimerEngine {
             pool.append(contentsOf: Dream.Home.allCases.map(Dream.den))
         }
         for finery in Dream.Finery.allCases
-        where pouch.owns(.accessory(finery.reachedAt)) || hasPlus {
+        where pouch.owns(.accessory(finery.reachedAt)) || storeHasPlus {
             pool.append(contentsOf: repeatElement(.finery(finery), count: 2))
         }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {

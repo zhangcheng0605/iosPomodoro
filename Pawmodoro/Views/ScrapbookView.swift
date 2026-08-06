@@ -145,8 +145,8 @@ struct SnapshotImage: View {
 
     var body: some View {
         if let url = scrapbook.url(for: snapshot),
-           let image = UIImage(contentsOfFile: url.path) {
-            Image(uiImage: image)
+           let image = PlatformImage.file(url.path) {
+            Image(platform: image)
                 .resizable()
                 .scaledToFill()
                 // The grade is applied at draw time, never to the file. The

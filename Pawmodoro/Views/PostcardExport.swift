@@ -1,6 +1,5 @@
 import CoreTransferable
 import SwiftUI
-import UIKit
 import UniformTypeIdentifiers
 
 /// A postcard, exportable — and rendered only once somebody actually exports it.

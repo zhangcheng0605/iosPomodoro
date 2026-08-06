@@ -235,16 +235,17 @@ extension Color {
     /// A plain blend toward another colour.
     ///
     /// SwiftUI's own `mix(with:by:)` is iOS 18, and this app is 17+. Written
-    /// out through `UIColor` so it composites the same way the palette does.
+    /// out through the platform colour so it composites the same way the
+    /// palette does.
     func mix(with other: Color, by amount: Double) -> Color {
-        let a = UIColor(self)
-        let b = UIColor(other)
+        let a = PlatformColor(self)
+        let b = PlatformColor(other)
         var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
         var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
         a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
         b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
         let t = CGFloat(min(1, max(0, amount)))
-        return Color(UIColor(
+        return Color(PlatformColor(
             red: r1 + (r2 - r1) * t,
             green: g1 + (g2 - g1) * t,
             blue: b1 + (b2 - b1) * t,

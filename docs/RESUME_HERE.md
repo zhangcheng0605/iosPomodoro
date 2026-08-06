@@ -13,10 +13,11 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **its first four phases are already built**: the acorn pouch, the
-Magpie's Cart, the Wardrobe and the Dens. They are blind like everything else
-here, and sections 12 to 14 are their walkthroughs. The interaction era, the
-Scrapbook and macOS have not started.
+macOS) — and **five of its eight phases are already built**: the acorn pouch,
+the Magpie's Cart, the Wardrobe, the Dens, and the interaction era's touch
+vocabulary and keepsakes. They are blind like everything else here, and
+sections 12 to 15 are their walkthroughs. The Scrapbook and macOS have not
+started.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -555,6 +556,39 @@ footprint, and confirmed each pair of frames actually differs.
   den: the Sunday Post should carry that den's line the following week, once,
   and never again.
 
+### 15. Touching the buddy, and what it brings back
+
+The timer screen. This is the one section here that cannot be checked from
+Linux at all — it is a gesture.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S                                       # tap the buddy's head, nose, chin, tummy
+$S -PawmodoroBuddy penguin               # the tummy is its favourite
+$S -PawmodoroKeepsakes 4                 # the shelf, in the stats sheet
+```
+
+`check_touch.py` has cleared 458 regions across 118 frames: nothing is off the
+animal, nothing is too small to aim at on a pose the buddy holds, no two
+regions collapse onto each other, and all twelve favourites are findable. What
+is left:
+
+- **Does a tap land where you think it did?** Touch the four spots in turn and
+  read the caption. The regions are generous and they tile, so a near-miss
+  should land on a neighbour rather than on nothing — if a tap anywhere on the
+  buddy produces no spot line at all, the grid conversion in
+  `BuddyView.gridPoint` is wrong.
+- **The favourite.** Each buddy has one, hinted nowhere. `Buddy.favouriteSpot`
+  is the answer key — but try finding one without it first, because that is
+  the experience.
+- **Stroking.** A slow drag re-fires on a 0.4s throttle. It should feel like
+  scratching an animal, not like a button repeating.
+- **That focus is still sacred.** Start a focus phase and touch the buddy: it
+  should stir, not react by spot, and say nothing about your hand.
+- **The keepsake shelf.** `-PawmodoroKeepsakes 4` puts four on it. Nothing
+  anywhere should badge or announce them — if there is a "new" dot on the
+  stats button, it goes.
+
 ---
 
 ## Verification loop (every session)
@@ -569,6 +603,7 @@ python3 tools/check_residents.py         # after moving a resident or its art
 python3 tools/check_species.py           # after any roster or weather-gate change
 python3 tools/check_catalog.py           # after any price, earn rate or fence
 python3 tools/check_accessories.py       # after any buddy sprite or wardrobe change
+python3 tools/check_touch.py             # after any anchor or touch-region change
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"

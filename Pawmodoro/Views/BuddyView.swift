@@ -151,6 +151,17 @@ struct BuddyView: View {
         .accessibilityAction(named: isNapping ? "Check on \(name)" : "Pet \(name)") {
             pet()
         }
+        // A touch region cannot be aimed at without sight, so each spot gets
+        // its own action. The favourite is not marked in any of these labels:
+        // finding it is the feature, and a list that gave it away would take
+        // the feature from exactly the people this is for.
+        .accessibilityActions {
+            if !isNapping {
+                ForEach(TouchSpot.allCases) { spot in
+                    Button("Touch \(spot.name)") { touchNamed(spot) }
+                }
+            }
+        }
         .onAppear { animator.setBase(restingPose) }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
         .onChange(of: engine.completion) { _, completion in
@@ -228,23 +239,74 @@ struct BuddyView: View {
 
     private var petGesture: some Gesture {
         // A zero-distance drag catches both a tap and a stroke; strokes keep
-        // firing on a throttle so scratching the buddy stays rewarding.
+        // firing on a throttle so scratching the buddy stays rewarding. The
+        // location is what turned this from a button into a creature: the
+        // buddy now knows *where* your hand is.
         DragGesture(minimumDistance: 0)
-            .onChanged { _ in pet(throttle: 0.4) }
+            .onChanged { value in pet(at: value.location, throttle: 0.4) }
     }
 
-    private func pet(throttle: TimeInterval = 0.25) {
+    /// Where a touch landed, in the drawing grid's own units.
+    ///
+    /// The sprite is drawn `scaledToFit` into a `spriteSize` square, and the
+    /// grid is square too, so the conversion is one division — and it is the
+    /// same space `BuddyAnchors` and `Accessory.placement` already work in,
+    /// which is why the touch regions could be derived from the anchors the
+    /// wardrobe measures instead of needing a third table of their own.
+    private func gridPoint(_ location: CGPoint) -> CGPoint {
+        let unit = spriteSize / BuddyAnchors.canvas
+        return CGPoint(x: location.x / unit, y: location.y / unit)
+    }
+
+    private func pet(at location: CGPoint? = nil, throttle: TimeInterval = 0.25) {
         let now = Date()
         guard now.timeIntervalSince(lastPet) > throttle else { return }
         lastPet = now
 
         if isNapping {
-            // Mid-focus: the buddy stirs but never wakes. No penalty, no guilt.
+            // Mid-focus: the buddy stirs but never wakes. No penalty, no guilt,
+            // and no touch vocabulary either — a sleeping animal does not have
+            // opinions about where you put your hand, and the fiction that
+            // focus is sacred outranks the new feature.
             animator.play(.stirring, for: buddy)
             HapticsDirector.shared.nudge()
             return
         }
 
+        let spot = location.flatMap {
+            TouchSpot.at(gridPoint($0), on: currentAsset)
+        }
+        engine.touched(spot)
+
+        animator.play(.happy, for: buddy)
+        // The favourite gets the softer, longer haptic — the one difference
+        // between finding it and not that is felt rather than read.
+        if engine.foundFavourite {
+            HapticsDirector.shared.purr()
+            HapticsDirector.shared.purr()
+        } else {
+            HapticsDirector.shared.purr()
+        }
+        SoundPlayer.shared.playPurr()
+        addHeart()
+    }
+
+    /// The frame currently on screen, which is what the touch regions are
+    /// measured against. Anchors are per *frame*, so asking the resting pose
+    /// while a bounce is playing would put the chin in the wrong place.
+    private var currentAsset: String {
+        reduceMotion
+            ? BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0)
+            : frameName(at: Date())
+    }
+
+    /// The accessibility path: a named spot rather than a location.
+    ///
+    /// Named `touchNamed` because `touch` is already the finger tracker this
+    /// view holds — the two would compile side by side and read as a bug.
+    private func touchNamed(_ spot: TouchSpot) {
+        lastPet = .distantPast
+        engine.touched(spot)
         animator.play(.happy, for: buddy)
         HapticsDirector.shared.purr()
         SoundPlayer.shared.playPurr()
@@ -294,6 +356,14 @@ struct BuddyView: View {
         // off. Cleared as soon as the caption has had a turn.
         if let wearing = engine.justWore {
             return "\(name) \(wearing.firstWornLine)"
+        }
+        // What your hand just found. Above the quirk poses because it is a
+        // reply to something you did a second ago, and below the sleeping
+        // remark because focus outranks everything.
+        if let spot = engine.touchedSpot {
+            return engine.foundFavourite
+                ? "\(name) \(buddy.favouriteLine)"
+                : "\(name) \(spot.line)"
         }
         // Ahead of the quirk poses on purpose: a soak happens every other
         // break, and the two of them sitting together is the payoff of a

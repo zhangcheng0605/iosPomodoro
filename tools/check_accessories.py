@@ -65,13 +65,14 @@ def parse_anchors():
     for match in re.finditer(
         r'"(\w+)": Anchors\(\s*head: CGPoint\(x: ([-\d.]+), y: ([-\d.]+)\),\s*'
         r'headWidth: ([-\d.]+),\s*neck: CGPoint\(x: ([-\d.]+), y: ([-\d.]+)\),\s*'
-        r'neckWidth: ([-\d.]+)\)', source
+        r'neckWidth: ([-\d.]+),\s*bottom: ([-\d.]+)\)', source
     ):
         rows[match.group(1)] = {
             "head": (float(match.group(2)), float(match.group(3))),
             "headWidth": float(match.group(4)),
             "neck": (float(match.group(5)), float(match.group(6))),
             "neckWidth": float(match.group(7)),
+            "bottom": float(match.group(8)),
         }
     if not rows:
         raise SystemExit("could not parse BuddyAnchors.swift")

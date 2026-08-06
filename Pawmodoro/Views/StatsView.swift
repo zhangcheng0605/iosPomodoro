@@ -16,6 +16,7 @@ struct StatsView: View {
                     // addressed to you rather than describing you.
                     SundayPostView()
                     bondCard
+                    keepsakeShelf
                     pouchLine
                     summaryGrid
                     weekChart
@@ -124,6 +125,54 @@ struct StatsView: View {
         case 0: return "The pouch is empty. Twenty minutes of sitting fills it a little."
         case 1: return "One acorn in the pouch."
         default: return "\(acorns) acorns in the pouch."
+        }
+    }
+
+    /// What the buddy has left on the desk.
+    ///
+    /// No count, no "3 of 6", and no empty slots waiting to be filled — an
+    /// empty shelf shows nothing at all rather than six grey outlines, because
+    /// six grey outlines is a checklist and this is a windowsill. The whole
+    /// feature is that you find these by looking, so there is nothing anywhere
+    /// that says one has arrived.
+    @ViewBuilder
+    private var keepsakeShelf: some View {
+        if !engine.shelf.items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Left on the desk")
+                    .font(.headline)
+                    .foregroundStyle(Theme.bark)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .bottom, spacing: 14) {
+                        ForEach(Array(engine.shelf.items.enumerated()), id: \.offset) { _, keepsake in
+                            VStack(spacing: 4) {
+                                Image(keepsake.asset)
+                                    .interpolation(.none)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 34)
+                                Text(keepsake.name)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Theme.bark.opacity(0.6))
+                                    .lineLimit(1)
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(keepsake.name). \(keepsake.note)")
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Theme.surface.opacity(0.55))
+                )
+                if let last = engine.shelf.items.last {
+                    Text(last.note)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.6))
+                }
+            }
         }
     }
 

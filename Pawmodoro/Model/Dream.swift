@@ -58,6 +58,8 @@ enum Dream: Hashable, Identifiable {
     case finery(Finery)
     /// Home, from the inside.
     case den(Home)
+    /// Something it brought you, dreamed about again.
+    case brought(Brought)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -430,6 +432,38 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The things it left on the desk, dreamed about afterwards.
+    ///
+    /// The one dream family that is about something the *buddy* did rather
+    /// than something you did or somewhere you went — which is the whole
+    /// argument for keepsakes existing, restated in the diary.
+    enum Brought: String, CaseIterable, Hashable {
+        case thestick, thefeather
+
+        var reachedAt: Keepsake {
+            switch self {
+            case .thestick: .stick
+            case .thefeather: .feather
+            }
+        }
+
+        var asset: String { reachedAt.asset }
+
+        var subject: String {
+            switch self {
+            case .thestick: "the stick"
+            case .thefeather: "the feather"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .thestick: "Carrying it a long way, for no reason it could give."
+            case .thefeather: "Grey, and slightly bent, and worth the trip."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -483,6 +517,7 @@ enum Dream: Hashable, Identifiable {
         case .magpie(let magpie): "magpie.\(magpie.rawValue)"
         case .finery(let finery): "finery.\(finery.rawValue)"
         case .den(let home): "den.\(home.rawValue)"
+        case .brought(let brought): "brought.\(brought.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -507,6 +542,7 @@ enum Dream: Hashable, Identifiable {
         case "magpie": return Magpie(rawValue: parts[1]).map(Dream.magpie)
         case "finery": return Finery(rawValue: parts[1]).map(Dream.finery)
         case "den": return Home(rawValue: parts[1]).map(Dream.den)
+        case "brought": return Brought(rawValue: parts[1]).map(Dream.brought)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -532,6 +568,7 @@ enum Dream: Hashable, Identifiable {
         case .magpie(let magpie): magpie.asset
         case .finery(let finery): finery.asset
         case .den(let home): home.asset
+        case .brought(let brought): brought.asset
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -543,7 +580,7 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor, .hour, .wood, .neighbour,
-             .magpie, .finery, .den: true
+             .magpie, .finery, .den, .brought: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -573,6 +610,7 @@ enum Dream: Hashable, Identifiable {
         case .magpie(let magpie): magpie.subject
         case .finery(let finery): finery.subject
         case .den(let home): home.subject
+        case .brought(let brought): brought.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -596,6 +634,7 @@ enum Dream: Hashable, Identifiable {
         case .magpie(let magpie): magpie.line
         case .finery(let finery): finery.line
         case .den(let home): home.line
+        case .brought(let brought): brought.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -624,6 +663,7 @@ enum Dream: Hashable, Identifiable {
             + Magpie.allCases.map(Dream.magpie)
             + Finery.allCases.map(Dream.finery)
             + Home.allCases.map(Dream.den)
+            + Brought.allCases.map(Dream.brought)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

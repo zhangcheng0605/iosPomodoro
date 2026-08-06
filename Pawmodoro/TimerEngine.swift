@@ -126,6 +126,8 @@ final class TimerEngine {
     let chronicle: Chronicle
     /// What has been traded for. The balance is not in here — see `Acorns`.
     let pouch: Pouch
+    /// What the buddy has left on the desk.
+    let shelf: Shelf
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -144,7 +146,8 @@ final class TimerEngine {
         stray: Stray = Stray(),
         dreams: DreamDiary = DreamDiary(),
         chronicle: Chronicle = Chronicle(),
-        pouch: Pouch = Pouch()
+        pouch: Pouch = Pouch(),
+        shelf: Shelf = Shelf()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -155,6 +158,7 @@ final class TimerEngine {
         self.dreams = dreams
         self.chronicle = chronicle
         self.pouch = pouch
+        self.shelf = shelf
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -271,6 +275,27 @@ final class TimerEngine {
             return max(0, forced - pouch.spent)
         }
         return Acorns.balance(minutes: log.totalMinutes, spent: pouch.spent)
+    }
+
+    /// Where you last touched the buddy, and what it made of it.
+    ///
+    /// Set for one caption's turn, like `justWore` and `residentArrived`.
+    /// Nothing about it is stored: petting is not counted anywhere, does not
+    /// feed the bond, and leaves no record. A stroke you could grind would be
+    /// a chore with fur on it.
+    private(set) var touchedSpot: TouchSpot?
+    /// True when that touch found the buddy's favourite place.
+    private(set) var foundFavourite = false
+
+    /// Somebody put a hand on the buddy, there.
+    func touched(_ spot: TouchSpot?) {
+        touchedSpot = spot
+        foundFavourite = spot != nil && spot == settings.buddy.favouriteSpot
+    }
+
+    func clearTouch() {
+        touchedSpot = nil
+        foundFavourite = false
     }
 
     /// Whether this den is standing in the homestead.
@@ -392,6 +417,7 @@ final class TimerEngine {
             // the system. The same goes for a new hat.
             residentArrived = nil
             justWore = nil
+            clearTouch()
         }
 
         let end = Date().addingTimeInterval(remaining)
@@ -1060,6 +1086,12 @@ final class TimerEngine {
         // Dressed up, once you actually own the thing. Asked of the pouch
         // rather than of a second unlock table, so the gate can never
         // disagree with what is in the wardrobe.
+        // The things it brought you, once it actually has. Asked of the
+        // shelf rather than of a threshold, so the gate cannot disagree with
+        // what is on the desk.
+        for brought in Dream.Brought.allCases where shelf.has(brought.reachedAt) {
+            pool.append(contentsOf: repeatElement(.brought(brought), count: 2))
+        }
         // Home, from the inside, once there is one to be inside of.
         if visibleDen != nil {
             pool.append(contentsOf: Dream.Home.allCases.map(Dream.den))
@@ -1337,6 +1369,16 @@ final class TimerEngine {
         // session it can be true for.
         if let resident = residentArrived {
             chronicle.add(.resident, resident.rawValue)
+        }
+        // Something left on the desk. One roll per completed session at long
+        // odds, against the session rather than against anything done in it —
+        // there is no way to make a keepsake likelier and nothing to
+        // optimise, which is what keeps a stick a gift rather than a drop.
+        if bond >= Keepsake.reachedAt,
+           Double.random(in: 0..<1) < Keepsake.chance {
+            let keepsake = Keepsake.next(after: shelf.count)
+            shelf.add(keepsake)
+            chronicle.add(.keepsake, keepsake.rawValue)
         }
         // The first night actually spent in a new den. Recorded here rather
         // than by the homestead view, for the same reason every other episode

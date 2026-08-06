@@ -135,6 +135,12 @@ def measure(grid):
         "headWidth": widest,
         "neck": (round(neck_cx, 1), neck_row),
         "neckWidth": neck_w,
+        # Where the animal ends. Nothing in the wardrobe needs it — a hat and a
+        # collar both hang off the head — but `TouchSpot` does: a tummy region
+        # sized from the head ran off the bottom of the canvas on half the
+        # roster, and there is no way to know where the body stops without
+        # measuring it.
+        "bottom": bottom,
     }
 
 
@@ -315,6 +321,9 @@ enum BuddyAnchors {
         /// The collar line: where the centre of a neck piece sits.
         let neck: CGPoint
         let neckWidth: CGFloat
+        /// The last row the animal occupies, for anything that needs to know
+        /// where the body stops rather than where the head is.
+        let bottom: CGFloat
     }
 
     /// The grid every coordinate above is measured on.
@@ -335,7 +344,8 @@ def emit_anchors(rows):
             f'            head: CGPoint(x: {a["head"][0]}, y: {a["head"][1]}),\n'
             f'            headWidth: {a["headWidth"]},\n'
             f'            neck: CGPoint(x: {a["neck"][0]}, y: {a["neck"][1]}),\n'
-            f'            neckWidth: {a["neckWidth"]}),\n'
+            f'            neckWidth: {a["neckWidth"]},\n'
+            f'            bottom: {a["bottom"]}),\n'
         )
     lines.append("    ]\n}\n")
     with open(ANCHORS_FILE, "w") as handle:

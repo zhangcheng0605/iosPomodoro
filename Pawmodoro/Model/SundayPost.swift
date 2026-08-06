@@ -184,6 +184,11 @@ enum SundayPost {
                          + "along than last time.")
         }
 
+        if let left = events.last(where: { $0.kind == .keepsake }),
+           let keepsake = Keepsake(rawValue: left.subject) {
+            lines.append(keepsake.postLine)
+        }
+
         if let settled = events.last(where: { $0.kind == .settledIn }),
            let den = Den(rawValue: settled.subject) {
             lines.append(den.settledInLine)

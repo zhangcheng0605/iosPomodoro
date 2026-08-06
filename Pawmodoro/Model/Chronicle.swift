@@ -64,6 +64,8 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// bought it, because buying a bed and going to sleep in it are two
         /// different days and only the second one is worth a sentence.
         case settledIn
+        /// Something the buddy left on the desk.
+        case keepsake
     }
 }
 

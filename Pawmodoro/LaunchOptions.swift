@@ -37,10 +37,13 @@ enum StorageKeys {
     /// balance is derived from the session log, see `Acorns`.
     static let owned = "pawmodoro.owned"
 
+    /// Things the buddy has left on the desk, in the order they arrived.
+    static let keepsakes = "pawmodoro.keepsakes"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
-        owned,
+        owned, keepsakes,
     ]
 }
 
@@ -329,6 +332,15 @@ enum LaunchOptions {
     ///
     /// Grants the *buddy's own* den rather than an arbitrary one — a den
     /// belongs to a species — so this also switches the buddy to its owner.
+    /// Seed the keepsake shelf, e.g. `-PawmodoroKeepsakes 4`.
+    ///
+    /// The honest way to get one is a one-in-twenty-five roll after a session,
+    /// which is not a thing anybody can drive a simulator through.
+    static let seedKeepsakes: Int? = {
+        guard arguments.contains("-PawmodoroKeepsakes") else { return nil }
+        return value(after: "-PawmodoroKeepsakes").flatMap(Int.init)
+    }()
+
     static let forcedDen: Den? = {
         guard arguments.contains("-PawmodoroDen"),
               let raw = value(after: "-PawmodoroDen")
@@ -445,6 +457,7 @@ enum LaunchOptions {
     static let openCart = false
     static let forcedWear: [Accessory] = []
     static let forcedDen: Den? = nil
+    static let seedKeepsakes: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

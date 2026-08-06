@@ -557,6 +557,66 @@ were two."), the blanket ("Under it, listening to you turn pages.").
 (force the treat tray open), `-PawmodoroGreeting` (force the morning
 greeting on launch).
 
+### As built — Phase 5, tier 1 and tier 3
+
+Built on Linux, never compiled. The touch vocabulary and the keepsakes; tier 2
+(greeting, treats, brushing, tucking in) is not built.
+
+**The touch vocabulary is the answer to the brief.** Four spots — crown, nose,
+chin, tummy — each with its own reaction, and every buddy has one **favourite**
+that is hinted nowhere in the app. Finding it is the feature; a tooltip
+pointing at it would turn a moment of noticing into a checklist.
+
+The regions are derived from the anchors `generate_accessories.py` already
+measures, so there is no third table of coordinates and a buddy redrawn
+tomorrow has correct touch regions from the next run of that tool. It needed
+one new measurement — where the animal *ends* — because a tummy sized from the
+head ran off the bottom of the canvas on half the roster, and the tummy is the
+penguin's favourite.
+
+**Two geometry bugs `check_touch.py` found:**
+
+- Sizing the regions from the head's *width* was right on a round-headed buddy
+  and wrong on every long-eared one. The dog's head is thirty-five units
+  across, so a nose region a third of that reached down to the chin and the
+  two shared 85 % of their area — a spot that can never win the tie-break is a
+  spot that does not exist. They come from the head's **height** now.
+- The horizontal poses — the stretch, the otter's float, the penguin's slide —
+  have ten rows between crown and collar, which divides into slivers nobody
+  could aim at. Those frames get **no regions at all** and the buddy answers
+  with the ordinary reaction, which on a lying-down animal is the honest
+  answer anyway.
+
+**And the checker itself was the era's clearest own goal.** Its first version
+carried its own copy of the region coefficients, and *all five* deliberate
+breaks passed cleanly — it was only ever agreeing with itself. Moving the
+numbers into `TouchSpot.shape` as data and parsing them made four fail
+instantly. CLAUDE.md now records this as the third instance of that trap, with
+the instruction that follows from it: break your checker before you believe it.
+
+**Keepsakes are the other direction**, and the reason this era is not just a
+bigger set of buttons. One roll per completed session at 1-in-25, from
+`.close` bond onward, against the *session* rather than anything done in it —
+there is nothing to optimise and no way to make a stick likelier. No
+notification, no badge, no "1 new": it waits on the shelf until somebody
+looks. Six of them arrive in a fixed order rather than randomly, so nobody
+ends up with four ribbons and no stick.
+
+**Divergences:**
+
+- **Tier 2 is not built.** The greeting, treats, brushing and tucking in are
+  four separate interactions with their own art and state, and shipping half
+  of each would be worse than shipping none. Tier 1 and tier 3 together are
+  the complete idea — a creature that reacts to your hand, and one that brings
+  you things.
+- **Petting is not counted anywhere.** No stroke total, no affection meter, no
+  contribution to the bond. The fences at the top of `TouchSpot.swift` are
+  written before the feature for that reason.
+- **VoiceOver gets the spots as named actions**, since a region cannot be
+  aimed at without sight — and none of those labels marks the favourite,
+  because giving it away would take the feature from exactly the people the
+  actions are for.
+
 ## Phase 6 — The Scrapbook (where you actually were)
 
 The postcards remember where the *buddy* was. The Scrapbook remembers where

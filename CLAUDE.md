@@ -145,6 +145,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroCart` | Open the Magpie's Cart on launch |
 | `-PawmodoroWear <ids>` | Dress the buddy on launch, e.g. `sunhat,bow` — two at once is what catches a bad anchor |
 | `-PawmodoroDen <id>` | Grant a den and switch to its owner, e.g. `igloo` |
+| `-PawmodoroKeepsakes <n>` | Seed the shelf of things the buddy brought you |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
@@ -173,8 +174,8 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are thirteen now (`swift`, `contrast`, `grove`,
-`residents`, `species`, `catalog`, `accessories`, `post`, `weather`,
+without a Mac** — there are fourteen now (`swift`, `contrast`, `grove`,
+`residents`, `species`, `catalog`, `accessories`, `touch`, `post`, `weather`,
 `yearring`, `clocks`, `stray`, `snail`), they
 take about fifteen seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
@@ -361,13 +362,21 @@ There are no tests. A change is verified by building and looking at it:
   The residents are drawn in front of the whole wood now. A thing this app
   promises can never be lost has to still be *visible*, or it decayed
   whatever the storage says.
-- **A checker that restates the values it checks has proved nothing.** Twice
-  now: `check_weather.py` parsed the weights and then verified the roll
+- **A checker that restates the values it checks has proved nothing.** Three
+  times now: `check_weather.py` parsed the weights and then verified the roll
   against them, so swapping two weights passed cleanly; `check_yearring.py`
   kept the ring's ladder as its own constant, so flattening all four steps in
   the Swift — the exact bug it exists to catch — passed cleanly too. The fix
-  is the same both times: **parse the real values out of the Swift**, and for
-  anything that is a promise about the past, add a stored fixture on top.
+  is the same every time: **parse the real values out of the Swift**, and for
+  anything that is a promise about the past, add a stored fixture on top. The
+  third was `check_touch.py`, and it is the clearest demonstration of the trap
+  in the repo: five deliberate breaks — a nose pushed off the face, a chin
+  shrunk to a sliver, two regions collapsed onto each other, a tummy floated
+  into the air — and *every one passed*, because the checker carried its own
+  copy of the coefficients. Moving them into `TouchSpot.shape` as data, and
+  parsing that, made four of the five fail immediately. **Break your checker
+  before you believe it**; a green run on code you have deliberately broken is
+  the only proof that a checker checks anything.
 - **Anything rolled from a date is a promise about the past, and gets a stored
   fixture.** `tools/check_weather.py` runs a decade of every place through a
   Python port of `WorldCalendar.seed` — the distribution, the golden-after-

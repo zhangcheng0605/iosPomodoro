@@ -95,8 +95,24 @@ struct TimerRingView: View {
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .opacity(isAdjustable ? 0 : 1)
+                // Faded rather than removed when another face is carrying the
+                // time: two things counting the same interval at full strength
+                // compete, and the ring is still the thing you can read from
+                // across the room.
+                .opacity(isAdjustable ? 0 : (engine.clockFace.isDrawn ? 1 : 0.3))
                 .animation(.linear(duration: 0.25), value: engine.progress)
+
+            // The chosen face, if it is not the ring. Drawn inside the dial
+            // and *under* the digits, which stay exactly where they are on
+            // their own capsule — swapping the face never moves the one thing
+            // on this screen anybody actually reads.
+            if !engine.clockFace.isDrawn {
+                ClockFaceView(face: engine.clockFace, progress: engine.progress)
+                    .frame(height: diameter * 0.46)
+                    .offset(y: -diameter * 0.05)
+                    .opacity(isAdjustable ? 0.35 : 1)
+                    .allowsHitTesting(false)
+            }
 
             // One thin concentric ring per completed lap, laid inside the
             // track. Two hours of deep work is five rings — time made visible

@@ -283,6 +283,15 @@ enum LaunchOptions {
         return laps > 0 ? laps : nil
     }()
 
+    /// Start on a clock face, e.g. `-PawmodoroClockFace incense`. Two of the
+    /// six are earned by reaching places that take a hundred sessions.
+    static let forcedClockFace: ClockFace? = {
+        guard arguments.contains("-PawmodoroClockFace"),
+              let raw = value(after: "-PawmodoroClockFace")
+        else { return nil }
+        return ClockFace(rawValue: raw)
+    }()
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -376,6 +385,7 @@ enum LaunchOptions {
     static let forcedSnail: Double? = nil
     static let drift = false
     static let driftLaps: Int? = nil
+    static let forcedClockFace: ClockFace? = nil
     static let bondSessions: Int? = nil
 #endif
 

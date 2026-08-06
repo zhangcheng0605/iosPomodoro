@@ -75,6 +75,10 @@ struct SettingsView: View {
                     ThemePicker { showPaywall = true }
                 }
 
+                Section("The cabinet of clocks") {
+                    ClockFacePicker()
+                }
+
                 Section {
                     Toggle("Auto-start next phase", isOn: $engine.settings.autoStartNextPhase)
                     Toggle("Haptics", isOn: $engine.settings.hapticsEnabled)

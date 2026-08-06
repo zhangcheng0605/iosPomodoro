@@ -133,6 +133,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroSnail <0-100>` | Put the old snail that far across her crossing; `-1` sends her away |
 | `-PawmodoroDrift` | Cast off an open hour on launch |
 | `-PawmodoroLaps <n>` | Start a drift already n laps deep (backdates the cast-off) |
+| `-PawmodoroClockFace <id>` | Start on a cabinet face, e.g. `incense`, `sand`, `shadow` |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

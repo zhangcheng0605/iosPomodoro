@@ -231,6 +231,37 @@ final class TimerEngine {
         return Snail.x(at: settings.place)
     }
 
+    /// Whether a clock face has been earned.
+    ///
+    /// Every requirement is a counter the app was already keeping for its own
+    /// reasons, so nothing new is recorded to unlock one and there is no
+    /// separate progression to migrate or corrupt.
+    func hasEarned(_ face: ClockFace) -> Bool {
+        switch face.requirement {
+        case .always:
+            return true
+        case .sessions(let count):
+            return log.totalSessions >= count
+        case .nights(let count):
+            return log.nightSessions >= count
+        case .reached(let place):
+            return hasReached(place)
+        case .anyConstellation:
+            return ConstellationAtlas.completedCount(
+                nightSessions: log.nightSessions
+            ) > 0
+        }
+    }
+
+    /// The face to actually draw. Falls back to the ring if the chosen one is
+    /// no longer earned — which cannot happen today, because nothing in this
+    /// app goes backwards, but the fallback costs one line and means a future
+    /// change to a counter can never leave somebody staring at a blank dial.
+    var clockFace: ClockFace {
+        if let forced = LaunchOptions.forcedClockFace { return forced }
+        return hasEarned(settings.clockFace) ? settings.clockFace : .ring
+    }
+
     /// How far the stray has come. Counted out of the log every time it's read
     /// rather than stored, which is what makes it impossible to get out of step
     /// with the history it describes.

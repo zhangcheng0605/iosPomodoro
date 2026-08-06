@@ -35,6 +35,13 @@ struct PomodoroSettings: Codable, Equatable {
     /// it is the whole point of having built it.
     var liveActivityEnabled: Bool = true
 
+    /// Which face the timer wears. The plan asked for its own `StorageKeys`
+    /// entry; it is a setting, it rides in the settings blob with every other
+    /// one, and `-PawmodoroResetState` clears it through `StorageKeys.settings`
+    /// exactly as it clears the theme and the buddy. A second key would have
+    /// been a second thing to remember.
+    var clockFace: ClockFace = .ring
+
     init() {}
 
     private enum CodingKeys: String, CodingKey {
@@ -42,7 +49,7 @@ struct PomodoroSettings: Codable, Equatable {
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
-        case liveActivityEnabled
+        case liveActivityEnabled, clockFace
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -88,6 +95,9 @@ struct PomodoroSettings: Codable, Equatable {
         liveActivityEnabled = try container.decodeIfPresent(
             Bool.self, forKey: .liveActivityEnabled
         ) ?? fallback.liveActivityEnabled
+        clockFace = try container.decodeIfPresent(
+            ClockFace.self, forKey: .clockFace
+        ) ?? fallback.clockFace
     }
 
     // MARK: Naming

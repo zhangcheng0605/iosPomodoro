@@ -115,6 +115,15 @@ struct HomesteadScene: View {
 
     private func scene(in size: CGSize, frame: Int) -> some View {
         ZStack(alignment: .topLeading) {
+            // The ground the wood stands on, drawn here rather than left to
+            // the callers. The stats card supplied its own and the panorama
+            // postcard did not, so a hundred trees came out floating on black
+            // — the one place in the app with no background behind the art.
+            // Keeping it inside the shared view is the same argument the rest
+            // of this file makes: the two callers cannot disagree about what
+            // the wood looks like if neither of them draws it.
+            Theme.surface
+
             ForEach(pieces) { piece in
                 Image(piece.asset(frame: frame))
                     .interpolation(.none)

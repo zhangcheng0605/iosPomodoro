@@ -43,8 +43,14 @@ Mac"* is a running order, not a list.
 
 ## The one line to paste
 
-> read docs/RESUME_HERE.md and do the Mac evening: build it, fix what the
-> compiler finds, then walk the new screens in order. the listening pass last.
+> read docs/TONIGHT.md and do the Mac evening: build it, fix what the compiler
+> finds, then walk the new surfaces in order. the listening pass last.
+
+**`docs/TONIGHT.md` is the short version of this file** and is the one to open
+first at the Mac: the build order, the ten new files ranked by how likely each
+is to break with the fix for each, and the four surfaces where a checker was
+structurally unable to help. Come back here for the per-screen walkthroughs
+(sections 1–20 below) and for why anything is the way it is.
 
 ---
 
@@ -691,8 +697,8 @@ other one shut.
 
 ```sh
 tools/run-sim.sh --demo --headless \
-    --args "-PawmodoroPassage snowgeese -PawmodoroSighting snowgoose \
-            -PawmodoroPlace meadow -PawmodoroClock 14"
+    -PawmodoroPassage snowgeese -PawmodoroSighting snowgoose \
+    -PawmodoroPlace meadow -PawmodoroClock 14
 ```
 
 Ids: `swans`, `cuckoo`, `paintedladies`, `salmon`, `redwings`, `snowgeese`,
@@ -734,8 +740,8 @@ is not a plan.
 
 ```sh
 tools/run-sim.sh --demo --headless \
-    --args "-PawmodoroPlace harbor -PawmodoroTide springlow \
-            -PawmodoroSighting octopus -PawmodoroClock 14"
+    -PawmodoroPlace harbor -PawmodoroTide springlow \
+    -PawmodoroSighting octopus -PawmodoroClock 14
 ```
 
 Values: `springlow`, `low`, `mid`, `high`, or a bare number 0–1.

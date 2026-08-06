@@ -50,9 +50,11 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > iPhone app on purpose. Read `docs/NEXT_UPDATE.md` before the next archive —
 > that change is visible to App Review.
 
-**Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
-where the build order stopped, what has and hasn't been seen running, and what
-is blocked on the user.
+**At a Mac, picking this up after the Linux run? Read `docs/TONIGHT.md`** —
+the short running order: build, the ten new files ranked by how likely each is
+to break, then the four surfaces no checker could judge.
+**`docs/RESUME_HERE.md`** is the long version — where the build order stopped,
+what has and hasn't been seen running, and what is blocked on the user.
 
 **The next era is planned:** `docs/HEARTH_PLAN.md` — the fifth plan document
 — covers the owner's monetization brief: the acorn currency, the Magpie's
@@ -67,10 +69,12 @@ phases V-Z (weather, sound, the open hour, the long now, widgets). **Phase 0
 is built except 0e**: the Chronicle, the world calendar, the conventions and
 the dream backfill are in; the listening pass and the widget-target step are
 the Mac sitting that is left, and Phase W does not start until the listening
-pass has notes. **V's weather and snail, X's Drift and Cabinet, and all four
-altitudes of Y are built on top of it** — none compiled; `docs/RESUME_HERE.md`
-is the running order for the Mac evening. What Y still owes is Y4's four
-time-of-day grades and its hundred-hour panorama. The two earlier plan
+pass has notes. **Phases V, X and Y are complete** — weather, the snail, the
+Flyway, Tidewater, the Drift with its deep-drift species, the Cabinet, and all
+four altitudes of the Long Now including the Homestead's time-of-day grades
+and its hundred-hour panorama. None of it has been compiled;
+`docs/TONIGHT.md` is the running order. What is left in Deep Time is W (gated
+on the listening pass) and Z (needs an Xcode target). The two earlier plan
 documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
 running, D (Live Activity) written but needing a one-time Xcode target step,
 E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers

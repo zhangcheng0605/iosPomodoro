@@ -129,6 +129,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroBond <n>` | Seed n completed sessions, to preview every bond level |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
+| `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.
@@ -149,7 +150,8 @@ first-launch notification prompt, and the paywall's locked state.
 
 ## Verifying a change
 
-**Run `python3 tools/check_swift.py` before ending any session written without
+**Run `python3 tools/check_swift.py` and `check_weather.py` before ending any
+session written without
 a Mac.** Most of this app is written on Linux and compiled days later, so a
 typo costs Mac time — which is the scarce resource here, not Linux time. It
 closes the mechanical error classes a compiler would catch instantly:
@@ -259,13 +261,25 @@ There are no tests. A change is verified by building and looking at it:
   never its centre — anchoring the centre put the biggest stage in the Onsen's
   hot spring while the two smaller ones looked fine. Run it after moving her,
   resizing a stage sprite, or redrawing any scene.
-- **Run `python3 tools/check_contrast.py` after touching a palette.** It reads
-  the real values out of `AppTheme.swift` and blends the time-of-day sky wash
-  over every phase background, in every theme and appearance — 216 pairs. The
-  wash is safe because `Palette.sky(_:)` mixes each hue toward `cream` first,
-  which pins its luminance near the background's; lowering `Palette.skyMix`
-  will fail the check. It also samples the real exported scene pixels behind
-  every text row — 51k measurements, a couple of seconds.
+- **Run `python3 tools/check_contrast.py` after touching a palette or a veil.**
+  It reads the real values out of `AppTheme.swift` and blends the time-of-day
+  sky wash over every phase background, in every theme and appearance. It also
+  samples the real exported scene pixels behind every text row, under every
+  weather veil — 922k measurements, about six seconds. Be honest about what
+  that proves: the text capsules composite last at 70–82 %, so they dominate
+  the result and the check confirms the veils are safe rather than standing
+  guard over them. See `Palette.weatherMix`, which says so with the numbers.
+- **Anything rolled from a date is a promise about the past, and gets a stored
+  fixture.** `tools/check_weather.py` runs a decade of every place through a
+  Python port of `WorldCalendar.seed` — the distribution, the golden-after-
+  storm rule, the snow window, determinism — and then checks two dozen stored
+  (day, place) → weather rows that were generated once and never change.
+  Everything above the fixture parses the weights out of the Swift, which
+  makes it self-consistent: swap two weights and it all still passes, because
+  it now believes the new weights. Only the fixture notices, and what it
+  notices is that a storm somebody sat through last March has just become an
+  overcast afternoon. Every future date-rolled feature — the tide, the flyway,
+  the snail, the grove's layout — wants the same two halves.
 - **Animation is driven by `TimelineView`, never by a `Timer`.** A timeline
   stops when its view is off screen or the app is backgrounded, so an idle app
   costs nothing. Loops run at 2–4fps, bursts at 8fps, particles at 30fps, and

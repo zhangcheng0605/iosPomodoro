@@ -63,6 +63,13 @@ enum Theme {
         palette.sky(part)?.color
     }
 
+    /// The tint for what the sky is doing today, laid over the place itself
+    /// rather than over the phase gradient. Nil when the weather is `clear`,
+    /// which is what the app looked like before weather existed.
+    static func weatherVeil(for weather: Weather) -> Color? {
+        palette.weather(weather)?.color
+    }
+
     static func accent(for phase: TimerEngine.Phase) -> Color {
         switch phase {
         case .focus: blossom

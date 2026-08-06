@@ -1076,6 +1076,56 @@ def dream_yours_desk():
     return outline_silhouette(g)
 
 
+def dream_sky_puddle():
+    """What the rain leaves behind, and the best thing about rain.
+
+    Two goes at the splash before this one: concentric ripples in the water
+    read as beans (a closed shape inside a shape of the same tone has no edge
+    to be seen by), and ticks flicking up out of it read as antennae. One dark
+    ring on the *bright* middle has the tone contrast to be a ripple."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 12, 18, 18], fill=BODY)            # the puddle, seen flat
+    d.ellipse([4, 13, 15, 17], fill=CREAM)           # what it is reflecting
+    d.ellipse([8, 14, 12, 16], outline=SHADE)        # where one just landed
+    d.line([(10, 3), (10, 9)], fill=SHADE)           # and the next one coming
+    return outline_silhouette(g)
+
+
+def dream_sky_thunder():
+    """Further off each time, which is how a storm says goodnight.
+
+    The bolt hangs clear of the cloud by a pixel on purpose:
+    `outline_silhouette` rings the *union* of everything drawn, so a bolt
+    touching the cloud gets no line between them and the pair reads as one
+    lumpy bag. The gap buys it its own outline."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for box in ([1, 3, 9, 9], [6, 1, 15, 8], [11, 4, 18, 9]):
+        d.ellipse(box, fill=SHADE)                   # three lobes and
+    d.rectangle([2, 6, 17, 9], fill=SHADE)           # a flat underside
+    d.polygon([(11, 11), (7, 16), (10, 16), (8, 19), (14, 14), (11, 14)],
+              fill=BODY)
+    return outline_silhouette(g)
+
+
+def dream_sky_afterglow():
+    """The day after a storm: washed clean, and lit from the side.
+
+    Drawn as the same cloud `dream_sky_thunder` has, leaving — which is what
+    golden weather actually is, and makes the pair read as one story told a
+    day apart. Rays were tried first and stair-stepped into a solid hatched
+    mass; light drawn as light needs somewhere dark to come out from."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([11, 1, 19, 9], fill=CREAM)            # the sun, mostly behind
+    for box in ([1, 6, 9, 13], [5, 4, 14, 12], [10, 7, 17, 13]):
+        d.ellipse(box, fill=SHADE)                   # the last of the cloud
+    d.rectangle([2, 9, 16, 13], fill=SHADE)
+    d.rectangle([0, 17, 19, 19], fill=BODY)          # the ground, lit again
+    return outline_silhouette(g)
+
+
 def fx_bubble(shift=0):
     """The thought bubble the dream sits inside.
 
@@ -1503,6 +1553,9 @@ if __name__ == "__main__":
         ("yours_chair", dream_yours_chair),
         ("yours_doorway", dream_yours_doorway),
         ("yours_desk", dream_yours_desk),
+        ("sky_puddle", dream_sky_puddle),
+        ("sky_thunder", dream_sky_thunder),
+        ("sky_afterglow", dream_sky_afterglow),
     ):
         to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")

@@ -230,6 +230,19 @@ enum LaunchOptions {
         return formatter.date(from: raw).map { Calendar.current.startOfDay(for: $0) }
     }()
 
+    /// Pin today's weather at every place, e.g. `-PawmodoroWeather storm`.
+    ///
+    /// A storm is one day in thirty at one place, and golden only ever follows
+    /// one, so waiting for either is not a way to check a veil.
+    /// `-PawmodoroDate` reaches the same states honestly when you want to see
+    /// the roll itself working rather than one sky.
+    static let forcedWeather: Weather? = {
+        guard arguments.contains("-PawmodoroWeather"),
+              let raw = value(after: "-PawmodoroWeather")
+        else { return nil }
+        return Weather(rawValue: raw)
+    }()
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -319,6 +332,7 @@ enum LaunchOptions {
     static let pinnedDay: Date? = nil
     static let seedChronicle = false
     static let forcedSeason: Season? = nil
+    static let forcedWeather: Weather? = nil
     static let bondSessions: Int? = nil
 #endif
 

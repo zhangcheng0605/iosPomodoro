@@ -15,13 +15,16 @@ import Observation
 /// journal makes a rich dream life, which quietly makes the journal itself
 /// worth more.
 ///
-/// Six of the nine cases arrived together, in Phase 0d of the Deep Time plan,
+/// Six of the ten cases arrived together, in Phase 0d of the Deep Time plan,
 /// to pay a debt: the pool had not been fed since it was written, so five whole
 /// systems — the bond, the regulars, the things you can only hear, the seasons
 /// and the stray's arc — could be lived through without the buddy ever dreaming
 /// about any of them. Each has its own case now, gated in `TimerEngine.pool()`
 /// on the thing itself, so a dream can only be had by somebody who earned what
 /// it is about.
+///
+/// `sky` is the tenth, and the first to arrive the way the convention now says
+/// they should: weather shipped *with* its dreams rather than owing them.
 enum Dream: Hashable, Identifiable {
     /// Something you both saw. The heart of it.
     case memory(Species)
@@ -37,6 +40,8 @@ enum Dream: Hashable, Identifiable {
     case sound(Heard)
     /// The time of year, dreamed while it is still that time of year.
     case season(Season)
+    /// What the sky left behind today.
+    case sky(Sky)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -104,6 +109,43 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// What the weather leaves behind, once it has gone.
+    ///
+    /// Deliberately three, not one per weather: nine weathers would be nine
+    /// sprites and nine near-identical captions, and a dream about "overcast"
+    /// is not a dream about anything. These are the three the sky leaves you
+    /// something to remember it by — and two of them are rare enough that
+    /// having them in the diary means you were actually there.
+    enum Sky: String, CaseIterable, Hashable {
+        case puddle, thunder, afterglow
+
+        /// Which weathers earn it. A dream about a puddle belongs to somebody
+        /// who sat through the rain that made it.
+        var reachedAt: [Weather] {
+            switch self {
+            case .puddle: [.drizzle, .rain]
+            case .thunder: [.storm]
+            case .afterglow: [.golden]
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .puddle: "the puddle"
+            case .thunder: "the thunder"
+            case .afterglow: "the light afterwards"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .puddle: "Deeper than it looked, and warm."
+            case .thunder: "Further off each time, and then not at all."
+            case .afterglow: "Everything lit from one side, and steaming."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -149,6 +191,7 @@ enum Dream: Hashable, Identifiable {
         case .visitor(let visitor): "visitor.\(visitor.rawValue)"
         case .sound(let sound): "sound.\(sound.rawValue)"
         case .season(let season): "season.\(season.rawValue)"
+        case .sky(let sky): "sky.\(sky.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -165,6 +208,7 @@ enum Dream: Hashable, Identifiable {
         case "visitor": return Visitor(rawValue: parts[1]).map(Dream.visitor)
         case "sound": return Heard(rawValue: parts[1]).map(Dream.sound)
         case "season": return Season(rawValue: parts[1]).map(Dream.season)
+        case "sky": return Sky(rawValue: parts[1]).map(Dream.sky)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -182,6 +226,7 @@ enum Dream: Hashable, Identifiable {
         case .visitor(let visitor): visitor.asset
         case .sound(let sound): "dream_heard_\(sound.rawValue)"
         case .season(let season): "dream_season_\(season.rawValue)"
+        case .sky(let sky): "dream_sky_\(sky.rawValue)"
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -193,7 +238,7 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor: true
-        case .memory, .regular, .sound, .season, .yours, .surreal: false
+        case .memory, .regular, .sound, .season, .sky, .yours, .surreal: false
         }
     }
 
@@ -213,6 +258,7 @@ enum Dream: Hashable, Identifiable {
         case .visitor(let visitor): visitor.subject
         case .sound(let sound): sound.name.lowercased()
         case .season(let season): season.name.lowercased()
+        case .sky(let sky): sky.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -228,6 +274,7 @@ enum Dream: Hashable, Identifiable {
         case .visitor(let visitor): visitor.line
         case .sound(let sound): sound.dreamLine
         case .season(let season): season.dreamLine
+        case .sky(let sky): sky.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -248,6 +295,7 @@ enum Dream: Hashable, Identifiable {
             + Visitor.allCases.map(Dream.visitor)
             + Heard.allCases.map(Dream.sound)
             + Season.allCases.map(Dream.season)
+            + Sky.allCases.map(Dream.sky)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

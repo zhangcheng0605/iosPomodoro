@@ -33,6 +33,24 @@ SKY_HUE = {
 SKY_MIX = 0.58
 SKY_WASH_OPACITY = 0.45
 
+# Mirrors Palette.weather(_:) and Weather.veilOpacity — which palette hue each
+# weather borrows, and how strongly it is laid over the scene.
+#
+# `clear` is absent because it draws nothing; every other weather is a second
+# veil between the scene's own veil and the sky wash, which is a layer the
+# text has to survive and therefore a layer this has to measure.
+WEATHER_MIX = 0.62
+WEATHER_VEILS = {
+    "breeze": ("sage", 0.10),
+    "snow": ("night", 0.20),
+    "drizzle": ("night", 0.22),
+    "golden": ("sunshine", 0.26),
+    "overcast": ("bark", 0.30),
+    "rain": ("night", 0.30),
+    "mist": ("cream", 0.34),
+    "storm": ("night", 0.40),
+}
+
 # Mirrors Theme.background(for:): (top colour, its opacity over cream, bottom).
 PHASE_BACKGROUNDS = {
     "focus": ("blush", 0.6),
@@ -138,31 +156,52 @@ def check_scenes(palettes, minimum):
 
                     text = c("bark")
                     wash_hue = SKY_HUE[part]
-                    worst = (99.0, None)
 
-                    for fraction, backing in TEXT_ROWS:
-                        y = min(height - 1, int(height * fraction))
-                        # Every 8th column is plenty to catch a bad region and
-                        # keeps the whole sweep under a second.
-                        for x in range(0, width, 8):
-                            r, g, b = pixels[x, y]
-                            scene = (r / 255.0, g / 255.0, b / 255.0)
-                            background = over(c("cream"), scene, SCENE_VEIL)
-                            if wash_hue is not None:
-                                wash = over(c("cream"), c(wash_hue), SKY_MIX)
-                                background = over(wash, background, SKY_WASH_OPACITY)
-                            # The text's own backing, last.
-                            background = over(c("cream"), background, backing)
-                            ratio = contrast(text, background)
-                            checked += 1
-                            if ratio < worst[0]:
-                                worst = (ratio, (fraction, x))
-                    if worst[0] < minimum:
-                        row, col = worst[1]
-                        failures.append(
-                            f"{name}/{theme}/{appearance} at row {row:.3f} "
-                            f"x={col}: {worst[0]:.2f}:1"
-                        )
+                    # Clear first, then every weather that draws a veil. Each
+                    # is measured on its own so a failure names the sky that
+                    # caused it rather than "somewhere in this scene".
+                    skies = [("clear", None, 0.0)]
+                    skies += [
+                        (weather, hue, alpha)
+                        for weather, (hue, alpha) in sorted(WEATHER_VEILS.items())
+                    ]
+
+                    for weather, veil_hue, veil_alpha in skies:
+                        worst = (99.0, None)
+                        for fraction, backing in TEXT_ROWS:
+                            y = min(height - 1, int(height * fraction))
+                            # Every 8th column is plenty to catch a bad region
+                            # and keeps the whole sweep to a few seconds.
+                            for x in range(0, width, 8):
+                                r, g, b = pixels[x, y]
+                                scene = (r / 255.0, g / 255.0, b / 255.0)
+                                background = over(c("cream"), scene, SCENE_VEIL)
+                                # The weather veil sits on the scene, inside
+                                # SceneryView, so it composites before the sky.
+                                if veil_hue is not None:
+                                    veil = over(
+                                        c("cream"), c(veil_hue), WEATHER_MIX
+                                    )
+                                    background = over(
+                                        veil, background, veil_alpha
+                                    )
+                                if wash_hue is not None:
+                                    wash = over(c("cream"), c(wash_hue), SKY_MIX)
+                                    background = over(
+                                        wash, background, SKY_WASH_OPACITY
+                                    )
+                                # The text's own backing, last.
+                                background = over(c("cream"), background, backing)
+                                ratio = contrast(text, background)
+                                checked += 1
+                                if ratio < worst[0]:
+                                    worst = (ratio, (fraction, x))
+                        if worst[0] < minimum:
+                            row, col = worst[1]
+                            failures.append(
+                                f"{name}/{weather}/{theme}/{appearance} at row "
+                                f"{row:.3f} x={col}: {worst[0]:.2f}:1"
+                            )
     return failures, checked
 
 

@@ -28,17 +28,28 @@ struct AlmanacView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+            // Through WorldCalendar, so -PawmodoroDate moves the date printed
+            // here along with the sky, the moon and the weather under it.
+            Text(WorldCalendar.now
+                .formatted(.dateTime.weekday(.wide).day().month(.wide)))
                 .font(.headline)
                 .foregroundStyle(Theme.bark)
             HStack(spacing: 6) {
                 Image(systemName: moonSymbol)
                     .font(.caption)
                     .foregroundStyle(Theme.blossom)
-                Text("\(MoonPhase.name()) · \(dayPart.almanacWord)")
+                // The one place the weather is named in words. Everywhere else
+                // it is a veil and some particles, which is the right weight
+                // for it — but a thing with no name is a thing nobody can tell
+                // you about, and this is meant to be worth mentioning.
+                Text("\(MoonPhase.name()) · \(dayPart.almanacWord) · "
+                     + engine.weather.name.lowercased())
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.7))
             }
+            Text(engine.weather.line)
+                .font(.footnote.italic())
+                .foregroundStyle(Theme.bark.opacity(0.6))
             if MoonPhase.isFull() {
                 Text("A good night for the water's edge.")
                     .font(.footnote.italic())

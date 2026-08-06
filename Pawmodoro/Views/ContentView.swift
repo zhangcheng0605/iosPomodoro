@@ -38,6 +38,8 @@ struct ContentView: View {
 
                 sky
 
+                weather
+
                 seasonal
 
                 // Something tiny that settles on the buddy or the ring. Above
@@ -248,8 +250,15 @@ struct ContentView: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
             let place = engine.settings.place
+            // Named `today` rather than `weather`: this view has a `weather`
+            // layer property of its own, and a local shadowing it here reads
+            // like a typo even when it isn't.
+            let today = engine.weather
             ZStack {
-                SceneryView(place: place, part: part)
+                SceneryView(place: place, part: part, weather: today)
+                    // Weather is *not* in the id: changing it should cross-fade
+                    // the veil, not rebuild the scene. The place and the hour
+                    // are what swap the artwork underneath.
                     .id("\(place.rawValue)-\(part.rawValue)")
 
                 if let vignette = place.vignette,
@@ -336,6 +345,31 @@ struct ContentView: View {
             && !engine.stray.hasJoined
             && engine.strayStage >= .home
             && engine.runState == .idle
+    }
+
+    /// What the sky is doing today.
+    ///
+    /// Above the sky wash so rain reads against the night tint, and below the
+    /// UI so nothing ever falls across the countdown — the same sandwich the
+    /// seasons sit in, because they are the same kind of layer.
+    ///
+    /// The one piece of coordination in here: if the player has chosen the
+    /// rain ambience and it is also raining, only one of the two draws. Two
+    /// independent rain fields on the same screen is a downpour nobody asked
+    /// for, and the ambience is the one the player actually picked.
+    @ViewBuilder
+    private var weather: some View {
+        let today = engine.weather
+        let ambienceIsRaining = engine.isRunning
+            && engine.settings.ambience == .rain
+        if !(ambienceIsRaining && today.suggests == .rain) {
+            WeatherView(
+                weather: today,
+                tint: Theme.bark,
+                accent: Theme.accent(for: engine.phase)
+            )
+            .id(today)
+        }
     }
 
     /// Whatever time of year it is, if it is any in particular.
@@ -478,6 +512,10 @@ struct ContentView: View {
     private func ambienceButton(for option: Ambience) -> some View {
         let unlocked = store.isUnlocked(option)
         let selected = engine.settings.ambience == option
+        // The weather suggests; it never chooses. A ring, not a switch — and
+        // not on something already playing or something not owned, because a
+        // glow you cannot act on is just noise.
+        let suggested = unlocked && !selected && engine.weather.suggests == option
 
         return Button {
             if unlocked {
@@ -500,6 +538,17 @@ struct ContentView: View {
                             ? Theme.onAccent
                             : Theme.bark.opacity(unlocked ? 0.7 : 0.35)
                     )
+                    // Static, not pulsing. A ring that breathes on the main
+                    // screen is a thing the eye keeps returning to for the
+                    // rest of the session, and this is a hint, not an alert.
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 11)
+                            .strokeBorder(
+                                Theme.accent(for: engine.phase)
+                                    .opacity(suggested ? 0.8 : 0),
+                                lineWidth: 1.5
+                            )
+                    )
 
                 if !unlocked {
                     Image(systemName: "lock.fill")
@@ -521,6 +570,11 @@ struct ContentView: View {
             unlocked
                 ? "Ambience: \(option.label)"
                 : "Ambience: \(option.label), locked, requires Pawmodoro Plus"
+        )
+        // A ring is invisible to VoiceOver, so the suggestion has to be said
+        // out loud too or it only exists for people who can see it.
+        .accessibilityHint(
+            suggested ? "Suggested \(engine.weather.suggestionNote ?? "")" : ""
         )
     }
 

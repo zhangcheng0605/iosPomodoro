@@ -288,6 +288,86 @@ Ships in two slices, per the judges: **V-slice-1 = veils + particles + the
 suggestion glow (W2's hook, sound-less), zero species.** Weather must feel
 right for a week on the owner's own phone before anything lives in it.
 
+### As built — V-slice-1 (weather, no species)
+
+Built on Linux, unbuilt by any compiler. `check_swift.py`, `check_contrast.py`,
+`check_stray.py` and the new `check_weather.py` are all green; the three new
+sprites were rendered and looked at. **V3 onward has not been started**, per
+the plan's own instruction that weather spend a week on a real phone before
+anything lives in it.
+
+**`check_weather.py` found a real bug on its first run, before anything had
+been compiled.** Golden was written as "if yesterday stormed, today is golden",
+which is what the table above says. Over a decade of every place that produces
+two failures nobody would ever have reported from inside the app: two storms
+running showed **golden on both days**, and the second storm was **never shown
+at all**. The rarest weather in the table, silently eaten by the second-rarest,
+about thirty times a decade. The fix is one clause — golden only wins when
+today is not itself a storm — and it also does all the work of keeping golden
+days from chaining, which the original comment had claimed was impossible for a
+reason that turned out to be wrong.
+
+That is the argument for the whole file: weather is a pure function of the
+date, so it is one of the few things in this app that can be checked
+*completely* without a Mac. Run every day of a decade at every place and count.
+
+**The fixture is the half that matters.** Everything else in `check_weather.py`
+parses the weights out of `Weather.swift` and then verifies the roll against
+them — which is self-consistent by construction. Swapping `mist` and
+`overcast` passed cleanly. So the file carries two dozen stored (day, place) →
+weather rows, generated once from the shipping implementation, covering all
+nine weathers. Those catch a changed weight, a reordered `rollable`, and a
+touched seed constant — verified by doing each. This is the plan's own
+"layout seeds are compatibility contracts" rule, and every date-rolled feature
+after this one — tide, flyway, snail, grove — wants the same two halves.
+
+**Divergences from the plan, and why:**
+
+- **Weather particles are their own layer, not an extension of
+  `AmbientSceneView`.** The plan says to extend it. That layer is mounted only
+  while the timer runs with a sound chosen, because it is the *picture of the
+  ambience* — but weather is not a choice and is not earned, and "opening the
+  app in the morning is opening the curtains" only works if the curtains are
+  open before you press play. `WeatherView` is modelled on `SeasonalView`
+  instead, at the same 12fps and for the same reason. One piece of
+  coordination: if the rain ambience is playing and it is also raining, only
+  one rain field draws.
+- **The suggestion glows but does not float forward.** W2 asks for the
+  matching chip to "float forward in the Sound Studio". It glows, and the row
+  gains three words saying why ("for the rain"), and the order does not
+  change. A settings list that rearranges itself with the sky is the app
+  moving your furniture; the glow already does the job, and reordering can be
+  added later if a week on the phone says the glow is too quiet. The ring is
+  static rather than pulsing, and the reason is on the main screen: something
+  breathing there is something the eye keeps coming back to for the rest of
+  the session.
+- **Snow's "winter" is `Season.winter`,** which is December only, rather than a
+  second set of month windows. One opinion about the time of year — and
+  `-PawmodoroSeason winter` therefore makes it snow, which is what anybody
+  reaching for that flag wanted.
+- **The weather is named in exactly one place.** The plan's V-slice-1 is veils,
+  particles and the glow, none of which give the sky a *name*. The almanac's
+  today line gained `· mist` and a one-line remark under it, because a thing
+  with no name is a thing nobody can tell you about. Everywhere else it stays
+  a veil and some particles, which is the right weight for it.
+- **Three dream entries, not nine.** The standing convention wants 2–3 per
+  feature; one per weather would be nine sprites and nine near-identical
+  captions, and a dream about "overcast" is not a dream about anything.
+  `Dream.Sky` is `puddle` (after rain or drizzle), `thunder` (after a storm)
+  and `afterglow` (after a golden day) — two of them rare enough that having
+  them in the diary means you were actually there. This is the first feature to
+  ship *with* its dreams rather than owing them.
+
+**What the contrast check does and does not prove.** It grew from 103k
+measurements to 922k, composites every veil, and passes everywhere. But it was
+pushed to find out what it is sensitive to, and the answer is: not the veil.
+The text capsules composite last at 70–82 % opacity and dominate the result;
+a veil only fails at `weatherMix` 0 with an opacity of 0.8, four times anything
+shipped. One reassuring number did fall out: every weather veil measures
+*better* than a clear sky, because mixing toward `cream` moves the background
+away from the `bark` text. The tightest pair in the whole matrix — 5.18:1 — is
+a clear-sky pair that predates weather entirely.
+
 ### V3. Wave 4 — the creatures that come with the sky (~18 species)
 
 Journal 41 → ~59. Weather-gated exactly as existing species are hour-gated —

@@ -103,6 +103,7 @@ struct AmbiencePicker: View {
     private func row(for option: Ambience) -> some View {
         let unlocked = store.isUnlocked(option)
         let selected = engine.settings.ambience == option
+        let suggested = unlocked && !selected && engine.weather.suggests == option
 
         return Button {
             if unlocked {
@@ -117,6 +118,14 @@ struct AmbiencePicker: View {
                     .foregroundStyle(unlocked ? Theme.blossom : Theme.bark.opacity(0.4))
                 Text(option.label)
                     .foregroundStyle(Theme.bark.opacity(unlocked ? 1 : 0.5))
+                // Why, in three words. The list keeps its order — see the
+                // Phase V As-built note: a settings list that rearranges
+                // itself with the sky is the app moving your furniture.
+                if suggested, let note = engine.weather.suggestionNote {
+                    Text(note)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.bark.opacity(0.5))
+                }
                 Spacer()
                 if !unlocked {
                     Image(systemName: "lock.fill")

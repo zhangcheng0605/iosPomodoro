@@ -153,6 +153,14 @@ final class TimerEngine {
     /// How well you and your buddy know each other, counted out of the log.
     var bond: Bond { Bond.level(at: log.totalSessions) }
 
+    /// What the sky is doing where you are, today.
+    ///
+    /// Derived, never stored: a function of the calendar day and the place,
+    /// through `WorldCalendar`. So it survives a reinstall, agrees with itself
+    /// across every screen that asks, costs nothing to keep, and moves with
+    /// `-PawmodoroDate` along with the season and the moon.
+    var weather: Weather { Weather.at(settings.place) }
+
     /// How far the stray has come. Counted out of the log every time it's read
     /// rather than stored, which is what makes it impossible to get out of step
     /// with the history it describes.
@@ -598,6 +606,13 @@ final class TimerEngine {
         if let season = Season.current() {
             pool.append(contentsOf: repeatElement(.season(season), count: 3))
         }
+        // What today's sky leaves behind. Weighted 3 for the same reason the
+        // season is: a storm is one day in thirty and golden only ever follows
+        // one, so a low weight would make these unreachable rather than rare.
+        let today = weather
+        for sky in Dream.Sky.allCases where sky.reachedAt.contains(today) {
+            pool.append(contentsOf: repeatElement(.sky(sky), count: 3))
+        }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
         }
@@ -630,7 +645,7 @@ final class TimerEngine {
             met = journal.record(for: species)?.firstSeen
         case .sound(let sound):
             met = journal.firstHeard(sound)
-        case .travel, .companion, .visitor, .season, .yours, .surreal:
+        case .travel, .companion, .visitor, .season, .sky, .yours, .surreal:
             met = nil
         }
         guard let met else { return nil }

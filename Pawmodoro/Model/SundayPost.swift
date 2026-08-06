@@ -184,6 +184,11 @@ enum SundayPost {
                          + "along than last time.")
         }
 
+        if let settled = events.last(where: { $0.kind == .settledIn }),
+           let den = Den(rawValue: settled.subject) {
+            lines.append(den.settledInLine)
+        }
+
         // The homestead's arrivals, in the letter's tense: they happened, and
         // now they are simply part of the place. Never how many there are —
         // eight of eight is a collection, and this is a garden.

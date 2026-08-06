@@ -433,6 +433,48 @@ weather isn't worth it.").
 
 **Flags:** `-PawmodoroDen <id>`.
 
+### As built — Phase 4, the Dens
+
+Built on Linux, never compiled. Twelve houses, two frames each, standing in the
+homestead. The penguin's igloo — the example the whole feature was asked for by
+— lands exactly as specified.
+
+**No new placement system and no new checker, on purpose.** Y4's residents had
+already paid for everything a den needs: hand-placed art in the near band,
+feet-anchored, drawn in front of the wood, and a checker that measures overlap,
+the band, the card's rounded corners and the footprint ceiling. So a den goes
+through `check_residents.py` as if it were a ninth resident, and every lesson
+that surface cost transfers instead of being relearned. That was the argument
+for putting dens in the homestead rather than giving them a screen.
+
+**One den on screen at a time** — the current buddy's — so all twelve share a
+single spot in the yard rather than each needing one. The checker holds that
+spot against all eight neighbours for every den size, which is what caught the
+two-point clearance from the birdhouse being real rather than lucky.
+
+**The second frame is always the same idea: somebody is in.** A light on, a
+tail showing, a muzzle resting in the door. Chosen by the world's clock rather
+than animated — a house blinking between occupied and empty twice a second
+would be a haunting — and inverted for a nocturnal buddy, because Luna works
+nights and a dark empty hollow at midnight is exactly backwards.
+
+**Divergences:**
+
+- **`.settledIn` is recorded by the engine, not the view.** The first night
+  actually slept in a new den is an episode, and episodes are written where
+  the hour, the buddy and the pouch are all known at once. A view never writes
+  to the log.
+- **Soot's chimney corner arrives with her and has no price.** `Den.isForSale`
+  says so and `check_catalog.py` refuses to let that change — the same fence
+  that stops `Buddy.catalogItem` selling her.
+- **`Dream.Home`, not `Dream.Den`.** `check_swift.py` refuses two enums with
+  the same simple name outright, and it is right to: the day `Grove.Stage`
+  collided with `Stray.Stage` it reported three confident wrong failures.
+- **The branch was a garden table.** Drawn as a platform on three props, the
+  red panda's den came out as a table with two bushes on it. It is a limb
+  rising into leaves now. The basket, meanwhile, had a *green* cat curled in
+  it — the homestead palette's shade tone is foliage, not fur.
+
 ## Phase 5 — A creature of one's own (the interaction era)
 
 The brief: *"interact with the pet like it is their own."* The design

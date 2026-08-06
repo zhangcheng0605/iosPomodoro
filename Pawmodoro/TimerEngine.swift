@@ -178,6 +178,10 @@ final class TimerEngine {
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
             self.settings.music = forced
         }
+        // A den belongs to a species, so showing one means being that buddy.
+        if let den = LaunchOptions.forcedDen {
+            self.settings.buddy = den.buddy
+        }
         for accessory in LaunchOptions.forcedWear {
             self.settings.wear(accessory, on: self.settings.buddy, in: accessory.slot)
         }
@@ -267,6 +271,22 @@ final class TimerEngine {
             return max(0, forced - pouch.spent)
         }
         return Acorns.balance(minutes: log.totalMinutes, spent: pouch.spent)
+    }
+
+    /// Whether this den is standing in the homestead.
+    ///
+    /// Soot's is never for sale and arrives with her — asked of `isForSale`
+    /// rather than special-cased here, so there is one opinion about it.
+    func ownsDen(_ den: Den) -> Bool {
+        guard den.isForSale else { return stray.hasJoined }
+        return hasPlus || pouch.owns(.den(den))
+    }
+
+    /// The den standing in the homestead right now, if any. One at a time:
+    /// the current buddy's.
+    var visibleDen: Den? {
+        guard let den = Den.forBuddy(settings.buddy), ownsDen(den) else { return nil }
+        return den
     }
 
     /// Minutes of focus until `count` acorns are in hand, or nil if they
@@ -1040,6 +1060,10 @@ final class TimerEngine {
         // Dressed up, once you actually own the thing. Asked of the pouch
         // rather than of a second unlock table, so the gate can never
         // disagree with what is in the wardrobe.
+        // Home, from the inside, once there is one to be inside of.
+        if visibleDen != nil {
+            pool.append(contentsOf: Dream.Home.allCases.map(Dream.den))
+        }
         for finery in Dream.Finery.allCases
         where pouch.owns(.accessory(finery.reachedAt)) || hasPlus {
             pool.append(contentsOf: repeatElement(.finery(finery), count: 2))
@@ -1313,6 +1337,18 @@ final class TimerEngine {
         // session it can be true for.
         if let resident = residentArrived {
             chronicle.add(.resident, resident.rawValue)
+        }
+        // The first night actually spent in a new den. Recorded here rather
+        // than by the homestead view, for the same reason every other episode
+        // is: a view should never write to the log, and this is the one place
+        // that knows the hour, the buddy and the pouch at once.
+        if let den = Den.forBuddy(settings.buddy),
+           ownsDen(den),
+           den.isOccupied(at: LaunchOptions.forcedDayPart ?? DayPart.current(),
+                          buddy: settings.buddy),
+           !pouch.hasSettled(in: den) {
+            pouch.noteSettled(in: den)
+            chronicle.add(.settledIn, den.rawValue)
         }
         let strayAfter = stray.stage(log: log)
         if strayAfter != strayBefore {

@@ -152,6 +152,32 @@ def parse_residents():
     return cases, {k: int(v) for k, v in arrives.items()}, place, size
 
 
+def parse_dens():
+    """Every den's size, and the one spot they all share, out of `Den.swift`.
+
+    A den stands in the same yard as the eight neighbours and gets exactly the
+    same treatment — overlap, the near band, the card's rounded corners, the
+    footprint ceiling. That is the whole reason it was put in the homestead
+    rather than given a surface of its own: every lesson Y4 paid for transfers
+    instead of being relearned.
+    """
+    source = open(os.path.join(ROOT, "Pawmodoro", "Model", "Den.swift")).read()
+    spot = re.search(
+        r"static let position: \(x: Double, y: Double\) = \(([\d.]+), ([\d.]+)\)",
+        source)
+    if not spot:
+        raise SystemExit("could not parse Den.position")
+    body = source.split("var size: CGSize")[1].split("\n    }")[0]
+    sizes = {
+        name: (float(w), float(h))
+        for name, w, h in re.findall(
+            r"case \.(\w+): CGSize\(width: ([\d.]+), height: ([\d.]+)\)", body)
+    }
+    if not sizes:
+        raise SystemExit("could not parse Den.size")
+    return (float(spot.group(1)), float(spot.group(2))), sizes
+
+
 def parse_lines(name):
     """One caption table, as {case: text}."""
     source = open(RESIDENT_FILE).read()
@@ -273,7 +299,59 @@ def main():
                 f"with a bite out of it"
             )
 
-    footprint = coverage((0, 0, CARD[0], CARD[1]), list(boxes.values()))
+    # --- 3b. The dens, in the same yard and under the same rules -----------
+    den_spot, den_sizes = parse_dens()
+    biggest = max(den_sizes.values(), key=lambda s: s[0] * s[1])
+    for name, size_ in sorted(den_sizes.items()):
+        cx = CARD[0] * den_spot[0]
+        bottom = CARD[1] * den_spot[1]
+        box = (cx - size_[0] / 2, bottom - size_[1], cx + size_[0] / 2, bottom)
+        if den_spot[1] < NEAR_BAND:
+            failures.append(
+                f"the dens stand at y={den_spot[1]:.2f}, above the near band "
+                f"at {NEAR_BAND:.2f}")
+        if box[0] < 0 or box[1] < 0 or box[2] > CARD[0] or box[3] > CARD[1]:
+            failures.append(f"den '{name}' hangs off the card")
+        clipped = corner_clipped(box)
+        if clipped:
+            failures.append(
+                f"den '{name}' pokes into the card's rounded corner at "
+                f"({clipped[0]:.0f}, {clipped[1]:.0f})")
+        for resident in cases:
+            shared = overlap(box, boxes[resident])
+            if shared > 0:
+                failures.append(
+                    f"den '{name}' overlaps {resident} by {shared:.0f}pt² — one "
+                    f"den is on screen at a time, but it shares the yard with "
+                    f"all eight neighbours and has to miss every one of them")
+        for suffix in (0, 1):
+            if not os.path.isdir(os.path.join(ASSETS, f"den_{name}_{suffix}.imageset")):
+                failures.append(f"den_{name}_{suffix}: missing — run "
+                                f"tools/generate_dens.py")
+                continue
+            drawn = logical(f"den_{name}_{suffix}")
+            if (drawn.shape[1], drawn.shape[0]) != tuple(int(v) for v in size_):
+                failures.append(
+                    f"den '{name}' frame {suffix} is drawn {drawn.shape[1]}x"
+                    f"{drawn.shape[0]} but `size` says "
+                    f"{size_[0]:.0f}x{size_[1]:.0f} — scaledToFit will "
+                    f"letterbox it")
+        first = logical(f"den_{name}_0")
+        second = logical(f"den_{name}_1")
+        if first is not None and second is not None and first.shape == second.shape:
+            differing = int((first != second).any(axis=2).sum())
+            if differing < MINIMUM_FRAME_DELTA:
+                failures.append(
+                    f"den '{name}': empty and occupied differ in {differing} "
+                    f"pixels — the whole feature is being able to tell")
+
+    # The footprint counts the biggest den, since one is always standing.
+    den_box = (CARD[0] * den_spot[0] - biggest[0] / 2,
+               CARD[1] * den_spot[1] - biggest[1],
+               CARD[0] * den_spot[0] + biggest[0] / 2,
+               CARD[1] * den_spot[1])
+    footprint = coverage((0, 0, CARD[0], CARD[1]),
+                         list(boxes.values()) + [den_box])
     share = footprint / (CARD[0] * CARD[1])
     if share > MAXIMUM_FOOTPRINT:
         failures.append(

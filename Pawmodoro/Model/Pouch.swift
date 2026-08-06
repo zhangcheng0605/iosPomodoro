@@ -37,6 +37,9 @@ final class Pouch {
         if LaunchOptions.ownEverything {
             owned.formUnion(CatalogItem.all.map(\.id))
         }
+        if let den = LaunchOptions.forcedDen {
+            owned.insert(CatalogItem.den(den).id)
+        }
     }
 
     // MARK: Reading
@@ -100,6 +103,22 @@ final class Pouch {
         owned.insert(Self.wornMark(accessory))
         save()
     }
+
+    /// Whether this den has ever been slept in.
+    ///
+    /// Same storage and the same law as `hasWorn`: it only grows, and it has
+    /// to survive a relaunch or the Sunday Post would report the same first
+    /// night every week.
+    func hasSettled(in den: Den) -> Bool {
+        owned.contains(Self.settledMark(den))
+    }
+
+    func noteSettled(in den: Den) {
+        owned.insert(Self.settledMark(den))
+        save()
+    }
+
+    private static func settledMark(_ den: Den) -> String { "slept!\(den.rawValue)" }
 
     /// Deliberately in the same set, under a prefix no `CatalogItem.id` uses,
     /// so it needs no second storage key and `-PawmodoroResetState` clears it

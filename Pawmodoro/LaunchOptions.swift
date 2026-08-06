@@ -325,6 +325,17 @@ enum LaunchOptions {
     /// A list rather than one, because the interesting question is always how
     /// two pieces sit together — a hat and a collar at once is the composite
     /// that catches an anchor being wrong.
+    /// Grant and show a den on launch, e.g. `-PawmodoroDen igloo`.
+    ///
+    /// Grants the *buddy's own* den rather than an arbitrary one — a den
+    /// belongs to a species — so this also switches the buddy to its owner.
+    static let forcedDen: Den? = {
+        guard arguments.contains("-PawmodoroDen"),
+              let raw = value(after: "-PawmodoroDen")
+        else { return nil }
+        return Den(rawValue: raw)
+    }()
+
     static let forcedWear: [Accessory] = {
         guard arguments.contains("-PawmodoroWear"),
               let raw = value(after: "-PawmodoroWear")
@@ -433,6 +444,7 @@ enum LaunchOptions {
     static let ownEverything = false
     static let openCart = false
     static let forcedWear: [Accessory] = []
+    static let forcedDen: Den? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

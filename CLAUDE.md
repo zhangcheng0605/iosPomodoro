@@ -144,6 +144,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroOwnEverything` | Own the whole cart without Plus and without earning it |
 | `-PawmodoroCart` | Open the Magpie's Cart on launch |
 | `-PawmodoroWear <ids>` | Dress the buddy on launch, e.g. `sunhat,bow` — two at once is what catches a bad anchor |
+| `-PawmodoroDen <id>` | Grant a den and switch to its owner, e.g. `igloo` |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |

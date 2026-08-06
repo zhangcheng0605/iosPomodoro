@@ -59,6 +59,11 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// Something taken from the Magpie's Cart. The subject is a
         /// `CatalogItem.id`.
         case trade
+        /// The first night a buddy actually slept in a new den. The subject is
+        /// the den — deliberately a different event from the `.trade` that
+        /// bought it, because buying a bed and going to sleep in it are two
+        /// different days and only the second one is worth a sentence.
+        case settledIn
     }
 }
 

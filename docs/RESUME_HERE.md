@@ -13,10 +13,10 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **its first three phases are already built**: the acorn pouch,
-the Magpie's Cart and the Wardrobe. They are blind like everything else here,
-and sections 12 and 13 are their walkthroughs. The rest of the era has not
-started.
+macOS) — and **its first four phases are already built**: the acorn pouch, the
+Magpie's Cart, the Wardrobe and the Dens. They are blind like everything else
+here, and sections 12 to 14 are their walkthroughs. The interaction era, the
+Scrapbook and macOS have not started.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -525,6 +525,35 @@ against the fur it sits on. What is left is what only an eye settles:
 - **The one-time remark.** Put a piece on for the first time: the caption
   should say it once, then go back to normal on the next session, and never
   say it again for that piece even after a relaunch.
+
+### 14. The dens
+
+Stats sheet → the homestead. One den shows at a time: the current buddy's.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroDen igloo -PawmodoroBond 200 -PawmodoroClock 22   # occupied, at night
+$S -PawmodoroDen igloo -PawmodoroBond 200 -PawmodoroClock 13   # empty, midday
+$S -PawmodoroDen oakhollow -PawmodoroBond 200 -PawmodoroClock 13  # the owl inverts it
+```
+
+`-PawmodoroDen` grants the den *and* switches to its owner, because a den
+belongs to a species. `check_residents.py` has already cleared every den
+against all eight neighbours, the near band, the rounded corners and the
+footprint, and confirmed each pair of frames actually differs.
+
+- **The occupied frame at 22pt.** Each den's second frame is a light, a tail
+  or a muzzle a few pixels across. If you cannot tell occupied from empty at
+  the size it ships, the fix is more contrast in `generate_dens.py`, not a
+  bigger den — the footprint ceiling is measured.
+- **The owl's inversion.** `-PawmodoroClock 13` with the owl should show her
+  *in* the oak hollow, and at 22 should show it empty. Backwards means
+  `Den.isOccupied` has lost the nocturnal flip.
+- **The homestead line.** With a den owned it should read "There is the pond,
+  … and an igloo, which nobody questions." — no count anywhere.
+- **The first night.** Finish one session with `-PawmodoroClock 22` and a new
+  den: the Sunday Post should carry that den's line the following week, once,
+  and never again.
 
 ---
 

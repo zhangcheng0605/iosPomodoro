@@ -31,6 +31,12 @@ struct HomesteadView: View {
         Resident.settled(sessions: engine.log.totalSessions)
     }
 
+    /// The current buddy's house, if it has been traded for. One at a time —
+    /// twelve dens in one yard would be a housing estate.
+    private var den: Den? { engine.visibleDen }
+
+    private var dayPart: DayPart { LaunchOptions.forcedDayPart ?? DayPart.current() }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("The homestead")
@@ -66,7 +72,8 @@ struct HomesteadView: View {
     /// garden into a set to complete, and the whole point of a resident is
     /// that it arrives without ever having been on offer.
     private var residentLine: String? {
-        let names = residents.map(\.settledLine)
+        var names = residents.map(\.settledLine)
+        if let den { names.append(den.settledLine) }
         switch names.count {
         case 0: return nil
         case 1: return "There is \(names[0])."
@@ -104,13 +111,26 @@ struct HomesteadView: View {
                 Piece(id: "tree-\(tree.index)", x: tree.x, y: tree.y,
                       size: tree.stage.size, assets: [tree.stage.asset])
             }
-        let yard = residents
+        var yard = residents
             .sorted { $0.position.y < $1.position.y }
             .map { resident in
                 Piece(id: "resident-\(resident.rawValue)",
                       x: resident.position.x, y: resident.position.y,
                       size: resident.size, assets: resident.frames)
             }
+        if let den {
+            // Not animated: its two frames are empty and occupied, chosen by
+            // the world's clock rather than by a timer. A house that blinks
+            // between somebody being in and out twice a second would be a
+            // haunting.
+            let occupied = den.isOccupied(at: dayPart, buddy: engine.settings.buddy)
+            yard.append(Piece(
+                id: "den-\(den.rawValue)",
+                x: Den.position.x, y: Den.position.y,
+                size: den.size, assets: [den.frames[occupied ? 1 : 0]]
+            ))
+            yard.sort { $0.y < $1.y }
+        }
         return wood + yard
     }
 

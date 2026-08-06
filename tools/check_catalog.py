@@ -52,6 +52,7 @@ FIXTURE_PRICES = {
     "place": 150,
     "theme": 40,
     "accessory": 15,
+    "den": 35,
 }
 
 # What a steady user earns in a day, for the sanity sums below: two hours of
@@ -169,6 +170,14 @@ def main():
     # Every accessory is for sale — there is no free one and none the app
     # withholds for a story — so the whole enum is the shelf.
     accessories = parse_cases("Accessory.swift", "Accessory")
+    # Every den except Soot's, which arrives with her and has no price.
+    dens = [d for d in parse_cases("Den.swift", "Den") if d != "chimney"]
+    den_source = open(os.path.join(MODEL, "Den.swift")).read()
+    if "buddy != .stray" not in den_source:
+        failures.append(
+            "Den.isForSale no longer excludes the stray's — hers arrives with "
+            "her, as the epilogue of the one story in this app, and a price on "
+            "it would make that story a transaction")
 
     # Soot is Plus-gated but never for sale, and `Buddy.catalogItem` says so.
     # Parse that exclusion rather than restating it.
@@ -196,6 +205,11 @@ def main():
             failures.append(
                 f"accessory '{accessory}' is on the shelf with no sprite — run "
                 f"tools/generate_accessories.py")
+    for den in parse_cases("Den.swift", "Den"):
+        for frame in (0, 1):
+            if not imageset_exists(f"den_{den}_{frame}"):
+                failures.append(f"den_{den}_{frame}: missing — run "
+                                f"tools/generate_dens.py")
     for name in ("acorn", "magpie_0", "magpie_1", "cart_0", "cart_1"):
         if not imageset_exists(name):
             failures.append(f"{name}: missing — run tools/generate_magpie.py")
@@ -203,7 +217,7 @@ def main():
     # --- 3. The two fences that are arithmetic ------------------------------
     per_day = DAILY_MINUTES / divisor
     counts = {"buddy": len(buddies), "place": len(places), "theme": len(themes),
-              "accessory": len(accessories)}
+              "accessory": len(accessories), "den": len(dens)}
     total = sum(prices[kind] * count for kind, count in counts.items()
                 if kind in prices)
 

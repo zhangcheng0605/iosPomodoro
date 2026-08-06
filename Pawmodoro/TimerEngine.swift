@@ -829,6 +829,12 @@ final class TimerEngine {
         for adrift in Dream.Adrift.allCases where longestLaps >= adrift.reachedAt {
             pool.append(contentsOf: repeatElement(.adrift(adrift), count: 2))
         }
+        // The hours you have actually been awake in, off the shelf.
+        let shelf = ShelfOfHours.build(from: log.records)
+        for hour in Dream.Hour.allCases
+        where ShelfOfHours.isLit(hour.reachedAt, in: shelf) {
+            pool.append(contentsOf: repeatElement(.hour(hour), count: 2))
+        }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
         }
@@ -861,8 +867,8 @@ final class TimerEngine {
             met = journal.record(for: species)?.firstSeen
         case .sound(let sound):
             met = journal.firstHeard(sound)
-        case .travel, .companion, .visitor, .season, .sky, .adrift, .yours,
-             .surreal:
+        case .travel, .companion, .visitor, .season, .sky, .adrift, .hour,
+             .yours, .surreal:
             met = nil
         }
         guard let met else { return nil }

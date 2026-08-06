@@ -121,7 +121,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
 | `-PawmodoroNightSessions <n>` | Seed n sessions finished after dark, for the star atlas |
-| `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `yours`, `surreal` |
+| `-PawmodoroDream <id\|kind>` | Force a dream: `surreal.yarn`, or a kind — `memory`, `regular`, `travel`, `companion`, `visitor`, `sound`, `season`, `sky`, `adrift`, `hour`, `yours`, `surreal` |
 | `-PawmodoroFillDreams` | Mark every dream as dreamed, for looking at the diary |
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |

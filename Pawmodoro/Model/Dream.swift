@@ -15,7 +15,7 @@ import Observation
 /// journal makes a rich dream life, which quietly makes the journal itself
 /// worth more.
 ///
-/// Six of the eleven cases arrived together, in Phase 0d of the Deep Time plan,
+/// Six of the twelve cases arrived together, in Phase 0d of the Deep Time plan,
 /// to pay a debt: the pool had not been fed since it was written, so five whole
 /// systems — the bond, the regulars, the things you can only hear, the seasons
 /// and the stray's arc — could be lived through without the buddy ever dreaming
@@ -23,9 +23,10 @@ import Observation
 /// on the thing itself, so a dream can only be had by somebody who earned what
 /// it is about.
 ///
-/// `sky` and `adrift` are the tenth and eleventh, and the first to arrive the
-/// way the convention now says they should: weather and the open hour each
-/// shipped *with* their dreams rather than owing them.
+/// `sky`, `adrift` and `hour` came later and came the way the convention now
+/// says they should: weather, the open hour and the shelf each shipped *with*
+/// their dreams rather than owing them. None of the three cost new art —
+/// `hour` in particular is the shelf's own candle sprites, as silhouettes.
 enum Dream: Hashable, Identifiable {
     /// Something you both saw. The heart of it.
     case memory(Species)
@@ -45,6 +46,8 @@ enum Dream: Hashable, Identifiable {
     case sky(Sky)
     /// An open hour, once you have sat one.
     case adrift(Adrift)
+    /// An hour of the clock you have actually been awake in.
+    case hour(Hour)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -181,6 +184,47 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// Two hours off the Shelf of Hours, and the only two worth a dream.
+    ///
+    /// No new art: these are the shelf's own candle sprites as silhouettes,
+    /// which is also why they are two rather than three — there are two
+    /// candles and they say different things. Both are gated on having
+    /// actually lit that candle, so a dream about 3 a.m. belongs to somebody
+    /// who was up at 3 a.m.
+    enum Hour: String, CaseIterable, Hashable {
+        case smallhours, blownout
+
+        /// Which candle has to be lit. Read off `ShelfOfHours` rather than
+        /// written out, so the two cannot drift about which hour is which.
+        var reachedAt: Int {
+            switch self {
+            case .smallhours: ShelfOfHours.smallHours
+            case .blownout: ShelfOfHours.firstLight
+            }
+        }
+
+        var asset: String {
+            switch self {
+            case .smallhours: "fx_candle_lit"
+            case .blownout: "fx_candle_out"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .smallhours: "the small hours"
+            case .blownout: "a candle put out"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .smallhours: "The hour with nobody else awake in it."
+            case .blownout: "It had got light without either of you noticing."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -228,6 +272,7 @@ enum Dream: Hashable, Identifiable {
         case .season(let season): "season.\(season.rawValue)"
         case .sky(let sky): "sky.\(sky.rawValue)"
         case .adrift(let adrift): "adrift.\(adrift.rawValue)"
+        case .hour(let hour): "hour.\(hour.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -246,6 +291,7 @@ enum Dream: Hashable, Identifiable {
         case "season": return Season(rawValue: parts[1]).map(Dream.season)
         case "sky": return Sky(rawValue: parts[1]).map(Dream.sky)
         case "adrift": return Adrift(rawValue: parts[1]).map(Dream.adrift)
+        case "hour": return Hour(rawValue: parts[1]).map(Dream.hour)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -265,6 +311,7 @@ enum Dream: Hashable, Identifiable {
         case .season(let season): "dream_season_\(season.rawValue)"
         case .sky(let sky): "dream_sky_\(sky.rawValue)"
         case .adrift(let adrift): "dream_adrift_\(adrift.rawValue)"
+        case .hour(let hour): hour.asset
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -275,7 +322,7 @@ enum Dream: Hashable, Identifiable {
     /// here instead, so everything inside a bubble is a sketch.
     var isSilhouette: Bool {
         switch self {
-        case .travel, .companion, .visitor: true
+        case .travel, .companion, .visitor, .hour: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -299,6 +346,7 @@ enum Dream: Hashable, Identifiable {
         case .season(let season): season.name.lowercased()
         case .sky(let sky): sky.subject
         case .adrift(let adrift): adrift.subject
+        case .hour(let hour): hour.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -316,6 +364,7 @@ enum Dream: Hashable, Identifiable {
         case .season(let season): season.dreamLine
         case .sky(let sky): sky.line
         case .adrift(let adrift): adrift.line
+        case .hour(let hour): hour.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -338,6 +387,7 @@ enum Dream: Hashable, Identifiable {
             + Season.allCases.map(Dream.season)
             + Sky.allCases.map(Dream.sky)
             + Adrift.allCases.map(Dream.adrift)
+            + Hour.allCases.map(Dream.hour)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

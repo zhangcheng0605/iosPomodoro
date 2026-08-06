@@ -1208,6 +1208,35 @@ def snail(stretched=False):
     return outline_silhouette(g)
 
 
+def fx_candle(lit=True):
+    """A candle for the Shelf of Hours, lit or put out.
+
+    A template like the other effects, so the app tints it — a lit candle in
+    the theme's own accent, an unlit one in faded bark. That also means the
+    *only* difference between these two sprites is the silhouette: a flame, or
+    a thread of smoke going the other way. At this size that reads better than
+    colour would have, and it reads identically in all eight themes."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # The body, tall and narrow, sitting on a small dish.
+    d.rectangle([15, 16, 24, 34], fill=OUTLINE)
+    d.rectangle([11, 35, 28, 37], fill=OUTLINE)
+    # A drip down one side, so it reads as wax rather than a pillar.
+    d.rectangle([15, 18, 16, 25], fill=T)
+    d.rectangle([15, 20, 16, 23], fill=OUTLINE)
+    d.line([(19, 12), (19, 16)], fill=OUTLINE)          # the wick
+    if lit:
+        # The flame: a teardrop, wider low and pinched at the top.
+        d.ellipse([16, 5, 22, 13], fill=OUTLINE)
+        d.polygon([(19, 1), (22, 8), (16, 8)], fill=OUTLINE)
+    else:
+        # Put out: two curls of smoke leaving. Drawn to the *left*, so the two
+        # frames never look like the same shape at a glance.
+        d.arc([12, 2, 20, 10], 250, 40, fill=OUTLINE)
+        d.arc([14, 7, 20, 13], 60, 220, fill=OUTLINE)
+    return g
+
+
 def fx_bubble(shift=0):
     """The thought bubble the dream sits inside.
 
@@ -1648,5 +1677,7 @@ if __name__ == "__main__":
     print("Effects:")
     to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
     to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)
+    to_png(fx_candle(), FX_PALETTE, "fx_candle_lit", template=True)
+    to_png(fx_candle(lit=False), FX_PALETTE, "fx_candle_out", template=True)
     to_png(fx_bubble(), FX_PALETTE, "fx_bubble_0", template=True)
     to_png(fx_bubble(shift=1), FX_PALETTE, "fx_bubble_1", template=True)

@@ -19,6 +19,7 @@ struct StatsView: View {
                         emptyState
                     }
                     YearRingView()
+                    ShelfOfHoursView()
                     AlbumView()
                     StarAtlasView()
                     JournalView()

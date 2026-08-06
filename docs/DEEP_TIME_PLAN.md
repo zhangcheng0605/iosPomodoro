@@ -616,6 +616,76 @@ classic sinusoid — the app gently teaching a real natural rhythm. Scene
 delta is drawn as an overlay strip on the existing Harbor exports, same
 veil discipline; `generate_scenes.py`'s sky-only assertion carries over.
 
+### As built — V6, Tidewater
+
+Six new species, one changed one, a shore strip, a tide table drawn as the
+sinusoid it actually is, three dreams, and the checker that turned out to be
+the point.
+
+**The model is real M2 and nothing else.** Two highs and two lows per 24h50m
+lunar day, with the *range* opening at new and full moon and closing at the
+quarters. That is genuinely how tides work and it is four lines. What it is
+not is a real place: no harmonic constituent beyond M2, no shallow-water
+correction, no location permission. Harbor Isle has its own sea for exactly
+the reason it has its own weather.
+
+**This is the first thing in the app that changes on the scale of hours**, and
+that has a consequence nobody would have predicted from the plan:
+`check_species.py` **cannot measure it**. That file answers "how many days a
+year is this reachable" by counting days, and every day has a low water — so
+the octopus would come out reachable 365 days a year while actually being out
+for ninety minutes on a dozen afternoons a month, some of them at three in the
+morning. Passing for the wrong reason is worse than not being measured, so
+`check_tide.py` owns tide reachability at **hour granularity** and
+`check_species.py` skips tide-gated species with a rule requiring that the
+handover happened.
+
+**And the hour granularity immediately proved it was needed.** Break-testing
+the new checker, one mutation put a `dayParts: [.dawn]` on the octopus — an
+edit that looks completely reasonable, "the octopus is out at dawn". Spring
+low water *and* dawn coincide for **four hours a year**. Not four hours a
+month. Two conditions on different clocks multiply, and the day-counting
+checker would have reported that species as reachable every day of the year.
+
+**The seal changed, which is the only shipped species this touched.** She now
+comes close at half tide and high water, which is when a seal actually comes
+in over the rocks. Widened to `.mid` as well as `.high` deliberately: adding a
+condition to a species people have already met should not quietly halve how
+often anybody meets her.
+
+**The shore strip is nine points of screen and that is checked.** `TideView`
+draws between 0.79 and 0.88 of the height; the lowest text row in the app is
+the paw capsule at 0.718. Seven points of clearance is exactly the sort of
+margin a later layout change eats without meaning to, and
+`check_contrast.py` samples the *scene exports* — it cannot see a SwiftUI
+overlay at all, so nothing else in the toolchain would ever report it.
+`check_tide.py` reads both numbers out of their own files and fails on either
+an overlap or a margin under 4%.
+
+**Divergences:**
+
+- **`Tide.State`, not `Tide.Stage`.** `check_swift.py` matches enums on their
+  simple name and `Stray.Stage` already exists; two `Stage`s and its
+  exhaustiveness rule goes quietly blind on *both*. It refused the file until
+  the rename, which is the checker earning its keep on a collision nobody
+  would have thought about.
+- **No rumoured octopus at "the lowest spring tides" specifically.** It is
+  gated on `.springLow` and on nothing else — no long session, no full moon.
+  A spring low is already the narrowest repeating window in the app and the
+  four-hours-a-year result above is what stacking looks like.
+- **The almanac shows the tide whether or not anything has been seen in it**,
+  unlike the Flyway, which stays silent until you have met it. A tide is not a
+  surprise — it is the weather of the sea, it is there every day, and a tide
+  table is a thing anybody at a harbour can read off a board. What it never
+  does is name what is out there: "low water" is an observation, "the octopus
+  pools are open" is an errand.
+- **The curve is a `Canvas` with no `TimelineView`.** It changes by under a
+  pixel a minute and the almanac is a sheet somebody has open for twenty
+  seconds.
+- **No `-PawmodoroTide springlow` boundary values.** Each named stage lands in
+  the middle of its band rather than on its edge; pinning to a boundary is how
+  you get a screenshot that disagrees with the almanac line beside it.
+
 ### V7. Flags
 
 `-PawmodoroWeather <id>`, `-PawmodoroDate <yyyy-mm-dd>` (from 0c),

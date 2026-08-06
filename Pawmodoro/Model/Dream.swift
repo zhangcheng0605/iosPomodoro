@@ -54,6 +54,8 @@ enum Dream: Hashable, Identifiable {
     case neighbour(Neighbour)
     /// Something that only passes through, remembered afterwards.
     case flight(Flight)
+    /// The sea, doing the one thing it does.
+    case tidal(Tidal)
     /// The bird who keeps the cart, once you have met her.
     case magpie(Magpie)
     /// Wearing something, somewhere it does not matter.
@@ -381,6 +383,53 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The sea at Harbor Isle, dreamed about by an animal who does not
+    /// understand it.
+    ///
+    /// Three, and none of them mentions the moon. That is the joke and it is
+    /// also the honest thing: a cat watching the water go out has no theory
+    /// about why, and a caption explaining the spring–neap cycle would be the
+    /// app teaching through the buddy's mouth. The almanac teaches; the diary
+    /// only ever remembers.
+    ///
+    /// No new art — the shore's own animals, as silhouettes.
+    enum Tidal: String, CaseIterable, Hashable {
+        case out, pools, back
+
+        /// The state of the water that earns it.
+        var reachedAt: Tide.State {
+            switch self {
+            case .out: .low
+            case .pools: .springLow
+            case .back: .high
+            }
+        }
+
+        var asset: String {
+            switch self {
+            case .out: "wild_curlew_0"
+            case .pools: "wild_octopus_0"
+            case .back: "wild_oystercatcher_1"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .out: "the ground under the sea"
+            case .pools: "something in the deepest pool"
+            case .back: "the water, back again"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .out: "It had all gone somewhere, and nobody was worried."
+            case .pools: "It looked back. That was the whole dream."
+            case .back: "Over the same stones, as if they had never been dry."
+            }
+        }
+    }
+
     /// The magpie, and the one thing in her cart the buddy actually wants.
     ///
     /// The era's dream pair, and it is deliberately *hers* rather than the
@@ -600,6 +649,7 @@ enum Dream: Hashable, Identifiable {
         case .wood(let wood): "wood.\(wood.rawValue)"
         case .neighbour(let neighbour): "neighbour.\(neighbour.rawValue)"
         case .flight(let flight): "flight.\(flight.rawValue)"
+        case .tidal(let tidal): "tidal.\(tidal.rawValue)"
         case .magpie(let magpie): "magpie.\(magpie.rawValue)"
         case .finery(let finery): "finery.\(finery.rawValue)"
         case .den(let home): "den.\(home.rawValue)"
@@ -627,6 +677,7 @@ enum Dream: Hashable, Identifiable {
         case "wood": return Wood(rawValue: parts[1]).map(Dream.wood)
         case "neighbour": return Neighbour(rawValue: parts[1]).map(Dream.neighbour)
         case "flight": return Flight(rawValue: parts[1]).map(Dream.flight)
+        case "tidal": return Tidal(rawValue: parts[1]).map(Dream.tidal)
         case "magpie": return Magpie(rawValue: parts[1]).map(Dream.magpie)
         case "finery": return Finery(rawValue: parts[1]).map(Dream.finery)
         case "den": return Home(rawValue: parts[1]).map(Dream.den)
@@ -655,6 +706,7 @@ enum Dream: Hashable, Identifiable {
         case .wood(let wood): wood.asset
         case .neighbour(let neighbour): neighbour.asset
         case .flight(let flight): flight.asset
+        case .tidal(let tidal): tidal.asset
         case .magpie(let magpie): magpie.asset
         case .finery(let finery): finery.asset
         case .den(let home): home.asset
@@ -671,7 +723,8 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor, .hour, .wood, .neighbour,
-             .magpie, .finery, .den, .brought, .snapshot, .flight: true
+             .magpie, .finery, .den, .brought, .snapshot, .flight,
+             .tidal: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -699,6 +752,7 @@ enum Dream: Hashable, Identifiable {
         case .wood(let wood): wood.subject
         case .neighbour(let neighbour): neighbour.subject
         case .flight(let flight): flight.subject
+        case .tidal(let tidal): tidal.subject
         case .magpie(let magpie): magpie.subject
         case .finery(let finery): finery.subject
         case .den(let home): home.subject
@@ -725,6 +779,7 @@ enum Dream: Hashable, Identifiable {
         case .wood(let wood): wood.line
         case .neighbour(let neighbour): neighbour.line
         case .flight(let flight): flight.line
+        case .tidal(let tidal): tidal.line
         case .magpie(let magpie): magpie.line
         case .finery(let finery): finery.line
         case .den(let home): home.line
@@ -756,6 +811,7 @@ enum Dream: Hashable, Identifiable {
             + Wood.allCases.map(Dream.wood)
             + Neighbour.allCases.map(Dream.neighbour)
             + Flight.allCases.map(Dream.flight)
+            + Tidal.allCases.map(Dream.tidal)
             + Magpie.allCases.map(Dream.magpie)
             + Finery.allCases.map(Dream.finery)
             + Home.allCases.map(Dream.den)

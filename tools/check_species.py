@@ -83,6 +83,7 @@ def parse_specs():
             "isPhenomenon": "isPhenomenon: true" in text,
             "passage": (re.search(r"passage: \.(\w+)", text)
                         or _None()).group(1),
+            "tides": re.findall(r"\.(\w+)", _field(text, "tides") or ""),
             "needsFullMoon": "needsFullMoon: true" in text,
             "minimumMinutes": int((re.search(r"minimumMinutes: (\d+)", text)
                                    or _Zero()).group(1)),
@@ -166,8 +167,25 @@ def main():
                 span |= {(year, day) for day in range(found[0], found[1] + 1)}
         open_days[name] = span
 
+    # Tide-gated species are measured in `check_tide.py` instead, at hour
+    # granularity, and are skipped here rather than passed with a misleading
+    # number. This file counts *days*, and every day has a low water — so the
+    # octopus would come out reachable 365 days a year while actually being
+    # out for a couple of hours on a dozen afternoons a month. Passing for the
+    # wrong reason is worse than not being measured, so the handover is a rule:
+    # anything with a `tides:` gate must be in check_tide's table.
+    import check_tide
+    tide_gated = set(check_tide.parse_gated())
+    for name, spec in sorted(specs.items()):
+        if spec["tides"] and name not in tide_gated:
+            failures.append(
+                f"{name} is gated on the tide but check_tide.py does not see "
+                f"it — its reachability is measured by nothing")
+
     thinnest = (10_000.0, None)
     for name, spec in sorted(specs.items()):
+        if spec["tides"]:
+            continue
         wanted = set(spec["weathers"])
         window = open_days.get(spec["passage"]) if spec["passage"] else None
         if window is not None and not window:

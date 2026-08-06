@@ -33,6 +33,8 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     case redkite, dandelionmouse
     case snowfox, ermine, winterwren
     case greywagtail, mushroomvole
+    // Tidewater — the strip of shore that is only there some of the time.
+    case starfish, anemone, curlew, oystercatcher, hermitcrab, octopus
     // The Flyway — things that only pass through. See `Passage`.
     case whooperswan, cuckoo, paintedlady, salmonrun
     case redwing, snowgoose, waxwing
@@ -71,6 +73,13 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         /// ordinary roll and awarded by `TimerEngine.lateAward()` instead.
         var awardedLate: Bool = false
         var isPhenomenon: Bool = false
+        /// Which states of the water this needs. Empty means any, which is
+        /// every species that shipped before the sea moved.
+        ///
+        /// Only ever true at Harbor Isle — nowhere else has a tide — but the
+        /// field is not gated on the place here, because a `Spec` says what a
+        /// species needs and `places` already says where it is.
+        var tides: [Tide.State] = []
         /// The migration window this only turns up inside, if any.
         ///
         /// The one gate in this table a player cannot arrange, wait for, or
@@ -143,9 +152,15 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         case .crab: Spec(name: "Crab", note: "Sideways across the wet stones.",
             places: [.harbor], dayParts: [.dusk], rarity: .common,
             motion: .linger, altitude: 0.815, size: .init(width: 30, height: 22))
+        // The one existing species the tide changed. She has always been
+        // here; she is now here when the water is *up*, which is when a seal
+        // actually comes in over the rocks. Widened to half tide as well, so
+        // adding a condition to a shipped species does not quietly halve how
+        // often anybody meets her.
         case .seal: Spec(name: "Seal", note: "Watched you for a while, then rolled.",
             places: [.harbor], dayParts: [.day], rarity: .uncommon,
-            motion: .linger, altitude: 0.805, size: .init(width: 44, height: 23))
+            motion: .linger, altitude: 0.805, size: .init(width: 44, height: 23),
+            tides: [.mid, .high])
         case .heron: Spec(name: "Heron", note: "Did not move once the whole time.",
             places: [.harbor], dayParts: [.dawn], rarity: .uncommon,
             motion: .linger, altitude: 0.760, size: .init(width: 36, height: 34))
@@ -306,6 +321,37 @@ enum Species: String, Codable, CaseIterable, Identifiable {
             weathers: [.overcast])
 
         // --- Phenomena
+        // --- Tidewater. Six animals that live in the couple of hours a day
+        // the shore exists at all, plus the seal, who is the opposite: she
+        // comes close when the water is up.
+        case .starfish: Spec(name: "Starfish", note: "Left behind on a rock, in no hurry about it.",
+            places: [.harbor], dayParts: [], rarity: .common,
+            motion: .linger, altitude: 0.860, size: .init(width: 26, height: 24),
+            tides: [.low, .springLow])
+        case .anemone: Spec(name: "Beadlet Anemone", note: "Shut like a blob until the water came back.",
+            places: [.harbor], dayParts: [], rarity: .common,
+            motion: .linger, altitude: 0.870, size: .init(width: 20, height: 20),
+            tides: [.low, .springLow])
+        case .hermitcrab: Spec(name: "Hermit Crab", note: "Carrying a shell that was slightly too big.",
+            places: [.harbor], dayParts: [], rarity: .uncommon,
+            motion: .hop, altitude: 0.855, size: .init(width: 24, height: 20),
+            tides: [.low, .springLow])
+        case .curlew: Spec(name: "Curlew", note: "Working the mud with that whole ridiculous bill.",
+            places: [.harbor], dayParts: [.dawn, .day, .dusk], rarity: .uncommon,
+            motion: .hop, altitude: 0.830, size: .init(width: 36, height: 30),
+            tides: [.low, .springLow])
+        case .oystercatcher: Spec(name: "Oystercatcher", note: "Loud about something, and then loud about it again.",
+            places: [.harbor], dayParts: [.dawn, .day, .dusk], rarity: .common,
+            motion: .hop, altitude: 0.840, size: .init(width: 30, height: 26),
+            tides: [.low, .springLow])
+        // The journal's other rarest page. Not gated on a long session or a
+        // full moon on top of this: a spring low is already the narrowest
+        // window in the app that repeats, and stacking would make it a rumour
+        // rather than an animal.
+        case .octopus: Spec(name: "Octopus", note: "In the deepest pool, and gone the moment you looked twice.",
+            places: [.harbor], dayParts: [], rarity: .rare,
+            motion: .linger, altitude: 0.875, size: .init(width: 34, height: 28),
+            tides: [.springLow])
         // --- The Flyway. Every one of these is gated on a fortnight that
         // moves from year to year, so the places and hours are kept generous
         // on purpose: the window is the whole of the difficulty and stacking a
@@ -409,13 +455,15 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         case .robin, .swallow, .gull, .heron, .woodpecker, .tawnyowl, .crane,
              .kingfisher, .dove, .peacock, .swift, .ptarmigan,
              .stormpetrel, .weathercrow, .winterwren, .greywagtail, .redkite,
-             .whooperswan, .cuckoo, .redwing, .snowgoose, .waxwing:
+             .whooperswan, .cuckoo, .redwing, .snowgoose, .waxwing,
+             .curlew, .oystercatcher:
             "a pale feather"
         case .butterfly, .bee, .moth, .dragonfly, .firefly,
              .fogmoth, .dragonswarm, .rainbeetle, .paintedlady:
             "a torn wing"
         case .dolphin, .whale, .seal, .otter, .turtle, .koi, .crab, .frog,
-             .bigfrog, .littlefrog, .earthworm, .ghostslug, .salmonrun:
+             .bigfrog, .littlefrog, .earthworm, .ghostslug, .salmonrun,
+             .starfish, .anemone, .hermitcrab, .octopus:
             "a pale scar"
         // Its own arm rather than folded into the scars: a snail is told apart
         // by its shell, and "the garden snail with a pale scar" is a sentence
@@ -462,6 +510,7 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         // honest reading — the swans are not "eligible but unlucky" in July,
         // they are in Iceland.
         if let passage = spec.passage, !Passage.isOpen(passage) { return false }
+        if !spec.tides.isEmpty && !spec.tides.contains(Tide.state()) { return false }
         return spec.places.contains(place)
             && (spec.dayParts.isEmpty || spec.dayParts.contains(dayPart))
             && focusMinutes >= spec.minimumMinutes
@@ -482,6 +531,14 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         // of year, which is what somebody standing in a field would know.
         if let passage = spec.passage {
             return "Some years, around \(passage.hintMonth)"
+        }
+        // A tide names the water and the place and stops. Deliberately no
+        // clock: the tide is fifty minutes later every day, so any hour this
+        // could name would be wrong tomorrow — and a hint that goes stale is
+        // worse than a vaguer one that never does.
+        if let water = Tide.hint(for: spec.tides) {
+            let where_ = spec.places.map(\.name).joined(separator: " or ")
+            return "\(water.capitalizedFirst), at \(where_)"
         }
         let where_ = spec.places.count > 3
             ? "anywhere"

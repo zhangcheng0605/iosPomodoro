@@ -63,6 +63,7 @@ of what the next release owes users.
 | **X2** — the Cabinet of Clocks | **built, never compiled** |
 | **V3** — wave 4: the journal 41 → 63 species, gated on the sky | **built, never compiled** |
 | **V4** — the Flyway: 8 migration windows, 63 → 71 species | **built, never compiled** |
+| **V6** — Tidewater: the sea at Harbor Isle, 71 → 77 species | **built, never compiled** |
 
 ### What today added
 
@@ -708,7 +709,42 @@ One compile risk specific to this: `Passage.window` uses
 call sites unwrap it in a `guard`; if the compiler complains it will be about
 the `DateComponents` build above it rather than the ordinality itself.
 
-### 19. The Crossing — arithmetic only, and nothing to look at
+### 19. Tidewater — the shore, and the first thing that moves in hours
+
+`-PawmodoroTide` is the flag; the tide turns every six hours and a spring low
+is a couple of hours twice a day for a few days a fortnight, so waiting for one
+is not a plan.
+
+```sh
+tools/run-sim.sh --demo --headless \
+    --args "-PawmodoroPlace harbor -PawmodoroTide springlow \
+            -PawmodoroSighting octopus -PawmodoroClock 14"
+```
+
+Values: `springlow`, `low`, `mid`, `high`, or a bare number 0–1.
+
+1. **The shore strip, at all four states, in all four themes and both
+   appearances.** This is the one piece of Tidewater no checker can judge: it
+   is `Theme.bark` at 55% over whatever the Harbor scene draws there, and
+   whether that reads as *wet mud* or as *a grey smear* is a question only a
+   person can answer. Try `springlow` and `high` back to back — the difference
+   should be visible but should not make the place look like two places.
+2. **That it does not touch the paw capsule.** The strip tops out at 0.79 of
+   the screen and the capsule sits at 0.718. Checked arithmetically by
+   `check_tide.py`, but on a short phone (SE) the layout is tighter than the
+   fractions suggest and this is worth one look.
+3. **The tide curve in the almanac** — a sinusoid with a dot on it, at Harbor
+   Isle only. Open it on two consecutive days: the curve should visibly shift
+   by about fifty minutes, which is the thing it exists to teach.
+4. **The six new sprites**, ids `starfish`, `anemone`, `hermitcrab`, `curlew`,
+   `oystercatcher`, `octopus`. The curlew and the oystercatcher share one
+   `wader` template and are told apart only by their bills; that separation is
+   the one to check at sighting size.
+5. **The seal changed.** She is now `[.mid, .high]` — the only shipped species
+   this phase touched. `-PawmodoroTide high -PawmodoroSighting seal`.
+6. **A dream**, `-PawmodoroDream tidal.pools`.
+
+### 20. The Crossing — arithmetic only, and nothing to look at
 
 `Pawmodoro/Model/Crossing.swift` is the **merge**, with no transport behind
 it: no CloudKit, no `NSUbiquitousKeyValueStore`, no network call. There is
@@ -758,11 +794,12 @@ python3 tools/check_stray.py             # must print "all pass"
 python3 tools/check_snail.py             # after moving her or redrawing a scene
 python3 tools/check_crossing.py          # after ANY new store, storage key or merge
 python3 tools/check_flyway.py            # after any passage, window or migrant species
+python3 tools/check_tide.py              # after the tide model, a tide gate or the shore strip
 tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All seventeen were green when this was written: 922,032 contrast pairs, 20,736
+All eighteen were green when this was written: 922,032 contrast pairs, 20,736
 stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 400 pairs of
 merged worlds, 105 Swift files and 625 imagesets. `check_snail.py` takes about
 18 seconds; the rest are quick.

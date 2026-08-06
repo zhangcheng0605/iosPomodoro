@@ -126,6 +126,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
 | `-PawmodoroWeather <id>` + `-PawmodoroSighting` | The only way to see a wave-4 species on demand — half the roster is gated on the sky |
 | `-PawmodoroPassage <id>` | Hold one migration window open, e.g. `swans` — and hold every other one shut. The only practical way to see the Flyway |
+| `-PawmodoroTide <id\|0-1>` | Pin the water at Harbor Isle: `springlow`, `low`, `mid`, `high`, or a number. The tide turns every six hours, so waiting for one is not a way to check the shore |
 | `-PawmodoroEncounter <id>` | Guarantee a micro-encounter this session: `butterfly`, `robin`, `snowflake` |
 | `-PawmodoroFillJournal [n]` | Mark every species as seen; `5` makes them all named regulars |
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
@@ -176,10 +177,10 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are seventeen now (`swift`, `contrast`, `grove`,
+without a Mac** — there are eighteen now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
-`weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`), they
-take about twenty seconds between them, and each one exists because
+`weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`,
+`tide`), they take about twenty-five seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
 Most of this app is written on Linux and compiled days later, so a

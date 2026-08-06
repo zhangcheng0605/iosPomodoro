@@ -17,6 +17,7 @@ reason the places get four times of day from one drawing.
 Species ids must match `Species` in Pawmodoro/Model/Species.swift.
 """
 import json
+import math
 import os
 
 import numpy as np
@@ -954,6 +955,165 @@ def thunderhead(flash):
     return outline(g)
 
 
+# --- Tidewater: the shore that is only there some of the time ---------------
+
+
+def starfish(curl):
+    """Five arms, and the whole point is that they are not even.
+
+    Second draft. The first drew each arm as a three-pixel-wide *line* from
+    the centre, and three-pixel lines from a common origin do not make a
+    starfish — they merge into one lumpy blob with dents in it. What reads is
+    a **tapering triangle** per arm: wide where it joins, one pixel at the
+    tip. Same five arms, same lopsidedness, completely different animal.
+    """
+    g = grid(13, 12)
+    d = ImageDraw.Draw(g)
+    cx, cy = 6, 6
+    # Uneven on purpose. Five arms at a perfect 72° apart is a symbol off a
+    # shop window; a real starfish is lopsided, and the lopsidedness is what
+    # makes it read as an animal.
+    # The middle, filled before the arms. Without it the five triangles leave
+    # transparent wedges between their shoulders, and `outline()` faithfully
+    # draws a dark line around each one — a starfish with a spoked wheel
+    # inside it.
+    d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=MAIN)
+    arms = ((-96, 6), (-20, 6), (48, 5), (132, 6), (206, 5))
+    for index, (angle, length) in enumerate(arms):
+        reach = length - (1 if (curl and index % 2 == 0) else 0)
+        radians = math.radians(angle)
+        tip = (cx + reach * math.cos(radians), cy + reach * math.sin(radians))
+        # The two shoulders, a quarter turn either side of the arm.
+        left = math.radians(angle - 34)
+        right = math.radians(angle + 34)
+        d.polygon([(round(tip[0]), round(tip[1])),
+                   (round(cx + 3 * math.cos(left)),
+                    round(cy + 3 * math.sin(left))),
+                   (round(cx + 3 * math.cos(right)),
+                    round(cy + 3 * math.sin(right)))], fill=MAIN)
+    d.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=LIGHT)
+    d.point((cx, cy), fill=ACCENT)
+    return outline(g)
+
+
+def anemone(open_out):
+    """Shut it is a blob; open it is a blob with a fringe. Both are true.
+
+    The frames matter more here than anywhere else on this sheet, because a
+    closed anemone genuinely *is* a featureless lump — that is the animal, and
+    it is the reason the note says so. The open frame therefore has to earn
+    the whole identification on its own, so the tentacles are drawn as a full
+    fan above the column rather than as a fringe on top of it.
+    """
+    g = grid(10, 10)
+    d = ImageDraw.Draw(g)
+    d.ellipse([2, 4, 8, 9], fill=MAIN)                      # the column
+    d.ellipse([3, 7, 7, 9], fill=SHADE)                     # the foot
+    if open_out:
+        # Radiating from the mouth, one pixel each — at this size a tentacle
+        # with any width at all is a leg.
+        for x, y in ((0, 3), (1, 1), (3, 0), (5, 0), (7, 1), (9, 3)):
+            d.line([(x, y), (5, 4)], fill=ACCENT)
+        d.ellipse([3, 3, 7, 6], fill=LIGHT)                 # the disc
+        d.point((5, 4), fill=SHADE)                         # the mouth
+    else:
+        d.ellipse([3, 4, 7, 7], fill=SHADE)
+    return outline(g)
+
+
+def hermitcrab(step):
+    """A crab wearing a shell that is slightly too big for it."""
+    g = grid(12, 10)
+    d = ImageDraw.Draw(g)
+    # The shell first and largest — it is the joke, and a hermit crab drawn
+    # with the crab dominant is just a crab.
+    d.ellipse([4, 1, 11, 8], fill=SHADE)
+    d.arc([5, 2, 10, 7], 0, 300, fill=LIGHT)                # the spiral
+    lift = 1 if step else 0
+    d.ellipse([1, 5 - lift, 6, 9 - lift], fill=MAIN)        # the crab
+    d.point((2, 6 - lift), fill=EYE)
+    d.point((4, 6 - lift), fill=EYE)
+    for x in (2, 4):                                        # legs, out front
+        d.line([(x, 9 - lift), (x - 1, 9)], fill=ACCENT)
+    d.line([(1, 7 - lift), (0, 5 - lift)], fill=ACCENT)     # the big claw
+    return outline(g)
+
+
+def wader(step, *, bill=6, curved=False, width=18, height=15, legs=4,
+          pied=False):
+    """A long-legged bird working the mud. The bill is the whole species.
+
+    A curlew and an oystercatcher have the same body; what anybody actually
+    identifies them by is one downcurved bill and one straight orange one. So
+    this is the songbird template's cousin with the bill parameterised, rather
+    than two drawings that would drift apart.
+    """
+    g = grid(width, height)
+    d = ImageDraw.Draw(g)
+    body_top = height - legs - 7
+    d.ellipse([5, body_top, width - 3, body_top + 7], fill=MAIN)
+    if pied:
+        # Black above, white below — the marking that names an oystercatcher
+        # from a hundred metres away.
+        d.ellipse([6, body_top + 4, width - 4, body_top + 7], fill=LIGHT)
+    d.ellipse([3, body_top - 4, 8, body_top + 1], fill=MAIN)      # the head
+    d.point((5, body_top - 2), fill=EYE)
+    if curved:
+        # Drawn as three descending steps rather than an arc: `ImageDraw.arc`
+        # at six pixels produces two disconnected dots.
+        for index in range(bill):
+            d.point((3 - index, body_top - 1 + index * index // 4), fill=ACCENT)
+    else:
+        d.line([(3, body_top - 1), (3 - bill, body_top - 1)], fill=ACCENT)
+    for index, x in enumerate((7, 11)):
+        drop = legs - (1 if (step and index == 0) else 0)
+        d.line([(x, body_top + 6), (x, body_top + 6 + drop)], fill=ACCENT)
+    return outline(g)
+
+
+def octopus(reach):
+    """Eight arms is unreadable; four in front of a head is an octopus.
+
+    The lesson the Kite Spider taught, applied before drawing rather than
+    after: leg *count* is not legible at this scale and trying to make it so
+    produces a lattice. What reads is the mantle — a big soft dome with two
+    eyes low on it — and a few arms with a curl in them.
+    """
+    g = grid(17, 14)
+    d = ImageDraw.Draw(g)
+    d.ellipse([4, 0, 14, 8], fill=MAIN)                     # the mantle
+    d.ellipse([5, 5, 8, 8], fill=LIGHT)                     # the eyes, low
+    d.ellipse([10, 5, 13, 8], fill=LIGHT)
+    d.point((6, 6), fill=EYE)
+    d.point((11, 6), fill=EYE)
+    for index, x in enumerate((5, 8, 11, 14)):
+        curl = 1 if (index % 2 == 0) == reach else -1
+        d.line([(x, 8), (x - 2, 11)], fill=SHADE, width=2)
+        d.line([(x - 2, 11), (x - 2 + curl, 13)], fill=SHADE)
+        d.point((x - 2 + curl, 13), fill=ACCENT)
+    return outline(g)
+
+
+TIDEWATER = {
+    "starfish": (starfish, palette((228, 132, 96), (188, 96, 68),
+                                   (250, 208, 176), (140, 66, 50))),
+    "anemone": (anemone, palette((196, 72, 72), (156, 48, 52),
+                                 (238, 148, 140), (96, 34, 40))),
+    "hermitcrab": (hermitcrab, palette((198, 106, 74), (128, 108, 88),
+                                       (232, 214, 190), (112, 58, 44))),
+    "curlew": (lambda s: wader(s, bill=7, curved=True, width=20, height=17,
+                               legs=5),
+               palette((178, 154, 122), (140, 120, 94), (240, 232, 216),
+                       (96, 80, 62))),
+    "oystercatcher": (lambda s: wader(s, bill=6, width=18, height=15,
+                                      pied=True),
+                      palette((54, 52, 58), (36, 34, 40), (250, 250, 252),
+                              (232, 108, 44))),
+    "octopus": (octopus, palette((186, 108, 128), (146, 76, 98),
+                                 (238, 194, 200), (96, 46, 64))),
+}
+
+
 # --- The Flyway: things that only pass through ------------------------------
 #
 # Four of these are *movements* rather than animals, and that is the drawing
@@ -1194,7 +1354,7 @@ WAVE4 = {
                      palette((104, 108, 126), (72, 76, 94), (198, 202, 216), (248, 226, 138))),
 }
 
-for wave in (WAVE2, WAVE4, FLYWAY):
+for wave in (WAVE2, WAVE4, FLYWAY, TIDEWATER):
     SPECIES.update({name: draw for name, (draw, _) in wave.items()})
     P.update({name: pal for name, (_, pal) in wave.items()})
 

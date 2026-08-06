@@ -285,6 +285,27 @@ enum LaunchOptions {
         return percent < 0 ? -1 : min(100, percent) / 100
     }()
 
+    /// Pin the water at Harbor Isle: `-PawmodoroTide low`, `high`,
+    /// `springlow`, `mid`, or a bare number from 0 to 1.
+    ///
+    /// The tide turns every six hours and a spring low is a couple of hours
+    /// twice a day for a few days a fortnight, so waiting for one is not a way
+    /// to check the shore strip. Each named stage lands in the middle of its
+    /// own band rather than on its edge — pinning to a boundary is how you get
+    /// a screenshot that disagrees with the almanac line beside it.
+    static let forcedTide: Double? = {
+        guard arguments.contains("-PawmodoroTide"),
+              let raw = value(after: "-PawmodoroTide")
+        else { return nil }
+        switch raw.lowercased() {
+        case "springlow": return 0.04
+        case "low": return 0.18
+        case "mid": return 0.50
+        case "high": return 0.86
+        default: return Double(raw).map { min(1, max(0, $0)) }
+        }
+    }()
+
     /// Hold one migration window open, e.g. `-PawmodoroPassage swans`.
     ///
     /// The only practical way to see the Flyway. A window is a fortnight
@@ -478,6 +499,7 @@ enum LaunchOptions {
     static let forcedWeather: Weather? = nil
     static let forcedSnail: Double? = nil
     static let forcedPassage: Passage? = nil
+    static let forcedTide: Double? = nil
     static let drift = false
     static let driftLaps: Int? = nil
     static let forcedClockFace: ClockFace? = nil

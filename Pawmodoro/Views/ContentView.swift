@@ -36,6 +36,8 @@ struct ContentView: View {
 
                 scenery
 
+                tide
+
                 snail
 
                 toys
@@ -311,6 +313,28 @@ struct ContentView: View {
     /// where she belongs: she is part of the place rather than part of the
     /// app. Re-read once a minute like the sky, which is roughly two thousand
     /// times more often than she moves.
+    /// The water at Harbor Isle, and nowhere else.
+    ///
+    /// Directly on top of the scenery and under everything else, because the
+    /// shore is part of the picture rather than part of the app — the snail
+    /// has to be able to stand on it and the stray has to be able to sit above
+    /// it. Re-read every five minutes: the tide moves about a hundredth of its
+    /// range in that time, which is under a point of screen, and a `.periodic`
+    /// timeline stops dead when the app is backgrounded.
+    @ViewBuilder
+    private var tide: some View {
+        if engine.settings.place == .harbor {
+            TimelineView(.periodic(from: .now, by: 300)) { context in
+                TideView(
+                    level: Tide.level(at: context.date),
+                    tint: Theme.surface,
+                    mud: Theme.bark,
+                    rising: Tide.isRising(at: context.date)
+                )
+            }
+        }
+    }
+
     @ViewBuilder
     private var snail: some View {
         TimelineView(.periodic(from: .now, by: 60)) { _ in

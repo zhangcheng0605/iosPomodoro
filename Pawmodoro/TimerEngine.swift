@@ -1107,6 +1107,17 @@ final class TimerEngine {
                   journal.hasSeen(species) else { continue }
             pool.append(contentsOf: repeatElement(.flight(flight), count: 2))
         }
+        // The sea, and only for somebody who has actually sat beside it.
+        // Gated on having reached Harbor Isle and on the water being in that
+        // state *now* — the same shape as the season and the sky, because a
+        // tide is the weather of the sea and a dream about low water on a day
+        // it never went out would say the tide means nothing.
+        if hasReached(.harbor) {
+            let water = Tide.state()
+            for tidal in Dream.Tidal.allCases where tidal.reachedAt == water {
+                pool.append(contentsOf: repeatElement(.tidal(tidal), count: 3))
+            }
+        }
         // Her cart is one tap inside Settings and always has been open, so
         // the gate is having sat at all rather than having traded — a dream
         // you can only have after spending would be the app rewarding the

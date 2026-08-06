@@ -17,6 +17,7 @@ struct AlmanacView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             travelogue
+            tide
             flyway
             aboutNow
             elsewhere
@@ -194,6 +195,46 @@ struct AlmanacView: View {
             return "\(possibleHere.count) about — you've met them all here."
         }
         return "\(possibleHere.count) about, \(unseen) you haven't met."
+    }
+
+    // MARK: The tide
+
+    /// What the water is doing, and a curve of the day it is doing it in.
+    ///
+    /// Only at Harbor Isle, because only Harbor Isle has a sea. Shown whether
+    /// or not anything has been seen in it — unlike the flyway, which stays
+    /// silent until you have met it. The difference is that a tide is not a
+    /// *surprise*: it is the weather of the sea, it is there every day, and a
+    /// tide table is a thing anybody standing at a harbour can read off a
+    /// board. Hiding it would be hiding the ordinary.
+    ///
+    /// The one thing it never does is name what is out there. "Low water" is
+    /// an observation; "the octopus pools are open" is an errand.
+    @ViewBuilder
+    private var tide: some View {
+        if place == .harbor {
+            let now = WorldCalendar.now
+            let state = Tide.state(at: now)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("The water — \(state.name.lowercased())"
+                     + (Tide.isRising(at: now) ? ", coming in" : ", going out"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+                TideCurveView(now: now, tint: Theme.blossom, line: Theme.bark)
+                    .frame(height: 34)
+                Text(state.line)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.65))
+                // The classic tide-table sentence, and the app quietly
+                // teaching a real rhythm: high water is about fifty minutes
+                // later every day, forever, and nobody ever tells you that.
+                if let turn = Tide.nextTurn(after: now) {
+                    Text("It turns around \(turn.formatted(date: .omitted, time: .shortened)).")
+                        .font(.footnote.italic())
+                        .foregroundStyle(Theme.bark.opacity(0.55))
+                }
+            }
+        }
     }
 
     // MARK: The Flyway

@@ -269,6 +269,63 @@ def check_platform_guards(failures):
                 break
 
 
+def check_debug_only_symbols(failures):
+    """A type declared inside `#if DEBUG` must not be named outside one.
+
+    `LaunchOptions` flags all have Release stand-ins, so a branch guarded by
+    one folds away — but the *symbol* on the other side of it still has to
+    exist. A whole file wrapped in `#if DEBUG` has no Release stand-in by
+    design, so naming it from ordinary code builds perfectly in Debug and
+    fails only in Release.
+
+    Found the hard way: `SnapshotSeed.fill(scrapbook)` sat behind
+    `if LaunchOptions.seedScrapbook`, which is a `false` constant in Release
+    — and Release still failed, because a constant `false` stops the branch
+    running, not the name being resolved.
+    """
+    debug_only = {}
+    for path in swift_files():
+        source = open(path).read()
+        if not source.lstrip().startswith("#if DEBUG"):
+            continue
+        # The whole file is Debug-only: collect the types it declares.
+        for kind, name in re.findall(
+                r"^(enum|struct|final class|class) (\w+)", strip(source), re.M):
+            debug_only[name] = rel(path)
+    if not debug_only:
+        return
+
+    for path in swift_files():
+        name = rel(path)
+        source = open(path).read()
+        if source.lstrip().startswith("#if DEBUG"):
+            continue
+        stripped = strip(source)
+        # Which line ranges are inside a #if DEBUG fence?
+        guarded_lines = set()
+        depth = 0
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            bare = line.strip()
+            if re.match(r"#if\s+DEBUG", bare):
+                depth += 1
+            elif bare.startswith("#if"):
+                if depth:
+                    depth += 1
+            elif bare.startswith("#endif") and depth:
+                depth -= 1
+            if depth:
+                guarded_lines.add(index)
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            if index in guarded_lines:
+                continue
+            for symbol, home in debug_only.items():
+                if re.search(rf"\b{symbol}\b", line):
+                    failures.append(
+                        f"{name}:{index}: names `{symbol}`, which is declared "
+                        f"inside `#if DEBUG` in {home} — this builds in Debug "
+                        f"and fails the Release build")
+
+
 def check_members(failures, launch_options):
     """`Theme.x` and `LaunchOptions.x` that were never declared."""
     theme = open(os.path.join(SOURCE, "Theme.swift")).read()
@@ -511,6 +568,7 @@ def main():
     check_assets(failures)
     check_members(failures, launch_options)
     check_platform_guards(failures)
+    check_debug_only_symbols(failures)
     enums, duplicate_enums = enum_cases()
     check_duplicate_enums(failures, duplicate_enums)
     # An ambiguous name is dropped rather than checked against a merged case

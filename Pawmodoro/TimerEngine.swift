@@ -228,7 +228,12 @@ final class TimerEngine {
         // A file left behind by a crash between writing the JPEG and saving
         // its row is storage nobody can reach. One directory listing.
         scrapbook.prune()
+        // `SnapshotSeed` is compiled out of Release entirely, so the call
+        // has to be too — `seedScrapbook` being a `false` constant there
+        // stops the branch running, not the symbol being looked up.
+        #if DEBUG
         if LaunchOptions.seedScrapbook { SnapshotSeed.fill(scrapbook) }
+        #endif
         for accessory in LaunchOptions.forcedWear {
             self.settings.wear(accessory, on: self.settings.buddy, in: accessory.slot)
         }

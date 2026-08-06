@@ -604,11 +604,10 @@ ends up with four ribbons and no stick.
 
 **Divergences:**
 
-- **Tier 2 is not built.** The greeting, treats, brushing and tucking in are
-  four separate interactions with their own art and state, and shipping half
-  of each would be worse than shipping none. Tier 1 and tier 3 together are
-  the complete idea — a creature that reacts to your hand, and one that brings
-  you things.
+- **Tier 2 is a quarter built.** The greeting is in — see below. Treats,
+  brushing and tucking in are three separate interactions with their own art
+  and state, and shipping half of *each* would be worse than shipping none;
+  shipping one of them whole is a different thing entirely.
 - **Petting is not counted anywhere.** No stroke total, no affection meter, no
   contribution to the bond. The fences at the top of `TouchSpot.swift` are
   written before the feature for that reason.
@@ -616,6 +615,56 @@ ends up with four ribbons and no stick.
   aimed at without sight — and none of those labels marks the favourite,
   because giving it away would take the feature from exactly the people the
   actions are for.
+
+### As built — Phase 5, tier 2's greeting
+
+The first opening on a new day: the buddy stretches, looks up, and says
+something. It is a small feature and it is the one place in this app where the
+gentle streak's philosophy is **animated** rather than merely obeyed — *return
+is always celebrated, absence is never mentioned.* Four warmths, and the
+longer you have been away the gladder the greeting. There is no arm in that
+table that gets colder.
+
+**No new art and no new pose.** `BuddyPose.waking` is already eyes-open, then
+a stretch for the buddies that have one, then the pleased bounce — which is
+exactly what the plan asked a greeting to be. Inventing a second animation
+that looked the same would be two things to keep in step for no gain. What
+carries the warmth is the *caption*, which holds for `Warmth.seconds`: longer
+for the rarer ones, so a gladder greeting lingers after the bounce has
+finished rather than needing a longer bounce of its own.
+
+**It fires on foreground as well as on launch**, because the common case is an
+app that was never killed, only backgrounded overnight — a greeting that only
+fired on a cold launch would be missed by exactly the people who open it every
+morning. And never while a phase is running: saying good morning over a focus
+session is the app talking across the thing it exists to protect.
+
+**`tools/check_greeting.py` is the nineteenth checker and it is almost
+entirely a fence around four sentences.** The pull toward "it's been a while"
+is constant and it is *reasonable-sounding every single time*; each such edit
+would look fine in review, and together they turn the one screen that says
+hello into the one that makes you feel bad for having a life. So: twenty-four
+forbidden phrasings, a walk over every gap from 0 to 1000 days asserting
+warmth never decreases, and six forbidden calls — no notification, no acorn,
+no streak. Ten rules, all break-tested.
+
+One of those break tests found a real hole. The caption "counted the quiet
+mornings" names the absence without using the word *days*, *weeks* or
+*months*, and the first version of the fence let it straight through. It is
+also precisely the sentence somebody would write meaning to be tender.
+`mornings`, `nights`, `counted`, `since` and `quiet` are all forbidden now.
+
+**Divergences:**
+
+- **`Warmth.first` is its own arm**, unreachable by any gap and picked from
+  the absence of history instead. "Welcome back" to somebody who has never
+  been here is the kind of small wrongness that makes an app feel like a form.
+- **`StorageKeys.greeted` is deliberately not synced.** Greeting somebody
+  twice on two machines is a nicer failure than greeting them on neither, and
+  the alternative is a conflict rule for a hello. `check_crossing.py` required
+  the decision to be written down, which is exactly what that rule is for —
+  it caught this key on the first run after it was added.
+- **Nothing is granted and nothing is announced.** It is a hello.
 
 ## Phase 6 — The Scrapbook (where you actually were)
 

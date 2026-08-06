@@ -89,6 +89,45 @@ final class TimerEngine {
     /// to find a pond than being told about one.
     private(set) var residentArrived: Resident?
 
+    /// The hello the buddy owes today, or nil once it has been said.
+    ///
+    /// Set at most once a day, cleared by whoever showed it. Not persisted
+    /// beyond `GreetingLog`'s single date: a greeting half-shown when the app
+    /// was killed is a greeting that simply happens again, which is the right
+    /// failure for a hello.
+    private(set) var greeting: Greeting.Warmth?
+
+    /// Say hello, if today has not had one.
+    ///
+    /// Called on launch and on every foreground — both, because the common
+    /// case is an app that was never actually killed, only backgrounded
+    /// overnight, and a greeting that only fired on a cold launch would be
+    /// missed by exactly the people who use the app every day.
+    ///
+    /// Never during a running phase. Interrupting a focus session to say good
+    /// morning would be the app talking over the thing it exists to protect.
+    func greetIfOwed() {
+        guard runState == .idle else { return }
+        if LaunchOptions.forceGreeting {
+            greeting = LaunchOptions.forcedGreeting ?? .daily
+            return
+        }
+        guard greetings.isOwed() else { return }
+        greeting = Greeting.for(daysAway: daysSinceLastSession,
+                                hasSat: !log.records.isEmpty)
+        greetings.noteGreeted()
+    }
+
+    func endGreeting() { greeting = nil }
+
+    /// Whole days since the last completed session, through `WorldCalendar` so
+    /// `-PawmodoroDate` moves it with everything else.
+    private var daysSinceLastSession: Int {
+        guard let last = log.records.map(\.endedAt).max() else { return 0 }
+        return max(0, WorldCalendar.days(from: WorldCalendar.startOfDay(last),
+                                         to: WorldCalendar.today))
+    }
+
     /// Set for one caption's worth of time when something is worn for the
     /// first time ever.
     ///
@@ -124,6 +163,8 @@ final class TimerEngine {
     let shelf: Shelf
     /// Photographs of where you actually were.
     let scrapbook: Scrapbook
+    /// One date: the last day the buddy said hello.
+    @ObservationIgnored let greetings = GreetingLog()
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -663,6 +704,10 @@ final class TimerEngine {
             driftNeedsAsking = Drift.needsAsking(elapsed: driftElapsed)
             return
         }
+        // Backgrounded overnight and brought back is the ordinary way a day
+        // starts for somebody who uses this every morning, so the greeting
+        // has to live here as well as at launch.
+        greetIfOwed()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {

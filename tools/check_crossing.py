@@ -151,6 +151,12 @@ NEEDS_NO_MERGE = {
                  "until there is something to move the JPEGs with, because a "
                  "row pointing at a file that isn't there is the one failure "
                  "`Scrapbook.prune()` cannot repair.",
+    "greeted": "the last day the buddy said hello, and the one piece of state "
+               "here that is better off *not* syncing. Greeting somebody twice "
+               "on two machines is a nicer failure than greeting them on "
+               "neither, and both machines would have to agree about which "
+               "one saw them first — which is a conflict rule for a hello. "
+               "See the note on `GreetingLog`.",
     "strayFirstSeen": "a single date, and her whole arc counts back from it. "
                       "`min` of two, folded into the transport.",
     "strayJoined": "same — one date.",

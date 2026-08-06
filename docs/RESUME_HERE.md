@@ -65,6 +65,7 @@ of what the next release owes users.
 | **V4** — the Flyway: 8 migration windows, 63 → 71 species | **built, never compiled** |
 | **V6** — Tidewater: the sea at Harbor Isle, 71 → 77 species | **built, never compiled** |
 | **X1** — the deep-drift species, 77 → 81, and Phase X is finished | **built, never compiled** |
+| **Hearth 5, tier 2** — the greeting, the first opening of a new day | **built, never compiled** |
 
 ### What today added
 
@@ -799,11 +800,12 @@ python3 tools/check_snail.py             # after moving her or redrawing a scene
 python3 tools/check_crossing.py          # after ANY new store, storage key or merge
 python3 tools/check_flyway.py            # after any passage, window or migrant species
 python3 tools/check_tide.py              # after the tide model, a tide gate or the shore strip
+python3 tools/check_greeting.py          # after ANY change to what the buddy says on a new day
 tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All eighteen were green when this was written: 922,032 contrast pairs, 20,736
+All nineteen were green when this was written: 922,032 contrast pairs, 20,736
 stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 400 pairs of
 merged worlds, 105 Swift files and 625 imagesets. `check_snail.py` takes about
 18 seconds; the rest are quick.

@@ -133,6 +133,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroTheme <id>` | Start in a theme, e.g. `-PawmodoroTheme ink` |
 | `-PawmodoroPostcard` | Put one postcard in the album on launch |
 | `-PawmodoroPanorama` | Put the hundred-hour panoramic postcard in the album — four months of sitting, otherwise |
+| `-PawmodoroGreet [warmth]` | Force the day's greeting: `daily`, `away`, `gladder`, `first`. The warmest needs a week away |
 | `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |
@@ -178,10 +179,10 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are eighteen now (`swift`, `contrast`, `grove`,
+without a Mac** — there are nineteen now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
 `weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`,
-`tide`), they take about twenty-five seconds between them, and each one exists because
+`tide`, `greeting`), they take about twenty-five seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
 Most of this app is written on Linux and compiled days later, so a

@@ -162,7 +162,15 @@ struct BuddyView: View {
                 }
             }
         }
-        .onAppear { animator.setBase(restingPose) }
+        .onAppear {
+            animator.setBase(restingPose)
+            engine.greetIfOwed()
+            playGreetingIfOwed()
+        }
+        .onChange(of: engine.greeting) { _, hello in
+            guard hello != nil else { return }
+            playGreetingIfOwed()
+        }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
         .onChange(of: engine.completion) { _, completion in
             // The payoff for *finishing* a focus session: the buddy opens its
@@ -216,6 +224,28 @@ struct BuddyView: View {
             return buddy.frame(x < 0.5 ? "look_l" : "look_r")
         }
         return animator.frameName(for: buddy, at: date)
+    }
+
+    /// Stretch, look up, bounce — and that is the existing `waking` one-shot,
+    /// unchanged.
+    ///
+    /// No new pose and no new art. `waking` is already eyes-open, then a
+    /// stretch for the buddies that have one, then the pleased bounce, which
+    /// is exactly what the plan asked a greeting to be. Inventing a second
+    /// animation that looked the same would be two things to keep in step for
+    /// no gain — the standing quirk rule, applied to a whole feature.
+    ///
+    /// The caption is what carries the *warmth*: it holds for
+    /// `Warmth.seconds`, which is longer than the animation, so a gladder
+    /// greeting lingers after the bounce has finished rather than needing its
+    /// own longer bounce.
+    private func playGreetingIfOwed() {
+        guard let hello = engine.greeting, !isNapping else { return }
+        animator.play(.waking, for: buddy)
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(hello.seconds * 1_000_000_000))
+            engine.endGreeting()
+        }
     }
 
     /// Follows whichever pose is on screen, so a slow breathing loop doesn't
@@ -344,6 +374,14 @@ struct BuddyView: View {
     private var caption: String {
         if animator.isPlayingTransient(at: Date()), isNapping {
             return "shhh — \(name) is dreaming"
+        }
+        // The hello, ahead of everything except a sleeping buddy. It is the
+        // first thing on screen on a new day and it is over in a few seconds;
+        // anything that outranked it would mean somebody who opens the app,
+        // gets a resident and a greeting on the same morning never sees the
+        // greeting at all.
+        if let hello = engine.greeting {
+            return "\(name) \(hello.line)"
         }
         // Ahead of everything else, because it is the rarest thing this line
         // ever says: eight of these in a lifetime of the app, against a soak

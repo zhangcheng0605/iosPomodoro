@@ -44,10 +44,14 @@ enum StorageKeys {
     /// Documents/Snapshots — `Scrapbook.prune()` keeps the two in step.
     static let snapshots = "pawmodoro.snapshots"
 
+    /// The last day the buddy said hello. One date, and the only thing the
+    /// greeting stores — see `GreetingLog`.
+    static let greeted = "pawmodoro.greeted"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
-        owned, keepsakes, snapshots,
+        owned, keepsakes, snapshots, greeted,
     ]
 }
 
@@ -285,6 +289,21 @@ enum LaunchOptions {
         return percent < 0 ? -1 : min(100, percent) / 100
     }()
 
+    /// Force the day's greeting, at a chosen warmth:
+    /// `-PawmodoroGreet gladder`. Without a value, whatever the real gap
+    /// earns.
+    ///
+    /// The warmest greeting needs a week away, and the app cannot be left
+    /// alone for a week during a verification pass. Forcing it also bypasses
+    /// `GreetingLog`, so it can be watched twice in a row.
+    static let forcedGreeting: Greeting.Warmth? = {
+        guard arguments.contains("-PawmodoroGreet") else { return nil }
+        guard let raw = value(after: "-PawmodoroGreet") else { return .daily }
+        return Greeting.Warmth(rawValue: raw) ?? .daily
+    }()
+
+    static let forceGreeting = isSet("-PawmodoroGreet")
+
     /// Put the hundred-hour panoramic postcard in the album on launch.
     ///
     /// Its own flag rather than a side effect of `-PawmodoroBond 200`, because
@@ -509,6 +528,8 @@ enum LaunchOptions {
     static let forcedPassage: Passage? = nil
     static let forcedTide: Double? = nil
     static let panorama = false
+    static let forcedGreeting: Greeting.Warmth? = nil
+    static let forceGreeting = false
     static let drift = false
     static let driftLaps: Int? = nil
     static let forcedClockFace: ClockFace? = nil

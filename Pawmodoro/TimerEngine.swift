@@ -578,8 +578,13 @@ final class TimerEngine {
         // The cat outside, while she is still outside. Once she has come in
         // she is dreamed about as one of the household instead — the two
         // sources never overlap, and the diary keeps whatever it already had.
+        //
+        // Gated on `hasJoined` rather than on the stage: she reaches `.home`
+        // when she is ready to be named, not when she is named, and a player
+        // who leaves the naming sheet for a week would otherwise fall into a
+        // hole where she is dreamed about neither way.
         let stage = strayStage
-        if stage < .home {
+        if !stray.hasJoined {
             for visitor in Dream.Visitor.allCases where stage >= visitor.reachedAt {
                 pool.append(contentsOf: repeatElement(.visitor(visitor), count: 2))
             }

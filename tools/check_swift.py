@@ -156,6 +156,39 @@ def check_assets(failures):
             )
 
 
+def check_dream_ids(failures):
+    """`Dream.id` and `Dream.from(id:)` must name the same set of prefixes.
+
+    The diary is a dictionary keyed on `Dream.id`, and `from(id:)` is what
+    turns those keys back into dreams. Add a case, write its `id`, forget its
+    arm in `from(id:)`, and the compiler is perfectly happy: every entry of
+    that kind simply stops decoding, and the only symptom is a dream quietly
+    missing from a page nobody can count. Nothing else in the toolchain can
+    see it.
+    """
+    path = os.path.join(SOURCE, "Model", "Dream.swift")
+    source = open(path).read()
+
+    # `case .memory(let species): "memory.\(species.rawValue)"`. The literal
+    # dot is what separates these from the `asset` switch two properties
+    # down, whose arms build `dream_heard_\(…)` with no dot at all — the
+    # first version of this rule left it out and matched nothing, which it
+    # announced by failing on every prefix at once.
+    written = set(re.findall(r'case \.\w+\(let \w+\): "(\w+)\.\\\(', source))
+    read = set(re.findall(r'case "(\w+)": return ', source))
+
+    for prefix in sorted(written - read):
+        failures.append(
+            f"Dream.swift: id() writes '{prefix}.…' but from(id:) has no arm "
+            f"for it — every dream of that kind would stop decoding"
+        )
+    for prefix in sorted(read - written):
+        failures.append(
+            f"Dream.swift: from(id:) reads '{prefix}.…' but id() never "
+            f"writes it"
+        )
+
+
 def check_dream_assets(failures, enums):
     """`case .sound(let sound): "dream_heard_\\(sound.rawValue)"` -> one
     imageset per case of `Heard`.
@@ -399,6 +432,7 @@ def main():
     check_assets(failures)
     check_members(failures, launch_options)
     enums = enum_cases()
+    check_dream_ids(failures)
     check_dream_assets(failures, enums)
     check_switch_exhaustiveness(failures, enums)
     check_constellation_links(failures)

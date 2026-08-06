@@ -363,8 +363,18 @@ final class TimerEngine {
     /// time. Not persisted: it is a remark about a thing that happened five
     /// seconds ago, and `Pouch.hasFedFavourite` is the only part worth
     /// remembering.
-    private(set) var offered: (treat: Treat, reception: Treat.Reception,
-                               isFirstFavourite: Bool)?
+    /// A struct rather than the labelled tuple this started as. `@Observable`
+    /// did not publish changes to the tuple: feeding a treat wrote through to
+    /// `Pouch` exactly as it should and the caption never moved, because the
+    /// view was never told anything had changed. Same three fields, same
+    /// member names, so every reader is untouched.
+    struct Offering: Equatable {
+        let treat: Treat
+        let reception: Treat.Reception
+        let isFirstFavourite: Bool
+    }
+
+    private(set) var offered: Offering?
 
     /// Offer a treat. Nothing is spent, nothing is counted, nothing is
     /// unlocked — see the fences on `Treat`.
@@ -373,7 +383,8 @@ final class TimerEngine {
         let reception = buddy.reception(of: treat)
         let first = reception == .favourite && !pouch.hasFedFavourite(buddy)
         if first { pouch.noteFedFavourite(buddy) }
-        offered = (treat, reception, first)
+        offered = Offering(treat: treat, reception: reception,
+                           isFirstFavourite: first)
         // The delighted one gets the purr the favourite touch spot already
         // uses; the other two get the same soft detent as any other tap.
         // Deliberately not `complete()` — a treat is not an achievement.

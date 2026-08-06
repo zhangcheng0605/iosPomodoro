@@ -10,7 +10,6 @@ import Foundation
 final class SoundPlayer {
     static let shared = SoundPlayer()
 
-    private var ambiencePlayer: AVAudioPlayer?
     private var chimePlayer: AVAudioPlayer?
     private var purrPlayer: AVAudioPlayer?
     private var heardPlayer: AVAudioPlayer?
@@ -21,7 +20,7 @@ final class SoundPlayer {
     /// Balance against the music channel. Applied live, so moving the slider
     /// is audible immediately rather than at the next phase.
     var ambienceVolume: Float = 0.8 {
-        didSet { ambiencePlayer?.volume = 0.55 * ambienceVolume }
+        didSet { AmbienceLoop.shared.volume = 0.55 * ambienceVolume }
     }
 
     private init() {}
@@ -55,19 +54,9 @@ final class SoundPlayer {
     func setAmbience(_ ambience: Ambience) {
         guard ambience != currentAmbience else { return }
         currentAmbience = ambience
-
-        guard let fileName = ambience.fileName else {
-            ambiencePlayer?.stop()
-            ambiencePlayer = nil
-            return
-        }
-
         configureSessionIfNeeded()
-        ambiencePlayer?.stop()
-        ambiencePlayer = makePlayer(named: fileName)
-        ambiencePlayer?.numberOfLoops = -1
-        ambiencePlayer?.volume = 0.55 * ambienceVolume
-        ambiencePlayer?.play()
+        AmbienceLoop.shared.volume = Float(0.55 * ambienceVolume)
+        AmbienceLoop.shared.play(ambience)
     }
 
     /// One of the things you can only hear, played once, quietly, under

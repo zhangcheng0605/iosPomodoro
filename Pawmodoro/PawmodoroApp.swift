@@ -51,10 +51,12 @@ struct PawmodoroApp: App {
                 engine.syncAfterWake()
                 engine.refreshAmbience()
                 MusicPlayer.shared.resumeIfNeeded()
+                AmbienceLoop.shared.resumeIfNeeded()
             case .background, .inactive:
                 // iOS tears the audio engine down anyway; letting it idle in
                 // the background is what gets an app looked at twice.
                 MusicPlayer.shared.suspend()
+                AmbienceLoop.shared.suspend()
             @unknown default:
                 break
             }

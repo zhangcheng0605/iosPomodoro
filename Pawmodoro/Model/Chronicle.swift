@@ -54,6 +54,8 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// the place, because where you were standing is the whole of what
         /// there is to say about it.
         case snail
+        /// Somebody moved into the homestead.
+        case resident
     }
 }
 

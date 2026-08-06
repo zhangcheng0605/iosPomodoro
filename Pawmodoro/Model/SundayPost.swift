@@ -175,6 +175,14 @@ enum SundayPost {
                          + "along than last time.")
         }
 
+        // The homestead's arrivals, in the letter's tense: they happened, and
+        // now they are simply part of the place. Never how many there are —
+        // eight of eight is a collection, and this is a garden.
+        if let moved = events.last(where: { $0.kind == .resident }),
+           let resident = Resident(rawValue: moved.subject) {
+            lines.append("We have \(resident.settledLine) now.")
+        }
+
         if let stray = events.filter({ $0.kind == .stray }).last,
            let stage = Int(stray.subject).flatMap(Stray.Stage.init(rawValue:)),
            let line = stage.postLine {

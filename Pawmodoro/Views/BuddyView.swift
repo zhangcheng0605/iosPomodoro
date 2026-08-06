@@ -277,6 +277,12 @@ struct BuddyView: View {
         if animator.isPlayingTransient(at: Date()), isNapping {
             return "shhh — \(name) is dreaming"
         }
+        // Ahead of everything else, because it is the rarest thing this line
+        // ever says: eight of these in a lifetime of the app, against a soak
+        // every other break. It lasts the one break and is then gone for good.
+        if let resident = engine.residentArrived {
+            return "\(name) has noticed — \(resident.arrivalLine)"
+        }
         // Ahead of the quirk poses on purpose: a soak happens every other
         // break, and the two of them sitting together is the payoff of a
         // fortnight. One caption for two sprites, so it reads as one moment.

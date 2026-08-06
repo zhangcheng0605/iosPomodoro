@@ -59,7 +59,11 @@ phases V-Z (weather, sound, the open hour, the long now, widgets). **Phase 0
 is built except 0e**: the Chronicle, the world calendar, the conventions and
 the dream backfill are in; the listening pass and the widget-target step are
 the Mac sitting that is left, and Phase W does not start until the listening
-pass has notes. The two earlier plan documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
+pass has notes. **V's weather and snail, X's Drift and Cabinet, and all four
+altitudes of Y are built on top of it** — none compiled; `docs/RESUME_HERE.md`
+is the running order for the Mac evening. What Y still owes is Y4's four
+time-of-day grades and its hundred-hour panorama. The two earlier plan
+documents are built out. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
 running, D (Live Activity) written but needing a one-time Xcode target step,
 E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers
 content and its build order is finished except alternate app icons. Each phase
@@ -126,7 +130,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
-| `-PawmodoroBond <n>` | Seed n completed sessions, to preview every bond level |
+| `-PawmodoroBond <n>` | Seed n completed sessions — every bond level, and every homestead resident (`200` for all eight) |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
@@ -154,10 +158,13 @@ first-launch notification prompt, and the paywall's locked state.
 
 ## Verifying a change
 
-**Run `python3 tools/check_swift.py`, `check_weather.py` and
-`check_yearring.py` before ending any
-session written without
-a Mac.** Most of this app is written on Linux and compiled days later, so a
+**Run every `python3 tools/check_*.py` before ending any session written
+without a Mac** — there are ten now (`swift`, `contrast`, `grove`,
+`residents`, `post`, `weather`, `yearring`, `clocks`, `stray`, `snail`), they
+take about fifteen seconds between them, and each one exists because
+something got through. `check_swift.py` is the one that stands in for the
+compiler; the rest each guard one system.
+Most of this app is written on Linux and compiled days later, so a
 typo costs Mac time — which is the scarce resource here, not Linux time. It
 closes the mechanical error classes a compiler would catch instantly:
 unbalanced brackets, `#if DEBUG`/`#else` drift in `LaunchOptions` (a flag
@@ -302,7 +309,20 @@ There are no tests. A change is verified by building and looking at it:
   a lattice and no rule anybody had thought to write could see it. It was
   found by rendering a thirty-tree forest and looking at the picture. Every
   generator in `tools/` can composite its output; do that before believing
-  the exit code.
+  the exit code. It happened again with the homestead: `check_residents.py`
+  was green while the lantern sat directly on top of the well and the well
+  had a bite taken out of it by the card's corner radius. **Composite the
+  finished surface**, not just the sprite sheet — a sprite that reads alone
+  can still be wrong where it stands.
+- **Anything hand-placed on a surface something else also draws into needs a
+  checker, and the checker's first answer is often "move it".** Eight
+  residents were laid out among the trees by hand, one at a time, each looking
+  fine. At the grove's capacity of a hundred and twenty they were 80–100 %
+  buried — a hundred and twenty full trees cover that card one and a third
+  times over — and nobody would have met it before four months of daily use.
+  The residents are drawn in front of the whole wood now. A thing this app
+  promises can never be lost has to still be *visible*, or it decayed
+  whatever the storage says.
 - **A checker that restates the values it checks has proved nothing.** Twice
   now: `check_weather.py` parsed the weights and then verified the roll
   against them, so swapping two weights passed cleanly; `check_yearring.py`

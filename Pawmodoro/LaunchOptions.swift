@@ -199,8 +199,13 @@ enum LaunchOptions {
     }()
 
     /// Seed the log to a given length, e.g. `-PawmodoroBond 150`. Previews
-    /// every bond level — and, incidentally, every journey unlock — without
-    /// grinding three hundred sessions.
+    /// every bond level — and, incidentally, every journey unlock and every
+    /// homestead resident — without grinding three hundred sessions.
+    ///
+    /// The residents deliberately get no flag of their own: they are read off
+    /// `log.totalSessions`, which this already sets, and a second way to seed
+    /// the same number is a second thing to keep in step. `-PawmodoroBond 200`
+    /// is a full homestead.
     static let bondSessions: Int? = {
         guard arguments.contains("-PawmodoroBond") else { return nil }
         let count = value(after: "-PawmodoroBond").flatMap(Int.init) ?? 0

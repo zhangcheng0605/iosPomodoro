@@ -951,6 +951,65 @@ against a merged list. The better fix was still the better name: `Growth`.
   as an observation rather than a countdown. No percentage, no next milestone,
   no trees-to-go.
 
+### As built — Y4's residents (the other half)
+
+Built on Linux, never compiled. Eight of them — pond, birdhouse, beehive,
+hedge, washline, lantern, well, bench — at 15/30/50/70/95/125/160/200 sessions,
+two frames each at 2fps, `tools/generate_residents.py`. `GroveView` became
+`HomesteadView` and now draws both halves.
+
+**The interesting failure is one nobody could have seen for four months.**
+
+The first arrangement interleaved residents with the trees by depth, sorted
+into one list — which is the prettier picture, and is what the code comment
+argued for at the time. `check_residents.py` was written to assert that each
+resident kept most of itself visible with the wood in front of it, and on its
+first run reported the beehive at **0 % visible**, the washline at 2 %, the
+bench at 4 %, the pond at 12 %. A hundred and twenty full trees at 24×30
+cover a 350×180 card *one and a third times over*: the canopy closing is
+already in `Grove`'s own docstring, and anything sharing that depth range
+simply stops existing. Nobody would have met it before a hundred and twenty
+hours of focus.
+
+That is a decay bug wearing a layout bug's clothes. A pond you lose after four
+months has decayed whatever the storage says, and this era's one law is that
+nothing does. So the residents moved into a near band (y ≥ 0.78) and are drawn
+**in front of the whole wood** — the trees behind the house, the neighbours in
+the yard, which is what both names said all along.
+
+The checker then had to change jobs, because "is a resident buried" had become
+true-by-construction — a checker that restates the code. It now measures the
+opposite mistake, which is just as invisible from an editor: that eight
+neighbours drawn over the top of the trees don't wall off the hundred hours
+behind them. The yard covers 3 % of the card against a 22 % ceiling.
+
+**And the render caught two more the checker could not.** With the two rows at
+matching x, the lantern sat directly above the well and the beehive above the
+bench; each pair read as one tall object. The rows are offset by half a slot
+now. And the well, tucked into the bottom-right, lost a bite to the card's
+16pt corner radius — which is nowhere in any bounds check, so
+`corner_clipped()` exists and the sprite generator's contact sheet is not the
+only picture worth looking at. Same lesson as the grove's diagonal stripes,
+found the same way.
+
+**Other decisions:**
+
+- **No card, no confetti, no notification.** A resident is announced by the
+  buddy's caption for the length of one break, and `residentArrived` is
+  cleared when the next focus starts. It is deliberately not persisted: miss
+  it and you find the pond yourself, which is a better way to find a pond.
+- **No flag of its own.** `-PawmodoroBond 200` already seeds two hundred
+  sessions, which is what a resident reads. A second seeding flag is a second
+  thing to keep in step.
+- **They are not in the journal.** A resident is not a species you met, and
+  putting them there would make the homestead another set to complete.
+- **Three dreams, no new art** — `Dream.Neighbour`: the fish, the tenant, the
+  lamplight, drawn from the residents' own second frames as silhouettes.
+  Gated on `Resident.settled` rather than on thresholds copied into `Dream`,
+  so the gate cannot disagree with the thing it gates.
+- **Still unbuilt in Y4:** the four time-of-day grades and the hundred-hour
+  panoramic postcard.
+
 ## Phase Z — The Window Sill (presence, and the one dangerous migration)
 
 Deliberately last: the only phase that cannot ship from the command line,

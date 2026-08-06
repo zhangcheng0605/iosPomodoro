@@ -3,11 +3,11 @@
 **Written 6 Aug 2026 from a Windows laptop, for the Mac evening that follows
 it.** Phase 0 is built except its Mac sitting, and **eight more phases went in
 on top of it in the same day**: weather, the old snail, the Drift, the Cabinet
-of Clocks, and all four altitudes of the Long Now except the Homestead's
-residents.
+of Clocks, and all four altitudes of the Long Now — the Homestead included,
+both its halves.
 
 **None of it has been through a compiler.** That is not a warning about
-quality — nine checkers are green and every sprite was rendered and looked at —
+quality — ten checkers are green and every sprite was rendered and looked at —
 it is a statement about what tonight is for. Expect a handful of errors, fix
 them, and then look at the things no checker can judge.
 
@@ -46,7 +46,7 @@ of what the next release owes users.
 | **Y3** — the year ring | **built, never compiled** |
 | **Y1** — the shelf of hours | **built, never compiled** |
 | **Y2** — the Sunday Post | **built, never compiled** |
-| **Y4** — the grove (trees only; residents not built) | **built, never compiled** |
+| **Y4** — the Homestead: the grove *and* the residents | **built, never compiled** |
 | **X2** — the Cabinet of Clocks | **built, never compiled** |
 
 ### What today added
@@ -73,11 +73,13 @@ journey moves exactly as far as the countdowns it replaced.
 incense, shadow) as generated frame strips, earned by counters the app already
 keeps.
 
-**Phase Y — three of four altitudes.** Y1 the Shelf of Hours, Y2 the Sunday
-Post, Y3 the Year Ring, Y4's grove. All of them backfill from history the
+**Phase Y — all four altitudes.** Y1 the Shelf of Hours, Y2 the Sunday Post,
+Y3 the Year Ring, Y4 the Homestead — the grove, and the eight residents that
+move into the yard in front of it. All of them backfill from history the
 moment they arrive, which is the return on having built the Chronicle first.
+Y4 still owes its four time-of-day grades and its hundred-hour panorama.
 
-**Five new checkers, and they earned it.** Four real bugs were found before a
+**Six new checkers, and they earned it.** Five real bugs were found before a
 compiler saw any of this:
 
 | Found by | What it was |
@@ -86,11 +88,14 @@ compiler saw any of this:
 | `check_grove.py` | Trees *n* and *n+89* stood 0.0097 apart — both layout axes were golden-ratio-derived and re-phased at Fibonacci intervals |
 | `check_clocks.py` | The candle and the incense **ran backwards** on their last frame, because the flame counted as "the part that grows" |
 | `check_yearring.py` | The plan's own tinting made a night session's day measure ΔE 1.3 from a day nobody focused — indistinguishable, in one theme, forever |
+| `check_residents.py` | Every homestead resident was **80–100 % buried** once the grove hit capacity — the beehive at 0 %. Invisible until a hundred and twenty hours of focus |
 
-**And two the checkers missed**, both caught by rendering the thing and looking
-at it: the grove came out in diagonal stripes at thirty trees, and the water
-clock tapered the wrong way. That is now a convention in CLAUDE.md — *a green
-checker is not a look.*
+**And four the checkers missed**, all caught by rendering the thing and looking
+at it: the grove came out in diagonal stripes at thirty trees, the water clock
+tapered the wrong way, the homestead's lantern sat directly on top of its well
+(and the beehive on the bench), and the well lost a bite to the card's rounded
+corner. That is now a convention in CLAUDE.md — *a green checker is not a
+look.*
 
 ---
 
@@ -111,7 +116,7 @@ xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Debug \
 expected outcome, not a sign something is wrong.** In likelihood order:
 
 0. **The nine new SwiftUI files.** `WeatherView`, `SnailView`, `YearRingView`,
-   `ShelfOfHoursView`, `SundayPostView`, `GroveView`, `ClockFaceView`,
+   `ShelfOfHoursView`, `SundayPostView`, `HomesteadView`, `ClockFaceView`,
    `PostcardExport`, and the changes inside `TimerRingView` and `ContentView`.
    `Canvas`, `TimelineView` and `GeometryReader` are all shapes the app
    already uses, so most should be quiet. `YearRingView` has the most novel
@@ -158,7 +163,8 @@ tools/run-sim.sh --demo --headless -PawmodoroFillDreams
 (`run-sim.sh` passes anything starting `-Pawmodoro` straight to the app, so the
 flag lists below can be appended to that same line verbatim.)
 
-119 tiles. What to actually check, in this order:
+128 tiles — the full `Dream.everything`. What to actually check, in this
+order:
 
 - **The thirteen new sprites read at 62pt.** They were looked at on Linux at
   8× on a cream card and they read there; 62pt on a phone is the real test.
@@ -182,6 +188,7 @@ $S -PawmodoroFillJournal -PawmodoroDream sound                  # only ever hear
 $S -PawmodoroStray 3 -PawmodoroDream visitor                    # the cat, still outside
 $S -PawmodoroBond 150 -PawmodoroUnlockPlus -PawmodoroDream companion
 $S -PawmodoroSeason autumn -PawmodoroDream season               # the time of year
+$S -PawmodoroBond 125 -PawmodoroDream neighbour                 # the homestead's own
 ```
 
 The bubble itself appears over the sleeping buddy between 40 % and 70 % of a
@@ -298,7 +305,45 @@ does not appear at all — that is the design, not a missing view.
   anywhere on it — that is the anti-goal, and it is the kind of thing that
   gets helpfully added back later.
 
-### 7. The clock faces
+### 7. The homestead
+
+Stats sheet, under the week chart. It is the one surface where two different
+clocks are drawn into the same picture, and the only one where an eight-frame
+loop runs all at once.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroBond 200 -PawmodoroSeedStats   # all eight residents, a wood behind them
+$S -PawmodoroBond 30                        # two residents, a nearly empty yard
+```
+
+`-PawmodoroBond n` seeds n sessions of 25 minutes, so it sets the trees and
+the residents together: 200 gives all eight neighbours and about eighty-three
+trees. There is no residents flag on purpose.
+
+`check_residents.py` has already proved they never overlap, never leave the
+card, clear its rounded corners and read against every theme. What is left is
+what a checker cannot ask:
+
+- **Does the loop disappear?** Eight residents at 2fps is meant to be
+  something you notice on the third visit, not motion. If the card reads as
+  busy, the number to change is `Resident.frameSeconds`, not the sprites.
+- **Do eight loops cost anything?** The `TimelineView` is only mounted when
+  somebody lives there, so an empty homestead should be free — but scroll the
+  stats sheet with all eight running and watch for a stutter. If there is one,
+  the answer is a `Canvas`, which means giving up `.interpolation(.none)` and
+  redrawing the sprites at 1× instead.
+- **Does the yard read as a yard, or as a shelf?** This is the judgement the
+  render could not settle. Two rows, offset by half a slot; if it still looks
+  like a row of icons along the bottom edge, the band wants to be deeper
+  rather than the sprites bigger.
+- **The arrival caption.** `-PawmodoroBond 29`, then finish one focus phase:
+  the buddy's line should become "… has noticed — somebody has moved into the
+  birdhouse" and stay that way for the whole break, then go back to normal
+  when you start the next session. Nothing else should announce it — no card,
+  no confetti, no notification.
+
+### 8. The clock faces
 
 Settings → The cabinet of clocks. Two of the six are earned by places that
 take a hundred sessions, so use the flag.
@@ -321,7 +366,7 @@ If a face is too busy under the digits, the fix is
 `.frame(height: diameter * 0.46)` in `TimerRingView`, not the art — the art is
 measured and the size is not.
 
-### 8. Share a postcard
+### 9. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -329,7 +374,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 9. The four gates of 0e — the actual reason for a Mac evening
+### 10. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 
@@ -378,6 +423,7 @@ python3 tools/check_weather.py           # any date-rolled feature
 python3 tools/check_yearring.py          # after touching a palette or the ring
 python3 tools/check_post.py              # after any Chronicle kind or letter copy
 python3 tools/check_grove.py             # after touching the grove layout
+python3 tools/check_residents.py         # after moving a resident or its art
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"
@@ -386,13 +432,14 @@ tools/run-sim.sh --demo --headless
 xcodebuild … -configuration Release …    # the Release build catches what Debug won't
 ```
 
-All five were green when this was written: 922,032 contrast pairs, 20,736
-stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 72 Swift files
-and 387 imagesets. `check_snail.py` takes about 18 seconds; the rest are quick.
+All ten were green when this was written: 922,032 contrast pairs, 20,736
+stray pairs, 483,840 snail pairs, 29,200 place-days of weather, 84 Swift files
+and 470 imagesets. `check_snail.py` takes about 18 seconds; the rest are quick.
 
-Two of these are new, and the reason to keep running them is that one of them
-paid for itself immediately: `check_weather.py` found a logic bug in the
-golden-day rule on its very first run, before any of this had been compiled.
+Six of these are new, and the reason to keep running them is that two paid for
+themselves on their very first run — `check_weather.py` found a logic bug in
+the golden-day rule, and `check_residents.py` found every homestead resident
+buried under a grown wood. Neither had been compiled at the time.
 
 ---
 

@@ -79,7 +79,17 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   untested surface in the app.
 - **iPhone SE layout** — no SE runtime installed here. If the stray or the
   constellations collide with a control, move `Stage.x`, never
-  `Stray.groundLine`.
+  `Stray.groundLine`. The homestead is the new entry here: its residents are
+  hand-placed as fractions of a card `check_residents.py` assumes is 350pt
+  wide, which is the padded stats sheet on the *narrowest* phone. A wider
+  screen only spreads them out, so this is the safe direction — but it has
+  never been drawn at any width.
+- **The whole Deep Time build — nine phases written on Linux and never
+  compiled.** Weather, the snail, the Drift, the Cabinet of Clocks, and all
+  four altitudes of the Long Now (the shelf, the Sunday Post, the year ring,
+  the Homestead). Ten checkers are green and every sprite has been rendered
+  and looked at; no compiler has seen any of it. `docs/RESUME_HERE.md` is the
+  running order for the first Mac session, in likelihood-of-error order.
 
 ---
 

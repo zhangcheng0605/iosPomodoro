@@ -80,6 +80,16 @@ final class TimerEngine {
     /// engine waits. It is the only question the Drift ever puts to anybody.
     var driftNeedsAsking = false
 
+    /// Who moved into the homestead on the session just finished.
+    ///
+    /// The whole announcement. A resident gets no card, no confetti and no
+    /// notification — the buddy's caption mentions it through the break that
+    /// follows, and then the caption goes back to normal and the thing is
+    /// simply part of the garden. Deliberately not persisted: if you were
+    /// away when it landed you find the pond yourself, which is a better way
+    /// to find a pond than being told about one.
+    private(set) var residentArrived: Resident?
+
     let log: SessionLog
     let journal: Journal
     let album: Album
@@ -283,6 +293,10 @@ final class TimerEngine {
             rollHeard()
             rollEncounter()
             rollStrayCameo()
+            // The neighbour has been mentioned for a whole break by now. Once
+            // you sit back down it is furniture, which is the entire point of
+            // the system.
+            residentArrived = nil
         }
 
         let end = Date().addingTimeInterval(remaining)
@@ -392,6 +406,9 @@ final class TimerEngine {
         focusInCycle += banking.laps
 
         let bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
+        residentArrived = Resident.justArrived(
+            before: sessionsBefore, after: log.totalSessions
+        )
         let figure = ConstellationAtlas.justCompleted(
             before: nightsBefore, after: log.nightSessions
         )
@@ -873,6 +890,14 @@ final class TimerEngine {
         for wood in Dream.Wood.allCases where trees >= wood.reachedAt {
             pool.append(contentsOf: repeatElement(.wood(wood), count: 2))
         }
+        // The neighbours, once they have actually moved in. Asked of
+        // `Resident.settled` rather than of a threshold copied into `Dream`,
+        // so the gate can never disagree with the thing it gates.
+        let neighbours = Resident.settled(sessions: log.totalSessions)
+        for neighbour in Dream.Neighbour.allCases
+        where neighbours.contains(neighbour.reachedAt) {
+            pool.append(contentsOf: repeatElement(.neighbour(neighbour), count: 2))
+        }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
         }
@@ -1038,6 +1063,9 @@ final class TimerEngine {
             let strayBefore = stray.stage(log: log)
             log.add(minutes: settings.focusMinutes)
             bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
+            residentArrived = Resident.justArrived(
+                before: sessionsBefore, after: log.totalSessions
+            )
             figure = ConstellationAtlas.justCompleted(
                 before: nightsBefore, after: log.nightSessions
             )
@@ -1137,6 +1165,12 @@ final class TimerEngine {
         // Nothing is shown and nothing is unlocked. It is written down, and in
         // a year the Sunday Post will be able to say you were both out.
         if snailX != nil { chronicle.add(.snail, settings.place.rawValue) }
+        // Read off the engine rather than passed in: both completion paths
+        // set it immediately after the log write, and there is exactly one
+        // session it can be true for.
+        if let resident = residentArrived {
+            chronicle.add(.resident, resident.rawValue)
+        }
         let strayAfter = stray.stage(log: log)
         if strayAfter != strayBefore {
             chronicle.add(.stray, String(strayAfter.rawValue))

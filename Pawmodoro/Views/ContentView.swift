@@ -218,7 +218,22 @@ struct ContentView: View {
                         place: engine.settings.place.rawValue,
                         dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
                         buddy: engine.settings.buddy.rawValue,
-                        occasion: .arrival, sessions: 3, sighting: Species.stag.rawValue
+                        occasion: .arrival, sessions: 3,
+                        sighting: Species.stag.rawValue, minutes: nil
+                    ))
+                }
+                // The other end of the album: four months of daily sitting,
+                // in one flag. There is no honest way to reach this by hand.
+                if LaunchOptions.panorama,
+                   !engine.album.cards.contains(where: { $0.occasion == .panorama }) {
+                    engine.album.add(Postcard(
+                        id: UUID(), date: Date(),
+                        place: engine.settings.place.rawValue,
+                        dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+                        buddy: engine.settings.buddy.rawValue,
+                        occasion: .panorama, sessions: engine.log.todaySessions,
+                        sighting: nil,
+                        minutes: Grove.panoramaHours * Grove.minutesPerTree
                     ))
                 }
                 guard LaunchOptions.celebrate else { return }

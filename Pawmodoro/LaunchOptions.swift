@@ -285,6 +285,14 @@ enum LaunchOptions {
         return percent < 0 ? -1 : min(100, percent) / 100
     }()
 
+    /// Put the hundred-hour panoramic postcard in the album on launch.
+    ///
+    /// Its own flag rather than a side effect of `-PawmodoroBond 200`, because
+    /// the card is minted on a session *crossing* a hundred hours and seeding
+    /// history retroactively never crosses anything. Four months of daily
+    /// sitting is the only other way to see it.
+    static let panorama = isSet("-PawmodoroPanorama")
+
     /// Pin the water at Harbor Isle: `-PawmodoroTide low`, `high`,
     /// `springlow`, `mid`, or a bare number from 0 to 1.
     ///
@@ -500,6 +508,7 @@ enum LaunchOptions {
     static let forcedSnail: Double? = nil
     static let forcedPassage: Passage? = nil
     static let forcedTide: Double? = nil
+    static let panorama = false
     static let drift = false
     static let driftLaps: Int? = nil
     static let forcedClockFace: ClockFace? = nil

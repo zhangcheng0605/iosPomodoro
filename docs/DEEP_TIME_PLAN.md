@@ -1261,7 +1261,55 @@ on has no business hiding under a third one's implementation, so it is
   text row would put its contrast somewhere `check_contrast.py` never looks —
   it samples the scene exports, not SwiftUI overlays. The wood is graded; the
   card it sits on and the line in its corner are not.
-- **Still unbuilt in Y4:** the hundred-hour panoramic postcard.
+### As built — Y4's hundred-hour panorama
+
+The last thing Y4 owed, and the longest reach of anything in this app: a
+hundred hours of focus is four months of sitting down every weekday.
+
+**It is a `Postcard`, not a new artefact.** The album already re-draws every
+card from its stored facts rather than keeping an image — which is the whole
+reason a postcard survives an art change — so the panorama is one more
+`Occasion` and one more field. `Postcard.minutes` is `Int?` so every card
+written before this decodes untouched, the same argument `SightingRecord`
+made when the weather arrived.
+
+**Drawn from `card.minutes`, not from today's total**, and that is what makes
+it a memory: open it in a year and it still shows the hundred trees that stood
+there, not the hundred and twenty there are now.
+
+**`HomesteadScene` came out of `HomesteadView` to build it.** A postcard
+cannot ask an `@Observable` engine what the tree count is, so everything the
+scene needs is a parameter now and the two callers pass different sources for
+the same five things. The side effect is the useful part: the stats card and
+the panorama can no longer disagree about what the wood looks like, which they
+would have within a week of either being edited.
+
+**`check_residents.py` grew a second surface, and this is the third time the
+homestead has needed that lesson.** The residents are placed by *fractions* of
+the surface but sized in *fixed points*, so drawing the same scene at a
+postcard's 320×168 instead of the stats card's 350×180 crowds them by about
+8% with nothing anywhere changing. Both surfaces run every geometry rule now.
+As it happens 320×168 has room — the checker's first break test failed to
+break anything, which is the answer being "this is fine" rather than the rule
+being asleep; shrinking to a thumbnail does fire it.
+
+**Divergences:**
+
+- **A hundred hours, under the grove's capacity of 120 on purpose.** The card
+  is a picture of a wood you are still adding to, not a certificate for
+  having finished one.
+- **The headline is "The whole wood", not "100 hours".** The number is in the
+  line underneath, where it reads as a fact about trees rather than as a
+  score. The Sunday Post's sentence is quieter still and never says the total.
+- **`ChronicleEvent.Kind.panorama` carries the hours as its subject**, so a
+  later milestone — if there is ever one, and there does not have to be —
+  reuses the kind rather than needing another.
+- **It is minted by searching the album** rather than by storing a flag: the
+  album is already the record of what has been sent, and a second opinion
+  about it is a second thing to keep in step.
+- **`Dream.Wood.hundred` reads `Grove.panoramaHours`** rather than the literal
+  100. The gate and the card it is about are four months apart, and nobody
+  would ever notice them drifting.
 
 ## Phase Z — The Window Sill (presence, and the one dangerous migration)
 

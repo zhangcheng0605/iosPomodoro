@@ -35,6 +35,15 @@ enum Grove {
     /// and twenty trees the canopy has closed anyway.
     static let capacity = 120
 
+    /// Hours of focus before the wood is worth a picture of its own.
+    ///
+    /// A hundred, which is four months of sitting down every weekday, and the
+    /// longest reach of anything in this app. Deliberately *under* the grove's
+    /// capacity of 120: the card is a picture of a wood you are still adding
+    /// to, not a certificate for having finished one. Nothing in the app ever
+    /// mentions this number before it happens.
+    static let panoramaHours = 100
+
     /// How grown a tree is. Three steps and then it is done: there is no
     /// fourth to chase and none that can be lost.
     ///

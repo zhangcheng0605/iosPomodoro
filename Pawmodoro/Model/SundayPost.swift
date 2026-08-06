@@ -201,6 +201,16 @@ enum SundayPost {
             lines.append("We kept a picture of one of the afternoons.")
         }
 
+        // A hundred hours, and the letter is deliberately the *quietest* place
+        // it is mentioned. There is a card in the album about it; this is one
+        // sentence, in the past tense, about a wood rather than about a total.
+        // "You reached 100 hours" would be the one line in this app that turns
+        // four months of sitting into a score.
+        if events.contains(where: { $0.kind == .panorama }) {
+            lines.append("Somebody drew the whole wood this week. It has got "
+                         + "big without either of us noticing.")
+        }
+
         if let left = events.last(where: { $0.kind == .keepsake }),
            let keepsake = Keepsake(rawValue: left.subject) {
             lines.append(keepsake.postLine)

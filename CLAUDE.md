@@ -132,6 +132,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
 | `-PawmodoroTheme <id>` | Start in a theme, e.g. `-PawmodoroTheme ink` |
 | `-PawmodoroPostcard` | Put one postcard in the album on launch |
+| `-PawmodoroPanorama` | Put the hundred-hour panoramic postcard in the album — four months of sitting, otherwise |
 | `-PawmodoroUnlockMusic` | Every mixtape, without Plus and without travelling |
 | `-PawmodoroTrack <id>` | Start with a track selected, e.g. `kettle_song` |
 | `-PawmodoroStray <1-5>` | Put the stray at a stage of her trust arc |

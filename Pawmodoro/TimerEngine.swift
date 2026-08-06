@@ -1368,8 +1368,31 @@ final class TimerEngine {
                 buddy: settings.buddy.rawValue,
                 occasion: arrival != nil ? .arrival : .cycle,
                 sessions: log.todaySessions,
-                sighting: seen?.rawValue
+                sighting: seen?.rawValue,
+                minutes: nil
             ))
+        }
+
+        // A hundred hours. The one card in the album that takes four months of
+        // daily sitting to reach, minted the session it is crossed and never
+        // again — the album is searched rather than a flag being stored,
+        // because the album is already the record of what has been sent and a
+        // second opinion about it is a second thing to keep in step.
+        if finished == .focus,
+           log.totalMinutes >= Grove.panoramaHours * Grove.minutesPerTree,
+           !album.cards.contains(where: { $0.occasion == .panorama }) {
+            album.add(Postcard(
+                id: UUID(),
+                date: Date(),
+                place: settings.place.rawValue,
+                dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+                buddy: settings.buddy.rawValue,
+                occasion: .panorama,
+                sessions: log.todaySessions,
+                sighting: seen?.rawValue,
+                minutes: log.totalMinutes
+            ))
+            chronicle.add(.panorama, String(Grove.panoramaHours))
         }
 
         completion = PhaseCompletion(

@@ -249,20 +249,27 @@ enum Dream: Hashable, Identifiable {
     /// trees actually standing there, so the first is available after an hour
     /// and the second after a small wood.
     enum Wood: String, CaseIterable, Hashable {
-        case firstone, canopy
+        case firstone, canopy, hundred
 
         /// Trees that have to be standing.
         var reachedAt: Int {
             switch self {
             case .firstone: 1
             case .canopy: 25
+            // The panorama's own dream, and the last thing in the diary
+            // anybody reaches. Written as `Grove.panoramaHours` rather than
+            // as 100 so the gate cannot disagree with the card it is about —
+            // the standing rule, and here it is load-bearing, because these
+            // two are four months apart and nobody would ever notice them
+            // drifting.
+            case .hundred: Grove.panoramaHours
             }
         }
 
         var asset: String {
             switch self {
             case .firstone: "grove_sapling"
-            case .canopy: "grove_full"
+            case .canopy, .hundred: "grove_full"
             }
         }
 
@@ -270,6 +277,7 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .firstone: "the first tree"
             case .canopy: "the whole wood"
+            case .hundred: "the wood from above"
             }
         }
 
@@ -277,6 +285,7 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .firstone: "Still mostly a stick. It does not know that."
             case .canopy: "Under all of it at once, and nowhere near an edge."
+            case .hundred: "All of it, at once, from somewhere much higher up."
             }
         }
     }

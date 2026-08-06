@@ -83,6 +83,19 @@ FIXTURE = (
 # narrowest phone the app supports, and a height the view fixes outright.
 CARD = (350.0, 180.0)
 
+# Every surface `HomesteadScene` is drawn into, smallest last.
+#
+# The stats card was the only one until the hundred-hour panorama, which draws
+# the same scene at a *postcard's* size — 320x168 rather than 350x180. The
+# residents are placed by fractions of the surface but sized in fixed points,
+# so a smaller surface crowds them by about 8% with nothing on screen or in
+# this file changing. That is precisely the class of thing the homestead has
+# already been caught by twice, so the geometry rules run on both.
+SURFACES = (
+    ("the stats card", 350.0, 180.0),
+    ("the hundred-hour postcard", 320.0, 168.0),
+)
+
 # The card is drawn into a rounded rectangle and clipped to it, so the last
 # few points of each corner are not really there. Matches the radius in
 # `HomesteadView`.
@@ -185,13 +198,14 @@ def parse_lines(name):
     return dict(re.findall(r'case \.(\w+): "([^"]*)"', body))
 
 
-def rect(name, place, size):
+def rect(name, place, size, card=None):
     """Where a resident's sprite lands on the card, base-anchored: the y in
-    `position` is its feet, exactly as `HomesteadView` places it."""
+    `position` is its feet, exactly as `HomesteadScene` places it."""
+    card = card or CARD
     x, y = place[name]
     w, h = size[name]
-    cx = CARD[0] * x
-    bottom = CARD[1] * y
+    cx = card[0] * x
+    bottom = card[1] * y
     return (cx - w / 2, bottom - h, cx + w / 2, bottom)
 
 
@@ -253,26 +267,40 @@ def main():
             f"a schedule"
         )
 
-    # 3. On the card, and not on top of each other.
+    # 3. On the card, and not on top of each other — for every surface the
+    #    same scene is drawn into. `boxes` stays on the big one, because the
+    #    footprint and contrast rules below are about the card the residents
+    #    were laid out against.
     boxes = {name: rect(name, place, size) for name in cases}
-    for name, box in boxes.items():
-        if box[0] < 0 or box[1] < 0 or box[2] > CARD[0] or box[3] > CARD[1]:
-            failures.append(
-                f"{name} hangs off the card at "
-                f"({box[0]:.0f}, {box[1]:.0f})-({box[2]:.0f}, {box[3]:.0f}) "
-                f"on a {CARD[0]:.0f}x{CARD[1]:.0f} homestead"
-            )
-    for index, first in enumerate(cases):
-        for second in cases[index + 1:]:
-            shared = overlap(boxes[first], boxes[second])
-            if shared > 0:
-                area = (boxes[first][2] - boxes[first][0]) * \
-                       (boxes[first][3] - boxes[first][1])
+    for label, width, height in SURFACES:
+        card = (width, height)
+        here = {name: rect(name, place, size, card) for name in cases}
+        for name, box in here.items():
+            if box[0] < 0 or box[1] < 0 or box[2] > width or box[3] > height:
                 failures.append(
-                    f"{first} and {second} overlap by {shared:.0f}pt² "
-                    f"({shared / area * 100:.0f}% of {first}) — hand-placed "
-                    f"furniture standing in each other"
+                    f"{name} hangs off {label} at "
+                    f"({box[0]:.0f}, {box[1]:.0f})-({box[2]:.0f}, {box[3]:.0f}) "
+                    f"on {width:.0f}x{height:.0f}"
                 )
+            clipped = corner_clipped(box, card)
+            if clipped:
+                failures.append(
+                    f"{name} loses its corner at ({clipped[0]:.0f}, "
+                    f"{clipped[1]:.0f}) to {label}'s rounded edge"
+                )
+        for index, first in enumerate(cases):
+            for second in cases[index + 1:]:
+                shared = overlap(here[first], here[second])
+                if shared > 0:
+                    area = ((here[first][2] - here[first][0])
+                            * (here[first][3] - here[first][1]))
+                    failures.append(
+                        f"{first} and {second} overlap by {shared:.0f}pt² "
+                        f"({shared / area * 100:.0f}% of {first}) on {label} "
+                        f"— hand-placed furniture standing in each other. A "
+                        f"smaller surface crowds fixed-size sprites placed by "
+                        f"fractions, and nothing on screen would show it"
+                    )
 
     # 4. In the near band, and leaving the wood most of the card.
     #
@@ -465,16 +493,17 @@ def main():
     return 0
 
 
-def corner_clipped(box):
+def corner_clipped(box, card=None):
     """The first corner of `box` that falls outside the card's rounded edge."""
+    card = card or CARD
     radius = CORNER_RADIUS
-    arcs = ((radius, radius), (CARD[0] - radius, radius),
-            (radius, CARD[1] - radius), (CARD[0] - radius, CARD[1] - radius))
+    arcs = ((radius, radius), (card[0] - radius, radius),
+            (radius, card[1] - radius), (card[0] - radius, card[1] - radius))
     for x in (box[0], box[2]):
         for y in (box[1], box[3]):
             for cx, cy in arcs:
-                inside_x = (x < cx) if cx < CARD[0] / 2 else (x > cx)
-                inside_y = (y < cy) if cy < CARD[1] / 2 else (y > cy)
+                inside_x = (x < cx) if cx < card[0] / 2 else (x > cx)
+                inside_y = (y < cy) if cy < card[1] / 2 else (y > cy)
                 if inside_x and inside_y:
                     if (x - cx) ** 2 + (y - cy) ** 2 > radius ** 2:
                         return (x, y)

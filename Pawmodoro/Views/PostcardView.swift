@@ -30,7 +30,52 @@ struct PostcardView: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
+    @ViewBuilder
     private var picture: some View {
+        if card.occasion == .panorama { panorama } else { placePicture }
+    }
+
+    /// The hundred-hour card: the whole wood, wide, with the buddy standing in
+    /// front of it.
+    ///
+    /// Drawn from `card.minutes` rather than from today's total, which is what
+    /// makes it a *memory* — open it in a year and it still shows the hundred
+    /// trees that stood there, not the hundred and twenty there are now.
+    /// `HomesteadScene` is the same view the stats card uses, so the two can
+    /// never disagree about what the wood looks like.
+    private var panorama: some View {
+        let minutes = card.minutes ?? Grove.panoramaHours * Grove.minutesPerTree
+        return ZStack(alignment: .bottom) {
+            HomesteadScene(
+                trees: Grove.trees(forMinutes: minutes),
+                // Everybody who has sat a hundred hours has every neighbour —
+                // the last arrives at 200 sessions and a hundred hours is at
+                // least 240. Passed as the full set rather than derived from a
+                // session count the card does not store.
+                residents: Resident.allCases,
+                den: nil,
+                dayPart: card.resolvedDayPart,
+                buddy: card.resolvedBuddy,
+                animated: false
+            )
+            .frame(width: width, height: 168 * scale)
+
+            BuddySprite(buddy: card.resolvedBuddy, sleeping: false, size: 48 * scale)
+                .offset(y: -6 * scale)
+
+            VStack {
+                HStack {
+                    Spacer()
+                    stamp
+                }
+                Spacer()
+            }
+            .padding(8 * scale)
+        }
+        .frame(width: width, height: 168 * scale)
+    }
+
+    private var placePicture: some View {
         ZStack(alignment: .bottom) {
             Image(card.resolvedPlace.assetName(for: card.resolvedDayPart))
                 .interpolation(.none)
@@ -97,10 +142,21 @@ struct PostcardView: View {
         switch card.occasion {
         case .arrival: "Made it to \(card.resolvedPlace.name)"
         case .cycle: "A good run at \(card.resolvedPlace.name)"
+        // Not "100 hours" and not a total of anything. The card is a picture
+        // of a wood; the headline says what the wood is, and the number is
+        // left to the line underneath where it reads as a fact rather than as
+        // a score.
+        case .panorama: "The whole wood"
         }
     }
 
     private var message: String {
+        if card.occasion == .panorama {
+            let trees = Grove.trees(
+                forMinutes: card.minutes ?? Grove.panoramaHours * Grove.minutesPerTree
+            ).count
+            return "\(trees) trees, one for each hour — \(buddyName)"
+        }
         var parts: [String] = []
         parts.append(card.sessions == 1 ? "1 session today" : "\(card.sessions) sessions today")
         if let seen = card.resolvedSighting {

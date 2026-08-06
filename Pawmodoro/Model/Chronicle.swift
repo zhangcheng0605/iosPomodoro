@@ -70,6 +70,11 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// *world* was at the time, which is the joke the whole feature runs
         /// on: a photo of a kitchen table, filed under Harbor Isle.
         case snapshot
+        /// A hundred hours of focus, and the panoramic card of the wood it
+        /// grew. The subject is the number of hours, so a later milestone —
+        /// if there is ever one, and there does not have to be — reuses the
+        /// kind rather than needing another.
+        case panorama
     }
 }
 

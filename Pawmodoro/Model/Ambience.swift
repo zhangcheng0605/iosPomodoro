@@ -20,6 +20,13 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
     case library
     case snowhush
     case temple
+    // Batch two.
+    case storm
+    case crickets
+    case cicadas
+    case nighttrain
+    case raintent
+    case emberslate
 
     var id: String { rawValue }
 
@@ -27,7 +34,8 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
     var isPlus: Bool {
         switch self {
         case .off, .rain, .purr, .fireplace, .drizzle, .wind: false
-        case .forest, .cafe, .ocean, .creek, .library, .snowhush, .temple: true
+        case .forest, .cafe, .ocean, .creek, .library, .snowhush, .temple,
+             .storm, .crickets, .cicadas, .nighttrain, .raintent, .emberslate: true
         }
     }
 
@@ -46,6 +54,12 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .library: "Library"
         case .snowhush: "Snow"
         case .temple: "Temple"
+        case .storm: "Storm"
+        case .crickets: "Crickets"
+        case .cicadas: "Cicadas"
+        case .nighttrain: "Night train"
+        case .raintent: "Tent"
+        case .emberslate: "Embers"
         }
     }
 
@@ -64,6 +78,12 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .library: "book.closed.fill"
         case .snowhush: "snowflake"
         case .temple: "bell.fill"
+        case .storm: "cloud.bolt.rain.fill"
+        case .crickets: "moon.stars.fill"
+        case .cicadas: "sun.max.fill"
+        case .nighttrain: "tram.fill"
+        case .raintent: "tent.fill"
+        case .emberslate: "flame"
         }
     }
 
@@ -83,6 +103,12 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .library: "library"
         case .snowhush: "snowhush"
         case .temple: "temple"
+        case .storm: "storm"
+        case .crickets: "crickets"
+        case .cicadas: "cicadas"
+        case .nighttrain: "nighttrain"
+        case .raintent: "raintent"
+        case .emberslate: "emberslate"
         }
     }
 }

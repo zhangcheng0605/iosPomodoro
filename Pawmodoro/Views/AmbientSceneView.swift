@@ -46,7 +46,13 @@ struct AmbientSceneView: View {
         case .drizzle: drawDrizzle(&canvas, size: size, t: t)
         case .wind: drawLeaves(&canvas, size: size, t: t)
         case .snowhush: drawSnowfall(&canvas, size: size, t: t)
-        case .creek, .library, .temple: break
+        case .storm: drawRain(&canvas, size: size, t: t)
+        case .raintent: drawDrizzle(&canvas, size: size, t: t)
+        case .emberslate: drawEmbers(&canvas, size: size, t: t)
+        // Rooms and night noises, again with nothing to draw: a carriage,
+        // a summer field and a cricket meadow are all places you are already
+        // standing in. The scene behind is doing that work.
+        case .creek, .library, .temple, .crickets, .cicadas, .nighttrain: break
         case .off: break
         }
     }

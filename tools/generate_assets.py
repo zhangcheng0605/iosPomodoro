@@ -373,6 +373,165 @@ def make_temple(dur=24.0, fade=1.0):
     return seamless(normalize(sig, 0.30), fade_n)
 
 
+def make_storm(dur=20.0, fade=1.0):
+    """Rain with weight under it, and thunder that has already happened.
+
+    The swells are brown noise on a 9-second period — the sound of a squall
+    arriving rather than of rain at a constant rate. Two thunder rolls are
+    baked in at uneven spacing and `distant()`-ed hard: near thunder is a
+    transient and would tick every time the loop came round.
+    """
+    rng = np.random.default_rng(131)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    body = shaped_noise(n, rng, exponent=0.5, cutoff=6000) * 0.8
+    swell = 0.55 + 0.45 * np.sin(2 * np.pi * (1.0 / 9.0) * t + 0.7)
+    body *= swell
+    weight = shaped_noise(n, rng, exponent=1.8, cutoff=260) * 0.5 * swell
+    drops = np.zeros(n)
+    for _ in range(int(dur * 80)):
+        start = rng.integers(0, n - 900)
+        length = int(rng.integers(160, 420))
+        env = np.exp(-np.linspace(0, 7, length))
+        freq = rng.uniform(900.0, 3400.0)
+        drops[start:start + length] += (
+            np.sin(2 * np.pi * freq * np.arange(length) / SR)
+            * env * rng.uniform(0.05, 0.20))
+    sig = body + weight + drops
+    for start_s in (4.0, 13.5):
+        begin = int(SR * start_s)
+        length = min(int(SR * 3.2), n - begin)
+        roll = shaped_noise(length, rng, exponent=2.2, cutoff=180)
+        roll *= envelope(length, 0.35, 0.9)
+        sig[begin:begin + length] += distant(roll, 300.0) * 0.55
+    return seamless(normalize(sig, 0.44), fade_n)
+
+
+def make_crickets(dur=14.0, fade=0.7):
+    """Five voices at about 4.5 Hz, none of them agreeing.
+
+    One pulse train is a smoke alarm. Five, detuned by a few per cent and
+    started at different phases, is a field — the beating between them is the
+    whole texture, and it is why the rate is per-voice rather than global.
+    """
+    rng = np.random.default_rng(137)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    for voice in range(5):
+        rate = 4.5 * rng.uniform(0.94, 1.07)
+        phase = rng.uniform(0, 2 * np.pi)
+        # A chirp is a burst of band-passed noise, not a tone: crickets are
+        # broadband and a sine reads as electronics immediately.
+        gate = (np.sin(2 * np.pi * rate * t + phase) > 0.72).astype(float)
+        carrier = shaped_noise(n, rng, exponent=0.1, cutoff=5600)
+        carrier = carrier - shaped_noise(n, np.random.default_rng(137 + voice),
+                                         0.1, cutoff=2900)
+        sig += gate * carrier * rng.uniform(0.5, 1.0)
+    night = shaped_noise(n, rng, exponent=1.7, cutoff=400) * 0.35
+    return seamless(normalize(sig * 0.5 + night, 0.32), fade_n)
+
+
+def make_cicadas(dur=12.0, fade=0.6):
+    """Summer, at full volume, tamed until it is bearable.
+
+    Cicadas are a saw-shimmer around 4 kHz and genuinely painful up close, so
+    this is `distant()`-ed harder than anything else here — the recipe is the
+    sound heard from inside a room with the window open.
+    """
+    rng = np.random.default_rng(139)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    shimmer = np.zeros(n)
+    for band in (3400.0, 4100.0, 4800.0):
+        am = 0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(11.0, 15.0) * t
+                                + rng.uniform(0, 6.0))
+        tone = np.sin(2 * np.pi * band * t + 4.0 * np.sin(2 * np.pi * 30.0 * t))
+        shimmer += tone * am
+    swell = 0.5 + 0.5 * np.sin(2 * np.pi * 0.08 * t)
+    body = shaped_noise(n, rng, exponent=0.6, cutoff=5000) * 0.4
+    return seamless(normalize(distant(shimmer * swell * 0.35 + body, 3000.0), 0.28),
+                    fade_n)
+
+
+def make_nighttrain(dur=18.0, fade=0.9):
+    """The room the Night Train mixtape is playing in.
+
+    A rail joint every 1.36 s — two hits, close together, because a bogie has
+    two axles. Under it, the interior rumble of a carriage: dark noise with a
+    slow sway. Half speed on purpose; a real rhythm would fight the music.
+    """
+    rng = np.random.default_rng(149)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    rumble = shaped_noise(n, rng, exponent=1.9, cutoff=300) * 0.75
+    rumble *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.13 * t)
+    clacks = np.zeros(n)
+    period = 1.36
+    start_s = 0.2
+    while start_s < dur:
+        for offset in (0.0, 0.085):
+            begin = int(SR * (start_s + offset))
+            length = int(SR * 0.045)
+            if begin + length >= n:
+                break
+            hit = shaped_noise(length, rng, exponent=0.5, cutoff=1800)
+            clacks[begin:begin + length] += hit * envelope(length, 0.002, 0.9) * 0.5
+        start_s += period
+    return seamless(normalize(rumble + clacks * 0.7, 0.34), fade_n)
+
+
+def make_raintent(dur=14.0, fade=0.7):
+    """Rain on a membrane a foot above your head.
+
+    The difference from rain is entirely resonance: canvas has a pitch, and
+    every drop excites it. The drops are louder and far more present than in
+    `make_rain`, and the body underneath is quieter — you are inside.
+    """
+    rng = np.random.default_rng(151)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    body = shaped_noise(n, rng, exponent=0.8, cutoff=3000) * 0.45
+    taps = np.zeros(n)
+    for _ in range(int(dur * 90)):
+        start = rng.integers(0, n - 1200)
+        length = int(rng.integers(300, 700))
+        local = np.arange(length) / SR
+        # Two partials a fifth apart: the membrane's own note.
+        pitch = rng.uniform(320.0, 430.0)
+        hit = (np.sin(2 * np.pi * pitch * local)
+               + 0.5 * np.sin(2 * np.pi * pitch * 1.5 * local))
+        taps[start:start + length] += hit * np.exp(-local * 42.0) * rng.uniform(0.10, 0.30)
+    return seamless(normalize(body + taps, 0.38), fade_n)
+
+
+def make_emberslate(dur=18.0, fade=0.9):
+    """The fireplace an hour after anybody put a log on.
+
+    All settle and no flame: the crackles are sparser, lower and further
+    apart than `make_fireplace`, and there is no roar under them at all —
+    what is left is the room being warm.
+    """
+    rng = np.random.default_rng(157)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    bed = shaped_noise(n, rng, exponent=1.7, cutoff=420) * 0.5
+    bed *= 0.8 + 0.2 * np.sin(2 * np.pi * 0.06 * t)
+    ticks = np.zeros(n)
+    for _ in range(int(dur * 3)):
+        start = rng.integers(0, n - 800)
+        length = int(rng.integers(220, 620))
+        local = np.arange(length) / SR
+        crack = shaped_noise(length, rng, exponent=0.3, cutoff=2600)
+        ticks[start:start + length] += crack * np.exp(-local * 26.0) * rng.uniform(0.10, 0.28)
+    return seamless(normalize(bed + ticks, 0.24), fade_n)
+
+
 # ------------------------------------------------------------------- chime
 def make_chime(dur=1.8):
     n = int(SR * dur)
@@ -623,6 +782,13 @@ if __name__ == "__main__":
     write_wav("library.wav", make_library())
     write_wav("snowhush.wav", make_snowhush())
     write_wav("temple.wav", make_temple())
+    # The Second Shelf — batch two.
+    write_wav("storm.wav", make_storm())
+    write_wav("crickets.wav", make_crickets())
+    write_wav("cicadas.wav", make_cicadas())
+    write_wav("nighttrain.wav", make_nighttrain())
+    write_wav("raintent.wav", make_raintent())
+    write_wav("emberslate.wav", make_emberslate())
     print("Chime:")
     write_wav("chime.wav", make_chime())
     print("Things heard:")

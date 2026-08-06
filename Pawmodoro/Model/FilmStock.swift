@@ -122,6 +122,33 @@ enum FilmStock: String, CaseIterable, Identifiable, Codable {
                 min(1, max(0, b * scale.2 + bias.2)))
     }
 
+    // MARK: The world's own four hours
+
+    /// The grade `tools/generate_scenes.py` exports each place in, for a given
+    /// time of day.
+    ///
+    /// This is what closes Y4's last art debt without drawing anything. The
+    /// plan asked for the homestead to be exported four times, once per time
+    /// of day, the way every place is — seventy-six more imagesets to keep in
+    /// step with the sprites they are graded from. But the grade is three
+    /// numbers, this enum already holds them, and `tools/check_film.py`
+    /// already fails if they drift from the generator's. So the homestead is
+    /// graded **at draw time** by the same arithmetic, from the same table,
+    /// and the card is lit like the rest of the world for the cost of one
+    /// switch.
+    ///
+    /// `day` is `asitwas` and that is not a shortcut: the scene generator's
+    /// `day` grade is `((255,255,255), 0.00, 1.00)`, the identity, because the
+    /// art is drawn in daylight and daylight is what it already looks like.
+    static func of(_ part: DayPart) -> FilmStock {
+        switch part {
+        case .dawn: .dawn
+        case .day: .asitwas
+        case .dusk: .dusk
+        case .night: .night
+        }
+    }
+
     // MARK: What is free
 
     /// The three anybody has without trading: the photograph as taken, the

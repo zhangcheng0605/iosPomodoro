@@ -211,6 +211,54 @@ def main():
             "single place the EXIF strip happens, and it has to happen on the "
             "Mac too")
 
+    # --- 6. The homestead is lit like the rest of the world -----------------
+    #
+    # Y4 asked for the homestead to be exported four times, once per time of
+    # day, the way every place is. It is graded at draw time by
+    # `FilmStock.of(_:)` instead — which only tells the truth if that switch
+    # names, for each hour, the stock carrying *that hour's* grade. Get one arm
+    # wrong and the wood is lit at dusk while the sky behind it is at dawn:
+    # entirely plausible on screen, and wrong every evening forever.
+    film_source = open(os.path.join(MODEL, "FilmStock.swift")).read()
+    block = re.search(r"static func of\(_ part: DayPart\) -> FilmStock \{"
+                      r"(.*?)\n    \}", film_source, re.S)
+    if not block:
+        failures.append(
+            "FilmStock.of(_:) is gone — the homestead's four time-of-day "
+            "grades were built on it, and without it the card is lit at noon "
+            "at midnight")
+    else:
+        chosen = dict(re.findall(r"case \.(\w+): \.(\w+)", block.group(1)))
+        # `DayPart` writes its four cases on one line — `case dawn, day, dusk,
+        # night` — so a one-case-per-line regex finds nothing at all and this
+        # whole rule loops zero times while reporting success. It did exactly
+        # that on its first two break tests.
+        declaration = (open(os.path.join(ROOT, "Pawmodoro", "Theme.swift"))
+                       .read().split("enum DayPart")[1])
+        hours = re.findall(r"\b(\w+)\b",
+                           re.search(r"case ([\w, ]+)", declaration).group(1))
+        if sorted(hours) != sorted(chosen):
+            failures.append(
+                f"FilmStock.of(_:) covers {sorted(chosen)} and DayPart has "
+                f"{sorted(hours)}")
+        for hour in hours:
+            stock = chosen.get(hour)
+            if stock is None:
+                failures.append(f"FilmStock.of(_:) has no arm for .{hour}")
+                continue
+            # `day` is the identity grade in the generator, and `asitwas` is
+            # the identity stock. Everything else has to match by name *and*
+            # by numbers.
+            wanted = scenes.get(hour)
+            if wanted is None:
+                continue
+            if grades.get(stock) != wanted:
+                failures.append(
+                    f"FilmStock.of(.{hour}) is .{stock}, whose grade is "
+                    f"{grades.get(stock)}, but generate_scenes.py grades "
+                    f"{hour} as {wanted} — the homestead is lit at a "
+                    f"different hour from the sky behind it")
+
     print(f"checked {len(FROM_SCENES)} shared grades, the press, "
           f"{len(FIXTURE)} fixture rows and {len(free)} free stocks")
     if failures:

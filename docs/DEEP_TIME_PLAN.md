@@ -1225,8 +1225,43 @@ found the same way.
   lamplight, drawn from the residents' own second frames as silhouettes.
   Gated on `Resident.settled` rather than on thresholds copied into `Dream`,
   so the gate cannot disagree with the thing it gates.
-- **Still unbuilt in Y4:** the four time-of-day grades and the hundred-hour
-  panoramic postcard.
+### As built — Y4's four time-of-day grades
+
+**No new art, and that was the whole finding.** The plan asked for the
+homestead to be exported four times, once per time of day, the way every place
+is: seventy-six more imagesets, each of which would have to be kept in step
+with the sprite it is graded from. But a grade in this app is three numbers —
+a tint, how far to pull toward it, and a brightness multiplier — and
+`FilmStock` has held all four sets of them since the Scrapbook, *because the
+film stocks were built out of the scene generator's grades in the first place*.
+So `FilmStock.of(_ part: DayPart)` names the stock carrying each hour's grade
+and `HomesteadView` applies it with the `.filmStock()` modifier the Scrapbook
+already uses. The wood is lit by exactly the arithmetic that lights Whispering
+Woods, for the cost of one switch.
+
+`day` maps to `asitwas` and that is not a shortcut: the generator's `day` grade
+is `((255,255,255), 0.00, 1.00)`, the identity, because the art is drawn in
+daylight.
+
+**`check_film.py` gained a sixth rule for it**, and its first two break tests
+both passed — which meant the rule was looping zero times. `DayPart` declares
+its cases on one line (`case dawn, day, dusk, night`) and the parser was
+written for one case per line, so it found no hours at all and reported
+success. Four break tests bite now: a swapped arm, a lost identity, a deleted
+arm, and the function vanishing.
+
+**One refactor came with it.** The `.filmStock()` `View` extension lived at the
+bottom of `ScrapbookView.swift`; a modifier that two unrelated screens depend
+on has no business hiding under a third one's implementation, so it is
+`Pawmodoro/Views/FilmStockGrade.swift` now.
+
+**Divergences:**
+
+- **The grade is applied inside the clip and under the caption.** Grading a
+  text row would put its contrast somewhere `check_contrast.py` never looks —
+  it samples the scene exports, not SwiftUI overlays. The wood is graded; the
+  card it sits on and the line in its corner are not.
+- **Still unbuilt in Y4:** the hundred-hour panoramic postcard.
 
 ## Phase Z — The Window Sill (presence, and the one dangerous migration)
 

@@ -150,6 +150,20 @@ struct HomesteadView: View {
                 }
             }
         }
+        // Y4's four time-of-day grades, and no new art for them.
+        //
+        // The plan asked for the homestead to be exported four times like
+        // every place is. It is graded at draw time instead, by
+        // `FilmStock.of(_:)` — which holds the scene generator's own three
+        // numbers per hour, with `tools/check_film.py` failing if they ever
+        // drift apart. Seventy-six imagesets, or one modifier reading the
+        // table that already had to exist.
+        //
+        // Inside the clip and under the caption on purpose: the wood is
+        // graded, the card it sits on is not, and neither is the line of text
+        // in the corner. Grading a text row would put the contrast measurement
+        // somewhere `check_contrast.py` never looks.
+        .filmStock(FilmStock.of(dayPart))
         .frame(height: 180)
         .frame(maxWidth: .infinity)
         .background(

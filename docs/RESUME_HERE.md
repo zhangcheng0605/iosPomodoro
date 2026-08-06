@@ -93,7 +93,9 @@ keeps.
 Y3 the Year Ring, Y4 the Homestead — the grove, and the eight residents that
 move into the yard in front of it. All of them backfill from history the
 moment they arrive, which is the return on having built the Chronicle first.
-Y4 still owes its four time-of-day grades and its hundred-hour panorama.
+Y4's four time-of-day grades are in too — applied at draw time from
+`FilmStock`, which has held the scene generator's own numbers since the
+Scrapbook, so they cost no new art. Only the hundred-hour panorama is left.
 
 **Six new checkers, and they earned it.** Five real bugs were found before a
 compiler saw any of this:

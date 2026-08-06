@@ -1,19 +1,25 @@
 # Resume here
 
 **Written 6 Aug 2026 from a Windows laptop, for the Mac evening that follows
-it.** Phase 0 of `docs/DEEP_TIME_PLAN.md` is built except for the parts that
-need a Mac, and the first slice of Phase V — weather, and the old snail — is
-built on top of it. **Nothing written today has been through a compiler.**
+it.** Phase 0 is built except its Mac sitting, and **eight more phases went in
+on top of it in the same day**: weather, the old snail, the Drift, the Cabinet
+of Clocks, and all four altitudes of the Long Now except the Homestead's
+residents.
+
+**None of it has been through a compiler.** That is not a warning about
+quality — nine checkers are green and every sprite was rendered and looked at —
+it is a statement about what tonight is for. Expect a handful of errors, fix
+them, and then look at the things no checker can judge.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
-Mac"* is the one to read first — it is a running order, not a list.
+Mac"* is a running order, not a list.
 
 ---
 
 ## The one line to paste
 
 > read docs/RESUME_HERE.md and do the Mac evening: build it, fix what the
-> compiler finds, walk the dream diary and the weather, then the listening pass
+> compiler finds, then walk the new screens in order. the listening pass last.
 
 ---
 
@@ -43,55 +49,48 @@ of what the next release owes users.
 | **Y4** — the grove (trees only; residents not built) | **built, never compiled** |
 | **X2** — the Cabinet of Clocks | **built, never compiled** |
 
-### What today added, in one paragraph each
+### What today added
 
-**The dream backfill (0d).** Five systems had shipped since the dream pool was
-written — the bond, the regulars, the things you can only hear, the seasons and
-the stray's arc — and none of them fed it. Six new `Dream` cases now do:
-`regular`, `companion`, `visitor`, `sound`, `season`, `yours`. Each is gated in
-`TimerEngine.pool()` on the thing it is about, so nothing can be dreamed by
-somebody who never met it. The diary went from 50 possible dreams to 116, and weather's three took it to
-119.
-Thirteen new sprites, drawn on the same 20px sepia grid as the surreal six.
-`docs/DEEP_TIME_PLAN.md`'s Phase 0 **As built** section has the table and the
-four decisions worth knowing before touching it.
+**Phase 0 finished.** The dream-pool backfill (six new `Dream` cases, gated on
+the systems they came from, taking the diary from 50 possible dreams to 128),
+the `AlbumView` rasterization fix (`Postcard` is `Transferable` now, so nothing
+is drawn until somebody shares), and the iPad decision — `"1"`, iPhone only.
 
-**The album fix (0a).** `ShareLink` was handed two `ImageRenderer` outputs per
-card at 640pt, as ordinary function arguments inside a `ForEach` — so opening
-the stats sheet rasterised every postcard twice at export size on the main
-thread, before anybody tapped anything. `Postcard` now conforms to
-`Transferable`; the PNG is drawn once, on demand, after a tap.
+**Phase V, slice 1 — weather.** Nine weathers rolled per calendar day per place
+out of `WorldCalendar.seed`. Never real weather: no permission, no network, the
+meadow has its own sky. A theme-aware veil plus a particle layer, so the scene
+pipeline stays 8 places × 4 hours rather than × 9. Plus the suggestion glow.
 
-**Three new `check_swift.py` rules.** Dream sprite names are expanded from the
-enum and checked against the catalog; `Dream.id` and `Dream.from(id:)` must
-name the same prefixes (they drift silently and the diary just stops decoding);
-and `switch self` inside an `extension` is now checked at all — it never was,
-and half the app's tables live in one. All verified by deliberately breaking
-the code, per the house rule.
+**Phase V5 — the old snail.** Six months to cross a place, six months
+elsewhere. Five places; Cloudspire, Harbor and the Onsen have no continuous
+ground, which was measured rather than decided.
 
-**Weather — V-slice-1 (V1, V2, the suggestion glow).** Nine weathers, rolled
-once per calendar day per place out of `WorldCalendar.seed`. Never real
-weather: no location permission, no network, the meadow has its own sky.
-Drawn as a theme-aware veil plus a particle layer, so the scene pipeline stays
-8 places × 4 hours instead of becoming × 9. The chip that suits today's sky
-gets a ring and three words; tapping is still the only thing that changes what
-plays. Three dream entries came with it, because the convention now says a
-feature ships with them rather than owing them.
+**Phase X1 — the Drift.** Hold play: no end time, no alarm. The ring counts up
+and lays a tree ring per lap. Banks one session per completed lap, so the
+journey moves exactly as far as the countdowns it replaced.
 
-**The old snail (V5).** Six months to cross a place, then six months
-elsewhere; her position is a pure function of the date, about two points a
-day. Five places — Cloudspire, Harbor and the Onsen have no continuous ground,
-which was measured rather than decided.
+**Phase X2 — the Cabinet of Clocks.** Five more faces (sand, candle, water,
+incense, shadow) as generated frame strips, earned by counters the app already
+keeps.
 
-**Two new checkers, and one of them found a real bug before any compiler saw
-the code.** `check_weather.py` runs a decade of every place through a Python
-port of `WorldCalendar.seed`. Golden was written exactly as the plan's table
-says — "if yesterday stormed, today is golden" — and that turns out to show
-**golden on both days when two storms run together**, and to **never show the
-second storm at all**. The rarest weather in the app, eaten by the
-second-rarest, about thirty times a decade, invisible from inside the app
-forever. `check_snail.py` is `check_stray.py`'s harder sibling and is what
-ruled three places out of her route.
+**Phase Y — three of four altitudes.** Y1 the Shelf of Hours, Y2 the Sunday
+Post, Y3 the Year Ring, Y4's grove. All of them backfill from history the
+moment they arrive, which is the return on having built the Chronicle first.
+
+**Five new checkers, and they earned it.** Four real bugs were found before a
+compiler saw any of this:
+
+| Found by | What it was |
+|---|---|
+| `check_weather.py` | Two storms running showed **golden on both days**, and the second storm was never shown at all — the rarest weather eaten by the second-rarest, ~30 times a decade |
+| `check_grove.py` | Trees *n* and *n+89* stood 0.0097 apart — both layout axes were golden-ratio-derived and re-phased at Fibonacci intervals |
+| `check_clocks.py` | The candle and the incense **ran backwards** on their last frame, because the flame counted as "the part that grows" |
+| `check_yearring.py` | The plan's own tinting made a night session's day measure ΔE 1.3 from a day nobody focused — indistinguishable, in one theme, forever |
+
+**And two the checkers missed**, both caught by rendering the thing and looking
+at it: the grove came out in diagonal stripes at thirty trees, and the water
+clock tapered the wrong way. That is now a convention in CLAUDE.md — *a green
+checker is not a look.*
 
 ---
 
@@ -111,10 +110,14 @@ xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Debug \
 `check_swift.py` is not a type checker. **A handful of errors here is the
 expected outcome, not a sign something is wrong.** In likelihood order:
 
-0. **`Pawmodoro/Views/WeatherView.swift` and `SnailView.swift`** are new
-   SwiftUI files and have never been compiled. `Canvas`, `TimelineView` and
-   `GeometryReader` are all shapes the app already uses elsewhere, so these
-   should be quiet, but they are the newest code here.
+0. **The nine new SwiftUI files.** `WeatherView`, `SnailView`, `YearRingView`,
+   `ShelfOfHoursView`, `SundayPostView`, `GroveView`, `ClockFaceView`,
+   `PostcardExport`, and the changes inside `TimerRingView` and `ContentView`.
+   `Canvas`, `TimelineView` and `GeometryReader` are all shapes the app
+   already uses, so most should be quiet. `YearRingView` has the most novel
+   geometry (`Path.addArc` twice per wedge) and `ContentView`'s
+   `.onLongPressGesture` on a `Button` is the one interaction pattern not used
+   anywhere else in the app.
 1. **`Pawmodoro/Views/PostcardExport.swift`.** `Transferable`,
    `DataRepresentation`, `SharePreview` and `ShareLink` are exactly the
    argument-label-and-inference class the checker is blind to. If one line has
@@ -131,10 +134,10 @@ expected outcome, not a sign something is wrong.** In likelihood order:
 4. **`bond >= .acquainted`** and **`stage >= visitor.reachedAt`** — both types
    are `Comparable` and both already use `<` elsewhere.
 
-Then Release, which is where a missing `#if DEBUG` stand-in would show up
-(three new flags today — `fillDreams`, `forcedWeather`, `forcedSnail` — and
-all three stand-ins are in place; `check_swift.py` verifies that, and it is
-one of the rules it was proved on):
+Then Release, which is where a missing `#if DEBUG` stand-in would show up.
+Six new flags today — `fillDreams`, `forcedWeather`, `forcedSnail`, `drift`,
+`driftLaps`, `forcedClockFace` — and all six stand-ins are in place;
+`check_swift.py` verifies that, and it is one of the rules it was proved on:
 
 ```sh
 xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Release \
@@ -295,7 +298,30 @@ does not appear at all — that is the design, not a missing view.
   anywhere on it — that is the anti-goal, and it is the kind of thing that
   gets helpfully added back later.
 
-### 7. Share a postcard
+### 7. The clock faces
+
+Settings → The cabinet of clocks. Two of the six are earned by places that
+take a hundred sessions, so use the flag.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroClockFace incense -PawmodoroUnlockPlaces
+$S -PawmodoroClockFace sand
+$S -PawmodoroClockFace shadow -PawmodoroNightSessions 60
+```
+
+`check_clocks.py` has already proved every face runs forward, never stalls,
+and finishes when the phase does — 960 sprite/dial pairs, faintest 7.79:1. So
+what is left for an eye is one question the checker cannot ask: **does a face
+read at 46 % of the dial, over scenery, with the digits sitting on top of it?**
+Under `--demo` a lap is 25 seconds, so all twelve frames go past in half a
+minute.
+
+If a face is too busy under the digits, the fix is
+`.frame(height: diameter * 0.46)` in `TimerRingView`, not the art — the art is
+measured and the size is not.
+
+### 8. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -303,7 +329,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 8. The four gates of 0e — the actual reason for a Mac evening
+### 9. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 

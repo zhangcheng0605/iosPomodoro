@@ -34,18 +34,24 @@ device before it ships.
 
 ## Known and NOT yet fixed
 
-1. **`Views/AlbumView.swift:35` — postcards rasterize on the main thread.**
-   Opening the stats sheet renders every postcard twice at export size, on the
-   main thread. A stutter today, and it gets worse the more postcards a user
-   collects. Render lazily, or at thumbnail size, and move export-size
-   rendering to the moment someone actually shares one.
+1. ~~**`Views/AlbumView.swift:35` — postcards rasterize on the main thread.**~~
+   **Fixed, never compiled.** `Postcard` conforms to `Transferable` and the
+   PNG is drawn once, on demand, after a tap; the share preview is a line of
+   text built from the card's stored facts, because a `SharePreview` carrying
+   an image wants that image up front. See `Views/PostcardExport.swift`. Needs
+   a Mac build to confirm the API shapes — `check_swift.py` is blind to them.
 
-2. **iPad is declared but not designed for.** `TARGETED_DEVICE_FAMILY = "1,2"`,
-   so the app installs on iPad and Apple reviews it there. It runs, but the
-   layout has a large dead band of scenery through the middle and the transport
-   controls sit on top of the house. Either lay it out properly for the larger
-   canvas, or set `TARGETED_DEVICE_FAMILY = "1"` and be an iPhone app on
-   purpose. Right now it is neither.
+2. ~~**iPad is declared but not designed for.**~~ **Decided:**
+   `TARGETED_DEVICE_FAMILY = "1"` as of this branch — an iPhone app on
+   purpose, which is the Deep Time plan's recommendation and the honest
+   description of a layout with a dead band of scenery through the middle and
+   the transport controls sitting on top of the house at iPad size. Revisit
+   when Phase Y's Homestead panorama earns a big canvas.
+
+   **This changes what App Review sees.** Anyone who installed 1.0 on an iPad
+   cannot update to the next version. On a just-launched app that is close to
+   nobody, which is exactly why now was the cheap moment to decide it. Undo is
+   two characters in `project.pbxproj`, lines 273 and 303.
 
 3. **The app calls itself "Pawmodoro" in 16 user-visible strings** while the
    App Store listing says "Paawmodoro" (the shorter name was taken). Onboarding

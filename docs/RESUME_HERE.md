@@ -31,7 +31,7 @@ of what the next release owes users.
 | 0d conventions in CLAUDE.md | **done** |
 | 0d the dream-pool backfill | **built, never compiled** — today |
 | 0a `AlbumView` rasterization | **built, never compiled** — today |
-| 0a the iPad decision | **open** — the one thing waiting on you, below |
+| 0a the iPad decision | **made** — `"1"`, iPhone only, see below |
 | 0e the Mac-and-device sitting, four gates | **open** — tonight |
 
 ### What today added, in one paragraph each
@@ -186,20 +186,20 @@ These gate all of Phase W and have been waiting since the plan was written.
 
 ---
 
-## The one thing waiting on you
+## The iPad decision, made
 
-**`TARGETED_DEVICE_FAMILY` is still `"1,2"`** — two occurrences in
-`Pawmodoro.xcodeproj/project.pbxproj`, lines 273 and 303. The Deep Time plan's
-recommendation is `"1"`: be an iPhone app on purpose, and revisit when the
-Homestead's panorama in Phase Y earns a big canvas.
+**`TARGETED_DEVICE_FAMILY` is now `"1"`** — iPhone only, on purpose. Two
+occurrences in `Pawmodoro.xcodeproj/project.pbxproj`, lines 273 and 303. It is
+the Deep Time plan's recommendation and the honest description of what the app
+is: at iPad size the layout has a dead band of scenery through the middle and
+the transport controls sit on top of the house.
 
-It was left alone deliberately. The edit itself is two characters, and it
-changes nothing until you archive — but the app is already live declaring iPad
-support, and dropping a device family means anyone who installed 1.0 on an
-iPad cannot update to 1.1. With a just-launched app that is close to nobody,
-which is exactly why now is the cheapest moment to decide it either way.
+**One thing to know before you archive.** The app is already live declaring
+iPad support, so anyone who installed 1.0 on an iPad cannot update to the next
+version. On a just-launched app that is close to nobody — which is why now was
+the cheap moment. Undo is two characters on those two lines.
 
-Say the word and it is one commit.
+Revisit when Phase Y's Homestead panorama earns a big canvas.
 
 ---
 
@@ -313,7 +313,8 @@ notes: that is a hard gate, not a caveat.
 - **Never verified on any device**: scene toys, the night firefly,
   eye-tracking, the snow-globe shake, organic micro-encounters, the iPhone SE
   layout.
-- **iPad is declared but not designed for** — the open decision above.
+- **iPad support is now dropped** — decided, not overlooked. Read the section
+  above before the next archive.
 - The app's own screens say "Pawmodoro" while the App Store listing says
   "Paawmodoro" (the shorter name was taken). Apple permits it; it is explained
   in the App Review notes; decide whether you want it.

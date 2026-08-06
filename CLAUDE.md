@@ -44,10 +44,11 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > Mac build and don't be alarmed — `docs/RESUME_HERE.md` lists the likely ones
 > in order, with the fix for each.
 >
-> Two things are still open: the **iPad decision**
-> (`TARGETED_DEVICE_FAMILY`, which is the owner's call) and **0e's Mac-and-
-> device sitting** — above all the listening pass, which gates every one of
-> Phase W's sounds.
+> One thing is still open: **0e's Mac-and-device sitting** — above all the
+> listening pass, which gates every one of Phase W's sounds. The iPad question
+> was decided rather than deferred: `TARGETED_DEVICE_FAMILY` is now `"1"`, an
+> iPhone app on purpose. Read `docs/NEXT_UPDATE.md` before the next archive —
+> that change is visible to App Review.
 
 **Resuming after a break? Read `docs/RESUME_HERE.md` first** — it says exactly
 where the build order stopped, what has and hasn't been seen running, and what

@@ -117,6 +117,18 @@ struct BuddyView: View {
                             .offset(y: -spriteSize * 0.22)
                     }
                 }
+                // Where the sprite is, for the treat tray below. The tray
+                // cannot see this view's geometry — they are siblings — so
+                // the frame travels the same channel the finger's position
+                // already does. Offsets (hearts, the dream bubble) do not
+                // move layout, so this is the sprite's own square.
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { touch.buddyFrame = proxy.frame(in: .global) }
+                        .onChange(of: proxy.frame(in: .global)) { _, frame in
+                            touch.buddyFrame = frame
+                        }
+                })
 
                 if strayIsAlongside {
                     // Smaller, and she keeps a little distance: she is sitting
@@ -178,6 +190,14 @@ struct BuddyView: View {
             animator.play(.happy, for: buddy)
         }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
+        // A treat has come within reach: the buddy sits up and takes notice.
+        // Reuses the `stirring` one-shot — for an awake buddy that is the
+        // alert, eyes-open frame, which reads as perking up — rather than
+        // `happy`, so the delighted bounce stays the favourite's alone.
+        .onChange(of: touch.treatNear) { _, near in
+            guard near, !isNapping else { return }
+            animator.play(.stirring, for: buddy)
+        }
         .onChange(of: engine.completion) { _, completion in
             // The payoff for *finishing* a focus session: the buddy opens its
             // eyes, stretches, and is pleased with you. Driven by the

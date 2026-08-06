@@ -101,6 +101,21 @@ enum Accessory: String, CaseIterable, Identifiable, Codable {
 
     var asset: String { "wear_\(rawValue)" }
 
+    /// The four the app simply gives you — two for the head, two for the
+    /// neck, owned from the first launch with no acorns and no Plus.
+    ///
+    /// They exist so the wardrobe can be *tried* before it is saved for:
+    /// somebody puts the leaf on the owl in their first minute, discovers
+    /// that hats are a thing here, and the paid pieces mean something. The
+    /// humble ones are the gifts — a leaf that fell, a cap somebody knitted,
+    /// a bandana, a bow — and the finery stays in the Magpie's Cart.
+    var isFree: Bool {
+        switch self {
+        case .knittedcap, .leaf, .bandana, .bow: true
+        case .sunhat, .flowercrown, .crown, .bellcollar, .scarf, .kerchief: false
+        }
+    }
+
     // MARK: Where it sits
 
     /// How wide the piece is drawn, as a fraction of the anchor's reference
@@ -189,7 +204,11 @@ enum Accessory: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// The picker's order: the free pieces first, then the cart's, each in
+    /// declaration order. First thing anybody sees in a row is something they
+    /// can actually put on.
     static func items(in slot: Slot) -> [Accessory] {
-        allCases.filter { $0.slot == slot }
+        let inSlot = allCases.filter { $0.slot == slot }
+        return inSlot.filter(\.isFree) + inSlot.filter { !$0.isFree }
     }
 }

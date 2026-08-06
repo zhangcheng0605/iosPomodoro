@@ -158,7 +158,7 @@ enum CatalogItem: Hashable, Identifiable {
     /// the walk to Whispering Woods would undo the only progression in this
     /// app that is a story rather than a purchase.
     static var all: [CatalogItem] {
-        Accessory.allCases.map(CatalogItem.accessory)
+        Accessory.allCases.filter { !$0.isFree }.map(CatalogItem.accessory)
             + Den.allCases.filter(\.isForSale).map(CatalogItem.den)
             + FilmStock.allCases.filter { !$0.isFree }.map(CatalogItem.film)
             + Buddy.allCases.filter { $0.isPlus }.map(CatalogItem.buddy)
@@ -166,10 +166,22 @@ enum CatalogItem: Hashable, Identifiable {
             + AppTheme.allCases.filter { $0.isPlus }.map(CatalogItem.theme)
     }
 
-    /// Everything in the wardrobe is for sale — there is no free accessory,
-    /// because there is no accessory the app gives you and none it withholds
-    /// for a story. They are the one category where the cart is the only road
-    /// apart from Plus.
+    /// The wardrobe splits like film does: `Accessory.isFree` marks the four
+    /// pieces the app gives you outright — filtered off the shelf here because
+    /// they are not for sale, exactly as the free film stocks are — and the
+    /// rest are cart-or-Plus.
+
+    /// Whether the app gives this away — the free accessories and film
+    /// stocks. Free is decided on the item's own type (`Accessory.isFree`,
+    /// `FilmStock.isFree`); this only gathers those answers so the store can
+    /// ask one question of any catalogue id.
+    var isFree: Bool {
+        switch self {
+        case .accessory(let accessory): accessory.isFree
+        case .film(let film): film.isFree
+        case .buddy, .place, .theme, .den: false
+        }
+    }
 
     static func items(on shelf: Shelf) -> [CatalogItem] {
         all.filter { $0.shelf == shelf }

@@ -82,11 +82,6 @@ final class HapticsDirector {
         ])
     }
 
-    /// A paw print landing.
-    func stamp() {
-        transient(intensity: 0.6, sharpness: 0.55, fallback: .rigid)
-    }
-
     /// The purr: a continuous rumble whose intensity rolls, so it feels like
     /// breathing rather than a buzz. This is the one that sells the petting.
     func purr(duration: TimeInterval = 1.3) {

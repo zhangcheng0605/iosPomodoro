@@ -153,9 +153,11 @@ final class StoreManager {
     /// The cart asks this rather than `isUnlocked(_:)` because it holds
     /// `CatalogItem`s rather than the underlying buddies and places, and
     /// because it wants the same answer for both roads: a thing you have is a
-    /// thing you have, whether it came from the pouch or from Plus.
+    /// thing you have, whether it came from the pouch or from Plus. The free
+    /// pieces — the given accessories, the free film — are checked first,
+    /// because a gift is not an entitlement and needs neither road.
     func isUnlocked(byPurchase item: CatalogItem) -> Bool {
-        hasPlus || pouch?.owns(item) == true
+        item.isFree || hasPlus || pouch?.owns(item) == true
     }
 
     /// The traded half of the entitlement. Set once, at app construction —

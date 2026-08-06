@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Cabinet of Clocks: six ways of rendering the same sacred interval.
+/// The Cabinet of Clocks: eight ways of rendering the same sacred interval.
 ///
 /// Every one of these is a **pure view over `engine.progress`**. `TimerEngine`
 /// knows nothing about them and never will — a clock face cannot start, stop,
@@ -13,10 +13,15 @@ import Foundation
 /// finished constellation. Nothing new is recorded to unlock one, and nothing
 /// is ever for sale. Locked faces are shown with a padlock rather than hidden,
 /// per the app's rule — the single exception to that rule is Soot, and she is
-/// not a clock.
+/// not a clock. Three come free: the ring, and the two gentle ones — the
+/// bloom and the lantern — so the cabinet is a cabinet from the first day
+/// rather than a single clock with promises.
 enum ClockFace: String, CaseIterable, Identifiable, Codable {
     /// The one the app has always had, drawn in SwiftUI rather than sprites.
     case ring
+    /// Free from the start, like the ring.
+    case bloom
+    case lantern
     case sand
     case candle
     case water
@@ -28,6 +33,8 @@ enum ClockFace: String, CaseIterable, Identifiable, Codable {
     var name: String {
         switch self {
         case .ring: "The ring"
+        case .bloom: "Bloom clock"
+        case .lantern: "Lantern clock"
         case .sand: "Sand glass"
         case .candle: "Candle clock"
         case .water: "Water clock"
@@ -42,6 +49,8 @@ enum ClockFace: String, CaseIterable, Identifiable, Codable {
     var blurb: String {
         switch self {
         case .ring: "The one you know."
+        case .bloom: "A flower, opening petal by petal. It never closes."
+        case .lantern: "Paper, filling slowly with light."
         case .sand: "The oldest of them, and still the clearest."
         case .candle: "Marked in hours, and it does not give them back."
         case .water: "Harbor Isle keeps time this way."
@@ -82,7 +91,7 @@ enum ClockFace: String, CaseIterable, Identifiable, Codable {
 
     var requirement: Requirement {
         switch self {
-        case .ring: .always
+        case .ring, .bloom, .lantern: .always
         case .sand: .sessions(10)
         case .candle: .nights(20)
         case .water: .reached(.harbor)

@@ -20,6 +20,7 @@ struct ScrapbookView: View {
     @State private var opened: Snapshot?
     @State private var importing = false
     @State private var failed: String?
+    @State private var showCamera = false
 
     private var scrapbook: Scrapbook { engine.scrapbook }
 
@@ -53,8 +54,32 @@ struct ScrapbookView: View {
                     .disabled(importing)
                     .accessibilityLabel("Keep a picture of where you are")
                 }
+                // Hidden, not disabled, where there is no camera — a control
+                // for hardware the simulator does not have is only clutter.
+                #if canImport(UIKit)
+                if CameraPicker.isAvailable {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showCamera = true
+                        } label: {
+                            Image(systemName: "camera")
+                        }
+                        .disabled(importing)
+                        .accessibilityLabel("Photograph where you are sitting")
+                    }
+                }
+                #endif
             }
             .sheet(item: $opened) { SnapshotView(snapshot: $0) }
+            #if canImport(UIKit)
+            // Full screen, because that is what a viewfinder is.
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker { image in
+                    keep(image)
+                }
+                .ignoresSafeArea()
+            }
+            #endif
             .onChange(of: picking) { _, item in
                 guard let item else { return }
                 Task { await keep(item) }
@@ -118,6 +143,21 @@ struct ScrapbookView: View {
             failed = "It was not an image this app could open."
             return
         }
+        write(prepared)
+    }
+
+    /// The camera's path in. Same pipeline from `prepare` onward — the shot
+    /// gets the same strip, scale and upright rendering an imported photograph
+    /// does, so there is exactly one definition of what a kept picture is.
+    private func keep(_ image: PlatformImage) {
+        guard let prepared = SnapshotImport.prepare(image) else {
+            failed = "It was not an image this app could open."
+            return
+        }
+        write(prepared)
+    }
+
+    private func write(_ prepared: Data) {
         guard let directory = Scrapbook.directory else {
             failed = "There is nowhere to keep it."
             return

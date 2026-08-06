@@ -1,15 +1,16 @@
 """Check that every clock face is actually a clock.
 
-The Cabinet of Clocks renders the same interval five other ways, at one frame
+The Cabinet of Clocks renders the same interval seven other ways, at one frame
 every two minutes. That rate is what makes this file necessary: a face that
 stalls for a third of the phase, jumps backward, finishes early or never
 finishes at all is an art regression nobody could catch by watching. You would
-have to sit through a whole session with a stopwatch, in each of five faces,
+have to sit through a whole session with a stopwatch, in each of seven faces,
 to see what this measures in a second.
 
 Every face obeys one convention — **the pixels drawn in `ACCENT` are the part
 that grows with time**: the wax pool, the fallen sand, the ash, the risen
-water, the swept shadow. So one assertion covers all five:
+water, the swept shadow, the opened petals, the risen light. So one assertion
+covers all seven:
 
   * that quantity **never decreases** from frame to frame
   * it **actually moves** — a face that ends where it started is a picture

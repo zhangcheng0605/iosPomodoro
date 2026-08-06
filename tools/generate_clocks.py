@@ -1,6 +1,6 @@
-"""Generate the Cabinet of Clocks: five alternate faces, as frame strips.
+"""Generate the Cabinet of Clocks: seven alternate faces, as frame strips.
 
-The same sacred interval, rendered five other ways. Each face is a strip of
+The same sacred interval, rendered seven other ways. Each face is a strip of
 frames indexed by `engine.progress`, which keeps `TimerEngine` completely
 untouched — a clock face in this app is a *view* over a number that already
 exists, and none of them can know anything the ring doesn't.
@@ -14,12 +14,14 @@ with a stopwatch to catch it. Frames can be *measured*, and
 
 **The convention every face obeys:** the pixels drawn in `ACCENT` are the part
 that grows with time — the wax pool, the fallen sand, the ash, the risen
-water, the swept shadow. That one rule is what makes a single monotonicity
-assertion cover all five, and it is why `check_clocks.py` can tell that a
-candle is burning down rather than merely changing.
+water, the swept shadow, the opened petals, the risen light. That one rule is
+what makes a single monotonicity assertion cover all seven, and it is why
+`check_clocks.py` can tell that a candle is burning down rather than merely
+changing.
 
     python3 tools/generate_clocks.py
 """
+import math
 import os
 import sys
 
@@ -163,12 +165,80 @@ def shadow(t):
     return outline_silhouette(g)
 
 
+def bloom(t):
+    """A potted flower opening one petal at a time. It never closes.
+
+    The pale petals are the flower still to come; the warm ones have opened.
+    Petals are drawn in a fixed index order every frame, so each petal's
+    visible region is constant across the strip and only its colour changes —
+    which is what keeps the ACCENT count strictly monotone even where
+    neighbouring petals overlap."""
+    g = new_grid(W, H)
+    d = ImageDraw.Draw(g)
+    d.polygon([(10, 38), (23, 38), (21, 43), (12, 43)], fill=NOSE)   # the pot
+    d.rectangle([16, 24, 17, 38], fill=NOSE)                         # the stem
+    d.ellipse([10, 30, 15, 34], fill=SHADE)                          # a leaf
+    cx, cy, arm, petals = 16.5, 15, 7.5, 10
+    opened = int(t * petals + 0.5)
+    for petal in range(petals):
+        angle = -math.pi / 2 + petal * 2 * math.pi / petals
+        px = cx + arm * math.cos(angle)
+        py = cy + arm * math.sin(angle)
+        fill = ACCENT if petal < opened else BODY
+        d.ellipse([px - 2.5, py - 2.5, px + 2.5, py + 2.5], fill=fill)
+    d.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=SHADE)          # centre
+    if t < 0.99:
+        d.point((int(cx), int(cy)), fill=PINK)                       # opening
+    return outline_silhouette(g)
+
+
+def lantern(t):
+    """A paper lantern filling with light, from the bottom up.
+
+    The rib rows stay SHADE over lit and unlit paper alike, so their ACCENT
+    contribution is a constant zero and the count stays monotone as the light
+    crosses them."""
+    g = new_grid(W, H)
+    d = ImageDraw.Draw(g)
+    d.rectangle([13, 3, 20, 5], fill=NOSE)                           # the cap
+    cx, cy, rx, ry = 16.5, 22.5, 10.0, 15.5
+    d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=BODY)       # paper
+
+    def chord(y):
+        dy = (y - cy) / ry
+        if abs(dy) >= 1:
+            return None
+        dx = rx * math.sqrt(1 - dy * dy)
+        return int(cx - dx) + 1, int(cx + dx) - 1
+
+    bottom = int(cy + ry) - 1
+    level = int(t * 28)
+    for y in range(bottom - level + 1, bottom + 1):                  # the light
+        run = chord(y)
+        if run:
+            d.line([(run[0], y), (run[1], y)], fill=ACCENT)
+    if 0.02 < t < 0.99:                                              # its rim,
+        run = chord(bottom - level)                                  # rising
+        if run:
+            d.line([(run[0], bottom - level), (run[1], bottom - level)],
+                   fill=PINK)
+    for rib in range(1, 5):                                          # the ribs
+        y = int(cy - ry + rib * 2 * ry / 5)
+        run = chord(y)
+        if run:
+            d.line([(run[0], y), (run[1], y)], fill=SHADE)
+    d.rectangle([14, 39, 19, 41], fill=NOSE)                         # the foot
+    return outline_silhouette(g)
+
+
 FACES = {
     "candle": candle,
     "sand": sand,
     "incense": incense,
     "water": water,
     "shadow": shadow,
+    "bloom": bloom,
+    "lantern": lantern,
 }
 
 

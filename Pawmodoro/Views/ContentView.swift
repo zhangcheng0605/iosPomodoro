@@ -14,6 +14,8 @@ struct ContentView: View {
     @State private var showPaywall = false
     @State private var showStudio = false
     @State private var showStrayNaming = false
+    @State private var showScrapbook = false
+    @State private var showTipJar = false
     /// True while the three breaths are running. The engine knows nothing
     /// about this — `start()` is simply called later.
     @State private var settling = false
@@ -88,9 +90,6 @@ struct ContentView: View {
                     BuddyView()
                         .padding(.top, 18)
 
-                    pawPrints
-                        .padding(.top, 14)
-
                     // Only when nothing is counting down. A treat offered
                     // mid-focus would be a reason to touch the screen during
                     // the one stretch of time this app exists to leave alone.
@@ -123,7 +122,11 @@ struct ContentView: View {
                         secondary: Theme.blossom,
                         streak: engine.log.currentStreak,
                         buddyName: engine.buddyName,
-                        onDismiss: { engine.completion = nil }
+                        onDismiss: { engine.completion = nil },
+                        onTip: {
+                            engine.completion = nil
+                            showTipJar = true
+                        }
                     )
                     .id(completion.id)
                     .transition(.opacity)
@@ -149,6 +152,21 @@ struct ContentView: View {
                                              ? Theme.bark : Theme.blossom)
                     }
                     .accessibilityLabel("Sound Studio")
+                }
+                // The gentle nudge to photograph where you sit today: one
+                // glyph, no new row, and gone entirely while focus runs —
+                // nothing invites a touch during the stretch this app exists
+                // to leave alone.
+                if !(engine.isRunning && !engine.phase.isBreak) {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showScrapbook = true
+                        } label: {
+                            Image(systemName: "camera")
+                                .foregroundStyle(Theme.bark)
+                        }
+                        .accessibilityLabel("Keep a picture of where you are sitting")
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -177,6 +195,12 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showCart) {
                 CartView()
+            }
+            .sheet(isPresented: $showScrapbook) {
+                ScrapbookView()
+            }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
             }
             // The only question the Drift ever asks. Phrased so that neither
             // answer is the "good" one: the app genuinely does not know
@@ -494,6 +518,7 @@ struct ContentView: View {
                 if part.showsStars {
                     StarfieldView(
                         tint: Theme.bark,
+                        moon: Theme.sunshine,
                         nightSessions: engine.log.nightSessions
                     )
                 }
@@ -510,36 +535,6 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Capsule().fill(Theme.accent(for: engine.phase)))
             .animation(.easeInOut, value: engine.phase)
-    }
-
-    private var pawPrints: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<engine.pawsPerCycle, id: \.self) { index in
-                let earned = index < engine.filledPaws
-                Image(systemName: "pawprint.fill")
-                    .font(.title3)
-                    .foregroundStyle(earned ? Theme.blossom : Theme.bark.opacity(0.18))
-                    .scaleEffect(earned ? 1 : 0.85)
-                    .rotationEffect(.degrees(earned ? 0 : -8))
-                    // The newest paw lands last and hardest — it's the one that
-                    // was just earned.
-                    .animation(
-                        .spring(duration: 0.45, bounce: 0.55)
-                            .delay(earned ? Double(index) * 0.04 : 0),
-                        value: engine.filledPaws
-                    )
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Theme.cream.opacity(0.7)))
-        .onChange(of: engine.filledPaws) { previous, current in
-            if current > previous { HapticsDirector.shared.stamp() }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(engine.filledPaws) of \(engine.pawsPerCycle) focus sessions this cycle"
-        )
     }
 
     /// Three named crossings. One tap re-lengths all three phases; the dial on
@@ -583,10 +578,27 @@ struct ContentView: View {
         }
     }
 
+    /// Every ambience chip, in a row that scrolls sideways.
+    ///
+    /// A plain `HStack` worked when there were six of these; at nineteen it was
+    /// wider than any phone and SwiftUI just clipped both ends, leaving the
+    /// later chips unreachable. The reader scrolls the current choice into
+    /// view on appear so the selection is never hidden off-screen.
     private var ambienceRow: some View {
-        HStack(spacing: 8) {
-            ForEach(Ambience.allCases) { option in
-                ambienceButton(for: option)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Ambience.allCases) { option in
+                        ambienceButton(for: option)
+                            .id(option)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+            .onAppear {
+                if engine.settings.ambience != .off {
+                    proxy.scrollTo(engine.settings.ambience, anchor: .center)
+                }
             }
         }
     }

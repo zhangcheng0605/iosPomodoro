@@ -14,9 +14,10 @@ struct WardrobePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    /// Passed the catalogue entry for a locked piece. Never nil here — every
-    /// accessory is for sale — but the signature matches the other pickers so
-    /// one handler in `SettingsView` serves them all.
+    /// Passed the catalogue entry for a locked piece. Never nil here — the
+    /// free accessories are never locked, and everything else in the wardrobe
+    /// is for sale — but the signature matches the other pickers so one
+    /// handler in `SettingsView` serves them all.
     var onLockedTap: (CatalogItem?) -> Void
 
     private var buddy: Buddy { engine.settings.buddy }

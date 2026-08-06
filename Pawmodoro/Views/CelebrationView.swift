@@ -15,6 +15,9 @@ struct CelebrationView: View {
     /// stays free of the timer so it can be previewed with any completion.
     let buddyName: String
     let onDismiss: () -> Void
+    /// Opens the tip jar, when the card carries its one quiet line. Optional
+    /// so the view stays previewable without wiring a store to it.
+    var onTip: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var started = Date()
@@ -225,6 +228,20 @@ struct CelebrationView: View {
         }
         title("Cycle complete")
         footnote(subtitle)
+        // One quiet line, on the one card that means a whole cycle was sat.
+        // It states the honest thing first — tips unlock nothing — and it is
+        // the smallest text on the card. No badge, no price, no urgency: a
+        // congratulation that turned into a checkout would be worth less than
+        // no congratulation at all.
+        if let onTip {
+            Button(action: onTip) {
+                Text("Tips unlock nothing — they keep this world growing")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.bark.opacity(0.55))
+                    .underline(true, color: Theme.bark.opacity(0.25))
+            }
+            .padding(.top, 4)
+        }
     }
 
     private func title(_ text: String) -> some View {

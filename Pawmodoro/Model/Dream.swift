@@ -485,16 +485,19 @@ enum Dream: Hashable, Identifiable {
 
     /// Dressed up, in a dream, for nobody.
     ///
-    /// Gated on actually owning the thing, so a dream about a crown belongs
-    /// to somebody who has one. Costs no new art — the accessory's own sprite,
-    /// as a silhouette.
+    /// Gated on actually owning the thing — or, for the free pieces, on having
+    /// worn it once — so a dream about a crown belongs to somebody who has
+    /// one, and a dream about the leaf to somebody who put it on. Costs no
+    /// new art — the accessory's own sprite, as a silhouette.
     enum Finery: String, CaseIterable, Hashable {
-        case crowned, belled
+        case crowned, belled, leafed, bowed
 
         var reachedAt: Accessory {
             switch self {
             case .crowned: .crown
             case .belled: .bellcollar
+            case .leafed: .leaf
+            case .bowed: .bow
             }
         }
 
@@ -504,6 +507,8 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .crowned: "the small crown"
             case .belled: "the bell"
+            case .leafed: "the leaf"
+            case .bowed: "the bow"
             }
         }
 
@@ -511,6 +516,8 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .crowned: "Wearing it to nowhere in particular, at length."
             case .belled: "It rang, and nothing in the dream looked up."
+            case .leafed: "It was the whole tree, and still weighed nothing."
+            case .bowed: "Everyone was wearing one. Nobody mentioned it."
             }
         }
     }

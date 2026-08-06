@@ -373,7 +373,7 @@ enum LaunchOptions {
     }()
 
     /// Start on a clock face, e.g. `-PawmodoroClockFace incense`. Two of the
-    /// six are earned by reaching places that take a hundred sessions.
+    /// eight are earned by reaching places that take a hundred sessions.
     static let forcedClockFace: ClockFace? = {
         guard arguments.contains("-PawmodoroClockFace"),
               let raw = value(after: "-PawmodoroClockFace")

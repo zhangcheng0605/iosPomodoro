@@ -4,6 +4,7 @@ struct StatsView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingClear = false
+    @State private var showTipJar = false
 
     private var log: SessionLog { engine.log }
 
@@ -15,6 +16,11 @@ struct StatsView: View {
                     // Above everything: it is the one surface here that is
                     // addressed to you rather than describing you.
                     SundayPostView()
+                    // High on purpose, and once: buried at the bottom of
+                    // Settings the jar earned nothing, which helps nobody. It
+                    // leads with the honest part — tips unlock nothing — and
+                    // then says what they actually do.
+                    tipRow
                     bondCard
                     keepsakeShelf
                     pouchLine
@@ -59,7 +65,47 @@ struct StatsView: View {
             } message: {
                 Text("This erases every recorded focus session. It cannot be undone.")
             }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
+            }
         }
+    }
+
+    /// The warm little row to the tip jar. A row, not a banner: it sits in
+    /// the same visual voice as the bond card below it, asks once, and never
+    /// changes based on how long it has been ignored.
+    private var tipRow: some View {
+        Button {
+            showTipJar = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(Theme.blossom)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("The tip jar")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.bark)
+                    Text("Tips unlock nothing at all. They keep "
+                         + "\(engine.buddyName) in treats — and new things "
+                         + "arriving here.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.bark.opacity(0.65))
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.35))
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "The tip jar. Tips unlock nothing at all; they keep "
+                + "\(engine.buddyName) in treats and new things arriving here."
+        )
     }
 
     private var summaryGrid: some View {

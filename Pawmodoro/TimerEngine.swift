@@ -1300,8 +1300,12 @@ final class TimerEngine {
         if visibleDen != nil {
             pool.append(contentsOf: Dream.Home.allCases.map(Dream.den))
         }
+        // A free piece is dreamed once it has actually been worn — ownership
+        // means nothing for a gift, and Plus does not put a leaf on anybody.
         for finery in Dream.Finery.allCases
-        where pouch.owns(.accessory(finery.reachedAt)) || storeHasPlus {
+        where finery.reachedAt.isFree
+            ? pouch.hasWorn(finery.reachedAt)
+            : pouch.owns(.accessory(finery.reachedAt)) || storeHasPlus {
             pool.append(contentsOf: repeatElement(.finery(finery), count: 2))
         }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {

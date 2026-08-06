@@ -168,9 +168,32 @@ def main():
     buddies = parse_locked("Buddy.swift", "Buddy")
     places = parse_locked("Place.swift", "Place")
     themes = parse_locked("AppTheme.swift", "AppTheme")
-    # Every accessory is for sale — there is no free one and none the app
-    # withholds for a story — so the whole enum is the shelf.
-    accessories = parse_cases("Accessory.swift", "Accessory")
+    # The wardrobe splits like film does: `Accessory.isFree` marks the four
+    # given pieces, and only the rest are on the shelf. The split itself is a
+    # promise — two free heads and two free necks, so the wardrobe can be
+    # tried before it is saved for — and like every gift in this app it may
+    # grow and never shrink.
+    all_accessories = parse_cases("Accessory.swift", "Accessory")
+    accessory_source = open(os.path.join(MODEL, "Accessory.swift")).read()
+    free_wear_body = accessory_source.split("var isFree: Bool {")[1].split("\n    }")[0]
+    free_wear = set()
+    for labels, value in re.findall(r"case ((?:\.\w+,? ?)+): (true|false)",
+                                    free_wear_body):
+        if value == "true":
+            free_wear.update(re.findall(r"\.(\w+)", labels))
+    slot_body = accessory_source.split("var slot: Slot {")[1].split("\n    }")[0]
+    slots = {}
+    for labels, slot in re.findall(r"case ((?:\.\w+,? ?)+): \.(\w+)", slot_body):
+        for case in re.findall(r"\.(\w+)", labels):
+            slots[case] = slot
+    for slot in ("head", "neck"):
+        given = [a for a in free_wear if slots.get(a) == slot]
+        if len(given) < 2:
+            failures.append(
+                f"only {len(given)} free '{slot}' accessories — the wardrobe "
+                f"gives two per slot, and a gift once given is never taken "
+                f"back")
+    accessories = [a for a in all_accessories if a not in free_wear]
     # Only the stocks that are not free. Capture, the ungraded photograph and
     # the journal's press are free forever — fence 6, the memory is never the
     # product — and `FilmStock.isFree` is where that is decided.
@@ -215,11 +238,13 @@ def main():
             failures.append(
                 f"place '{place}' is on the shelf but has no day scene to show "
                 f"in the unlock sheet")
-    for accessory in accessories:
+    # The whole enum, not just the shelf: a free piece is worn every day and
+    # needs its sprite exactly as much as a sold one.
+    for accessory in all_accessories:
         if not imageset_exists(f"wear_{accessory}"):
             failures.append(
-                f"accessory '{accessory}' is on the shelf with no sprite — run "
-                f"tools/generate_accessories.py")
+                f"accessory '{accessory}' is in the wardrobe with no sprite — "
+                f"run tools/generate_accessories.py")
     for den in parse_cases("Den.swift", "Den"):
         for frame in (0, 1):
             if not imageset_exists(f"den_{den}_{frame}"):

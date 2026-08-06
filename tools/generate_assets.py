@@ -196,22 +196,25 @@ def make_rain(variant=0, dur=12.0, fade=0.5):
     rng = np.random.default_rng(7 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
-    # Broadband hiss with a gentle tilt: the body of the rain.
-    body = shaped_noise(n, rng, exponent=0.4, cutoff=7000) * 0.8
+    # Broadband hiss with a gentle tilt: the body of the rain. Darker than it
+    # used to be — the owner's first real listen said "too noisy", so the
+    # cutoff came down and the tilt steepened, taking the top-end sizzle off.
+    body = shaped_noise(n, rng, exponent=0.55, cutoff=4500) * 0.8
     # Slow gusts so it breathes instead of sounding like static.
     t = np.arange(n) / SR
     gust = 0.85 + 0.15 * np.sin(2 * np.pi * 0.11 * t + 1.1)
     body *= gust
-    # Individual droplets: short bright decaying pings.
+    # Individual droplets: short decaying pings. Fewer and lower than the
+    # first release — a ping per second reads as weather, twice that as noise.
     drops = np.zeros(n)
-    for _ in range(int(dur * 55)):
+    for _ in range(int(dur * 32)):
         start = rng.integers(0, n - 900)
         length = int(rng.integers(180, 460))
         env = np.exp(-np.linspace(0, 7, length))
-        freq = rng.uniform(1100.0, 3600.0)
+        freq = rng.uniform(900.0, 2400.0)
         tone = np.sin(2 * np.pi * freq * np.arange(length) / SR)
-        drops[start:start + length] += tone * env * rng.uniform(0.05, 0.22)
-    return seamless(normalize(body + drops, 0.42), fade_n)
+        drops[start:start + length] += tone * env * rng.uniform(0.04, 0.15)
+    return seamless(normalize(body + drops, 0.32), fade_n)
 
 
 # -------------------------------------------------------------------- purr
@@ -365,20 +368,20 @@ def make_drizzle(variant=0, dur=12.0, fade=0.5):
     rng = np.random.default_rng(101 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
-    body = shaped_noise(n, rng, exponent=0.15, cutoff=9000) * 0.7
+    body = shaped_noise(n, rng, exponent=0.3, cutoff=6500) * 0.7
     # High-pass by subtracting a lowpassed copy of the same noise.
-    body = body - shaped_noise(n, np.random.default_rng(101 + variant * 17), 0.15, cutoff=700) * 0.7
+    body = body - shaped_noise(n, np.random.default_rng(101 + variant * 17), 0.3, cutoff=700) * 0.7
     t = np.arange(n) / SR
     body *= 0.88 + 0.12 * np.sin(2 * np.pi * 0.09 * t + 0.4)
     drops = np.zeros(n)
-    for _ in range(int(dur * 18)):
+    for _ in range(int(dur * 12)):
         start = rng.integers(0, n - 700)
         length = int(rng.integers(120, 300))
         env = np.exp(-np.linspace(0, 9, length))
-        freq = rng.uniform(2200.0, 5200.0)
+        freq = rng.uniform(1700.0, 3600.0)
         tone = np.sin(2 * np.pi * freq * np.arange(length) / SR)
-        drops[start:start + length] += tone * env * rng.uniform(0.04, 0.16)
-    return seamless(normalize(body + drops, 0.34), fade_n)
+        drops[start:start + length] += tone * env * rng.uniform(0.03, 0.11)
+    return seamless(normalize(body + drops, 0.26), fade_n)
 
 
 def make_wind(dur=16.0, fade=0.8):
@@ -454,7 +457,7 @@ def make_snowhush(dur=16.0, fade=0.9):
     """The sound of sound being absorbed.
 
     Snow takes the top off everything and gives nothing back, so this is the
-    darkest loop in the app and the quietest: peak 0.18 against rain's 0.42.
+    darkest loop in the app and the quietest: peak 0.18 against rain's 0.32.
     The eight-second breath is the only thing that happens, and it has to be
     slow enough that you notice it only after a minute.
     """
@@ -505,19 +508,19 @@ def make_storm(variant=0, dur=20.0, fade=1.0):
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
     t = np.arange(n) / SR
-    body = shaped_noise(n, rng, exponent=0.5, cutoff=6000) * 0.8
+    body = shaped_noise(n, rng, exponent=0.65, cutoff=4200) * 0.8
     swell = 0.55 + 0.45 * np.sin(2 * np.pi * (1.0 / 9.0) * t + 0.7)
     body *= swell
     weight = shaped_noise(n, rng, exponent=1.8, cutoff=260) * 0.5 * swell
     drops = np.zeros(n)
-    for _ in range(int(dur * 80)):
+    for _ in range(int(dur * 50)):
         start = rng.integers(0, n - 900)
         length = int(rng.integers(160, 420))
         env = np.exp(-np.linspace(0, 7, length))
-        freq = rng.uniform(900.0, 3400.0)
+        freq = rng.uniform(750.0, 2500.0)
         drops[start:start + length] += (
             np.sin(2 * np.pi * freq * np.arange(length) / SR)
-            * env * rng.uniform(0.05, 0.20))
+            * env * rng.uniform(0.04, 0.14))
     sig = body + weight + drops
     for start_s in (4.0, 13.5):
         begin = int(SR * start_s)
@@ -525,7 +528,7 @@ def make_storm(variant=0, dur=20.0, fade=1.0):
         roll = shaped_noise(length, rng, exponent=2.2, cutoff=180)
         roll *= envelope(length, 0.35, 0.9)
         sig[begin:begin + length] += distant(roll, 300.0) * 0.55
-    return seamless(normalize(sig, 0.44), fade_n)
+    return seamless(normalize(sig, 0.34), fade_n)
 
 
 def make_crickets(dur=14.0, fade=0.7):
@@ -615,9 +618,9 @@ def make_raintent(variant=0, dur=14.0, fade=0.7):
     rng = np.random.default_rng(151 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
-    body = shaped_noise(n, rng, exponent=0.8, cutoff=3000) * 0.45
+    body = shaped_noise(n, rng, exponent=0.8, cutoff=2400) * 0.45
     taps = np.zeros(n)
-    for _ in range(int(dur * 90)):
+    for _ in range(int(dur * 60)):
         start = rng.integers(0, n - 1200)
         length = int(rng.integers(300, 700))
         local = np.arange(length) / SR
@@ -625,8 +628,8 @@ def make_raintent(variant=0, dur=14.0, fade=0.7):
         pitch = rng.uniform(320.0, 430.0)
         hit = (np.sin(2 * np.pi * pitch * local)
                + 0.5 * np.sin(2 * np.pi * pitch * 1.5 * local))
-        taps[start:start + length] += hit * np.exp(-local * 42.0) * rng.uniform(0.10, 0.30)
-    return seamless(normalize(body + taps, 0.38), fade_n)
+        taps[start:start + length] += hit * np.exp(-local * 42.0) * rng.uniform(0.08, 0.22)
+    return seamless(normalize(body + taps, 0.29), fade_n)
 
 
 def make_emberslate(dur=18.0, fade=0.9):

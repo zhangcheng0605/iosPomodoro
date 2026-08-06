@@ -31,6 +31,9 @@ final class AmbienceLoop {
     private var current: Ambience = .off
     /// Which grade is loaded, so a session that crosses dusk can reload.
     private var currentPart: DayPart?
+    private var currentVariant = 0
+    /// Where the world is, for picking today's rendering.
+    var place: Place = .meadow
     private var attached = false
     private var connectedFormat: AVAudioFormat?
     private var configObserver: NSObjectProtocol?
@@ -43,12 +46,18 @@ final class AmbienceLoop {
 
     func play(_ ambience: Ambience) {
         let part = LaunchOptions.forcedDayPart ?? DayPart.current()
-        guard ambience != current || part != currentPart || !engine.isRunning
+        let variant = LaunchOptions.forcedVariant
+            ?? ambience.variant(on: WorldCalendar.today, at: place)
+        guard ambience != current || part != currentPart
+                || variant != currentVariant || !engine.isRunning
         else { return }
         current = ambience
         currentPart = part
+        currentVariant = variant
 
-        guard ambience != .off, let buffer = buffer(for: ambience, part: part) else {
+        guard ambience != .off,
+              let buffer = buffer(for: ambience, part: part, variant: variant)
+        else {
             player.stop()
             return
         }
@@ -134,8 +143,9 @@ final class AmbienceLoop {
     /// crossfade between two of them, so there is nothing to keep a second
     /// decoded buffer for. Eighteen of these resident would be most of a
     /// hundred megabytes.
-    private func buffer(for ambience: Ambience, part: DayPart) -> AVAudioPCMBuffer? {
-        guard let name = ambience.assetName(for: part) else { return nil }
+    private func buffer(for ambience: Ambience, part: DayPart,
+                        variant: Int) -> AVAudioPCMBuffer? {
+        guard let name = ambience.assetName(for: part, variant: variant) else { return nil }
         if let cached = buffers[name] { return cached }
         guard
               let url = Bundle.main.url(forResource: name, withExtension: "m4a")

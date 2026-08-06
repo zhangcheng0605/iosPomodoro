@@ -106,7 +106,28 @@ def graded(sig, part):
     return (sig * (1.0 - tilt) + smoothed * tilt) * level
 
 
-def write_loop(name, sig):
+VARIED = {"rain", "drizzle", "storm", "raintent"}
+
+
+def write_varied(name, maker):
+    """Three renderings of the same recipe, for the loops rain lives in.
+
+    "No two rains" was the ask, and this is the cheapest honest version of
+    it: the recipe is identical, the garnish seed is not, so the drops fall
+    in different places and the thunder lands at a different moment. The
+    session picks one from the day and the place, so today's rain is today's
+    rain and tomorrow's is not.
+
+    Only the rain family. Three variants of all eighteen loops would be two
+    hundred files and thirty-odd megabytes for a difference nobody asked to
+    hear in a library.
+    """
+    for variant in range(3):
+        stem = name if variant == 0 else f"{name}_v{variant}"
+        write_loop(stem, maker(variant=variant), quiet=(variant > 0))
+
+
+def write_loop(name, sig, quiet=False):
     """A looping ambience: WAV out, AAC in, and the exact frame count kept.
 
     The same three-step the music takes, and for the same reason. AAC adds
@@ -115,7 +136,10 @@ def write_loop(name, sig):
     every time round. The app trims the decoded buffer to the number below
     before scheduling it, which is why the number has to travel with the file.
     """
-    LOOP_FRAMES[name] = len(sig)
+    # Variants are the same recipe at the same length, so only the base name
+    # goes in the table — `Ambience` has no `.rain_v1` case and never should.
+    if "_v" not in name:
+        LOOP_FRAMES[name] = len(sig)
     total = 0
     for part in ("dawn", "day", "dusk", "night"):
         stem = name if part == "day" else f"{name}_{part}"
@@ -125,8 +149,9 @@ def write_loop(name, sig):
         encode(wav_path, m4a_path)
         os.remove(wav_path)
         total += os.path.getsize(m4a_path)
-    print(f"  {name}: 4 grades, {len(sig) / SR:.1f}s, "
-          f"{total / 1024:.0f} KB, {len(sig)} frames")
+    if not quiet:
+        print(f"  {name}: 4 grades, {len(sig) / SR:.1f}s, "
+              f"{total / 1024:.0f} KB, {len(sig)} frames")
 
 
 LOOP_FRAMES = {}
@@ -146,8 +171,8 @@ def write_wav(name, sig):
 
 
 # -------------------------------------------------------------------- rain
-def make_rain(dur=12.0, fade=0.5):
-    rng = np.random.default_rng(7)
+def make_rain(variant=0, dur=12.0, fade=0.5):
+    rng = np.random.default_rng(7 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
     # Broadband hiss with a gentle tilt: the body of the rain.
@@ -308,7 +333,7 @@ def make_ocean(dur=18.0, fade=1.0):
 # which is the law the music crash bought.
 # ============================================================================
 
-def make_drizzle(dur=12.0, fade=0.5):
+def make_drizzle(variant=0, dur=12.0, fade=0.5):
     """Rain, thinner. Not quieter — thinner.
 
     The body is the rain recipe high-passed: take the weight out from under
@@ -316,12 +341,12 @@ def make_drizzle(dur=12.0, fade=0.5):
     wall. Drops at a third the density, and higher, because small drops on
     hard ground is the sound being described.
     """
-    rng = np.random.default_rng(101)
+    rng = np.random.default_rng(101 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
     body = shaped_noise(n, rng, exponent=0.15, cutoff=9000) * 0.7
     # High-pass by subtracting a lowpassed copy of the same noise.
-    body = body - shaped_noise(n, np.random.default_rng(101), 0.15, cutoff=700) * 0.7
+    body = body - shaped_noise(n, np.random.default_rng(101 + variant * 17), 0.15, cutoff=700) * 0.7
     t = np.arange(n) / SR
     body *= 0.88 + 0.12 * np.sin(2 * np.pi * 0.09 * t + 0.4)
     drops = np.zeros(n)
@@ -447,7 +472,7 @@ def make_temple(dur=24.0, fade=1.0):
     return seamless(normalize(sig, 0.30), fade_n)
 
 
-def make_storm(dur=20.0, fade=1.0):
+def make_storm(variant=0, dur=20.0, fade=1.0):
     """Rain with weight under it, and thunder that has already happened.
 
     The swells are brown noise on a 9-second period — the sound of a squall
@@ -455,7 +480,7 @@ def make_storm(dur=20.0, fade=1.0):
     baked in at uneven spacing and `distant()`-ed hard: near thunder is a
     transient and would tick every time the loop came round.
     """
-    rng = np.random.default_rng(131)
+    rng = np.random.default_rng(131 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
     t = np.arange(n) / SR
@@ -559,14 +584,14 @@ def make_nighttrain(dur=18.0, fade=0.9):
     return seamless(normalize(rumble + clacks * 0.7, 0.34), fade_n)
 
 
-def make_raintent(dur=14.0, fade=0.7):
+def make_raintent(variant=0, dur=14.0, fade=0.7):
     """Rain on a membrane a foot above your head.
 
     The difference from rain is entirely resonance: canvas has a pitch, and
     every drop excites it. The drops are louder and far more present than in
     `make_rain`, and the body underneath is quieter — you are inside.
     """
-    rng = np.random.default_rng(151)
+    rng = np.random.default_rng(151 + variant * 17)
     fade_n = int(SR * fade)
     n = int(SR * dur) + fade_n
     body = shaped_noise(n, rng, exponent=0.8, cutoff=3000) * 0.45
@@ -869,7 +894,7 @@ def write_ambience_table():
 
 if __name__ == "__main__":
     print("Ambience loops:")
-    write_loop("rain", make_rain())
+    write_varied("rain", make_rain)
     write_loop("purr", make_purr())
     write_loop("fireplace", make_fireplace())
     print("Ambience loops (Pawmodoro Plus):")
@@ -877,18 +902,18 @@ if __name__ == "__main__":
     write_loop("cafe", make_cafe())
     write_loop("ocean", make_ocean())
     # The Second Shelf — Phase W, batch one.
-    write_loop("drizzle", make_drizzle())
+    write_varied("drizzle", make_drizzle)
     write_loop("wind", make_wind())
     write_loop("creek", make_creek())
     write_loop("library", make_library())
     write_loop("snowhush", make_snowhush())
     write_loop("temple", make_temple())
     # The Second Shelf — batch two.
-    write_loop("storm", make_storm())
+    write_varied("storm", make_storm)
     write_loop("crickets", make_crickets())
     write_loop("cicadas", make_cicadas())
     write_loop("nighttrain", make_nighttrain())
-    write_loop("raintent", make_raintent())
+    write_varied("raintent", make_raintent)
     write_loop("emberslate", make_emberslate())
     write_ambience_table()
     print("Chime:")

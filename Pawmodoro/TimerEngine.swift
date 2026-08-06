@@ -1325,7 +1325,8 @@ final class TimerEngine {
 
     /// Ambience follows the timer: it plays while running and rests otherwise.
     func refreshAmbience() {
-        SoundPlayer.shared.setAmbience(runState == .running ? settings.ambience : .off)
+        SoundPlayer.shared.setAmbience(runState == .running ? settings.ambience : .off,
+                                      place: settings.place)
         SoundPlayer.shared.ambienceVolume = Float(settings.ambienceVolume)
         refreshMusic()
     }

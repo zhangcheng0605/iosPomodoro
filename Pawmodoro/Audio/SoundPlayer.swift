@@ -51,11 +51,12 @@ final class SoundPlayer {
         }
     }
 
-    func setAmbience(_ ambience: Ambience) {
+    func setAmbience(_ ambience: Ambience, place: Place = .meadow) {
         guard ambience != currentAmbience else { return }
         currentAmbience = ambience
         configureSessionIfNeeded()
         AmbienceLoop.shared.volume = Float(0.55 * ambienceVolume)
+        AmbienceLoop.shared.place = place
         AmbienceLoop.shared.play(ambience)
     }
 

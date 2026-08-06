@@ -125,14 +125,37 @@ enum Ambience: String, Codable, CaseIterable, Identifiable, PlusLockable {
     /// hour you *see* come from the same clock, and `-PawmodoroClock 22` pins
     /// both. Day is the ungraded recipe, which is why the original six sound
     /// at noon exactly as they always have.
-    func assetName(for part: DayPart) -> String? {
-        guard let base = fileName else { return nil }
+    func assetName(for part: DayPart, variant: Int = 0) -> String? {
+        guard let base0 = fileName else { return nil }
+        // "No two rains": the rain family ships three renderings of the same
+        // recipe, differing only in where the drops fall and when the thunder
+        // lands. Everything else has one, and asking for variant 2 of the
+        // library quietly gets you the library.
+        let base = (variant > 0 && hasVariants) ? "\(base0)_v\(variant)" : base0
         switch part {
         case .day: return base
         case .dawn: return base + "_dawn"
         case .dusk: return base + "_dusk"
         case .night: return base + "_night"
         }
+    }
+
+    /// Whether three renderings exist, not one.
+    var hasVariants: Bool {
+        switch self {
+        case .rain, .drizzle, .storm, .raintent: true
+        case .off, .purr, .fireplace, .forest, .cafe, .ocean, .wind, .creek,
+             .library, .snowhush, .temple, .crickets, .cicadas, .nighttrain,
+             .emberslate: false
+        }
+    }
+
+    /// Which of the three today is, at this place. Deterministic, so the rain
+    /// you sat in this morning is the rain you sit in this afternoon — and a
+    /// different one tomorrow.
+    func variant(on day: Date, at place: Place) -> Int {
+        guard hasVariants else { return 0 }
+        return Int(WorldCalendar.seed(day: day, place: place, salt: "ambience") % 3)
     }
 
     /// Base name of the bundled loop, or nil when no sound should play.

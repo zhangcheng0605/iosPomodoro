@@ -442,6 +442,12 @@ enum LaunchOptions {
     /// heard without waiting for a storm.
     static let unlockSounds = isSet("-PawmodoroUnlockSounds")
 
+    /// Pin which of the rain family's three renderings plays.
+    static let forcedVariant: Int? = {
+        guard arguments.contains("-PawmodoroVariant") else { return nil }
+        return value(after: "-PawmodoroVariant").flatMap(Int.init).map { max(0, min(2, $0)) }
+    }()
+
     /// Seed a history with a one-day hole in it, so both streak states can be
     /// looked at without waiting for a bad week.
     static let seedGap = isSet("-PawmodoroSeedGap")
@@ -527,6 +533,7 @@ enum LaunchOptions {
     static let pinnedDay: Date? = nil
     static let seedChronicle = false
     static let unlockSounds = false
+    static let forcedVariant: Int? = nil
     static let forcedSeason: Season? = nil
     static let forcedWeather: Weather? = nil
     static let forcedSnail: Double? = nil

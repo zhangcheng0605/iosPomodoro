@@ -9,6 +9,14 @@ struct SightingRecord: Codable, Equatable {
     /// Where and when it was first seen, for the journal's caption line.
     var place: String
     var dayPart: String
+    /// What the sky was doing, if this was seen after the weather existed.
+    ///
+    /// Optional so that every journal written before Wave 4 decodes untouched
+    /// — the same reason `heard` got its own key rather than widening this
+    /// struct. Nothing backfills it and nothing should: "seen in clear
+    /// weather" invented for a sighting from last March would be a memory the
+    /// app made up.
+    var weather: String?
 }
 
 /// What you've seen, kept on device like everything else in this app.
@@ -105,7 +113,13 @@ final class Journal {
 
     // MARK: Writing
 
-    func add(_ species: Species, at place: Place, dayPart: DayPart, on date: Date = Date()) {
+    func add(
+        _ species: Species,
+        at place: Place,
+        dayPart: DayPart,
+        weather: Weather? = nil,
+        on date: Date = Date()
+    ) {
         if var existing = records[species.rawValue] {
             existing.count += 1
             existing.lastSeen = date
@@ -116,10 +130,23 @@ final class Journal {
                 lastSeen: date,
                 count: 1,
                 place: place.rawValue,
-                dayPart: dayPart.rawValue
+                dayPart: dayPart.rawValue,
+                weather: weather?.rawValue
             )
         }
         save()
+    }
+
+    /// Whether this has been seen in the current calendar year.
+    ///
+    /// Only the first thunder asks. It is the one thing in the app whose
+    /// availability resets — not decays: nothing is taken away, a second
+    /// chance is simply given, once a year, forever.
+    func hasSeenThisYear(_ species: Species) -> Bool {
+        guard let record = records[species.rawValue] else { return false }
+        let calendar = WorldCalendar.calendar
+        return calendar.component(.year, from: record.lastSeen)
+            == calendar.component(.year, from: WorldCalendar.now)
     }
 
     func clear() {

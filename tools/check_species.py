@@ -1,0 +1,255 @@
+"""Check the roster: that everything on it can actually be met.
+
+Wave 4 gated half the journal on the sky, and a weather gate is the first
+condition in this app that a player cannot arrange, wait for, or read off a
+clock. Every other gate is reachable by deciding something — go to the woods,
+sit at dawn, focus for forty minutes. A snow gate is reachable only if it
+actually snows at that place, in a window that overlaps the hours the species
+is out.
+
+So the question this asks is the one no amount of reading can answer: **how
+many days a year is each species reachable at all?** It runs a decade of
+`WorldCalendar.seed` through the Python port in `check_weather.py` — the same
+port that file's stored fixture already guards — and counts the days on which
+each species is eligible somewhere. A creature that comes out for four days a
+decade is not rare, it is a tile that never turns over.
+
+It also checks the parts a compiler cannot:
+
+- every species has its four imagesets, and the drawn aspect is roughly the
+  aspect `size` lays out with (`scaledToFit` letterboxes the difference);
+- nothing stacks a sky gate on top of a full moon or a forty-minute session:
+  two conditions you cannot arrange multiply, and the day count above cannot
+  see it because it counts days rather than sessions;
+- only phenomena are `awardedLate`, and every one that is names the sky it
+  waits for — otherwise `lateAward` has nothing to test and it can never be
+  handed out at all;
+- no note has a number, an exclamation mark, or a sentence about the reader.
+
+    python3 tools/check_species.py
+
+Exits non-zero if anything fails.
+"""
+import datetime
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import check_weather as weather_check
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets")
+MODEL = os.path.join(ROOT, "Pawmodoro", "Model")
+SPECIES_FILE = os.path.join(MODEL, "Species.swift")
+
+# Days a year a species must be reachable somewhere, averaged over a decade.
+#
+# Not a rarity floor — rarity is the roll, and a mythic is meant to be almost
+# never. This is a *reachability* floor: the number of days on which sitting
+# down in the right place at the right hour could possibly show it to you. A
+# species below this is gated on a sky that does not happen where it lives.
+MINIMUM_DAYS = 8.0
+
+# How far the drawn aspect may differ from the laid-out `size` before
+# `scaledToFit` leaves a visible letterbox on one axis.
+ASPECT_TOLERANCE = 0.22
+
+YEARS = 10
+
+
+def parse_specs():
+    """Every `Spec` row out of `Species.swift`, as a dict per case."""
+    source = open(SPECIES_FILE).read()
+    body = source.split("var spec: Spec {")[1].split("\n    }\n\n    // MARK")[0]
+    rows = {}
+    # Each arm runs from `case .name: Spec(` to the next `case .` at that
+    # indent, so multi-line rows survive.
+    parts = re.split(r"\n        case \.(\w+): Spec\(", body)
+    for name, text in zip(parts[1::2], parts[2::2]):
+        text = text.split("\n        case .")[0]
+        rows[name] = {
+            "name": re.search(r'name: "([^"]*)"', text).group(1),
+            "note": re.search(r'note: "([^"]*)"', text).group(1),
+            "places": re.findall(r"\.(\w+)", _field(text, "places")),
+            "dayParts": re.findall(r"\.(\w+)", _field(text, "dayParts")),
+            "weathers": re.findall(r"\.(\w+)", _field(text, "weathers") or ""),
+            "rarity": re.search(r"rarity: \.(\w+)", text).group(1),
+            "size": tuple(float(v) for v in re.search(
+                r"size: \.init\(width: ([\d.]+), height: ([\d.]+)\)",
+                text).groups()),
+            "awardedLate": "awardedLate: true" in text,
+            "isPhenomenon": "isPhenomenon: true" in text,
+            "needsFullMoon": "needsFullMoon: true" in text,
+            "minimumMinutes": int((re.search(r"minimumMinutes: (\d+)", text)
+                                   or _Zero()).group(1)),
+        }
+    if not rows:
+        raise SystemExit("could not parse any Spec rows out of Species.swift")
+    return rows
+
+
+class _Zero:
+    def group(self, _):
+        return "0"
+
+
+def _field(text, key):
+    """The bracketed list after `key:`, or None."""
+    found = re.search(re.escape(key) + r": \[([^\]]*)\]", text)
+    return found.group(1) if found else None
+
+
+def logical_size(asset):
+    """The drawn width and height, from the exported PNG."""
+    from PIL import Image
+    path = os.path.join(ASSETS, f"{asset}.imageset", f"{asset}.png")
+    if not os.path.exists(path):
+        return None
+    width, height = Image.open(path).size
+    return width, height
+
+
+def main():
+    specs = parse_specs()
+    failures = []
+
+    weights = weather_check.parse_weights()
+    rollable = weather_check.parse_rollable()
+    winter = weather_check.parse_winter_window()
+    if not weights or not rollable:
+        raise SystemExit("could not parse Weather.swift")
+
+    # --- 1. Reachability, over a decade of real skies ----------------------
+    epoch = datetime.date(2001, 1, 1)
+    start = datetime.date(2026, 1, 1)
+    days = [(start + datetime.timedelta(days=offset)) for offset in range(365 * YEARS)]
+
+    def month_day(number):
+        date = epoch + datetime.timedelta(days=number)
+        return (date.month, date.day)
+
+    # Sky per (day, place), computed once — every species then asks the same
+    # table rather than re-rolling it forty times.
+    skies = {}
+    places = sorted({place for spec in specs.values() for place in spec["places"]})
+    for date in days:
+        number = (date - epoch).days
+        for place in places:
+            skies[(number, place)] = weather_check.weather_at(
+                number, place, weights, rollable, month_day, winter
+            )
+
+    thinnest = (10_000.0, None)
+    for name, spec in sorted(specs.items()):
+        wanted = set(spec["weathers"])
+        if not wanted:
+            reachable = len(days)          # any sky will do
+        else:
+            reachable = sum(
+                1 for date in days
+                if any(skies[((date - epoch).days, place)] in wanted
+                       for place in spec["places"])
+            )
+        per_year = reachable / YEARS
+        if per_year < thinnest[0]:
+            thinnest = (per_year, name)
+        if per_year < MINIMUM_DAYS:
+            failures.append(
+                f"{name} is reachable {per_year:.1f} days a year across "
+                f"{spec['places']} — that is a tile that never turns over, "
+                f"not a rare animal"
+            )
+
+    # --- 2. The art ---------------------------------------------------------
+    for name, spec in sorted(specs.items()):
+        for suffix in ("0", "1", "ghost", "sketch"):
+            if logical_size(f"wild_{name}_{suffix}") is None:
+                failures.append(f"wild_{name}_{suffix}: missing — run "
+                                f"tools/generate_wildlife.py")
+        if not spec["isPhenomenon"]:
+            if logical_size(f"wild_{name}_regular") is None:
+                failures.append(
+                    f"wild_{name}_regular: missing — every species that can "
+                    f"become an individual needs the marked variant")
+        elif logical_size(f"wild_{name}_regular") is not None:
+            failures.append(
+                f"wild_{name}_regular exists, but a phenomenon is never an "
+                f"individual")
+
+        drawn = logical_size(f"wild_{name}_0")
+        if drawn:
+            laid_out = spec["size"][0] / spec["size"][1]
+            actual = drawn[0] / drawn[1]
+            drift = abs(actual - laid_out) / laid_out
+            if drift > ASPECT_TOLERANCE:
+                failures.append(
+                    f"{name}: drawn {actual:.2f}:1 but `size` says "
+                    f"{laid_out:.2f}:1 ({drift * 100:.0f}% out) — scaledToFit "
+                    f"will letterbox it"
+                )
+
+    # --- 3. The gates are coherent -----------------------------------------
+    for name, spec in sorted(specs.items()):
+        if spec["awardedLate"] and not spec["isPhenomenon"]:
+            failures.append(f"{name} is awardedLate but not a phenomenon — "
+                            f"nothing else should skip the ordinary roll")
+        # Deliberately not the other direction. `meteors` and `aurora` are
+        # phenomena that *are* rolled normally, because what gates them is
+        # where you are and what hour it is — both knowable at the start. Only
+        # the ones that depend on what the session did have to wait.
+        if spec["awardedLate"] and not spec["weathers"]:
+            failures.append(
+                f"{name} is awardedLate with no sky named — `lateAward` has "
+                f"nothing to test and it can never be awarded")
+
+        # Two unarrangeable gates multiply. The day count above is blind to
+        # this: a species available on nine snowy days a year *and* only under
+        # a full moon is available on roughly one, and the arithmetic that
+        # says so is not in any single row.
+        if spec["weathers"] and not spec["awardedLate"]:
+            if spec["needsFullMoon"]:
+                failures.append(
+                    f"{name} needs both a sky and a full moon — neither can be "
+                    f"arranged, and together they are not rare, they are off")
+            if spec["minimumMinutes"] > 0:
+                failures.append(
+                    f"{name} needs both a sky and a {spec['minimumMinutes']}-"
+                    f"minute session — one gate you cannot arrange is the "
+                    f"limit")
+
+    # --- 4. The words -------------------------------------------------------
+    for name, spec in sorted(specs.items()):
+        for label in ("name", "note"):
+            text = spec[label]
+            if "!" in text:
+                failures.append(f"{name}.{label} has an exclamation mark")
+            if label == "note" and any(ch.isdigit() for ch in text):
+                failures.append(
+                    f"{name}.note contains a number — a field note describes "
+                    f"an animal, it does not score one")
+            if label == "note" and re.search(r"\byou(r|'ve| have)\b", text):
+                failures.append(
+                    f"{name}.note is about the reader ('{text}') — the note is "
+                    f"about the animal, and the two get confused the moment "
+                    f"one row does it")
+
+    print(f"checked {len(specs)} species over {YEARS} years of skies "
+          f"({len(skies)} place-days)")
+    print(f"thinnest window: {thinnest[1]} at {thinnest[0]:.1f} days a year "
+          f"(floor {MINIMUM_DAYS:.0f})")
+    if failures:
+        unique = sorted(set(failures))
+        print(f"\n{len(unique)} FAILED:")
+        for line in unique[:20]:
+            print(f"  {line}")
+        if len(unique) > 20:
+            print(f"  ... and {len(unique) - 20} more")
+        return 1
+    print("all pass")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

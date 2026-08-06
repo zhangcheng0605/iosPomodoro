@@ -394,7 +394,7 @@ def songbird(step, *, crest=0, beak=2, tail=5, legs=3, breast=False,
 
 
 def quadruped(step, *, width=22, height=18, ear="round", tail="stub",
-              horns=False, belly=True, leg=5, neck=1, snout=0):
+              horns=False, belly=True, leg=5, neck=1, snout=0, tail_tip=False):
     """Standing four-legged animal, head to the left."""
     g = grid(width, height)
     d = ImageDraw.Draw(g)
@@ -430,6 +430,12 @@ def quadruped(step, *, width=22, height=18, ear="round", tail="stub",
         d.ellipse([back - 1, body_top + 1, back + 2, body_top + 4], fill=LIGHT)
     elif tail == "long":
         d.line([(back, body_top + 2), (back + 3, body_top - 3)], fill=SHADE, width=2)
+        # A parameter rather than a special case, per the buddies' rule: the
+        # black tip is the whole difference between an ermine and a white
+        # smudge, and on a white animal the shared SHADE tone is also white.
+        if tail_tip:
+            d.line([(back + 1, body_top - 1), (back + 3, body_top - 3)],
+                   fill=ACCENT, width=2)
     return outline(g)
 
 
@@ -710,8 +716,289 @@ WAVE2 = {
     "aurora": (aurora, palette((110, 198, 172), (150, 190, 232), (198, 166, 220), (58, 74, 88))),
 }
 
-SPECIES.update({name: draw for name, (draw, _) in WAVE2.items()})
-P.update({name: pal for name, (_, pal) in WAVE2.items()})
+
+# --- Wave 4: the creatures that come with the sky --------------------------
+#
+# Half of these are the shared `songbird`/`quadruped` builders with different
+# numbers, which is the whole argument for having built them: a snow fox is a
+# fox at a different palette and a longer leg, and drawing it again would only
+# create a second thing to keep in step. The bespoke ones below are the shapes
+# no builder covers — the ones that crawl, hang or fill the sky.
+
+def snail(out):
+    """Shell, and as much animal as is out of it.
+
+    The first cut drew the foot tucked under the shell and came out as a
+    cinnamon roll. The animal has to lead: a long foot in front, then the
+    shell sitting back on it.
+    """
+    g = grid(17, 14); d = ImageDraw.Draw(g)
+    reach = 2 if out else 0
+    d.ellipse([5, 2, 15, 11], fill=MAIN)                    # the shell, behind
+    d.arc([7, 4, 13, 9], 0, 360, fill=SHADE)                # and its whorl
+    d.arc([9, 5, 12, 8], 0, 360, fill=SHADE)
+    d.ellipse([0, 8, 13, 12], fill=LIGHT)                   # the foot, out front
+    d.ellipse([0, 6, 4 + reach, 11], fill=LIGHT)            # the head on it
+    # Stalks last, or the shell is drawn over the near one and the snail comes
+    # out with a single antenna.
+    for dx, top in ((0, 0), (3, 2)):
+        d.line([(dx + reach, 7), (dx + reach, top)], fill=LIGHT)
+        d.point((dx + reach, top), fill=EYE)
+    return outline(g)
+
+
+def frogling(hop, *, width=13, height=11, squat=0):
+    """A frog, at whatever size. `squat` widens it into something toad-shaped."""
+    g = grid(width, height); d = ImageDraw.Draw(g)
+    lift = 1 if hop else 0
+    body = height - 2 - lift
+    d.ellipse([2, body - 5 - squat, width - 3, body], fill=MAIN)
+    # Wider than it is tall, or at eleven pixels across the ellipse degenerates
+    # into a vertical white bar down the middle of the frog.
+    d.ellipse([3, body - 3, width - 4, body], fill=LIGHT)     # the pale throat
+    for x in (2, width - 4):                                 # folded legs
+        d.ellipse([x - 1, body - 3, x + 2, body + 1], fill=SHADE)
+    d.ellipse([3, body - 7 - squat, 6, body - 4 - squat], fill=MAIN)
+    d.ellipse([width - 7, body - 7 - squat, width - 4, body - 4 - squat], fill=MAIN)
+    d.point((4, body - 6 - squat), fill=EYE)
+    d.point((width - 6, body - 6 - squat), fill=EYE)
+    return outline(g)
+
+
+def worm(stretch):
+    """A line that moves along itself. Two frames, two different curves."""
+    g = grid(15, 7); d = ImageDraw.Draw(g)
+    for x in range(1, 14):
+        wave = 1 if stretch else 2
+        y = 3 + int(round(wave * np.sin(x / (4.5 if stretch else 3.0))))
+        d.point((x, y), fill=MAIN)
+        d.point((x, y + 1), fill=SHADE)
+    d.point((1, 3), fill=LIGHT)
+    return outline(g)
+
+
+def beetle(open_wing):
+    """Domed, and split down the middle. Frame two lifts the wing cases."""
+    g = grid(12, 9); d = ImageDraw.Draw(g)
+    lift = 1 if open_wing else 0
+    d.ellipse([2, 2 - lift, 10, 8], fill=MAIN)
+    d.line([(6, 2 - lift), (6, 8)], fill=SHADE)
+    d.ellipse([3, 0, 8, 3], fill=SHADE)                      # the head plate
+    d.point((4, 1), fill=EYE)
+    d.point((7, 1), fill=EYE)
+    for y in (4, 6):
+        d.point((1, y), fill=ACCENT)
+        d.point((10, y), fill=ACCENT)
+    if open_wing:
+        d.ellipse([1, 1, 5, 4], fill=LIGHT)
+        d.ellipse([7, 1, 11, 4], fill=LIGHT)
+    return outline(g)
+
+
+def slug(reach):
+    """The snail's shape with the shell taken away, which is the joke.
+
+    A white animal with no features is a cloud, so it gets the mantle shield
+    and its keel — the two things that are actually on a slug — and stalks
+    standing clear of the body rather than trailing off it diagonally.
+    """
+    g = grid(17, 8); d = ImageDraw.Draw(g)
+    out = 2 if reach else 0
+    d.ellipse([1, 3, 12 + out, 7], fill=MAIN)                # the body
+    d.ellipse([2, 2, 8, 6], fill=SHADE)                      # the mantle shield
+    d.line([(3, 4), (7, 4)], fill=LIGHT)                     # and its keel
+    for dx, top in ((13, 0), (11, 1)):                       # the stalks
+        d.line([(dx + out, 4), (dx + out, top)], fill=MAIN)
+        d.point((dx + out, top), fill=EYE)
+    return outline(g)
+
+
+def soaring(tilt):
+    """Wings out, forked tail, not flapping. A bird that rides wind.
+
+    This slot was a ballooning spider for four drafts and never once read as
+    one: eight legs at eleven pixels is a lattice, six is a basket, four on a
+    bigger body is a box with a lid, and three bent ones per side weld into
+    two wings. Leg count is not legible at this scale and *splay* is what the
+    eye is looking for — but splay is also what makes it a moth. The subject
+    changed rather than the drawing. The wind still gets something that only
+    turns up in it.
+    """
+    g = grid(23, 15); d = ImageDraw.Draw(g)
+    lift = 1 if tilt else 0
+    # One wing high and one low: a soaring bird holds a shallow V and tips it
+    # to turn, which is the only movement worth two frames.
+    d.polygon([(11, 7), (1, 4 - lift), (3, 8 - lift), (10, 9)], fill=MAIN)
+    d.polygon([(12, 7), (22, 4 + lift), (20, 8 + lift), (13, 9)], fill=SHADE)
+    d.ellipse([9, 5, 14, 10], fill=MAIN)                      # the body
+    # Wide and in the body tone: drawn narrow and dark, the fork read as two
+    # legs dangling, which is the one thing a soaring bird never has.
+    d.polygon([(11, 9), (7, 14), (11, 11), (15, 14)], fill=SHADE)    # forked tail
+    d.ellipse([10, 4, 13, 7], fill=LIGHT)                     # the pale head
+    d.point((11, 5), fill=EYE)
+    d.polygon([(10, 4), (8, 5), (10, 6)], fill=ACCENT)        # the hooked bill
+    return outline(g)
+
+
+def swarm(spread):
+    """Not one dragonfly — the whole afternoon's worth, going one way."""
+    g = grid(25, 16); d = ImageDraw.Draw(g)
+    for index, (x, y) in enumerate(((1, 6), (7, 2), (9, 9), (14, 5),
+                                    (17, 11), (20, 3), (21, 8))):
+        lift = (1 if spread else 0) * (1 if index % 2 else -1)
+        d.line([(x, y + lift), (x + 4, y + lift)], fill=MAIN, width=1)
+        d.point((x + 4, y + lift), fill=ACCENT)
+        d.line([(x + 1, y - 1 + lift), (x + 3, y - 2 + lift)], fill=LIGHT)
+        d.line([(x + 1, y + 1 + lift), (x + 3, y + 2 + lift)], fill=LIGHT)
+    return outline(g)
+
+
+def sleepingcat(breathe):
+    """A stranger, folded into a warm rectangle. Never the stray."""
+    g = grid(19, 12); d = ImageDraw.Draw(g)
+    rise = 1 if breathe else 0
+    d.ellipse([2, 5 - rise, 16, 11], fill=MAIN)              # the loaf
+    d.ellipse([4, 8, 14, 11], fill=LIGHT)
+    d.ellipse([1, 5, 7, 10], fill=MAIN)                      # head, tucked
+    d.polygon([(2, 6), (3, 3), (5, 6)], fill=SHADE)          # ears
+    d.polygon([(5, 6), (7, 3), (8, 6)], fill=SHADE)
+    d.line([(2, 8), (5, 8)], fill=EYE)                       # eyes, shut
+    d.line([(14, 10), (18, 8 - rise)], fill=SHADE, width=2)  # the tail
+    return outline(g)
+
+
+def bigbird(open_beak, *, width=17, height=18, hunch=0):
+    """A corvid shape: upright, heavy-headed, and not in a hurry."""
+    g = grid(width, height); d = ImageDraw.Draw(g)
+    body_top = 5 + hunch
+    d.ellipse([3, body_top, width - 3, height - 3], fill=MAIN)
+    d.polygon([(width - 5, body_top + 2), (width - 1, height - 6),
+               (width - 6, height - 5)], fill=SHADE)          # the tail
+    # The head drops a pixel and the beak opens together: a one-pixel gape on
+    # its own is a frame nobody can tell from the other one.
+    duck = 1 if open_beak else 0
+    d.ellipse([2, 1 + hunch + duck, 9, 7 + hunch + duck], fill=MAIN)
+    gape = 2 if open_beak else 0
+    d.polygon([(2, 3 + hunch + duck), (2 - 4, 4 + hunch + duck + gape),
+               (2, 5 + hunch + duck)], fill=ACCENT)
+    d.point((5, 3 + hunch + duck), fill=EYE)
+    d.ellipse([6, body_top + 1, width - 5, height - 6], fill=SHADE)   # the wing
+    for x in (6, 10):
+        d.line([(x, height - 3), (x, height - 1)], fill=ACCENT)
+    return outline(g)
+
+
+def petrel(down):
+    """Small, black, and always in the trough of a wave."""
+    g = grid(19, 13); d = ImageDraw.Draw(g)
+    tip = 4 if down else 0
+    d.polygon([(9, 6), (1, 2 + tip), (7, 7)], fill=SHADE)     # wings, one down
+    d.polygon([(10, 6), (18, 10 - tip), (12, 7)], fill=MAIN)
+    d.ellipse([7, 4, 13, 9], fill=MAIN)
+    d.ellipse([9, 8, 13, 10], fill=LIGHT)                     # the white rump
+    d.ellipse([5, 3, 9, 7], fill=MAIN)
+    d.point((6, 5), fill=EYE)
+    d.polygon([(5, 5), (3, 6), (5, 6)], fill=ACCENT)
+    return outline(g)
+
+
+def arc_phenomenon(bright, *, width=27, height=15, bands=None, thin=False):
+    """A bow across the sky: the rainbow's shape, at other saturations."""
+    g = grid(width, height); d = ImageDraw.Draw(g)
+    colours = bands or (MAIN, SHADE, LIGHT)
+    for index, colour in enumerate(colours):
+        box = [1 + index, 2 + index, width - 2 - index, height * 2 - index]
+        d.arc(box, 180, 360, fill=colour)
+        if not thin:
+            d.arc([box[0], box[1] + 1, box[2], box[3] + 1], 180, 360, fill=colour)
+    if bright:
+        for x in range(3, width - 3, 5):
+            d.point((x, 1), fill=GLINT)
+    return outline(g)
+
+
+def sunshower(bright):
+    """Rain, in full sun. Drawn as both at once, because that is the whole of
+    what makes anybody look up."""
+    g = grid(27, 16); d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 9, 9], fill=ACCENT)                      # the sun
+    for angle in range(0, 360, 45):
+        dx = int(round(6 * np.cos(np.radians(angle))))
+        dy = int(round(6 * np.sin(np.radians(angle))))
+        d.point((5 + dx, 5 + dy), fill=GLINT if bright else ACCENT)
+    for index, x in enumerate(range(11, 26, 3)):              # and the rain
+        top = 2 + (index % 3) * 3 + (1 if bright else 0)
+        d.line([(x, top), (x - 1, top + 4)], fill=MAIN)
+    return outline(g)
+
+
+def thunderhead(flash):
+    """The first storm of a year: cloud, and one fork under it."""
+    g = grid(23, 17); d = ImageDraw.Draw(g)
+    for x0, y0, x1, y1 in ((1, 3, 11, 10), (7, 1, 18, 9), (13, 4, 22, 10)):
+        d.ellipse([x0, y0, x1, y1], fill=MAIN)
+    d.rectangle([2, 7, 21, 10], fill=SHADE)
+    if flash:
+        d.polygon([(12, 10), (8, 15), (11, 15), (9, 17)], fill=ACCENT)
+        d.polygon([(15, 10), (13, 14), (16, 14)], fill=GLINT)
+    else:
+        # The same bolt, unlit. A frame that simply loses it reads as a bug
+        # rather than as the gap between one strike and the next.
+        d.polygon([(12, 10), (8, 15), (11, 15), (9, 17)], fill=SHADE)
+    return outline(g)
+
+
+WAVE4 = {
+    # Rain and drizzle
+    "gardensnail": (snail, palette((188, 150, 96), (150, 116, 68), (226, 208, 186), (94, 74, 52))),
+    "bigfrog": (lambda s: frogling(s, width=17, height=14, squat=1),
+                palette((112, 148, 84), (82, 116, 62), (226, 236, 200), (64, 92, 54))),
+    "littlefrog": (lambda s: frogling(s, width=13, height=11),
+                   palette((146, 190, 104), (110, 156, 78), (236, 246, 212), (72, 108, 58))),
+    "earthworm": (worm, palette((196, 134, 128), (158, 100, 98), (232, 190, 184), (110, 70, 68))),
+    "rainbeetle": (beetle, palette((72, 84, 96), (48, 58, 70), (196, 206, 216), (150, 128, 72))),
+    # Mist
+    "fogmoth": (moth, palette((214, 212, 206), (176, 176, 172), (240, 240, 238), (128, 128, 128))),
+    "roedeer": (lambda s: quadruped(s, ear="point", tail="stub", leg=7, neck=3, width=23),
+                palette((174, 146, 118), (138, 114, 90), (238, 230, 218), (96, 80, 64))),
+    "ghostslug": (slug, palette((238, 238, 236), (204, 206, 208), (250, 250, 250), (150, 152, 156))),
+    # Storm
+    "stormpetrel": (petrel, palette((70, 68, 74), (46, 44, 50), (242, 242, 244), (34, 32, 36))),
+    "weathercrow": (lambda s: bigbird(s, width=17, height=18),
+                    palette((52, 52, 60), (34, 34, 42), (206, 206, 214), (30, 30, 36))),
+    # Golden
+    "dragonswarm": (swarm, palette((238, 176, 82), (198, 138, 54), (250, 226, 178), (110, 78, 46))),
+    "suncat": (sleepingcat, palette((236, 190, 118), (200, 150, 82), (252, 236, 208), (108, 76, 50))),
+    # Breeze
+    "redkite": (soaring, palette((188, 108, 62), (152, 84, 48), (238, 232, 224), (74, 58, 48))),
+    "dandelionmouse": (lambda s: quadruped(s, ear="round", tail="long", leg=2, width=17, snout=1),
+                       palette((178, 152, 124), (140, 118, 94), (240, 232, 220), (86, 70, 58))),
+    # Snow
+    "snowfox": (lambda s: quadruped(s, ear="point", tail="bushy", leg=5, width=23, snout=2),
+                palette((246, 248, 252), (212, 218, 228), (255, 255, 255), (92, 100, 116))),
+    "ermine": (lambda s: quadruped(s, ear="round", tail="long", leg=3, width=25,
+                                   belly=False, snout=1, tail_tip=True),
+               palette((250, 250, 250), (216, 218, 224), (255, 255, 255), (40, 38, 36))),
+    "winterwren": (lambda s: songbird(s, tail=3, plump=2, width=16, height=14, breast=True),
+                   palette((150, 112, 78), (116, 84, 56), (238, 224, 204), (86, 62, 42))),
+    # Overcast
+    "greywagtail": (lambda s: songbird(s, tail=8, breast=True, width=21, legs=2),
+                    palette((150, 154, 162), (114, 118, 128), (244, 236, 196), (232, 206, 96))),
+    "mushroomvole": (lambda s: quadruped(s, ear="round", tail="stub", leg=2, width=16, snout=1),
+                     palette((160, 132, 106), (124, 100, 80), (232, 220, 204), (78, 62, 50))),
+    # Phenomena
+    "sunshower": (sunshower, palette((132, 168, 212), (98, 132, 178), (226, 238, 250), (246, 208, 108))),
+    # A fogbow is a rainbow with the colour taken out — which is exactly what
+    # this is: the same arc, three greys and one thin band.
+    "fogbow": (lambda s: arc_phenomenon(s, width=27, height=14, thin=True),
+               palette((238, 238, 240), (206, 208, 214), (250, 250, 252), (168, 172, 180))),
+    "firstthunder": (thunderhead,
+                     palette((104, 108, 126), (72, 76, 94), (198, 202, 216), (248, 226, 138))),
+}
+
+for wave in (WAVE2, WAVE4):
+    SPECIES.update({name: draw for name, (draw, _) in wave.items()})
+    P.update({name: pal for name, (_, pal) in wave.items()})
 
 
 if __name__ == "__main__":
@@ -727,7 +1014,8 @@ if __name__ == "__main__":
         # The fifth sighting turns a species into an individual; this is what
         # the journal shows once it has. A rainbow is never an individual, so
         # the phenomena don't get one.
-        regular = name not in ("rainbow", "meteors", "aurora")
+        regular = name not in ("rainbow", "meteors", "aurora",
+                               "sunshower", "fogbow", "firstthunder")
         if regular:
             to_png(first, marked(sepia(pal)), f"wild_{name}_regular")
         print(f"  {name}: 2 frames + ghost + sketch{' + regular' if regular else ''}")

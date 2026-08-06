@@ -931,6 +931,48 @@ def dream_heard_owlcall():
     return g
 
 
+def dream_heard_distantthunder():
+    """Somewhere behind the hills, and not coming this way.
+
+    Two fronts arriving from off the bottom-left and a ridge line across the
+    middle: the hills are the point of it — the sound is *behind* something,
+    which is why there is nothing to look at."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for radius, fill in ((7, OUTLINE), (12, SHADE), (17, BODY)):
+        d.arc([-2 - radius, 22 - radius, -2 + radius, 22 + radius],
+              -70, 10, fill=fill, width=2)
+    d.line([(0, 15), (5, 11), (10, 14), (15, 9), (19, 13)], fill=OUTLINE)
+    return g
+
+
+def dream_heard_foghorn():
+    """Two long notes, and nothing you could see agreed there was a boat.
+
+    Wide, flat fronts — a foghorn is the longest wavelength in the app — and
+    a waterline under them with nothing on it."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for y, fill in ((4, BODY), (8, SHADE), (12, OUTLINE)):
+        d.arc([-8, y - 5, 14, y + 5], -70, 70, fill=fill, width=2)
+    d.line([(0, 16), (19, 16)], fill=SHADE)
+    return g
+
+
+def dream_heard_geesesouth():
+    """High up, and all of them talking at once.
+
+    A skein: seven marks in a broken V. Drawn as the shape a flock makes
+    rather than as birds, because at twenty pixels a goose is a smudge and a
+    skein is unmistakable."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for x, y in ((9, 3), (6, 6), (12, 6), (3, 9), (15, 9), (1, 12), (17, 12)):
+        d.line([(x - 1, y + 1), (x, y)], fill=OUTLINE)
+        d.line([(x, y), (x + 1, y + 1)], fill=OUTLINE)
+    return g
+
+
 def dream_heard_farbell():
     """One stroke from the Keep, before anyone is up.
 
@@ -1726,6 +1768,9 @@ if __name__ == "__main__":
         ("heard_owlcall", dream_heard_owlcall),
         ("heard_farbell", dream_heard_farbell),
         ("heard_windchime", dream_heard_windchime),
+        ("heard_distantthunder", dream_heard_distantthunder),
+        ("heard_foghorn", dream_heard_foghorn),
+        ("heard_geesesouth", dream_heard_geesesouth),
         ("season_sakura", dream_season_sakura),
         ("season_fireflies", dream_season_fireflies),
         ("season_autumn", dream_season_autumn),

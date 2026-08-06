@@ -111,6 +111,46 @@ final class Stray {
             }
         }
 
+        /// Where she is when it is raining.
+        ///
+        /// She comes in tight against the near side and waits it out — a cat
+        /// in the rain is a cat under something, and the side she picks is the
+        /// one she is not usually on. It costs no new position: both values
+        /// are already in `x` above, and `check_stray.py` now cross-tests
+        /// every stage at every column rather than each at its own, so the
+        /// swap cannot put her on the open sea at Harbor.
+        ///
+        /// Nothing shrinks. Her dwell window *widens* in the wet, because she
+        /// is there for the shelter rather than for you and leaving means
+        /// getting wet. There is no weather that makes her come less.
+        func x(in weather: Weather) -> Double {
+            guard Self.shelters(from: weather) else { return x }
+            switch self {
+            case .eyes: 0.900
+            case .edge, .watching: 0.105
+            case .away, .beside, .home: 0.5
+            }
+        }
+
+        /// Rain she would rather be out of. Mist and snow do not count: a cat
+        /// in snow sits in the snow, and everybody has seen one do it.
+        static func shelters(from weather: Weather) -> Bool {
+            switch weather {
+            case .drizzle, .rain, .storm: true
+            case .clear, .overcast, .breeze, .mist, .golden, .snow: false
+            }
+        }
+
+        /// The slice of a focus phase she is present for, in a given sky.
+        func window(in weather: Weather) -> ClosedRange<Double> {
+            guard Self.shelters(from: weather), self <= .watching else {
+                return window
+            }
+            // Widened at the front only: she is already there when you sit
+            // down, having arrived for the porch rather than for you.
+            return max(0, window.lowerBound - 0.15)...window.upperBound
+        }
+
         /// Must match the aspect the sprite is drawn at in
         /// tools/generate_sprites.py, or `scaledToFit` letterboxes her.
         var size: CGSize {

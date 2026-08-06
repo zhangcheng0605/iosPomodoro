@@ -133,6 +133,27 @@ enum Weather: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// How a species hint names this sky.
+    ///
+    /// Lowercase and article-first, so it drops into the middle of a sentence
+    /// — "At first light, in Whispering Woods, in the mist". `name` is the
+    /// almanac's word and is capitalised; these two are deliberately separate
+    /// rather than one lowercased at the call site, because "in the golden"
+    /// is not English and "in the last of the light" is.
+    var hintPhrase: String {
+        switch self {
+        case .clear: "clear weather"
+        case .overcast: "flat grey light"
+        case .breeze: "a wind"
+        case .drizzle: "the drizzle"
+        case .rain: "the rain"
+        case .mist: "the mist"
+        case .storm: "a storm"
+        case .golden: "the last of the light"
+        case .snow: "the snow"
+        }
+    }
+
     /// One line in the world's voice, for the almanac and the buddy's caption.
     /// Nothing here congratulates or instructs; it is a remark about the sky.
     var line: String {

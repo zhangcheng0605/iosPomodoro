@@ -116,6 +116,7 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroUnlockPlaces` | Treat every place as reached, without seeding history |
 | `-PawmodoroBuddy <id>` | Start with one buddy, e.g. `-PawmodoroBuddy owl` |
 | `-PawmodoroSighting <id>` | Guarantee a wildlife sighting this session, e.g. `stag` |
+| `-PawmodoroWeather <id>` + `-PawmodoroSighting` | The only way to see a wave-4 species on demand — half the roster is gated on the sky |
 | `-PawmodoroEncounter <id>` | Guarantee a micro-encounter this session: `butterfly`, `robin`, `snowflake` |
 | `-PawmodoroFillJournal [n]` | Mark every species as seen; `5` makes them all named regulars |
 | `-PawmodoroMoon full\|new` | Pin the moon, for the moon rabbit |
@@ -159,8 +160,9 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are ten now (`swift`, `contrast`, `grove`,
-`residents`, `post`, `weather`, `yearring`, `clocks`, `stray`, `snail`), they
+without a Mac** — there are eleven now (`swift`, `contrast`, `grove`,
+`residents`, `species`, `post`, `weather`, `yearring`, `clocks`, `stray`,
+`snail`), they
 take about fifteen seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.

@@ -342,6 +342,7 @@ struct ContentView: View {
             StrayView(
                 stage: stage,
                 progress: engine.isRunning ? engine.progress : nil,
+                weather: engine.weather,
                 spooked: $straySpooked
             )
         }

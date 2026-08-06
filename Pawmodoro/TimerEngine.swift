@@ -419,7 +419,8 @@ final class TimerEngine {
             seen = sighting.species
             journal.add(
                 sighting.species, at: settings.place,
-                dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
+                dayPart: LaunchOptions.forcedDayPart ?? DayPart.current(),
+                weather: weather
             )
         }
         if let dream {
@@ -658,12 +659,14 @@ final class TimerEngine {
             return
         }
 
+        let sky = weather
         let eligible = Species.allCases.filter {
             $0.isEligible(
                 place: settings.place,
                 dayPart: part,
                 focusMinutes: settings.focusMinutes,
-                moonIsFull: MoonPhase.isFull()
+                moonIsFull: MoonPhase.isFull(),
+                weather: sky
             )
         }
         guard !eligible.isEmpty else { return }
@@ -683,6 +686,57 @@ final class TimerEngine {
         for species in ordered where Double.random(in: 0..<1) < species.rarity.chance {
             sighting = Sighting(species: species)
             return
+        }
+    }
+
+    /// The phenomenon this session earned, if any.
+    ///
+    /// Everything here depends on what the session *did* rather than on what
+    /// was true when it started, which is why none of it can go through
+    /// `rollSighting`. A rainbow needs the rain to have run and stopped; the
+    /// first thunder of a year needs to know it is the first.
+    ///
+    /// Order is rarest-first, and at most one is ever handed out: two
+    /// phenomena in one sitting would make both of them ordinary.
+    private func lateAward() -> Species? {
+        let sky = weather
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current()
+
+        func fits(_ species: Species) -> Bool {
+            species.spec.places.contains(settings.place)
+                && (species.spec.dayParts.isEmpty
+                    || species.spec.dayParts.contains(part))
+                && species.spec.weathers.contains(sky)
+        }
+
+        // Once a year, and only if you were sitting down for it. The journal
+        // is the record of whether it has already happened — there is no
+        // second flag to keep in step, and clearing history honestly gives it
+        // back, because clearing history is somebody saying they want to start
+        // again.
+        if fits(.firstthunder), isSpring(), !journal.hasSeenThisYear(.firstthunder) {
+            return .firstthunder
+        }
+        // The rainbow's own rule, unchanged and deliberately different from
+        // the others: it is earned by having *listened* to rain for half the
+        // session, not by the world's sky. That shipped, people have them,
+        // and a rainbow you got by choosing the rain loop is a fair rainbow.
+        if rainSeconds >= phaseDuration / 2, part == .day,
+           Species.rainbow.spec.places.contains(settings.place) {
+            return .rainbow
+        }
+        if fits(.fogbow) { return .fogbow }
+        if fits(.sunshower) { return .sunshower }
+        return nil
+    }
+
+    /// Spring, in the world's one hemisphere. `WorldCalendar.hemisphere` owns
+    /// the policy; this asks it rather than assuming March.
+    private func isSpring() -> Bool {
+        let month = WorldCalendar.calendar.component(.month, from: WorldCalendar.now)
+        switch WorldCalendar.hemisphere {
+        case .northern: return (3...5).contains(month)
+        case .southern: return (9...11).contains(month)
         }
     }
 
@@ -750,7 +804,7 @@ final class TimerEngine {
             return
         }
         let eligible = Heard.allCases.filter {
-            $0.isEligible(place: settings.place, dayPart: part)
+            $0.isEligible(place: settings.place, dayPart: part, weather: weather)
         }
         guard let sound = eligible.randomElement(),
               Double.random(in: 0..<1) < sound.spec.chance
@@ -1073,14 +1127,10 @@ final class TimerEngine {
             // finished counts toward the week she is deciding about. She only
             // ever starts watching off the back of a session you completed.
             stray.noticeIfReady(log: log)
-            // A rainbow is not rolled: it is earned by a session that
-            // actually ran rain for at least half its length, which is only
-            // knowable now. Deterministic, so it feels given rather than won.
-            if sighting == nil,
-               rainSeconds >= phaseDuration / 2,
-               (LaunchOptions.forcedDayPart ?? DayPart.current()) == .day,
-               Species.rainbow.spec.places.contains(settings.place) {
-                sighting = Sighting(species: .rainbow)
+            // The phenomena are not rolled: they are earned by what the
+            // session actually did, which is only knowable now.
+            if sighting == nil, let earned = lateAward() {
+                sighting = Sighting(species: earned)
             }
             // Same rule as a sighting: leave early and the dream just fades,
             // unrecorded. Dreams are like that.
@@ -1093,7 +1143,8 @@ final class TimerEngine {
                 journal.add(
                     sighting.species,
                     at: settings.place,
-                    dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
+                    dayPart: LaunchOptions.forcedDayPart ?? DayPart.current(),
+                    weather: weather
                 )
             }
             // Checked after the log is written, so this session counts toward

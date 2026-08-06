@@ -367,6 +367,60 @@ def make_owlcall(dur=2.8, seed=7):
     return normalize(distant(sig, 1500.0), 0.30)
 
 
+def make_distantthunder(dur=4.0, seed=23):
+    """Anywhere, in a storm. A long way off, and already going away.
+
+    Thunder is not a bang at this distance — the high end is gone by the time
+    it reaches you and what is left is a low roll. Shaped noise through a low
+    cutoff, with two swells rather than one, because a single envelope reads
+    as a door closing.
+    """
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(seed)
+    sig = shaped_noise(n, rng, 1.0, cutoff=220.0)
+    # Two swells, the second smaller and later: the rumble arriving off the
+    # hills after the first has passed.
+    swell = np.exp(-1.1 * t) + 0.45 * np.exp(-2.2 * np.abs(t - 1.4))
+    return normalize(distant(sig * swell * envelope(n, 0.18, 1.6), 400.0), 0.32)
+
+
+def make_foghorn(dur=3.6):
+    """Harbor Isle, in the mist. One note, held, and meant to be obeyed."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    sig = np.zeros(n)
+    # Low and nearly pure, with a second an octave up at a quarter strength —
+    # a real horn is a single reed and the harmonic is what carries.
+    for freq, amp in ((87.3, 1.0), (174.6, 0.26), (262.0, 0.08)):
+        sig += amp * np.sin(2 * np.pi * freq * t)
+    # It holds flat and then stops, which is the whole character of it.
+    hold = np.minimum(1.0, t / 0.5) * np.minimum(1.0, (dur - t) / 0.8)
+    return normalize(distant(sig * hold, 700.0), 0.30)
+
+
+def make_geesesouth(dur=4.2, seed=29):
+    """Autumn, overhead. Several of them, none in time with the others."""
+    n = int(SR * dur)
+    rng = np.random.default_rng(seed)
+    sig = np.zeros(n)
+    # Fourteen calls scattered over four seconds. A skein is a crowd, and a
+    # regular interval would make it a machine.
+    for _ in range(14):
+        start = rng.uniform(0.05, dur - 0.7)
+        begin = int(SR * start)
+        count = int(SR * rng.uniform(0.16, 0.28))
+        count = min(count, n - begin)
+        local = np.arange(count) / SR
+        freq = rng.uniform(430.0, 560.0)
+        # The break upward at the end is what makes it a goose and not a duck.
+        call = np.sin(2 * np.pi * (freq + 180.0 * local / (count / SR)) * local)
+        call += 0.4 * np.sin(2 * np.pi * 2 * freq * local)
+        call += 0.12 * shaped_noise(count, rng, 1.0, cutoff=2200.0)
+        sig[begin:begin + count] += call * envelope(count, 0.02, 0.10) * rng.uniform(0.4, 1.0)
+    return normalize(distant(sig, 2600.0), 0.26)
+
+
 def make_farbell(dur=3.4):
     """Sunstone Keep, at dawn. One stroke, a long way off."""
     n = int(SR * dur)
@@ -416,5 +470,8 @@ if __name__ == "__main__":
     write_wav("heard_owlcall.wav", make_owlcall())
     write_wav("heard_farbell.wav", make_farbell())
     write_wav("heard_windchime.wav", make_windchime())
+    write_wav("heard_distantthunder.wav", make_distantthunder())
+    write_wav("heard_foghorn.wav", make_foghorn())
+    write_wav("heard_geesesouth.wav", make_geesesouth())
     print("Icon:")
     make_icon()

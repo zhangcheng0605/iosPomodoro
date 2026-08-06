@@ -13,6 +13,9 @@ struct StrayView: View {
     /// Nil while nothing is running, which is how the later stages know to
     /// simply wait around instead of riding a phase.
     let progress: Double?
+    /// Today's sky here. She sits on the other side of the frame in the wet,
+    /// and stays longer — see `Stray.Stage.x(in:)`.
+    var weather: Weather = .clear
     /// Set when she has been spooked this phase. Not persisted anywhere:
     /// nothing about her can be lost, so this lasts until the phase does.
     @Binding var spooked: Bool
@@ -47,7 +50,7 @@ struct StrayView: View {
                     // inside the 44pt box, so placing the box's centre places
                     // hers.
                     .position(
-                        x: geometry.size.width * stage.x,
+                        x: geometry.size.width * stage.x(in: weather),
                         y: geometry.size.height * Stray.groundLine
                             - stage.size.height / 2
                     )
@@ -83,7 +86,8 @@ struct StrayView: View {
             .scaledToFit()
             // Drawn with her tail to the right, so on the right of the screen
             // she is mirrored: tail toward the edge, cat facing in.
-            .scaleEffect(x: stage.x < 0.5 ? 1 : -1, y: 1)
+            // Facing in, whichever side she is on today.
+            .scaleEffect(x: stage.x(in: weather) < 0.5 ? 1 : -1, y: 1)
     }
 
     /// A hand near her. At the edge of the scene she leaves; once she is
@@ -111,7 +115,7 @@ struct StrayView: View {
     /// them. Dwell time is the other half of the arc.
     private var isPresent: Bool {
         guard let progress else { return stage.showsWhenIdle }
-        return stage.window.contains(progress)
+        return stage.window(in: weather).contains(progress)
     }
 
     /// Never pops. Fades across the first and last fifth of her window; under
@@ -119,7 +123,7 @@ struct StrayView: View {
     private var fade: Double {
         guard !reduceMotion else { return 1 }
         guard let progress else { return 1 }
-        let window = stage.window
+        let window = stage.window(in: weather)
         let span = window.upperBound - window.lowerBound
         guard span > 0 else { return 1 }
         let t = (progress - window.lowerBound) / span

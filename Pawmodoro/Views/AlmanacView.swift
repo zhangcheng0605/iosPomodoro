@@ -148,7 +148,11 @@ struct AlmanacView: View {
                 place: place,
                 dayPart: dayPart,
                 focusMinutes: engine.settings.focusMinutes,
-                moonIsFull: MoonPhase.isFull()
+                moonIsFull: MoonPhase.isFull(),
+                // Today's real sky here, so "about now" means about now. Half
+                // the roster is weather-gated and a list that ignored that
+                // would be a list of things that are not, in fact, about.
+                weather: Weather.at(place)
             )
         }
     }
@@ -206,7 +210,8 @@ struct AlmanacView: View {
                             place: other,
                             dayPart: dayPart,
                             focusMinutes: engine.settings.focusMinutes,
-                            moonIsFull: MoonPhase.isFull()
+                            moonIsFull: MoonPhase.isFull(),
+                            weather: Weather.at(other)
                         )
                     }.count
                     if count > 0 {

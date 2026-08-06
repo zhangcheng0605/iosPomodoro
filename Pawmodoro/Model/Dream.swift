@@ -556,6 +556,9 @@ extension Heard {
         case .owlcall: "Twice again, and the wood no closer."
         case .farbell: "One stroke, and the whole morning after it."
         case .windchime: "Four notes, in an order they have never used."
+        case .distantthunder: "Behind the hills again, and staying there."
+        case .foghorn: "Answered, this time, by something further out."
+        case .geesesouth: "All of them, still going, still arguing."
         }
     }
 }

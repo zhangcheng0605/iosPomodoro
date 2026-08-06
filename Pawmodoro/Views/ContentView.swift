@@ -160,6 +160,17 @@ struct ContentView: View {
             .sheet(isPresented: $showStrayNaming) {
                 StrayNamingSheet()
             }
+            // The only question the Drift ever asks. Phrased so that neither
+            // answer is the "good" one: the app genuinely does not know
+            // whether you were sitting there, and pretending to would be
+            // worse than asking.
+            .alert("Still drifting?", isPresented: driftQuestion) {
+                Button("Count it") { engine.endDrift(keep: true) }
+                Button("Let it go", role: .cancel) { engine.endDrift(keep: false) }
+            } message: {
+                Text("This open hour has been running for "
+                     + "\(engine.remainingText). Should it count?")
+            }
             // She comes back next time you start. Being spooked costs the rest
             // of the phase and nothing else — there is no state anywhere that
             // remembers it.
@@ -593,6 +604,34 @@ struct ContentView: View {
         )
     }
 
+    private var driftQuestion: Binding<Bool> {
+        Binding(
+            get: { engine.driftNeedsAsking },
+            set: { if !$0 { engine.driftNeedsAsking = false } }
+        )
+    }
+
+    private var playSymbol: String {
+        if engine.isDrifting { return "water.waves" }
+        return engine.isRunning ? "pause.fill" : "play.fill"
+    }
+
+    private var playLabel: String {
+        if engine.isDrifting { return "Drifting" }
+        return engine.isRunning ? "Pause" : "Start"
+    }
+
+    /// The long press is the only way in and the only way out, so it has to be
+    /// said out loud — a gesture nobody is told about is a gesture that only
+    /// exists for the people who happened to hold the button down.
+    private var playHint: String {
+        if engine.isDrifting { return "Press and hold to come back in" }
+        if engine.runState == .idle, !engine.phase.isBreak {
+            return "Press and hold to cast off an open hour with no end time"
+        }
+        return ""
+    }
+
     private var controls: some View {
         HStack(spacing: 20) {
             Button {
@@ -608,9 +647,10 @@ struct ContentView: View {
             .accessibilityLabel("Restart phase")
 
             Button {
+                if engine.isDrifting { return }   // holding is the way back
                 beginOrToggle()
             } label: {
-                Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
+                Image(systemName: playSymbol)
                     .font(.largeTitle)
                     .frame(width: 84, height: 84)
                     .background(Circle().fill(Theme.accent(for: engine.phase)))
@@ -621,7 +661,23 @@ struct ContentView: View {
             // A little deeper than the rest: it's the biggest target and the
             // one press people repeat most.
             .buttonStyle(.squishy(pressedScale: 0.88))
-            .accessibilityLabel(engine.isRunning ? "Pause" : "Start")
+            // Long-press casts off, and long-press comes back. Both ends of a
+            // drift are deliberate for the same reason: the failure mode that
+            // matters is ending one by accident, and a session with no end
+            // time is exactly the session you would hate to lose by fumbling
+            // a tap.
+            .onLongPressGesture(minimumDuration: 0.6) {
+                withAnimation {
+                    if engine.isDrifting {
+                        engine.endDrift()
+                    } else if engine.runState == .idle, !engine.phase.isBreak {
+                        NotificationManager.shared.requestPermissionIfNeeded()
+                        engine.castOff()
+                    }
+                }
+            }
+            .accessibilityLabel(playLabel)
+            .accessibilityHint(playHint)
 
             Button {
                 withAnimation { engine.skipPhase() }

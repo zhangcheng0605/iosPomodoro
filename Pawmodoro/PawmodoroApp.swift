@@ -21,6 +21,9 @@ struct PawmodoroApp: App {
                 .environment(store)
                 .fontDesign(.rounded)
                 .task {
+                    // Before the store, so `-PawmodoroDrift` lands on the
+                    // first frame rather than after a network round trip.
+                    engine.applyDebugDrift()
                     await store.loadProducts()
                     engine.storeHasPlus = store.hasPlus
                     engine.applyEntitlement(hasPlus: store.hasPlus)

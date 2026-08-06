@@ -1126,6 +1126,31 @@ def dream_sky_afterglow():
     return outline_silhouette(g)
 
 
+def dream_adrift_rings():
+    """A cut log with more rings in it than you remember counting.
+
+    The open hour's own metaphor, handed back to it: the ring lays one down per
+    lap, and this is what that looks like after a while."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 18, 18], fill=BODY)
+    for inset in (2, 4, 6, 8):
+        d.ellipse([1 + inset, 1 + inset, 18 - inset, 18 - inset], outline=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_adrift_nomap():
+    """A boat with no oars, and nowhere it needs to be."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.polygon([(2, 9), (17, 9), (14, 14), (5, 14)], fill=BODY)   # the hull
+    d.line([(9, 3), (9, 9)], fill=SHADE)                          # a mast
+    d.polygon([(10, 4), (14, 9), (10, 9)], fill=CREAM)            # one small sail
+    for y, x0, x1 in ((16, 0, 8), (18, 6, 19)):                   # open water
+        d.line([(x0, y), (x1, y)], fill=SHADE)
+    return outline_silhouette(g)
+
+
 # --- The old snail ----------------------------------------------------------
 #
 # Drawn on a grid matched to her own aspect rather than a square one, the way
@@ -1616,6 +1641,8 @@ if __name__ == "__main__":
         ("sky_puddle", dream_sky_puddle),
         ("sky_thunder", dream_sky_thunder),
         ("sky_afterglow", dream_sky_afterglow),
+        ("adrift_rings", dream_adrift_rings),
+        ("adrift_nomap", dream_adrift_nomap),
     ):
         to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")

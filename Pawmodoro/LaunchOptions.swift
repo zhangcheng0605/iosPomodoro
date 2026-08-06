@@ -29,9 +29,13 @@ enum StorageKeys {
     /// yet — see `Chronicle`.
     static let chronicle = "pawmodoro.chronicle"
 
+    /// The longest open hour, in seconds. A quiet almanac line and nothing
+    /// else — see `SessionLog.longestDrift`.
+    static let longestDrift = "pawmodoro.longestDrift"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined, dreams, heard, chronicle,
+        strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
     ]
 }
 
@@ -264,6 +268,21 @@ enum LaunchOptions {
         return percent < 0 ? -1 : min(100, percent) / 100
     }()
 
+    /// Cast off an open hour on launch, instead of an idle countdown.
+    static let drift = isSet("-PawmodoroDrift")
+
+    /// Start a drift already n laps deep, e.g. `-PawmodoroLaps 5`.
+    ///
+    /// Backdates the cast-off rather than fast-forwarding anything, because
+    /// the whole feature is a function of one `Date` — so this reaches the
+    /// same state the honest route reaches, and every derived number agrees.
+    /// The honest route to five laps is two hours.
+    static let driftLaps: Int? = {
+        guard arguments.contains("-PawmodoroLaps") else { return nil }
+        let laps = value(after: "-PawmodoroLaps").flatMap(Int.init) ?? 0
+        return laps > 0 ? laps : nil
+    }()
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -355,6 +374,8 @@ enum LaunchOptions {
     static let forcedSeason: Season? = nil
     static let forcedWeather: Weather? = nil
     static let forcedSnail: Double? = nil
+    static let drift = false
+    static let driftLaps: Int? = nil
     static let bondSessions: Int? = nil
 #endif
 

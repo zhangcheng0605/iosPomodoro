@@ -131,6 +131,8 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
 | `-PawmodoroSnail <0-100>` | Put the old snail that far across her crossing; `-1` sends her away |
+| `-PawmodoroDrift` | Cast off an open hour on launch |
+| `-PawmodoroLaps <n>` | Start a drift already n laps deep (backdates the cast-off) |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

@@ -15,7 +15,7 @@ import Observation
 /// journal makes a rich dream life, which quietly makes the journal itself
 /// worth more.
 ///
-/// Six of the ten cases arrived together, in Phase 0d of the Deep Time plan,
+/// Six of the eleven cases arrived together, in Phase 0d of the Deep Time plan,
 /// to pay a debt: the pool had not been fed since it was written, so five whole
 /// systems — the bond, the regulars, the things you can only hear, the seasons
 /// and the stray's arc — could be lived through without the buddy ever dreaming
@@ -23,8 +23,9 @@ import Observation
 /// on the thing itself, so a dream can only be had by somebody who earned what
 /// it is about.
 ///
-/// `sky` is the tenth, and the first to arrive the way the convention now says
-/// they should: weather shipped *with* its dreams rather than owing them.
+/// `sky` and `adrift` are the tenth and eleventh, and the first to arrive the
+/// way the convention now says they should: weather and the open hour each
+/// shipped *with* their dreams rather than owing them.
 enum Dream: Hashable, Identifiable {
     /// Something you both saw. The heart of it.
     case memory(Species)
@@ -42,6 +43,8 @@ enum Dream: Hashable, Identifiable {
     case season(Season)
     /// What the sky left behind today.
     case sky(Sky)
+    /// An open hour, once you have sat one.
+    case adrift(Adrift)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -146,6 +149,38 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// What an open hour leaves behind.
+    ///
+    /// Two, not three: the Drift is one idea and it does not need three
+    /// captions to say it. Gated on how long you have actually drifted, in
+    /// laps rather than minutes, so it is reachable under fast timers as well
+    /// as in a real afternoon.
+    enum Adrift: String, CaseIterable, Hashable {
+        case nomap, rings
+
+        /// Laps of the longest drift so far before this can be dreamed.
+        var reachedAt: Int {
+            switch self {
+            case .nomap: 1
+            case .rings: 3
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .nomap: "a boat with no oars"
+            case .rings: "the rings in a cut log"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .nomap: "Nowhere it needed to be, and no hurry about that."
+            case .rings: "More of them than either of you remembered counting."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -192,6 +227,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): "sound.\(sound.rawValue)"
         case .season(let season): "season.\(season.rawValue)"
         case .sky(let sky): "sky.\(sky.rawValue)"
+        case .adrift(let adrift): "adrift.\(adrift.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -209,6 +245,7 @@ enum Dream: Hashable, Identifiable {
         case "sound": return Heard(rawValue: parts[1]).map(Dream.sound)
         case "season": return Season(rawValue: parts[1]).map(Dream.season)
         case "sky": return Sky(rawValue: parts[1]).map(Dream.sky)
+        case "adrift": return Adrift(rawValue: parts[1]).map(Dream.adrift)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -227,6 +264,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): "dream_heard_\(sound.rawValue)"
         case .season(let season): "dream_season_\(season.rawValue)"
         case .sky(let sky): "dream_sky_\(sky.rawValue)"
+        case .adrift(let adrift): "dream_adrift_\(adrift.rawValue)"
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -238,7 +276,8 @@ enum Dream: Hashable, Identifiable {
     var isSilhouette: Bool {
         switch self {
         case .travel, .companion, .visitor: true
-        case .memory, .regular, .sound, .season, .sky, .yours, .surreal: false
+        case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
+             .surreal: false
         }
     }
 
@@ -259,6 +298,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): sound.name.lowercased()
         case .season(let season): season.name.lowercased()
         case .sky(let sky): sky.subject
+        case .adrift(let adrift): adrift.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -275,6 +315,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): sound.dreamLine
         case .season(let season): season.dreamLine
         case .sky(let sky): sky.line
+        case .adrift(let adrift): adrift.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -296,6 +337,7 @@ enum Dream: Hashable, Identifiable {
             + Heard.allCases.map(Dream.sound)
             + Season.allCases.map(Dream.season)
             + Sky.allCases.map(Dream.sky)
+            + Adrift.allCases.map(Dream.adrift)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

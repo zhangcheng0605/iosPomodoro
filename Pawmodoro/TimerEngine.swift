@@ -67,6 +67,19 @@ final class TimerEngine {
     /// same quiet middle stretch.
     private(set) var dream: Dream?
 
+    /// The moment you cast off, or nil if this is an ordinary countdown.
+    ///
+    /// One `Date` is the whole of the Drift's state. Elapsed, laps, the ring
+    /// and what gets banked are all functions of it and the wall clock — see
+    /// `Drift`. Nothing here counts ticks, for the same reason the countdown
+    /// doesn't: iOS suspends backgrounded apps.
+    private(set) var driftStart: Date?
+
+    /// Set when a drift comes back from the dead — the app was away long
+    /// enough that counting it silently would be a lie. The view asks; the
+    /// engine waits. It is the only question the Drift ever puts to anybody.
+    var driftNeedsAsking = false
+
     let log: SessionLog
     let journal: Journal
     let album: Album
@@ -81,6 +94,8 @@ final class TimerEngine {
     @ObservationIgnored private var lastHeartbeatSecond: Int?
     /// Seconds of this phase spent with rain playing — the rainbow's condition.
     @ObservationIgnored private var rainSeconds: TimeInterval = 0
+    /// Which lap the drift last rolled a sighting for, so each lap rolls once.
+    @ObservationIgnored private var lastLapRolled = 0
 
     init(
         settings: PomodoroSettings? = nil,
@@ -124,18 +139,63 @@ final class TimerEngine {
         }
     }
 
+    /// `-PawmodoroDrift` and `-PawmodoroLaps`, applied once the engine exists.
+    ///
+    /// Backdates the cast-off rather than fast-forwarding anything: the whole
+    /// feature is a function of one `Date`, so moving that `Date` reaches the
+    /// same state the honest two hours reach, and every derived number — laps,
+    /// ring, banking, the six-hour question — agrees without being told.
+    func applyDebugDrift() {
+        guard LaunchOptions.drift || LaunchOptions.driftLaps != nil else { return }
+        castOff()
+        if let laps = LaunchOptions.driftLaps {
+            driftStart = Date().addingTimeInterval(-Double(laps) * lapSeconds - 1)
+            lastLapRolled = laps
+        }
+    }
+
     // MARK: Derived values
 
     var phaseDuration: TimeInterval { settings.duration(for: phase) }
 
     /// 0 at the start of a phase, 1 when it completes.
+    ///
+    /// While drifting this is the progress round the *current lap* instead.
+    /// That one substitution is what lets the whole scenery layer carry over
+    /// untouched: the sighting's appearance window, the dream's 0.40–0.70
+    /// slice and the vignette's position were already pure functions of
+    /// `progress`, and none of them needs to know the ring changed direction.
     var progress: Double {
+        if isDrifting {
+            return Drift.lapProgress(elapsed: driftElapsed, lapSeconds: lapSeconds)
+        }
         let duration = phaseDuration
         guard duration > 0 else { return 0 }
         return min(1, max(0, 1 - remaining / duration))
     }
 
+    // MARK: The open hour
+
+    var isDrifting: Bool { driftStart != nil }
+
+    /// How long this drift has been going. Derived from the start `Date`, so
+    /// it survives being backgrounded, killed and relaunched.
+    var driftElapsed: TimeInterval {
+        guard let driftStart else { return 0 }
+        return max(0, Date().timeIntervalSince(driftStart))
+    }
+
+    var lapSeconds: TimeInterval {
+        Drift.lapSeconds(focusMinutes: settings.focusMinutes)
+    }
+
+    /// Whole laps so far — one tree ring each.
+    var driftLaps: Int {
+        Drift.laps(elapsed: driftElapsed, lapSeconds: lapSeconds)
+    }
+
     var remainingText: String {
+        if isDrifting { return Drift.text(elapsed: driftElapsed) }
         let total = max(0, Int(remaining.rounded(.up)))
         return String(format: "%02d:%02d", total / 60, total % 60)
     }
@@ -213,6 +273,138 @@ final class TimerEngine {
         startTicker()
     }
 
+    /// Cast off: an open hour, with no end time and no alarm.
+    ///
+    /// Deliberately *not* `start()` with a very long duration. Nothing is
+    /// scheduled here — no notification, no Live Activity countdown — because
+    /// there is nothing to announce: the app does not know when this ends and
+    /// will never be the one to say so.
+    ///
+    /// The Drift **is** focus. The scenery is deaf to a finger exactly as it
+    /// is during a countdown, dreams and encounters roll once at cast-off, and
+    /// sightings roll again at every lap — so a long drift can meet two
+    /// animals, which is the reward for staying.
+    func castOff() {
+        guard runState == .idle else { return }
+        phase = .focus
+        rainSeconds = 0
+        rollSighting()
+        rollDream()
+        rollHeard()
+        rollEncounter()
+        rollStrayCameo()
+
+        let now = Date()
+        driftStart = now
+        lastLapRolled = 0
+        driftNeedsAsking = false
+        endDate = nil
+        remaining = 0
+        runState = .running
+        lastHeartbeatSecond = nil
+        HapticsDirector.shared.start()
+        refreshAmbience()
+        startTicker()
+    }
+
+    /// Come back in. Banks whatever was earned and returns to an ordinary
+    /// idle focus phase.
+    ///
+    /// `keep: false` is the answer to the six-hour question and to nothing
+    /// else — it puts the drift down without recording it, which is the same
+    /// thing abandoning a countdown does.
+    func endDrift(keep: Bool = true) {
+        guard let start = driftStart else { return }
+        let elapsed = max(0, Date().timeIntervalSince(start))
+        stopTicker()
+        driftStart = nil
+        driftNeedsAsking = false
+        endDate = nil
+        runState = .idle
+        remaining = phaseDuration
+        refreshAmbience()
+
+        guard keep else {
+            sighting = nil
+            dream = nil
+            scheduledSound = nil
+            encounter = nil
+            return
+        }
+        bankDrift(from: start, elapsed: elapsed)
+    }
+
+    /// Writes a finished drift into the log, then runs the ordinary completion
+    /// path once — so the journey, the bond, the constellations, the stray and
+    /// the celebration card all behave exactly as they would have after the
+    /// countdowns this replaced.
+    private func bankDrift(from start: Date, elapsed: TimeInterval) {
+        let banking = Drift.banking(elapsed: elapsed, focusMinutes: settings.focusMinutes)
+        let dates = Drift.endDates(
+            from: start, elapsed: elapsed, focusMinutes: settings.focusMinutes
+        )
+        guard !banking.isEmpty, banking.minutes.count == dates.count else {
+            // Under one lap. Nothing is kept and nothing is said about it —
+            // the same rule as leaving a countdown early.
+            sighting = nil
+            dream = nil
+            encounter = nil
+            return
+        }
+
+        let nightsBefore = log.nightSessions
+        let sessionsBefore = log.totalSessions
+        let strayBefore = stray.stage(log: log)
+        for (minutes, endedAt) in zip(banking.minutes, dates) {
+            log.add(minutes: minutes, endedAt: endedAt)
+        }
+        focusInCycle += banking.laps
+
+        let bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
+        let figure = ConstellationAtlas.justCompleted(
+            before: nightsBefore, after: log.nightSessions
+        )
+        stray.noticeIfReady(log: log)
+
+        var seen: Species?
+        if let sighting {
+            seen = sighting.species
+            journal.add(
+                sighting.species, at: settings.place,
+                dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
+            )
+        }
+        if let dream {
+            dreams.add(dream, daysAfter: daysSinceMeeting(dream))
+        }
+        let arrival = newlyReachedPlace()
+        recordToChronicle(seen: seen, dream: dream, bond: bond, figure: figure,
+                          arrival: arrival, strayBefore: strayBefore)
+        if let arrival, !arrival.isPlus {
+            settings.place = arrival
+            settingsDidChange()
+        }
+        log.recordLongestDrift(seconds: elapsed)
+
+        HapticsDirector.shared.complete()
+        SoundPlayer.shared.playChime()
+        completion = PhaseCompletion(
+            finished: .focus,
+            pawsEarned: filledPaws,
+            pawsPerCycle: pawsPerCycle,
+            isCycleComplete: false,
+            arrivedAt: arrival,
+            saw: seen,
+            completedFigure: figure,
+            dreamed: dream,
+            bondReached: bond,
+            driftLaps: banking.laps
+        )
+        sighting = nil
+        dream = nil
+        encounter = nil
+    }
+
     func pause() {
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
@@ -273,6 +465,14 @@ final class TimerEngine {
 
     /// Call when the app returns to the foreground.
     func syncAfterWake() {
+        // A drift has no end to arrive at, so nothing has to be caught up —
+        // its elapsed time is a subtraction against the wall clock and was
+        // already right. The one thing to notice is that it may have been
+        // going for a very long time.
+        if isDrifting {
+            driftNeedsAsking = Drift.needsAsking(elapsed: driftElapsed)
+            return
+        }
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {
@@ -623,6 +823,12 @@ final class TimerEngine {
         for sky in Dream.Sky.allCases where sky.reachedAt.contains(today) {
             pool.append(contentsOf: repeatElement(.sky(sky), count: 3))
         }
+        // The open hour, once you have actually sat one. Counted in laps
+        // rather than minutes so it is reachable under fast timers too.
+        let longestLaps = Drift.laps(elapsed: log.longestDrift, lapSeconds: lapSeconds)
+        for adrift in Dream.Adrift.allCases where longestLaps >= adrift.reachedAt {
+            pool.append(contentsOf: repeatElement(.adrift(adrift), count: 2))
+        }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
         }
@@ -655,7 +861,8 @@ final class TimerEngine {
             met = journal.record(for: species)?.firstSeen
         case .sound(let sound):
             met = journal.firstHeard(sound)
-        case .travel, .companion, .visitor, .season, .sky, .yours, .surreal:
+        case .travel, .companion, .visitor, .season, .sky, .adrift, .yours,
+             .surreal:
             met = nil
         }
         guard let met else { return nil }
@@ -727,6 +934,7 @@ final class TimerEngine {
     }
 
     private func tick() {
+        if isDrifting { return tickDrift() }
         guard let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if settings.ambience == .rain { rainSeconds += 0.25 }
@@ -735,6 +943,21 @@ final class TimerEngine {
         if remaining <= 0 {
             completePhase()
         }
+    }
+
+    /// A drift has nothing to count down to, so this does three things and
+    /// stops: keeps the rainbow's rain clock, plays anything scheduled, and
+    /// rolls a fresh sighting at the top of every lap.
+    private func tickDrift() {
+        if settings.ambience == .rain { rainSeconds += 0.25 }
+        playHeardIfDue()
+        let lap = driftLaps
+        guard lap > lastLapRolled else { return }
+        lastLapRolled = lap
+        // A new lap, so the meadow gets another go. `progress` has just
+        // wrapped to zero, which is exactly what a fresh sighting expects.
+        rollSighting()
+        HapticsDirector.shared.start()
     }
 
     /// One soft heartbeat per second over the last ten, tightening as the phase

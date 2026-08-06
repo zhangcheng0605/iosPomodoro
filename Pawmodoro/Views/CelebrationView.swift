@@ -133,9 +133,27 @@ struct CelebrationView: View {
             figureCard(figure)
         } else if let place = completion.arrivedAt {
             arrivalCard(place)
+        } else if let laps = completion.driftLaps {
+            driftCard(laps)
         } else {
             cycleCard
         }
+    }
+
+    /// What an open hour gets instead of a cycle card.
+    ///
+    /// It says how long, and then it stops. No best, no comparison, no "that's
+    /// your longest yet" — the one part of this app with no clock on it is not
+    /// going to be handed a scoreboard on the way out.
+    @ViewBuilder
+    private func driftCard(_ laps: Int) -> some View {
+        Image(systemName: "water.waves")
+            .font(.system(size: 42))
+            .foregroundStyle(accent)
+        title(laps == 1 ? "You drifted for a while" : "You drifted a long way")
+        footnote(laps == 1
+                 ? "One lap of the ring, and back in."
+                 : "\(laps) rings, laid down one at a time.")
     }
 
     /// A sighting outranks the cycle card: it is the rarer thing, and the
@@ -241,6 +259,11 @@ struct CelebrationView: View {
         }
         if let place = completion.arrivedAt {
             return "You've reached \(place.name). \(place.blurb)"
+        }
+        if let laps = completion.driftLaps {
+            return laps == 1
+                ? "You drifted for one lap of the ring."
+                : "You drifted for \(laps) laps of the ring."
         }
         return "Cycle complete. \(subtitle)"
     }

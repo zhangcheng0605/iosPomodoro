@@ -22,6 +22,9 @@ struct PhaseCompletion: Identifiable, Equatable {
     var dreamed: Dream?
     /// Set when this session was the one that deepened the bond a level.
     var bondReached: Bond?
+    /// How many laps an open hour ran for, or nil if this was a countdown.
+    /// Nothing is compared against anything: the card says how long you sat.
+    var driftLaps: Int?
 
     /// Only finishing focus earns confetti; breaks get a quieter beat, so the
     /// big moment stays rare enough to keep meaning something.
@@ -33,5 +36,6 @@ struct PhaseCompletion: Identifiable, Equatable {
     var showsCard: Bool {
         isCycleComplete || arrivedAt != nil || saw != nil
             || completedFigure != nil || dreamed != nil || bondReached != nil
+            || driftLaps != nil
     }
 }

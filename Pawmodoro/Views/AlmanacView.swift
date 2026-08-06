@@ -55,7 +55,28 @@ struct AlmanacView: View {
                     .font(.footnote.italic())
                     .foregroundStyle(Theme.blossom)
             }
+            // Recorded, shown, and never challenged. There is no next tier and
+            // nothing anywhere asks you to beat it.
+            if let longest = longestDriftLine {
+                Text(longest)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.55))
+            }
         }
+    }
+
+    /// Only once there has been one, and phrased as a fact rather than a
+    /// record — "your longest" would make the open hour a thing to win.
+    private var longestDriftLine: String? {
+        let seconds = engine.log.longestDrift
+        guard seconds >= 60 else { return nil }
+        let minutes = Int(seconds / 60)
+        if minutes < 60 { return "The longest you have drifted: \(minutes) minutes." }
+        let hours = minutes / 60
+        let rest = minutes % 60
+        return rest == 0
+            ? "The longest you have drifted: \(hours) hours."
+            : "The longest you have drifted: \(hours)h \(rest)m."
     }
 
     private var moonSymbol: String {

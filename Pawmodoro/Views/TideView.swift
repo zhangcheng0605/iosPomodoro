@@ -45,17 +45,26 @@ struct TideView: View {
             let width = geometry.size.width
             let water = Tide.waterline.lowest
                 + (Tide.waterline.highest - Tide.waterline.lowest) * level
-            let lowest = Tide.waterline.lowest
+            // The high-water mark: the top of the band the sea ever covers,
+            // and therefore the top of the shore it uncovers.
+            let mark = Tide.waterline.highest
 
             ZStack(alignment: .topLeading) {
-                // The uncovered shore: everything between where the water is
-                // now and the lowest it ever gets. At high water this is
-                // nothing at all, and the whole layer costs one empty rect.
-                if water < lowest {
+                // The uncovered shore: everything between the high-water mark
+                // and where the water actually is. Widest at low water,
+                // nothing at all at high — where the whole layer costs one
+                // empty rect.
+                //
+                // Note both fractions run *down* the screen, so the high-water
+                // mark is the smaller number: 0.79 is higher up the picture
+                // than 0.88. Getting that backwards draws the mud below the
+                // waterline and only when the tide is in, which is what the
+                // first version did.
+                if water > mark {
                     mud
                         .frame(width: width,
-                               height: (lowest - water) * height)
-                        .offset(y: water * height)
+                               height: (water - mark) * height)
+                        .offset(y: mark * height)
                         .opacity(0.55)
                 }
                 foam(width: width, at: water * height)

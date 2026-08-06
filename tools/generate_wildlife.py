@@ -1010,9 +1010,14 @@ def lynx(step):
     tufts, the ruff and the stub are the three things anybody names one by,
     and the template has parameters for none of them.
     """
-    g = grid(17, 15)
+    # 19 tall, not 15, and the animal sits four rows lower. The tufts are
+    # drawn from the top of the head *upward*; on the short grid they ran to
+    # y=-3 and three of their four pixels were clipped away, which left a
+    # generic brown quadruped — no tufts is no lynx. Seen on a contact sheet
+    # at real sighting size, where it could have been a fox or a weasel.
+    g = grid(17, 19)
     d = ImageDraw.Draw(g)
-    top = 5
+    top = 9
     # Second draft. The first put the head ellipse overlapping the body's and
     # the two merged into one brown lump with legs — no neck, no silhouette,
     # nothing anybody could name. The head sits clear of the shoulder now with

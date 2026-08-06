@@ -1,8 +1,9 @@
 # Resume here
 
 **Written 6 Aug 2026 from a Windows laptop, for the Mac evening that follows
-it.** Phase 0 of `docs/DEEP_TIME_PLAN.md` is now built except for the parts
-that need a Mac. Nothing written today has been through a compiler.
+it.** Phase 0 of `docs/DEEP_TIME_PLAN.md` is built except for the parts that
+need a Mac, and the first slice of Phase V — weather, and the old snail — is
+built on top of it. **Nothing written today has been through a compiler.**
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is the one to read first — it is a running order, not a list.
@@ -12,7 +13,7 @@ Mac"* is the one to read first — it is a running order, not a list.
 ## The one line to paste
 
 > read docs/RESUME_HERE.md and do the Mac evening: build it, fix what the
-> compiler finds, walk the dream diary, then the listening pass
+> compiler finds, walk the dream diary and the weather, then the listening pass
 
 ---
 
@@ -43,7 +44,8 @@ written — the bond, the regulars, the things you can only hear, the seasons an
 the stray's arc — and none of them fed it. Six new `Dream` cases now do:
 `regular`, `companion`, `visitor`, `sound`, `season`, `yours`. Each is gated in
 `TimerEngine.pool()` on the thing it is about, so nothing can be dreamed by
-somebody who never met it. The diary went from 50 possible dreams to 116.
+somebody who never met it. The diary went from 50 possible dreams to 116, and weather's three took it to
+119.
 Thirteen new sprites, drawn on the same 20px sepia grid as the surreal six.
 `docs/DEEP_TIME_PLAN.md`'s Phase 0 **As built** section has the table and the
 four decisions worth knowing before touching it.
@@ -124,7 +126,9 @@ expected outcome, not a sign something is wrong.** In likelihood order:
    are `Comparable` and both already use `<` elsewhere.
 
 Then Release, which is where a missing `#if DEBUG` stand-in would show up
-(there is one new flag today, `fillDreams`, and its stand-in is in place):
+(three new flags today — `fillDreams`, `forcedWeather`, `forcedSnail` — and
+all three stand-ins are in place; `check_swift.py` verifies that, and it is
+one of the rules it was proved on):
 
 ```sh
 xcodebuild -project Pawmodoro.xcodeproj -scheme Pawmodoro -configuration Release \
@@ -145,7 +149,7 @@ tools/run-sim.sh --demo --headless -PawmodoroFillDreams
 (`run-sim.sh` passes anything starting `-Pawmodoro` straight to the app, so the
 flag lists below can be appended to that same line verbatim.)
 
-116 tiles. What to actually check, in this order:
+119 tiles. What to actually check, in this order:
 
 - **The thirteen new sprites read at 62pt.** They were looked at on Linux at
   8× on a cream card and they read there; 62pt on a phone is the real test.

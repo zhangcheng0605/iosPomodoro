@@ -64,6 +64,7 @@ of what the next release owes users.
 | **V3** — wave 4: the journal 41 → 63 species, gated on the sky | **built, never compiled** |
 | **V4** — the Flyway: 8 migration windows, 63 → 71 species | **built, never compiled** |
 | **V6** — Tidewater: the sea at Harbor Isle, 71 → 77 species | **built, never compiled** |
+| **X1** — the deep-drift species, 77 → 81, and Phase X is finished | **built, never compiled** |
 
 ### What today added
 

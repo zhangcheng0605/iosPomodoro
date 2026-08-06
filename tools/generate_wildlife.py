@@ -955,6 +955,130 @@ def thunderhead(flash):
     return outline(g)
 
 
+# --- The deep drift: what turns up for somebody who has not moved ----------
+
+
+def sunfish(fin):
+    """A disc with a face and two absurd fins. Almost square, which is the joke.
+
+    Every other fish on this sheet is a lozenge; a sunfish is a dinner plate
+    that ends where the tail should start. Drawn nearly as tall as it is wide
+    and with the body cut off flat at the back, because the missing tail is
+    the single thing that identifies one.
+    """
+    g = grid(20, 19)
+    d = ImageDraw.Draw(g)
+    sweep = 1 if fin else 0
+    # The fins are drawn first and tall, so the disc is composited over their
+    # roots rather than swallowing them. Drawn after, at three pixels, they
+    # merged into the outline and the animal came out as a plain oval.
+    d.polygon([(6, 8), (4, 0 - sweep), (11, 7)], fill=SHADE)        # dorsal
+    d.polygon([(6, 11), (4, 18 + sweep), (11, 12)], fill=SHADE)     # ventral
+    d.ellipse([2, 4, 15, 15], fill=MAIN)                    # the disc
+    d.polygon([(12, 5), (17, 5), (17, 14), (12, 14)], fill=MAIN)    # flat back
+    d.line([(16, 5), (16, 14)], fill=SHADE)                 # the clipped tail
+    d.ellipse([2, 7, 6, 12], fill=LIGHT)                    # the pale face
+    d.point((4, 9), fill=EYE)
+    d.point((2, 11), fill=ACCENT)                           # the small mouth
+    return outline(g)
+
+
+def mantaray(beat):
+    """Seen from above: a wide flat diamond with a whip behind it."""
+    g = grid(23, 13)
+    d = ImageDraw.Draw(g)
+    lift = 1 if beat else 0
+    # Wingtips up or down — the whole animation, and the only movement a manta
+    # makes that reads at this size.
+    d.polygon([(11, 3), (0, 7 - lift), (4, 9), (11, 8)], fill=MAIN)
+    d.polygon([(12, 3), (22, 7 + lift), (18, 9), (12, 8)], fill=SHADE)
+    d.ellipse([9, 2, 14, 9], fill=MAIN)                     # the body
+    d.point((10, 4), fill=EYE)
+    d.point((13, 4), fill=EYE)
+    # The cephalic fins either side of the mouth: two pixels, and the only
+    # thing separating a manta from a bird in silhouette.
+    d.point((9, 2), fill=LIGHT)
+    d.point((14, 2), fill=LIGHT)
+    d.line([(11, 9), (11, 12)], fill=SHADE)                 # the tail
+    return outline(g)
+
+
+def lynx(step):
+    """A cat with ear tufts, a stub tail, and far too much leg.
+
+    The `quadruped` template would give a cat-shaped animal and no lynx: the
+    tufts, the ruff and the stub are the three things anybody names one by,
+    and the template has parameters for none of them.
+    """
+    g = grid(17, 15)
+    d = ImageDraw.Draw(g)
+    top = 5
+    # Second draft. The first put the head ellipse overlapping the body's and
+    # the two merged into one brown lump with legs — no neck, no silhouette,
+    # nothing anybody could name. The head sits clear of the shoulder now with
+    # a drawn neck between them, which is the only reason the ear tufts have
+    # anything to be tufts *on*.
+    d.ellipse([6, top, 15, top + 6], fill=MAIN)             # the body
+    d.ellipse([7, top + 3, 14, top + 6], fill=LIGHT)
+    # Spaced with a gap inside each pair. Four two-pixel legs at even spacing
+    # weld into one slab, and a lynx is mostly leg — the gaps are what say so.
+    for index, x in enumerate((7, 10, 12, 15)):
+        drop = 4 - (1 if (step and index % 2 == 0) else 0)
+        d.line([(x, top + 5), (x, top + 5 + drop)], fill=SHADE, width=2)
+    d.line([(6, top + 2), (4, top - 1)], fill=MAIN, width=3)        # the neck
+    d.ellipse([0, top - 4, 6, top + 1], fill=MAIN)          # the head, clear
+    d.ellipse([0, top - 1, 4, top + 1], fill=LIGHT)         # the pale muzzle
+    # Tufts: one pixel wide and four tall. Any thicker and they read as a cap.
+    d.line([(1, top - 4), (1, top - 8)], fill=ACCENT)
+    d.line([(5, top - 4), (5, top - 8)], fill=ACCENT)
+    d.point((2, top - 2), fill=EYE)
+    d.ellipse([14, top, 17, top + 3], fill=SHADE)           # the stub tail
+    d.point((16, top + 1), fill=ACCENT)
+    return outline(g)
+
+
+def whitestag(head_up):
+    """A stag in white, standing where a stag would not stand.
+
+    The palette is nearly the whole difference from the ordinary stag, so the
+    antlers are drawn wider and the pose is squarer — a white animal against a
+    pale sky needs its silhouette doing more work than its colour.
+    """
+    g = grid(20, 20)
+    d = ImageDraw.Draw(g)
+    rise = 0 if head_up else 1
+    body_top = 9
+    d.ellipse([5, body_top, 17, body_top + 7], fill=MAIN)
+    d.ellipse([7, body_top + 4, 15, body_top + 7], fill=LIGHT)
+    for index, x in enumerate((7, 9, 14, 16)):
+        drop = 4 - (1 if (head_up and index % 2 == 0) else 0)
+        d.line([(x, body_top + 6), (x, body_top + 6 + drop)], fill=SHADE, width=2)
+    head_y = body_top - 5 + rise
+    d.line([(6, body_top + 1), (4, head_y + 4)], fill=MAIN, width=3)   # neck
+    d.ellipse([1, head_y, 7, head_y + 5], fill=MAIN)
+    d.point((3, head_y + 2), fill=EYE)
+    # Antlers: two sweeps with three tines each, drawn wide rather than tall.
+    for side, start in ((-1, 3), (1, 6)):
+        d.line([(start, head_y), (start + side * 2, head_y - 5)], fill=ACCENT)
+        d.line([(start + side * 2, head_y - 5),
+                (start + side * 5, head_y - 6)], fill=ACCENT)
+        d.point((start + side * 3, head_y - 7), fill=ACCENT)
+    d.ellipse([16, body_top, 19, body_top + 3], fill=LIGHT)            # tail
+    return outline(g)
+
+
+DEEP = {
+    "sunfish": (sunfish, palette((162, 172, 184), (124, 134, 148),
+                                 (226, 232, 240), (78, 86, 100))),
+    "mantaray": (mantaray, palette((72, 88, 112), (48, 62, 84),
+                                   (232, 236, 242), (36, 46, 62))),
+    "lynx": (lynx, palette((196, 168, 130), (156, 130, 98),
+                           (244, 236, 220), (74, 62, 50))),
+    "whitestag": (whitestag, palette((250, 250, 252), (214, 216, 224),
+                                     (255, 255, 255), (196, 186, 158))),
+}
+
+
 # --- Tidewater: the shore that is only there some of the time ---------------
 
 
@@ -1354,7 +1478,7 @@ WAVE4 = {
                      palette((104, 108, 126), (72, 76, 94), (198, 202, 216), (248, 226, 138))),
 }
 
-for wave in (WAVE2, WAVE4, FLYWAY, TIDEWATER):
+for wave in (WAVE2, WAVE4, FLYWAY, TIDEWATER, DEEP):
     SPECIES.update({name: draw for name, (draw, _) in wave.items()})
     P.update({name: pal for name, (_, pal) in wave.items()})
 

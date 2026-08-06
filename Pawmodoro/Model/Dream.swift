@@ -177,13 +177,19 @@ enum Dream: Hashable, Identifiable {
     /// laps rather than minutes, so it is reachable under fast timers as well
     /// as in a real afternoon.
     enum Adrift: String, CaseIterable, Hashable {
-        case nomap, rings
+        case nomap, rings, deep
 
         /// Laps of the longest drift so far before this can be dreamed.
         var reachedAt: Int {
             switch self {
             case .nomap: 1
             case .rings: 3
+            // Deeper than anything the deep-drift roster asks for, so this
+            // arrives after the animals rather than before them — a dream
+            // about something enormous going under, had by somebody who has
+            // not yet been shown one, would be the app spoiling its own
+            // surprise.
+            case .deep: 4
             }
         }
 
@@ -191,6 +197,7 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .nomap: "a boat with no oars"
             case .rings: "the rings in a cut log"
+            case .deep: "something that went under"
             }
         }
 
@@ -198,6 +205,7 @@ enum Dream: Hashable, Identifiable {
             switch self {
             case .nomap: "Nowhere it needed to be, and no hurry about that."
             case .rings: "More of them than either of you remembered counting."
+            case .deep: "It did not come back up, and that was all right."
             }
         }
     }

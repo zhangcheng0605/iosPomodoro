@@ -1193,6 +1193,33 @@ def dream_adrift_nomap():
     return outline_silhouette(g)
 
 
+def dream_adrift_deep():
+    """Something very large, already going down, and the water closing.
+
+    Drawn as an absence rather than as an animal: a back and a fin sliding
+    under, with the surface still marked where it was. A whole creature would
+    make this a sighting somebody had — the deep-drift roster is where those
+    live — and the dream is about the part you did *not* see.
+    """
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    surface = 12
+    # A back and a fin, and nothing below the line.
+    #
+    # The first version filled everything under the surface with water, which
+    # made the sprite a solid rectangle — every other dream in the diary is a
+    # shape floating in an empty bubble, and one heavy block among them reads
+    # as a rendering fault rather than as a picture. `nomap` says "open water"
+    # with two short broken lines; this says it the same way.
+    d.chord([2, surface - 5, 17, surface + 4], 180, 360, fill=BODY)
+    d.polygon([(9, surface - 4), (11, surface - 10), (12, surface - 3)],
+              fill=SHADE)                                        # the fin
+    d.line([(2, surface), (17, surface)], fill=CREAM)            # the waterline
+    for x0, x1 in ((0, 4), (7, 12), (15, 19)):                   # broken water
+        d.line([(x0, surface + 3), (x1, surface + 3)], fill=SHADE)
+    return outline_silhouette(g)
+
+
 # --- The grove -------------------------------------------------------------
 #
 # One tree per completed focus hour, at three growth stages. Drawn here rather
@@ -1784,6 +1811,7 @@ if __name__ == "__main__":
         ("sky_afterglow", dream_sky_afterglow),
         ("adrift_rings", dream_adrift_rings),
         ("adrift_nomap", dream_adrift_nomap),
+        ("adrift_deep", dream_adrift_deep),
     ):
         to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")

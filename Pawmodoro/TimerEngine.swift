@@ -806,13 +806,19 @@ final class TimerEngine {
         }
 
         let sky = weather
+        // How deep the open hour is, or zero in an ordinary countdown. This
+        // is the only place in the app that passes a non-zero lap count, so
+        // the deep-drift roster is unreachable everywhere else by
+        // construction rather than by remembering to exclude it.
+        let deep = driftStart == nil ? 0 : driftLaps
         let eligible = Species.allCases.filter {
             $0.isEligible(
                 place: settings.place,
                 dayPart: part,
                 focusMinutes: settings.focusMinutes,
                 moonIsFull: MoonPhase.isFull(),
-                weather: sky
+                weather: sky,
+                laps: deep
             )
         }
         guard !eligible.isEmpty else { return }

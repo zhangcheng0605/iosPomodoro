@@ -33,6 +33,9 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     case redkite, dandelionmouse
     case snowfox, ermine, winterwren
     case greywagtail, mushroomvole
+    // The deep drift — reachable only by sitting for a very long time with
+    // no clock on it. See `Spec.deepLaps`.
+    case sunfish, mantaray, lynx, whitestag
     // Tidewater — the strip of shore that is only there some of the time.
     case starfish, anemone, curlew, oystercatcher, hermitcrab, octopus
     // The Flyway — things that only pass through. See `Passage`.
@@ -80,6 +83,20 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         /// field is not gated on the place here, because a `Spec` says what a
         /// species needs and `places` already says where it is.
         var tides: [Tide.State] = []
+        /// Laps of an **open hour** that have to be behind you before this
+        /// can turn up at all. Zero means an ordinary session will do.
+        ///
+        /// The only gate in the table that is about *how you are sitting*
+        /// rather than about where, when or what the sky is doing. Nothing
+        /// with a non-zero value here is ever eligible in a countdown — a
+        /// drift is the whole condition, and a species that also turned up in
+        /// a 25-minute focus phase would make the Drift's reward
+        /// indistinguishable from the ordinary roster.
+        ///
+        /// Deliberately *not* stacked with anything unarrangeable. A drift is
+        /// a decision, which makes it the fairest hard gate in the app —
+        /// right up until it is multiplied by a sky nobody can order.
+        var deepLaps: Int = 0
         /// The migration window this only turns up inside, if any.
         ///
         /// The one gate in this table a player cannot arrange, wait for, or
@@ -321,6 +338,28 @@ enum Species: String, Codable, CaseIterable, Identifiable {
             weathers: [.overcast])
 
         // --- Phenomena
+        // --- The deep drift. Four things that only turn up for somebody who
+        // has been sitting a long time with nothing counting down.
+        //
+        // Two at each threshold, and each pair split between the water and
+        // the woods, so an open hour anywhere can reach one. Generous places
+        // and hours on purpose: the sit *is* the condition.
+        case .sunfish: Spec(name: "Sunfish", note: "Lying on its side at the surface, apparently asleep.",
+            places: [.harbor], dayParts: [.day, .dusk], rarity: .uncommon,
+            motion: .linger, altitude: 0.760, size: .init(width: 40, height: 38),
+            deepLaps: 2)
+        case .lynx: Spec(name: "Lynx", note: "Came out because nothing had moved for a very long time.",
+            places: [.woods, .peaks, .keep], dayParts: [.dawn, .dusk, .night], rarity: .uncommon,
+            motion: .linger, altitude: 0.775, size: .init(width: 34, height: 30),
+            deepLaps: 2)
+        case .mantaray: Spec(name: "Manta Ray", note: "One slow pass underneath, and then the water was empty.",
+            places: [.harbor, .onsen], dayParts: [.day, .dusk], rarity: .rare,
+            motion: .arc, altitude: 0.790, size: .init(width: 46, height: 26),
+            deepLaps: 3)
+        case .whitestag: Spec(name: "White Stag", note: "Stood in the open, which they do not do.",
+            places: [.woods, .keep, .blossom], dayParts: [.dawn, .dusk, .night], rarity: .rare,
+            motion: .linger, altitude: 0.770, size: .init(width: 40, height: 40),
+            deepLaps: 3)
         // --- Tidewater. Six animals that live in the couple of hours a day
         // the shore exists at all, plus the seal, who is the opposite: she
         // comes close when the water is up.
@@ -463,7 +502,8 @@ enum Species: String, Codable, CaseIterable, Identifiable {
             "a torn wing"
         case .dolphin, .whale, .seal, .otter, .turtle, .koi, .crab, .frog,
              .bigfrog, .littlefrog, .earthworm, .ghostslug, .salmonrun,
-             .starfish, .anemone, .hermitcrab, .octopus:
+             .starfish, .anemone, .hermitcrab, .octopus,
+             .sunfish, .mantaray:
             "a pale scar"
         // Its own arm rather than folded into the scars: a snail is told apart
         // by its shell, and "the garden snail with a pale scar" is a sentence
@@ -473,7 +513,7 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         case .hare, .foxcub, .squirrel, .stag, .badger, .fawn, .hedgehog,
              .sheep, .mountainhare, .ibex, .macaque, .tanuki, .moonrabbit,
              .roedeer, .suncat, .dandelionmouse, .snowfox, .ermine,
-             .mushroomvole:
+             .mushroomvole, .lynx, .whitestag:
             "a notched ear"
         case .rainbow, .meteors, .aurora, .sunshower, .fogbow, .firstthunder,
              .comet:
@@ -497,14 +537,22 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     /// The late-awarded ones are deliberately excluded: a rainbow depends on
     /// what the session *did*, which nobody knows when it begins. They are
     /// handed out on completion instead.
+    /// `laps` is how deep an open hour is, and defaults to zero — which is
+    /// what an ordinary countdown, the almanac and the journal all are. Adding
+    /// it with a default rather than at every call site is deliberate: a
+    /// surface that does not know about the Drift should not be able to
+    /// accidentally offer a deep-drift species, and zero is the honest answer
+    /// for all of them.
     func isEligible(
         place: Place,
         dayPart: DayPart,
         focusMinutes: Int,
         moonIsFull: Bool,
-        weather: Weather
+        weather: Weather,
+        laps: Int = 0
     ) -> Bool {
         guard !spec.awardedLate else { return false }
+        if spec.deepLaps > 0 && laps < spec.deepLaps { return false }
         // The passage gate goes first: it is the only one that can be shut on
         // 350 days of the year, so asking it first is both cheaper and the
         // honest reading — the swans are not "eligible but unlucky" in July,
@@ -536,6 +584,14 @@ enum Species: String, Codable, CaseIterable, Identifiable {
         // clock: the tide is fifty minutes later every day, so any hour this
         // could name would be wrong tomorrow — and a hint that goes stale is
         // worse than a vaguer one that never does.
+        // The deep drift names the sit and nothing else. No minutes: a lap is
+        // the phase length, which people change, so "after 50 minutes" would
+        // be wrong for anybody who had.
+        if spec.deepLaps > 0 {
+            return spec.deepLaps > 2
+                ? "Deep into an open hour"
+                : "Some way into an open hour"
+        }
         if let water = Tide.hint(for: spec.tides) {
             let where_ = spec.places.map(\.name).joined(separator: " or ")
             return "\(water.capitalizedFirst), at \(where_)"

@@ -837,17 +837,62 @@ of the ring instead of four, and by then the history would be unrecoverable.
 
 **Divergences:**
 
-- **The deep-drift species are not built.** A whale surfacing, a sea turtle,
-  cranes crossing high, a sunfish — four new wildlife sprites, which belong
-  with wave 4's art pass rather than in an engine commit. The per-lap sighting
-  roll that they hang off is in and working; they are a roster addition when
-  the art lands.
+- ~~**The deep-drift species are not built.**~~ Built now — see below.
 - **`-PawmodoroLaps` backdates the cast-off** rather than fast-forwarding a
   counter. The feature is a function of one `Date`, so moving that `Date`
   reaches exactly the state the honest two hours reach — laps, ring, banking
   and the six-hour question all agree without being told about the flag.
 - **No Live Activity count-up.** The plan has one in Z; the controller is
   simply not called for a drift, so nothing has to be undone when Z arrives.
+
+### As built — X1's deep-drift species
+
+Four, and none of them the four the plan named. A whale, a sea turtle and
+cranes are all *already on the roster* as ordinary species — putting them in
+the deep-drift slot would have meant one animal appearing in two rows of the
+journal doing different things, the same collision the Flyway hit with the
+swift. So the sunfish survived from the plan's list and it was joined by a
+manta ray, a lynx and a white stag.
+
+**Two at each threshold, and each pair split between the water and the
+woods**, so an open hour *anywhere* can reach one: sunfish and lynx at two
+laps, manta ray and white stag at three. Places and hours are deliberately
+generous — the sit is the condition, and a second one on top of it would be
+the thing the checker below exists to forbid.
+
+**`Spec.deepLaps` is the gate and `isEligible` gained `laps: Int = 0`.** The
+default is the design: the almanac, the journal and every ordinary countdown
+pass nothing, so they get zero and the deep roster is unreachable from all of
+them *by construction* rather than by anybody remembering to exclude it.
+`TimerEngine.rollSighting` is the one caller that passes a real number.
+
+**The journal's hint names the sit and no minutes.** A lap is one phase
+length, which people change, so "after 50 minutes" would be wrong for anybody
+who had.
+
+**`check_species.py` gained the fence and a ceiling.** A deep species may not
+also need a sky, a moon, a passage, a tide, a minimum session or a late award
+— a drift is a *decision*, which makes it the fairest hard gate in the app
+right up until it is multiplied by something nobody can order. And
+`DEEPEST_LAPS = 4`: four laps is an hour and forty minutes of unbroken
+sitting, and past that it stops being a reward for a long sit and becomes an
+endurance test. All four rules break-tested.
+
+**Two sprites took a second draft, both for the same reason.** The lynx's head
+ellipse overlapped its body's and the two merged into one brown lump with legs
+— no neck, no silhouette, and nothing anybody could name; and its four
+two-pixel legs at even spacing welded into a slab. The head sits clear with a
+drawn neck now and the legs have a gap inside each pair. The sunfish's fins
+were drawn *after* the disc at three pixels and vanished into the outline;
+they are drawn first and tall, with the disc composited over their roots.
+
+**One more dream, at four laps** — `Adrift.deep`, deeper than anything the
+roster asks for, so it arrives *after* the animals rather than before them. A
+dream about something enormous going under, had by somebody who has not been
+shown one yet, would be the app spoiling its own surprise. Its sprite also
+took two drafts: the first filled everything below the waterline, which made
+it a solid rectangle among a diary of floating shapes and read as a rendering
+fault.
 - **Both ends are a long press**, which the plan only asked for at the end.
   Casting off by accident is a smaller harm than ending by accident, but a tap
   that sometimes starts a countdown and sometimes starts an open hour is worse

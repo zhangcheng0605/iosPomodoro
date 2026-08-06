@@ -58,6 +58,14 @@ ASPECT_TOLERANCE = 0.22
 
 YEARS = 10
 
+# The deepest an open hour may have to be before a species turns up.
+#
+# A lap is one phase length — 25 minutes by default — so four is an hour and
+# forty minutes of continuous, uninterrupted sitting. Past that it stops being
+# a reward for a long sit and becomes an endurance test, and the Drift's whole
+# premise is that there is nothing to endure.
+DEEPEST_LAPS = 4
+
 
 def parse_specs():
     """Every `Spec` row out of `Species.swift`, as a dict per case."""
@@ -84,6 +92,8 @@ def parse_specs():
             "passage": (re.search(r"passage: \.(\w+)", text)
                         or _None()).group(1),
             "tides": re.findall(r"\.(\w+)", _field(text, "tides") or ""),
+            "deepLaps": int((re.search(r"deepLaps: (\d+)", text)
+                             or _Zero()).group(1)),
             "needsFullMoon": "needsFullMoon: true" in text,
             "minimumMinutes": int((re.search(r"minimumMinutes: (\d+)", text)
                                    or _Zero()).group(1)),
@@ -181,6 +191,42 @@ def main():
             failures.append(
                 f"{name} is gated on the tide but check_tide.py does not see "
                 f"it — its reachability is measured by nothing")
+
+    # The deep drift. A lap is one phase length, so these are the only species
+    # in the app gated on *how* somebody is sitting rather than on where, when
+    # or what the sky is doing — and a drift is a decision, which makes it the
+    # fairest hard gate here. Right up until it is multiplied by something
+    # nobody can arrange, at which point it becomes the worst.
+    for name, spec in sorted(specs.items()):
+        if not spec["deepLaps"]:
+            continue
+        stacked = []
+        if spec["weathers"]:
+            stacked.append("a particular sky")
+        if spec["needsFullMoon"]:
+            stacked.append("a full moon")
+        if spec["passage"]:
+            stacked.append("a migration window")
+        if spec["tides"]:
+            stacked.append("a state of the tide")
+        if spec["minimumMinutes"]:
+            stacked.append("a minimum session length")
+        if stacked:
+            failures.append(
+                f"{name} needs {spec['deepLaps']} laps of an open hour *and* "
+                f"{' and '.join(stacked)} — an hour of drifting is already the "
+                f"longest ask in the app and multiplying it by something "
+                f"nobody can order makes the species theoretical")
+        if spec["deepLaps"] > DEEPEST_LAPS:
+            failures.append(
+                f"{name} needs {spec['deepLaps']} laps, over the ceiling of "
+                f"{DEEPEST_LAPS}. At a default phase length that is over two "
+                f"hours of unbroken sitting for one roll of the dice")
+        if spec["awardedLate"]:
+            failures.append(
+                f"{name} is both deep-drift and awarded late — `isEligible` "
+                f"returns false for late awards before it ever reads the lap "
+                f"count, so the drift gate does nothing")
 
     thinnest = (10_000.0, None)
     for name, spec in sorted(specs.items()):

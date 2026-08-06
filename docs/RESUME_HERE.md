@@ -13,9 +13,9 @@ them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS). It is not tonight's problem: nothing in it starts before this
-backlog has been through the compiler. It is mentioned here so it isn't
-discovered mid-era.
+macOS) — and **its first two phases are already built**: the acorn pouch and
+the Magpie's Cart. They are blind like everything else here, and section 12
+below is their walkthrough. The rest of the era has not started.
 
 **The next session is at the MacBook.** The section headed *"Tonight, at the
 Mac"* is a running order, not a list.
@@ -459,6 +459,40 @@ the cheap moment. Undo is two characters on those two lines.
 
 Revisit when Phase Y's Homestead panorama earns a big canvas.
 
+### 12. The pouch and the cart — the economy's first outing
+
+Settings → *The magpie's cart*. Every padlock in the app now opens the unlock
+sheet instead of going straight to the paywall, so this touches four pickers.
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroBond 200          # a full pouch, honestly earned
+$S -PawmodoroAcorns 30         # too poor for anything — the distance lines
+$S -PawmodoroOwnEverything     # every owned state at once
+$S -PawmodoroCart              # straight into the cart
+$S                             # a clean install: an empty pouch
+```
+
+`check_catalog.py` has proved the fixture holds, every item has art, and the
+economics sit inside both fences (25 days for the dearest thing, 300 for the
+lot). What is left for an eye:
+
+- **The unlock sheet's balance of voice.** The Trade button and the "Or
+  everything, at once" line under the rule are the whole commercial argument.
+  If Plus reads louder than the thing you came to look at, the sheet has
+  stopped selling the thing — the fix is the Plus block's weight, not the
+  price.
+- **The distance lines.** `-PawmodoroAcorns 30` then open a buddy: it should
+  say "a few weeks of afternoons away", never a number of sessions and never
+  a progress bar. Check the wording does not read as a target.
+- **The magpie at 46pt.** She was drawn and looked at on Linux; the head-tilt
+  loop runs at 1.5s and should read as a bird ignoring you, not as a UI
+  element blinking.
+- **That the timer screen still has no balance on it anywhere.** Fence 8. If
+  an acorn count has crept onto the countdown, it goes.
+- **Trade something, then check the four pickers.** The traded buddy should
+  be selectable everywhere immediately, and the padlock gone.
+
 ---
 
 ## Verification loop (every session)
@@ -471,6 +505,7 @@ python3 tools/check_post.py              # after any Chronicle kind or letter co
 python3 tools/check_grove.py             # after touching the grove layout
 python3 tools/check_residents.py         # after moving a resident or its art
 python3 tools/check_species.py           # after any roster or weather-gate change
+python3 tools/check_catalog.py           # after any price, earn rate or fence
 python3 tools/check_clocks.py            # after touching any clock face
 python3 tools/check_contrast.py          # must print "all pass"
 python3 tools/check_stray.py             # must print "all pass"

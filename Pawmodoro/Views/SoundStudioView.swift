@@ -47,7 +47,8 @@ struct SoundStudioView: View {
             Text("Ambience")
                 .font(.headline)
                 .foregroundStyle(Theme.bark)
-            AmbiencePicker { showPaywall = true }
+            // Ambience is not in the cart, so every lock here is a paywall lock.
+            AmbiencePicker { _ in showPaywall = true }
         }
     }
 

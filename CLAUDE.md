@@ -139,7 +139,10 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroHear <id>` | Guarantee a sound this session, e.g. `owlcall` |
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
-| `-PawmodoroBond <n>` | Seed n completed sessions — every bond level, and every homestead resident (`200` for all eight) |
+| `-PawmodoroBond <n>` | Seed n completed sessions — every bond level, every homestead resident (`200` for all eight), and a full pouch |
+| `-PawmodoroAcorns <n>` | Override the derived acorn total, for the cannot-afford-it half of the unlock sheet |
+| `-PawmodoroOwnEverything` | Own the whole cart without Plus and without earning it |
+| `-PawmodoroCart` | Open the Magpie's Cart on launch |
 | `-PawmodoroDate <yyyy-mm-dd>` | Pin the world's calendar day — season, moon, and everything date-driven after them |
 | `-PawmodoroSeedChronicle` | Six plausible weeks of world events in the chronicle |
 | `-PawmodoroWeather <id>` | Pin today's weather everywhere, e.g. `storm`, `mist`, `golden` |
@@ -168,9 +171,9 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are eleven now (`swift`, `contrast`, `grove`,
-`residents`, `species`, `post`, `weather`, `yearring`, `clocks`, `stray`,
-`snail`), they
+without a Mac** — there are twelve now (`swift`, `contrast`, `grove`,
+`residents`, `species`, `catalog`, `post`, `weather`, `yearring`, `clocks`,
+`stray`, `snail`), they
 take about fifteen seconds between them, and each one exists because
 something got through. `check_swift.py` is the one that stands in for the
 compiler; the rest each guard one system.
@@ -229,6 +232,18 @@ There are no tests. A change is verified by building and looking at it:
   already know. And no caption may name a buddy: they can all be renamed, and
   a model type cannot reach `settings.displayName(for:)`.
 
+- **The economy has one earn rate and one price table, and neither may rise.**
+  `Acorns.minutesPerAcorn` and `CatalogItem.price` decide what everybody's
+  focus history is worth, retroactively, and they are the only numbers in this
+  app a user can be *cheated* by. A price may fall — that is a gift and
+  everyone who already paid keeps the thing. Raising either takes something
+  from somebody who is not in the room, silently, with no notification or
+  patch note that repairs it. `tools/check_catalog.py` holds both in a stored
+  fixture and refuses the direction. Its other rules are the fences written
+  out as code: acorns are never sold for money (the bridge between cash and
+  the catalogue is Plus, whole, once), nothing is ever removed from the pouch,
+  Soot is never for sale, and the Sunday Post never itemises what you bought.
+  `docs/HEARTH_PLAN.md` has the reasoning for all eight.
 - **Colours go through `Theme`**, never literal `Color` values. That is what
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.

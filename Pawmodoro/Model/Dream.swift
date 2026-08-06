@@ -52,6 +52,8 @@ enum Dream: Hashable, Identifiable {
     case wood(Wood)
     /// One of the neighbours, once they have moved in.
     case neighbour(Neighbour)
+    /// The bird who keeps the cart, once you have met her.
+    case magpie(Magpie)
     /// You, which takes a while.
     case yours(Yours)
     /// Something that only happens asleep.
@@ -318,6 +320,42 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The magpie, and the one thing in her cart the buddy actually wants.
+    ///
+    /// The era's dream pair, and it is deliberately *hers* rather than the
+    /// pouch's. In five plan documents this is the one knowing exception to
+    /// "every feature lands with two or three dreams": the acorns get none.
+    /// A buddy that dreams about a balance is a buddy that has been given a
+    /// job, and the whole argument for the currency being invisible outside
+    /// two screens falls over the moment it turns up in the diary.
+    ///
+    /// So the magpie gets them instead, and neither line mentions a price.
+    /// Costs no new art — her own two sprites, as silhouettes.
+    enum Magpie: String, CaseIterable, Hashable {
+        case counting, shiny
+
+        var asset: String {
+            switch self {
+            case .counting: "magpie_1"
+            case .shiny: "magpie_0"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .counting: "the magpie, counting"
+            case .shiny: "something shiny"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .counting: "Counting, and losing count, and starting again."
+            case .shiny: "Exactly the right pebble. She knew it at once."
+            }
+        }
+    }
+
     /// Three things of yours, unlocked by the bond and nothing else.
     ///
     /// The bond is the one counter in the app that measures time spent
@@ -368,6 +406,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): "hour.\(hour.rawValue)"
         case .wood(let wood): "wood.\(wood.rawValue)"
         case .neighbour(let neighbour): "neighbour.\(neighbour.rawValue)"
+        case .magpie(let magpie): "magpie.\(magpie.rawValue)"
         case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
@@ -389,6 +428,7 @@ enum Dream: Hashable, Identifiable {
         case "hour": return Hour(rawValue: parts[1]).map(Dream.hour)
         case "wood": return Wood(rawValue: parts[1]).map(Dream.wood)
         case "neighbour": return Neighbour(rawValue: parts[1]).map(Dream.neighbour)
+        case "magpie": return Magpie(rawValue: parts[1]).map(Dream.magpie)
         case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
@@ -411,6 +451,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.asset
         case .wood(let wood): wood.asset
         case .neighbour(let neighbour): neighbour.asset
+        case .magpie(let magpie): magpie.asset
         case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
@@ -421,7 +462,8 @@ enum Dream: Hashable, Identifiable {
     /// here instead, so everything inside a bubble is a sketch.
     var isSilhouette: Bool {
         switch self {
-        case .travel, .companion, .visitor, .hour, .wood, .neighbour: true
+        case .travel, .companion, .visitor, .hour, .wood, .neighbour,
+             .magpie: true
         case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
              .surreal: false
         }
@@ -448,6 +490,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.subject
         case .wood(let wood): wood.subject
         case .neighbour(let neighbour): neighbour.subject
+        case .magpie(let magpie): magpie.subject
         case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
@@ -468,6 +511,7 @@ enum Dream: Hashable, Identifiable {
         case .hour(let hour): hour.line
         case .wood(let wood): wood.line
         case .neighbour(let neighbour): neighbour.line
+        case .magpie(let magpie): magpie.line
         case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
@@ -493,6 +537,7 @@ enum Dream: Hashable, Identifiable {
             + Hour.allCases.map(Dream.hour)
             + Wood.allCases.map(Dream.wood)
             + Neighbour.allCases.map(Dream.neighbour)
+            + Magpie.allCases.map(Dream.magpie)
             + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }

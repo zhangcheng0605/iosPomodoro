@@ -97,6 +97,8 @@ final class TimerEngine {
     let dreams: DreamDiary
     /// Written to, never read from — yet. See `Chronicle`.
     let chronicle: Chronicle
+    /// What has been traded for. The balance is not in here — see `Acorns`.
+    let pouch: Pouch
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -114,7 +116,8 @@ final class TimerEngine {
         album: Album = Album(),
         stray: Stray = Stray(),
         dreams: DreamDiary = DreamDiary(),
-        chronicle: Chronicle = Chronicle()
+        chronicle: Chronicle = Chronicle(),
+        pouch: Pouch = Pouch()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -124,6 +127,7 @@ final class TimerEngine {
         self.stray = stray
         self.dreams = dreams
         self.chronicle = chronicle
+        self.pouch = pouch
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -222,6 +226,46 @@ final class TimerEngine {
 
     /// How well you and your buddy know each other, counted out of the log.
     var bond: Bond { Bond.level(at: log.totalSessions) }
+
+    /// What is in the pouch right now.
+    ///
+    /// Derived here rather than stored anywhere, which is the whole design —
+    /// see `Acorns`. `-PawmodoroAcorns` overrides the *earned* side only, so
+    /// what you own still costs what it costs and the sums keep adding up.
+    var acorns: Int {
+        if let forced = LaunchOptions.forcedAcorns {
+            return max(0, forced - pouch.spent)
+        }
+        return Acorns.balance(minutes: log.totalMinutes, spent: pouch.spent)
+    }
+
+    /// Minutes of focus until `count` acorns are in hand, or nil if they
+    /// already are. The unlock sheet turns this into a distance.
+    func minutesUntil(_ count: Int) -> Int? {
+        guard acorns < count else { return nil }
+        return (count - acorns) * Acorns.minutesPerAcorn
+    }
+
+    /// Take something from the cart.
+    ///
+    /// The engine does it rather than the view, for the same reason the
+    /// journal's writes live here: this is the only place that knows the log,
+    /// the pouch and the chronicle at once, and a trade has to touch all
+    /// three or none. The debug override is handled honestly — with
+    /// `-PawmodoroAcorns` the pouch cannot do its own arithmetic, so the
+    /// affordability check happens here against the same balance the sheet
+    /// showed, and the pouch is told to keep the item either way.
+    @discardableResult
+    func trade(_ item: CatalogItem) -> Bool {
+        guard !pouch.owns(item) else { return true }
+        guard acorns >= item.price else { return false }
+        pouch.take(item)
+        // Written down and never mentioned again: the Sunday Post keeps this
+        // kind silent on purpose — the one surface addressed *to* the reader
+        // is not going to double as a receipt.
+        chronicle.add(.trade, item.id)
+        return true
+    }
 
     /// What the sky is doing where you are, today.
     ///
@@ -938,9 +982,7 @@ final class TimerEngine {
             pool.append(contentsOf: repeatElement(.hour(hour), count: 2))
         }
         // The wood behind the house, once trees are actually standing in it.
-        let trees = Grove.trees(
-            forMinutes: log.records.reduce(0) { $0 + $1.minutes }
-        ).count
+        let trees = Grove.trees(forMinutes: log.totalMinutes).count
         for wood in Dream.Wood.allCases where trees >= wood.reachedAt {
             pool.append(contentsOf: repeatElement(.wood(wood), count: 2))
         }
@@ -951,6 +993,13 @@ final class TimerEngine {
         for neighbour in Dream.Neighbour.allCases
         where neighbours.contains(neighbour.reachedAt) {
             pool.append(contentsOf: repeatElement(.neighbour(neighbour), count: 2))
+        }
+        // Her cart is one tap inside Settings and always has been open, so
+        // the gate is having sat at all rather than having traded — a dream
+        // you can only have after spending would be the app rewarding the
+        // spending, which is the one thing the fences forbid.
+        if log.totalSessions > 0 {
+            pool.append(contentsOf: Dream.Magpie.allCases.map(Dream.magpie))
         }
         for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
             pool.append(contentsOf: repeatElement(.yours(yours), count: 2))

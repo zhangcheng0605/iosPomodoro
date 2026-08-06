@@ -229,6 +229,54 @@ at once." Costs the magpie's existing sprites as silhouettes.
 **Flags:** `-PawmodoroCart` (open the cart on launch). The Phase 1 flags
 cover the rest.
 
+### As built — Phases 1 and 2, the Pouch and the Cart
+
+Built on Linux, never compiled. `tools/check_catalog.py` is new and all six of
+its fence rules were verified by deliberately breaking them.
+
+**The balance is derived and there is no counter anywhere**, exactly as
+planned: `Acorns.earned = totalMinutes / 20`, `balance = earned − Σ price(owned)`.
+The only thing stored is a `Set<String>` of catalogue ids. Consequences that
+fell out for free: `-PawmodoroBond 200` fills the pouch without knowing the
+economy exists, drift laps bank acorns because they bank sessions, and the
+whole thing backfills the day it ships.
+
+**The numbers, measured rather than guessed.** At the shipping divisor and a
+steady two hours a day: the dearest single item is 25 days away and the whole
+catalogue is 300 days (1,800 acorns). `check_catalog.py` asserts both ends —
+no single thing past a season (or the free road is decoration on the paywall)
+and the whole hoard at least half a year (or Plus has no argument). Those two
+constants are the era's commercial thesis expressed as arithmetic.
+
+**Divergences from the plan:**
+
+- **No two new catalogue buddies yet.** The plan wanted stock that is new
+  rather than re-routed; a full pose set each is the era's biggest art item
+  and it did not fit this commit. The cart currently stocks the eight Plus
+  buddies, four Plus places and six Plus themes — eighteen items. Adding the
+  new pair later needs no cart changes at all, because `CatalogItem.all` is
+  computed from `Buddy.allCases` rather than listed.
+- **`Pouch.take(_:)` does no arithmetic.** The plan had the pouch checking
+  affordability. It cannot honestly: the balance needs the session log, which
+  lives on the engine, and `-PawmodoroAcorns` overrides it. So
+  `TimerEngine.trade(_:)` is the one place that decides, mirroring
+  `StoreManager.isUnlocked(_:)` being the one place that decides entitlement.
+- **The Sunday Post got an acorn line after all**, computed from the week's
+  own minutes rather than from any `.trade` — those stay silent as planned.
+  It is phrased as weather ("The wood dropped acorns all week. I have not
+  counted them.") and never says a balance or what they might buy.
+- **The dreams are the magpie's, and the acorns get none.** This is the one
+  knowing exception to the dream convention in five plan documents and it is
+  recorded here as a decision: a buddy that dreams about a balance has been
+  given a job. Gated on having sat at all rather than on having traded, so
+  the app never rewards the spending.
+
+**One thing worth knowing before the Mac build:** `onLockedTap` changed shape
+from `() -> Void` to `(CatalogItem?) -> Void` across all four pickers. Nil
+means "Plus gates this but the cart does not sell it" — currently only
+ambience — and still routes to the paywall exactly as before. That is the
+seam where a compile error is most likely.
+
 ## Phase 3 — The Wardrobe (closes DELIGHT_PLAN's E2)
 
 The accessories the owner asked for, and the oldest open phase in any plan

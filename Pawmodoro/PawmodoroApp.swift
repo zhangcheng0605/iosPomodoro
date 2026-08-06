@@ -10,8 +10,13 @@ struct PawmodoroApp: App {
         // Before the engine and the store are built, since both read
         // UserDefaults on init and the debug launch options rewrite it.
         LaunchOptions.applyAtLaunch()
-        _engine = State(initialValue: TimerEngine())
-        _store = State(initialValue: StoreManager())
+        let engine = TimerEngine()
+        let store = StoreManager()
+        // The two roads to the same door, introduced. `isUnlocked(_:)` stays
+        // the single place that decides; it just knows about both now.
+        store.pouch = engine.pouch
+        _engine = State(initialValue: engine)
+        _store = State(initialValue: store)
     }
 
     var body: some Scene {

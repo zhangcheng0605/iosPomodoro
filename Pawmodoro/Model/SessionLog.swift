@@ -76,6 +76,11 @@ final class SessionLog {
 
     var totalSessions: Int { records.count }
 
+    /// Every completed focus minute ever. The grove plants a tree per hour of
+    /// it and the pouch drops an acorn per twenty minutes, so it had better be
+    /// one function rather than three copies of the same `reduce`.
+    var totalMinutes: Int { records.reduce(0) { $0 + $1.minutes } }
+
     var todaySessions: Int {
         let calendar = Calendar.current
         return records.filter { calendar.isDateInToday($0.endedAt) }.count

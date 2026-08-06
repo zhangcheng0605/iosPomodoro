@@ -56,6 +56,9 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         case snail
         /// Somebody moved into the homestead.
         case resident
+        /// Something taken from the Magpie's Cart. The subject is a
+        /// `CatalogItem.id`.
+        case trade
     }
 }
 

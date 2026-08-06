@@ -33,9 +33,14 @@ enum StorageKeys {
     /// else — see `SessionLog.longestDrift`.
     static let longestDrift = "pawmodoro.longestDrift"
 
+    /// Catalogue ids traded for. The only thing the economy stores — the
+    /// balance is derived from the session log, see `Acorns`.
+    static let owned = "pawmodoro.owned"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, chronicle, longestDrift,
+        owned,
     ]
 }
 
@@ -297,6 +302,24 @@ enum LaunchOptions {
         return ClockFace(rawValue: raw)
     }()
 
+    /// Override the derived acorn total, e.g. `-PawmodoroAcorns 800`.
+    ///
+    /// The pouch is normally a pure function of the session log, so the honest
+    /// way to fill it is `-PawmodoroBond 200`. This exists for the other
+    /// direction: driving the *cannot afford it* half of the unlock sheet,
+    /// which a seeded history makes hard to reach.
+    static let forcedAcorns: Int? = {
+        guard arguments.contains("-PawmodoroAcorns") else { return nil }
+        return value(after: "-PawmodoroAcorns").flatMap(Int.init)
+    }()
+
+    /// Own the entire catalogue without Plus and without earning it, for
+    /// driving every owned state at once.
+    static let ownEverything = arguments.contains("-PawmodoroOwnEverything")
+
+    /// Open the Magpie's Cart on launch.
+    static let openCart = arguments.contains("-PawmodoroCart")
+
     /// Six weeks of plausible world events, for building anything that reads
     /// the chronicle before the chronicle has had six weeks to fill up.
     static let seedChronicle = isSet("-PawmodoroSeedChronicle")
@@ -392,6 +415,9 @@ enum LaunchOptions {
     static let driftLaps: Int? = nil
     static let forcedClockFace: ClockFace? = nil
     static let bondSessions: Int? = nil
+    static let forcedAcorns: Int? = nil
+    static let ownEverything = false
+    static let openCart = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.

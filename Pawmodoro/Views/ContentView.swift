@@ -7,6 +7,10 @@ struct ContentView: View {
     @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
     @State private var showStats = false
+    /// `-PawmodoroCart` only. There is no button to the cart on this screen
+    /// and there must not be one — fence 8 keeps the timer clear of the
+    /// economy. It lives one tap deeper, in Settings.
+    @State private var showCart = LaunchOptions.openCart
     @State private var showPaywall = false
     @State private var showStudio = false
     @State private var showStrayNaming = false
@@ -159,6 +163,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showStrayNaming) {
                 StrayNamingSheet()
+            }
+            .sheet(isPresented: $showCart) {
+                CartView()
             }
             // The only question the Drift ever asks. Phrased so that neither
             // answer is the "good" one: the app genuinely does not know

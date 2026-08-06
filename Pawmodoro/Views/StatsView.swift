@@ -16,6 +16,7 @@ struct StatsView: View {
                     // addressed to you rather than describing you.
                     SundayPostView()
                     bondCard
+                    pouchLine
                     summaryGrid
                     weekChart
                     if log.totalSessions == 0 {
@@ -95,6 +96,37 @@ struct StatsView: View {
 
     /// The bond meter. Five hearts and a line, and deliberately no bar: this
     /// is a thing to notice having happened, not a target to chase.
+    /// The pouch, as one line.
+    ///
+    /// Deliberately not a card, not a header, and nowhere near the timer —
+    /// fence 8. It sits with the other quiet readouts and says a number,
+    /// which is all a pouch has to say. No "spend it" button: the way to the
+    /// cart is through Settings, one tap further from focus than this.
+    private var pouchLine: some View {
+        HStack(spacing: 6) {
+            Image("acorn")
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 15)
+            Text(pouchText)
+                .font(.footnote)
+                .foregroundStyle(Theme.bark.opacity(0.6))
+            Spacer()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(pouchText)
+    }
+
+    private var pouchText: String {
+        let acorns = engine.acorns
+        switch acorns {
+        case 0: return "The pouch is empty. Twenty minutes of sitting fills it a little."
+        case 1: return "One acorn in the pouch."
+        default: return "\(acorns) acorns in the pouch."
+        }
+    }
+
     private var bondCard: some View {
         let bond = engine.bond
         let name = engine.buddyName

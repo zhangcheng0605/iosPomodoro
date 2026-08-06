@@ -135,9 +135,37 @@ final class StoreManager {
 
     // MARK: Entitlements
 
+    /// Still the single place that decides whether a thing is available, and
+    /// now it knows about two roads to the same door.
+    ///
+    /// Plus first, because Plus is everything and always was. Then the
+    /// pouch — but only for things the cart actually sells: `catalogItem` is
+    /// nil for Soot and for anything else Plus gates but the cart will never
+    /// stock, so those fall through to locked, which is the safe answer.
     func isUnlocked(_ item: PlusLockable) -> Bool {
-        hasPlus || !item.isPlus
+        if hasPlus || !item.isPlus { return true }
+        guard let entry = (item as? any Ownable)?.catalogItem else { return false }
+        return pouch?.owns(entry) == true
     }
+
+    /// Whether a catalogue item is available, by either road.
+    ///
+    /// The cart asks this rather than `isUnlocked(_:)` because it holds
+    /// `CatalogItem`s rather than the underlying buddies and places, and
+    /// because it wants the same answer for both roads: a thing you have is a
+    /// thing you have, whether it came from the pouch or from Plus.
+    func isUnlocked(byPurchase item: CatalogItem) -> Bool {
+        hasPlus || pouch?.owns(item) == true
+    }
+
+    /// The traded half of the entitlement. Set once, at app construction —
+    /// held here rather than passed to every call site so that
+    /// `isUnlocked(_:)` stays one function with one answer, which is the
+    /// whole reason this file exists.
+    ///
+    /// Weak, because the pouch outlives nothing and this would otherwise be a
+    /// retain cycle waiting for somebody to add a back-reference.
+    @ObservationIgnored weak var pouch: Pouch?
 
     // MARK: Internals
 

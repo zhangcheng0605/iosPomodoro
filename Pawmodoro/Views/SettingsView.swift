@@ -7,6 +7,19 @@ struct SettingsView: View {
 
     @State private var showPaywall = false
     @State private var showTipJar = false
+    @State private var showCart = false
+    /// The locked thing somebody just tapped, if the cart sells it.
+    @State private var unlocking: CatalogItem?
+
+    /// What a padlock does, everywhere in this screen.
+    ///
+    /// Something the cart sells opens the unlock sheet, which shows the price
+    /// *and* the Plus road. Anything else — ambience, today — still goes
+    /// straight to the paywall, because there is no acorn road to offer and
+    /// pretending otherwise would be worse than the padlock.
+    private func lockedTap(_ item: CatalogItem?) {
+        if let item { unlocking = item } else { showPaywall = true }
+    }
 
     var body: some View {
         @Bindable var engine = engine
@@ -14,7 +27,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    BuddyPicker { showPaywall = true }
+                    BuddyPicker(onLockedTap: lockedTap)
                     HStack {
                         Text("Name")
                         Spacer()
@@ -37,7 +50,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    PlacePicker { showPaywall = true }
+                    PlacePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Where you are")
                 } footer: {
@@ -64,7 +77,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    AmbiencePicker { showPaywall = true }
+                    AmbiencePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Ambience")
                 } footer: {
@@ -72,7 +85,7 @@ struct SettingsView: View {
                 }
 
                 Section("Theme") {
-                    ThemePicker { showPaywall = true }
+                    ThemePicker(onLockedTap: lockedTap)
                 }
 
                 Section("The cabinet of clocks") {
@@ -94,6 +107,7 @@ struct SettingsView: View {
                          + "no battery.")
                 }
 
+                cartSection
                 plusSection
 
                 Section {
@@ -115,9 +129,40 @@ struct SettingsView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(item: $unlocking) { UnlockSheet(item: $0) }
+            .sheet(isPresented: $showCart) { CartView() }
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
+        }
+    }
+
+    /// The way into the one commercial room, and the only mention of the
+    /// economy anywhere outside it and the stats sheet. Never badged, never
+    /// with a count on it — fence 8: the balance does not follow you around.
+    private var cartSection: some View {
+        Section {
+            Button {
+                showCart = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image("magpie_0")
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 24)
+                    Text("The magpie's cart")
+                        .foregroundStyle(Theme.bark)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.bark.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text("The wood drops an acorn every twenty minutes you sit. "
+                 + "She trades.")
         }
     }
 

@@ -79,6 +79,7 @@ enum SundayPost {
         if let place = placeLine(weekEvents) { lines.append(place) }
         lines.append(contentsOf: eventLines(weekEvents))
         if let hour = hourLine(weekSessions) { lines.append(hour) }
+        if let acorns = acornLine(weekSessions) { lines.append(acorns) }
         lines.append(moonLine(on: lastMonday))
 
         return Letter(
@@ -102,7 +103,15 @@ enum SundayPost {
     ///
     /// - `sound`: reserved for Phase W and nothing writes it yet. It gets a
     ///   sentence the week the first ambience becomes findable, not before.
-    static let silentKinds: [ChronicleEvent.Kind] = [.sound]
+    /// - `trade`: silent forever, and this is the one entry here that is a
+    ///   decision rather than a deferral. The letter is the single surface in
+    ///   the app addressed *to* the reader, and the moment it starts
+    ///   itemising what they bought it is a receipt — which is a different
+    ///   relationship from the one every other line in it is building. The
+    ///   thing traded for shows up in the letter anyway, in its own words, on
+    ///   the week it starts being used: a new place gets "We reached the
+    ///   Sunstone Keep", which is worth more than "You spent 150 acorns."
+    static let silentKinds: [ChronicleEvent.Kind] = [.sound, .trade]
 
     // MARK: The grammar
 
@@ -232,6 +241,24 @@ enum SundayPost {
         case .day: return "Mostly in the middle of the day."
         case .dusk: return "Mostly as the light went."
         case .night: return "Mostly after dark, which suits me."
+        }
+    }
+
+    /// What the wood dropped, without ever saying what it is worth.
+    ///
+    /// Computed from the week's own minutes rather than read from a
+    /// `.trade` — those stay silent, per `silentKinds`. This is the only
+    /// place outside the cart and the stats sheet that the economy is
+    /// mentioned at all, and it is phrased as weather: acorns fall, and
+    /// nobody is being told to go and collect them. No balance, no total, no
+    /// suggestion of what they might buy.
+    private static func acornLine(_ sessions: [SessionRecord]) -> String? {
+        let dropped = Acorns.earned(minutes: sessions.reduce(0) { $0 + $1.minutes })
+        switch dropped {
+        case 0: return nil
+        case 1: return "One acorn came down while we were sitting."
+        case 2...9: return "A few acorns came down while we were sitting."
+        default: return "The wood dropped acorns all week. I have not counted them."
         }
     }
 

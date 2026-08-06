@@ -23,9 +23,7 @@ import SwiftUI
 struct HomesteadView: View {
     @Environment(TimerEngine.self) private var engine
 
-    private var minutes: Int {
-        engine.log.records.reduce(0) { $0 + $1.minutes }
-    }
+    private var minutes: Int { engine.log.totalMinutes }
 
     private var trees: [Grove.Tree] { Grove.trees(forMinutes: minutes) }
 

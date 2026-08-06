@@ -13,7 +13,10 @@ struct BuddyPicker: View {
     @Environment(StoreManager.self) private var store
 
     /// Called when the user taps something they don't own yet.
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -44,7 +47,7 @@ struct BuddyPicker: View {
             if unlocked {
                 engine.settings.buddy = buddy
             } else {
-                onLockedTap()
+                onLockedTap(buddy.catalogItem)
             }
         } label: {
             VStack(spacing: 4) {
@@ -92,7 +95,10 @@ struct AmbiencePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ForEach(Ambience.allCases) { option in
@@ -109,7 +115,10 @@ struct AmbiencePicker: View {
             if unlocked {
                 engine.settings.ambience = option
             } else {
-                onLockedTap()
+                // Ambience is Plus-only and the cart does not stock it — the
+                // sound shelf is Phase W's business, not the magpie's. Nil
+                // sends the caller to the paywall, unchanged.
+                onLockedTap(nil)
             }
         } label: {
             HStack(spacing: 12) {
@@ -148,7 +157,10 @@ struct ThemePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ForEach(AppTheme.allCases) { theme in
@@ -164,7 +176,7 @@ struct ThemePicker: View {
             if unlocked {
                 engine.settings.theme = theme
             } else {
-                onLockedTap()
+                onLockedTap(theme.catalogItem)
             }
         } label: {
             HStack(spacing: 12) {

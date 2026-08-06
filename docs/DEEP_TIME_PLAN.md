@@ -658,6 +658,53 @@ capsule.
 
 ---
 
+### As built — X2, the Cabinet of Clocks
+
+Built on Linux, never compiled. Five generated faces plus the ring.
+
+**Frame strips, not shapes, and that is why this was buildable blind.** The
+plan asked for "a frame-strip monotonicity assertion in the generator" and it
+turns out to be the load-bearing decision of the whole phase: at one frame
+every two minutes, a face that stalls, reverses or finishes early is invisible
+to anybody watching. `tools/check_clocks.py` measures in a second what would
+take five whole phases and a stopwatch to notice.
+
+**One convention makes one assertion cover five faces:** the pixels drawn in
+`ACCENT` are the part that *grows with time* — the wax pool, the fallen sand,
+the ash, the risen water, the swept sector. The checker counts that colour per
+frame and asserts it never decreases, actually moves, never stalls for more
+than two steps, and travels at least 90 % of its range by the chime.
+
+It found two problems, one each way:
+
+- **The flame and the coal were `ACCENT`**, and both go out at the end of a
+  phase — so the candle and the incense measured *less* on their last frame
+  than their second-to-last, and the checker called it what it was: a clock
+  running backwards. The live end has its own palette index now, which makes
+  the convention exactly true rather than nearly true.
+- **The water clock tapered the wrong way.** The vessel is wider at the top,
+  so a rising surface should widen; the first version inset it as it rose and
+  the water pulled away from the glass. The checker could not see that — it
+  came out of the contact sheet. Second time in a day that a green checker
+  still needed a look.
+
+**Divergences:**
+
+- **The chosen face lives in `PomodoroSettings`,** not its own `StorageKeys`
+  entry. It is a setting; it rides in the settings blob with the theme and the
+  buddy, and `-PawmodoroResetState` already clears it through
+  `StorageKeys.settings`. A second key would have been a second thing to
+  remember.
+- **The ring fades to 30 % rather than disappearing** when another face is
+  carrying the time. Two things counting the same interval at full strength
+  compete, but the ring is still the thing readable from across the room.
+- **Contrast is checked in `check_clocks.py`, not folded into
+  `check_contrast.py`** as the plan says. The digits never move — they stay on
+  their own capsule, which `check_contrast.py` already samples — so what
+  actually needed measuring was the *face art* against the dial it sits on,
+  and that is a sprite-against-background question of the kind `check_stray.py`
+  answers. 960 pairs, faintest 7.79:1 against a bar of 2.0.
+
 ## Phase Y — The Long Now (four altitudes of looking back)
 
 *The era's centerpiece and its screenshot. Everything here is a pure

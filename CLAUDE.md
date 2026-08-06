@@ -289,6 +289,13 @@ There are no tests. A change is verified by building and looking at it:
   voice: no congratulating, no instructing, no comparison with another week,
   no exclamation marks. That is the one surface in the app addressed *to* the
   reader, which makes it the one most likely to drift.
+- **A frame strip is a clock you can measure.** The Cabinet's five faces are
+  generated frame strips rather than SwiftUI shapes, and every one obeys the
+  same rule: the pixels drawn in `ACCENT` are the part that grows with time.
+  That is what lets `check_clocks.py` assert with one measurement that a face
+  never runs backwards, never stalls, and finishes when the phase does — none
+  of which anybody could see at one frame per two minutes. Any new face keeps
+  the convention or the checker goes blind.
 - **A green checker is not a look.** `check_grove.py` passed every rule it had
   — bounds, spacing, spread, the stored fixture — while the wood came out in
   visible diagonal stripes, because two multiplied-and-wrapped sequences form

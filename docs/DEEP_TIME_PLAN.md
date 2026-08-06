@@ -591,6 +591,55 @@ drift is a quiet almanac line, recorded, never challenged.
 `-PawmodoroDrift` starts one; fast timers compress laps to 25 s and the
 deep thresholds proportionally. `-PawmodoroLaps <n>` seeds a deep drift.
 
+### As built — X1, the Drift
+
+Built on Linux, never compiled. Five checkers green.
+
+**One substitution made the whole thing cheap.** While drifting,
+`TimerEngine.progress` returns the progress round the *current lap*. The
+sighting's appearance window, the dream's 0.40–0.70 slice and the vignette's
+position were already pure functions of `progress` — so the entire scenery
+layer carried over with no changes at all, and "sightings roll per lap" became
+one counter rather than a second engine.
+
+**What it banks, and why.** One `SessionRecord` per completed lap, so the
+journey moves the same distance it would have and the bond, the streak and the
+stray's arc count it identically. A drift under one lap banks nothing, which is
+the app's existing rule for leaving a countdown early. Past that every minute
+banks: the leftover of the unfinished last lap joins the final record, so the
+stats screen shows the hours actually sat. Only the *session count* rounds
+down, and only ever downward.
+
+Each record carries the time that lap really ended rather than one shared
+timestamp — and that is a decision made **for Phase Y**, not for X. Y1's Shelf
+of Hours lights a candle by the hour a session ended in, and Y3's Year Ring
+tints a day by the hours actually focused. A four-hour drift recorded as four
+identical timestamps would light one candle instead of four and paint one hour
+of the ring instead of four, and by then the history would be unrecoverable.
+
+**Divergences:**
+
+- **The deep-drift species are not built.** A whale surfacing, a sea turtle,
+  cranes crossing high, a sunfish — four new wildlife sprites, which belong
+  with wave 4's art pass rather than in an engine commit. The per-lap sighting
+  roll that they hang off is in and working; they are a roster addition when
+  the art lands.
+- **`-PawmodoroLaps` backdates the cast-off** rather than fast-forwarding a
+  counter. The feature is a function of one `Date`, so moving that `Date`
+  reaches exactly the state the honest two hours reach — laps, ring, banking
+  and the six-hour question all agree without being told about the flag.
+- **No Live Activity count-up.** The plan has one in Z; the controller is
+  simply not called for a drift, so nothing has to be undone when Z arrives.
+- **Both ends are a long press**, which the plan only asked for at the end.
+  Casting off by accident is a smaller harm than ending by accident, but a tap
+  that sometimes starts a countdown and sometimes starts an open hour is worse
+  than either — one gesture, one meaning.
+
+**The longest drift** is stored under its own `StorageKeys` entry, shown once
+in the almanac as a fact ("The longest you have drifted: 2h 15m") and used for
+nothing else. No next tier, no comparison, nothing that invites beating it: the
+one part of this app with no clock on it is not getting a scoreboard.
+
 ### X2. The Cabinet of Clocks [9/8/8/9]
 
 Six to eight alternate renderings of the same sacred interval, each a pure

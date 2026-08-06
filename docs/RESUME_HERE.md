@@ -36,6 +36,7 @@ of what the next release owes users.
 | 0e the Mac-and-device sitting, four gates | **open** — tonight |
 | **V-slice-1** — weather: veils, particles, the suggestion glow | **built, never compiled** |
 | **V5** — the old snail | **built, never compiled** |
+| **X1** — the Drift, the open hour | **built, never compiled** |
 
 ### What today added, in one paragraph each
 
@@ -222,7 +223,32 @@ What to look at:
 - **The almanac's today line**, which is the one place the weather is named in
   words.
 
-### 4. Share a postcard
+### 4. The open hour
+
+```sh
+S="tools/run-sim.sh --demo --headless"
+$S -PawmodoroDrift              # cast off on launch
+$S -PawmodoroLaps 5             # five rings deep already
+$S -PawmodoroLaps 40            # far past the six-hour question, which should fire
+```
+
+**Hold** the play button for 0.6 s to cast off, and hold it again to come back.
+Under `--demo` a lap is 25 seconds, so rings appear fast enough to watch.
+
+What to check:
+
+- **The tree rings.** One per lap, inside the track, stopping at eight. If they
+  crowd the countdown text, raise the padding step in `TimerRingView.treeRings`.
+- **What it banks.** End a five-lap drift and the stats screen should gain five
+  sessions and 125 minutes; the paw row should gain five prints. Under one lap
+  should bank nothing at all — that is the rule, not a bug.
+- **The six-hour question.** `-PawmodoroLaps 40` puts it past the threshold;
+  background and foreground the app to fire `syncAfterWake`. Both answers are
+  meant to feel equally reasonable.
+- **A sighting at the top of a lap.** `-PawmodoroSighting stag -PawmodoroDrift`
+  and wait through two laps: the stag should come round twice.
+
+### 5. Share a postcard
 
 `-PawmodoroPostcard` puts one in the album. Long-press it in the stats sheet →
 Share. The share sheet should show a text title like "Whispering Woods, 12 Aug"
@@ -230,7 +256,7 @@ rather than a picture — **that is the change**, not a regression: an image
 preview is an eager render, which is the thing being removed. What lands in
 Messages or Files must still be the full 640pt PNG.
 
-### 5. The four gates of 0e — the actual reason for a Mac evening
+### 6. The four gates of 0e — the actual reason for a Mac evening
 
 These gate all of Phase W and have been waiting since the plan was written.
 

@@ -1,23 +1,35 @@
 # Resume here
 
 **Written 6 Aug 2026 from a Windows laptop, for the Mac evening that follows
-it.** Phase 0 is built except its Mac sitting, and **eight more phases went in
-on top of it in the same day**: weather, the old snail, the Drift, the Cabinet
-of Clocks, and all four altitudes of the Long Now — the Homestead included,
-both its halves.
+it.** Phase 0 is built except its Mac sitting, and **the whole of the Deep
+Time plan that can be written without a compiler now sits on top of it**:
+weather, the old snail, the Flyway, Tidewater, the Drift and its deep-drift
+species, the Cabinet of Clocks, and all four altitudes of the Long Now — the
+Homestead complete, both halves, its four time-of-day grades and its
+hundred-hour panorama.
+
+**Phases V, X and Y are finished.** What is left in Deep Time is W (sound,
+hard-gated on the listening pass) and Z (widgets, which needs an Xcode target
+that does not exist yet). Neither can start here.
 
 **None of it has been through a compiler.** That is not a warning about
-quality — eleven checkers are green and every sprite was rendered and looked at —
-it is a statement about what tonight is for. Expect a handful of errors, fix
-them, and then look at the things no checker can judge.
+quality — **twenty checkers are green** and every sprite was rendered and
+looked at — it is a statement about what tonight is for. Expect a handful of
+errors, fix them, and then look at the things no checker can judge.
 
 **A fifth plan document now exists** — `docs/HEARTH_PLAN.md`, the owner's
 monetization era (currency, cart, accessories, dens, interactions, photos,
-macOS) — and **seven of its eight phases are built or part-built**: the acorn
-pouch, the Magpie's Cart, the Wardrobe, the Dens, the interaction era's touch
-vocabulary and keepsakes, the Scrapbook, and the writable half of macOS. They
-are blind like everything else here, and sections 12 to 17 are their
-walkthroughs. Only the iCloud crossing has not started.
+macOS) — and **all eight of its phases are built or part-built**: the acorn
+pouch, the Magpie's Cart, the Wardrobe, the Dens, the interaction era (tier 1's
+touch vocabulary, tier 3's keepsakes, and half of tier 2 — the greeting and
+the treats), the Scrapbook, the writable half of macOS, and the Crossing's
+merge arithmetic. They are blind like everything else here, and sections 12
+onward are their walkthroughs.
+
+**The journal went 41 → 81 species across this run**: wave 4's weather
+creatures, the Flyway's eight migrants, Tidewater's six shore animals and the
+Drift's four deep ones. Every one of them is drawn, and every roster gate is
+measured by a checker rather than eyeballed.
 
 **macOS needs a Mac sitting of its own**, listed in section 17 — the target,
 signing and entitlements cannot be created from Linux, so that phase is code

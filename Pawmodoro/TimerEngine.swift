@@ -115,6 +115,9 @@ final class TimerEngine {
         if LaunchOptions.fillJournal {
             journal.fillForDebug(count: LaunchOptions.fillJournalCount)
         }
+        if LaunchOptions.fillDreams {
+            dreams.fillForDebug()
+        }
         stray.seedForDebug()
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
             self.settings.music = forced
@@ -539,34 +542,94 @@ final class TimerEngine {
         dream = pool().randomElement()
     }
 
-    /// Weighted memory > travel > surreal, by simple repetition — a species you
-    /// actually saw is three times likelier than a fish holding a balloon. The
-    /// surreal six are always in the pool so that a brand-new buddy, whose
-    /// journal is empty, still has something to dream about.
+    /// Weighted by simple repetition — a species you actually saw is three
+    /// times likelier than a fish holding a balloon. The surreal six are always
+    /// in the pool so that a brand-new buddy, whose journal is empty, still has
+    /// something to dream about.
+    ///
+    /// Every other entry is gated on the thing it is about, so the pool is a
+    /// readout of the life you have actually had here: nothing can be dreamed
+    /// by somebody who hasn't met it. That is also why nothing needs a second
+    /// unlock table — the journal, the bond, the stray's arc and the calendar
+    /// already know, and this asks them.
     private func pool() -> [Dream] {
         var pool: [Dream] = []
         for species in Species.allCases where journal.hasSeen(species) {
             pool.append(contentsOf: repeatElement(.memory(species), count: 3))
+            // The one you keep running into goes in *on top of* the species
+            // rather than instead of it: a regular ends up twice as likely as
+            // anything seen once, which is the whole argument for regulars.
+            if journal.isRegular(species) {
+                pool.append(contentsOf: repeatElement(.regular(species), count: 3))
+            }
         }
         for place in Place.journey where hasReached(place) {
             if let vignette = place.vignette {
                 pool.append(contentsOf: repeatElement(.travel(vignette), count: 2))
             }
         }
+        // The household, gated on the bond rather than simply on the roster:
+        // on day one "Mochi dreamed of the dog" is a dream about a stranger.
+        if bond >= .acquainted {
+            for buddy in household {
+                pool.append(contentsOf: repeatElement(.companion(buddy), count: 2))
+            }
+        }
+        // The cat outside, while she is still outside. Once she has come in
+        // she is dreamed about as one of the household instead — the two
+        // sources never overlap, and the diary keeps whatever it already had.
+        let stage = strayStage
+        if stage < .home {
+            for visitor in Dream.Visitor.allCases where stage >= visitor.reachedAt {
+                pool.append(contentsOf: repeatElement(.visitor(visitor), count: 2))
+            }
+        }
+        for sound in Heard.allCases where journal.hasHeard(sound) {
+            pool.append(contentsOf: repeatElement(.sound(sound), count: 2))
+        }
+        // Only while it is that time of year. A dream of snow in July would
+        // say the seasons mean nothing, which is the opposite of the point of
+        // having any. Weighted 3, because the window is a fortnight.
+        if let season = Season.current() {
+            pool.append(contentsOf: repeatElement(.season(season), count: 3))
+        }
+        for yours in Dream.Yours.allCases where bond >= yours.reachedAt {
+            pool.append(contentsOf: repeatElement(.yours(yours), count: 2))
+        }
         pool.append(contentsOf: Dream.Surreal.allCases.map(Dream.surreal))
         return pool
     }
 
+    /// The others in the household: everything owned, minus whoever is on
+    /// duty. A buddy dreaming about itself is not a dream.
+    ///
+    /// Entitlement is checked here rather than trusted from `settings`,
+    /// because a Plus buddy nobody owns has never been in the house.
+    private var household: [Buddy] {
+        Buddy.roster(strayJoined: stray.hasJoined).filter {
+            $0 != settings.buddy && (!$0.isPlus || storeHasPlus)
+        }
+    }
+
     /// How long ago you met the thing being dreamed about, so the diary can
     /// write the relationship rather than just the fact.
+    ///
+    /// Sounds count too: the night you first heard the whale is a meeting, and
+    /// "eleven days after you met it" is the most a sound you never saw can be
+    /// given. Days come from `WorldCalendar` so the answer agrees with the sky
+    /// under `-PawmodoroDate`.
     private func daysSinceMeeting(_ dream: Dream) -> Int? {
-        guard case .memory(let species) = dream,
-              let record = journal.record(for: species)
-        else { return nil }
-        return Calendar.current.dateComponents(
-            [.day], from: Calendar.current.startOfDay(for: record.firstSeen),
-            to: Calendar.current.startOfDay(for: Date())
-        ).day
+        let met: Date?
+        switch dream {
+        case .memory(let species), .regular(let species):
+            met = journal.record(for: species)?.firstSeen
+        case .sound(let sound):
+            met = journal.firstHeard(sound)
+        case .travel, .companion, .visitor, .season, .yours, .surreal:
+            met = nil
+        }
+        guard let met else { return nil }
+        return WorldCalendar.days(from: met, to: WorldCalendar.now)
     }
 
     /// Roughly one phase in four, once she lives here and somebody else is on

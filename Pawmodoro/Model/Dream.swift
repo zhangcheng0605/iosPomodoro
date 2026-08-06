@@ -14,11 +14,31 @@ import Observation
 /// six surreal ones are new art. That is deliberate rather than thrifty: a rich
 /// journal makes a rich dream life, which quietly makes the journal itself
 /// worth more.
+///
+/// Six of the nine cases arrived together, in Phase 0d of the Deep Time plan,
+/// to pay a debt: the pool had not been fed since it was written, so five whole
+/// systems — the bond, the regulars, the things you can only hear, the seasons
+/// and the stray's arc — could be lived through without the buddy ever dreaming
+/// about any of them. Each has its own case now, gated in `TimerEngine.pool()`
+/// on the thing itself, so a dream can only be had by somebody who earned what
+/// it is about.
 enum Dream: Hashable, Identifiable {
     /// Something you both saw. The heart of it.
     case memory(Species)
+    /// Not the species — the one you keep running into.
+    case regular(Species)
     /// Something you travelled with.
     case travel(Vignette)
+    /// One of the others in the household, asleep somewhere else.
+    case companion(Buddy)
+    /// The cat outside, while she is still outside.
+    case visitor(Visitor)
+    /// Something only ever heard, and never once seen.
+    case sound(Heard)
+    /// The time of year, dreamed while it is still that time of year.
+    case season(Season)
+    /// You, which takes a while.
+    case yours(Yours)
     /// Something that only happens asleep.
     case surreal(Surreal)
 
@@ -40,11 +60,96 @@ enum Dream: Hashable, Identifiable {
         }
     }
 
+    /// The stray, at the distance she had reached when she was dreamed about.
+    ///
+    /// Its own String-raw enum rather than `Stray.Stage`, which is `Int`-raw:
+    /// the diary is keyed on `id`, and `"visitor.3"` is a key nobody could read
+    /// and nothing could safely renumber.
+    enum Visitor: String, CaseIterable, Hashable {
+        case hedge, grass, cushion
+
+        /// How far she has to have come before your buddy dreams this.
+        var reachedAt: Stray.Stage {
+            switch self {
+            case .hedge: .edge
+            case .grass: .watching
+            case .cushion: .beside
+            }
+        }
+
+        /// She has three sprites of her own, so this costs no art. Drawn as
+        /// silhouettes, like the vignettes: they were painted for the scene.
+        var asset: String {
+            switch self {
+            case .hedge: "stray_distant"
+            case .grass: "stray_watch_0"
+            case .cushion: "stray_watch_1"
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .hedge: "the cat at the edge"
+            case .grass: "the cat in the grass"
+            case .cushion: "the cat who stayed"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .hedge: "Not close, and not gone. There again."
+            case .grass: "Sitting where she can see you, and not moving."
+            case .cushion: "Near enough to hear breathing. Nobody moved."
+            }
+        }
+    }
+
+    /// Three things of yours, unlocked by the bond and nothing else.
+    ///
+    /// The bond is the one counter in the app that measures time spent
+    /// *together*, so what it buys is the buddy dreaming about you rather than
+    /// about the world. Each level's own description picked the object: at
+    /// `friendly` it settles the moment you sit down, at `close` it waits by
+    /// the door, at `devoted` it has picked a side of the desk.
+    enum Yours: String, CaseIterable, Hashable {
+        case chair, doorway, desk
+
+        var reachedAt: Bond {
+            switch self {
+            case .chair: .friendly
+            case .doorway: .close
+            case .desk: .devoted
+            }
+        }
+
+        var subject: String {
+            switch self {
+            case .chair: "your chair"
+            case .doorway: "your door"
+            case .desk: "your desk"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .chair: "With you in it, and no hurry about any of it."
+            case .doorway: "Opening, at about the usual time."
+            case .desk: "Both sides of it, and a mug going cold."
+            }
+        }
+    }
+
     /// Stable across launches: the diary is keyed on it.
     var id: String {
         switch self {
         case .memory(let species): "memory.\(species.rawValue)"
+        case .regular(let species): "regular.\(species.rawValue)"
         case .travel(let vignette): "travel.\(vignette.rawValue)"
+        case .companion(let buddy): "companion.\(buddy.rawValue)"
+        case .visitor(let visitor): "visitor.\(visitor.rawValue)"
+        case .sound(let sound): "sound.\(sound.rawValue)"
+        case .season(let season): "season.\(season.rawValue)"
+        case .yours(let yours): "yours.\(yours.rawValue)"
         case .surreal(let surreal): "surreal.\(surreal.rawValue)"
         }
     }
@@ -54,7 +159,13 @@ enum Dream: Hashable, Identifiable {
         guard parts.count == 2 else { return nil }
         switch parts[0] {
         case "memory": return Species(rawValue: parts[1]).map(Dream.memory)
+        case "regular": return Species(rawValue: parts[1]).map(Dream.regular)
         case "travel": return Vignette(rawValue: parts[1]).map(Dream.travel)
+        case "companion": return Buddy(rawValue: parts[1]).map(Dream.companion)
+        case "visitor": return Visitor(rawValue: parts[1]).map(Dream.visitor)
+        case "sound": return Heard(rawValue: parts[1]).map(Dream.sound)
+        case "season": return Season(rawValue: parts[1]).map(Dream.season)
+        case "yours": return Yours(rawValue: parts[1]).map(Dream.yours)
         case "surreal": return Surreal(rawValue: parts[1]).map(Dream.surreal)
         default: return nil
         }
@@ -63,23 +174,46 @@ enum Dream: Hashable, Identifiable {
     var asset: String {
         switch self {
         case .memory(let species): species.sketchAsset
+        // Already a sepia sketch *with the marking on it* — the same drawing
+        // the journal uses to say this one is somebody. No new art.
+        case .regular(let species): species.regularAsset
         case .travel(let vignette): vignette.assetName
+        case .companion(let buddy): buddy.asleepAssetName
+        case .visitor(let visitor): visitor.asset
+        case .sound(let sound): "dream_heard_\(sound.rawValue)"
+        case .season(let season): "dream_season_\(season.rawValue)"
+        case .yours(let yours): "dream_yours_\(yours.rawValue)"
         case .surreal(let surreal): "dream_\(surreal.rawValue)"
         }
     }
 
-    /// Vignettes are drawn in full colour for the sky, so in a dream they are
-    /// rendered as silhouettes instead — a sketch, like everything else here.
+    /// Art drawn in full colour for somewhere else — the vignettes for the sky,
+    /// the buddies and the stray for the scene — is rendered as a silhouette
+    /// here instead, so everything inside a bubble is a sketch.
     var isSilhouette: Bool {
-        if case .travel = self { return true }
-        return false
+        switch self {
+        case .travel, .companion, .visitor: true
+        case .memory, .regular, .sound, .season, .yours, .surreal: false
+        }
     }
 
     /// What the thing is called, on its own.
+    ///
+    /// Never a buddy's name: any of them can be renamed, and a caption has to
+    /// go through `PomodoroSettings.displayName(for:)` to know that. A
+    /// companion is described by what it *is* instead, which stays true
+    /// whatever it has been renamed to — and keeps the one name the player
+    /// chose by hand out of a sentence that would have hard-coded it.
     var subject: String {
         switch self {
         case .memory(let species): species.name.lowercased()
+        case .regular(let species): "the \(species.name.lowercased())"
         case .travel(let vignette): vignette.name
+        case .companion(let buddy): buddy.dreamSubject
+        case .visitor(let visitor): visitor.subject
+        case .sound(let sound): sound.name.lowercased()
+        case .season(let season): season.name.lowercased()
+        case .yours(let yours): yours.subject
         case .surreal: "something strange"
         }
     }
@@ -88,15 +222,33 @@ enum Dream: Hashable, Identifiable {
     var line: String {
         switch self {
         case .memory(let species): species.note
+        case .regular(let species): species.regularNote
         case .travel(let vignette): vignette.dreamLine
+        case .companion(let buddy): buddy.dreamLine
+        case .visitor(let visitor): visitor.line
+        case .sound(let sound): sound.dreamLine
+        case .season(let season): season.dreamLine
+        case .yours(let yours): yours.line
         case .surreal(let surreal): surreal.line
         }
     }
 
-    /// Every dream there is, for counting the diary against.
+    /// Every dream there is, for counting the diary against — and the order the
+    /// diary lists them in: your journey first, then the household, then the
+    /// world, then the impossible.
+    ///
+    /// Phenomena are filtered out of the regulars because a rainbow never
+    /// becomes an individual. `Species.canBeRegular` is the same test the
+    /// journal uses, so there is one opinion about it rather than two.
     static var everything: [Dream] {
         Species.allCases.map(Dream.memory)
+            + Species.allCases.filter(\.canBeRegular).map(Dream.regular)
             + [Vignette.sailboat, .balloon, .train].map(Dream.travel)
+            + Buddy.allCases.map(Dream.companion)
+            + Visitor.allCases.map(Dream.visitor)
+            + Heard.allCases.map(Dream.sound)
+            + Season.allCases.map(Dream.season)
+            + Yours.allCases.map(Dream.yours)
             + Surreal.allCases.map(Dream.surreal)
     }
 }
@@ -115,6 +267,62 @@ extension Vignette {
         case .sailboat: "Still crossing, in no hurry at all."
         case .balloon: "Higher than it ever goes awake."
         case .train: "Somewhere past Starfall, still going."
+        }
+    }
+}
+
+extension Buddy {
+    /// What the one on duty calls the one it is dreaming about. Deliberately
+    /// not a name — see `Dream.subject`.
+    var dreamSubject: String {
+        // Soot is the second cat in the cast, so "the cat" would be ambiguous
+        // the moment Mochi is the one asleep.
+        self == .stray ? "the cat who came in" : "the \(kind)"
+    }
+
+    /// Where this one sleeps, told by somebody else. Each is the buddy's own
+    /// signature behaviour carried into the dream, so a quirk stays data.
+    var dreamLine: String {
+        switch self {
+        case .cat: "Asleep in the good spot, as usual."
+        case .dog: "Asleep, with all four feet still going."
+        case .penguin: "Asleep standing up, somehow."
+        case .bunny: "Asleep with both ears down, which is rare."
+        case .hamster: "Asleep under the bedding, mostly buried."
+        case .fox: "Asleep in a curl, nose under tail."
+        case .capybara: "Asleep in the tub. Not one ripple."
+        case .redpanda: "Asleep along a branch, hanging over both sides."
+        case .owl: "Asleep in the daylight, which is her night."
+        case .otter: "Asleep on his back, still holding the pebble."
+        case .hedgehog: "Asleep as a closed ball. No way in."
+        case .stray: "Asleep indoors, in the warm bit by the window."
+        }
+    }
+}
+
+extension Heard {
+    /// The dream is not the journal note: the note is about the night you heard
+    /// it, and this is about hearing it again with nothing else in the way.
+    /// Still nothing to look at — that rule survives the dream.
+    var dreamLine: String {
+        switch self {
+        case .whalesong: "The answer this time. Still nothing to see."
+        case .trainhorn: "Going away, the way it always is."
+        case .owlcall: "Twice again, and the wood no closer."
+        case .farbell: "One stroke, and the whole morning after it."
+        case .windchime: "Four notes, in an order they have never used."
+        }
+    }
+}
+
+extension Season {
+    var dreamLine: String {
+        switch self {
+        case .sakura: "All of it at once, and none of it falling."
+        case .fireflies: "The whole field lit, and nobody counting."
+        case .autumn: "Coming down slowly enough to watch."
+        case .winter: "Everything quiet, and none of it cold."
+        case .lanterns: "Strung the length of a street with no end."
         }
     }
 }
@@ -170,6 +378,22 @@ final class DreamDiary {
 
     func clear() {
         records = [:]
+        save()
+    }
+
+    /// Debug only — every dream marked as dreamed, so the diary's whole spread
+    /// can be looked at in one launch.
+    ///
+    /// Nothing else could reach it: the page draws on five gated systems now,
+    /// and the honest route to a full one is a hundred and fifty sessions, five
+    /// sightings of forty species, all five seasons of a year, and a cat who
+    /// takes twelve days to come in.
+    func fillForDebug(on date: Date = Date()) {
+        for dream in Dream.everything where records[dream.id] == nil {
+            records[dream.id] = DreamRecord(
+                firstDreamed: date, lastDreamed: date, count: 1, daysAfter: nil
+            )
+        }
         save()
     }
 

@@ -19,3 +19,8 @@ build/
 
 # macOS
 .DS_Store
+
+# Python (the tools/ generators; these were committed by accident and churn
+# on every run)
+__pycache__/
+*.pyc

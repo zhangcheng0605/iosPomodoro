@@ -249,13 +249,28 @@ enum LaunchOptions {
     }()
 
     /// Force a dream: `-PawmodoroDream surreal.yarn` for one in particular, or
-    /// just `memory` / `travel` / `surreal` for any of that kind. Waiting for a
-    /// one-in-four roll to land on the kind you wanted to look at is not a way
-    /// to check a bubble.
+    /// a kind on its own for any of that kind — `memory`, `regular`, `travel`,
+    /// `companion`, `visitor`, `sound`, `season`, `yours`, `surreal`. Waiting
+    /// for a one-in-four roll to land on the kind you wanted to look at is not
+    /// a way to check a bubble.
+    ///
+    /// A kind still has to be *reachable*: the pool is gated on having met the
+    /// thing, so `-PawmodoroDream sound` finds nothing until something has
+    /// been heard. Pair it with `-PawmodoroFillJournal 5`, `-PawmodoroBond`,
+    /// `-PawmodoroStray` or `-PawmodoroSeason` accordingly.
     static let forcedDream: String? = {
         guard arguments.contains("-PawmodoroDream") else { return nil }
         return value(after: "-PawmodoroDream")
     }()
+
+    /// Mark every dream as already dreamed, for looking at the diary.
+    ///
+    /// The page draws on five gated systems now, and the honest route to a
+    /// full one is a hundred and fifty sessions, five sightings of forty
+    /// species, all five seasons of a year and a cat who takes twelve days to
+    /// come in. `-PawmodoroFillJournal` does not reach it — that fills the
+    /// journal, and a dream still has to be rolled and stayed for.
+    static let fillDreams = isSet("-PawmodoroFillDreams")
 
     /// Seed the log with n sessions finished after dark, e.g.
     /// `-PawmodoroNightSessions 12`. The atlas is 45 nights of content and the
@@ -298,6 +313,7 @@ enum LaunchOptions {
     static let forcedStrayStage: Int? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
+    static let fillDreams = false
     static let forcedHeard: Heard? = nil
     static let seedGap = false
     static let pinnedDay: Date? = nil

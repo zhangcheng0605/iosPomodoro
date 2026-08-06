@@ -116,7 +116,8 @@ def imagesets():
     }
 
 
-ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_")
+ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_",
+                  "dream_")
 
 
 def check_assets(failures):
@@ -153,6 +154,45 @@ def check_assets(failures):
                 f"Buddy.swift: .{species} refers to frame(\"{suffix}\") "
                 f"but there is no '{asset}'"
             )
+
+
+def check_dream_assets(failures, enums):
+    """`case .sound(let sound): "dream_heard_\\(sound.rawValue)"` -> one
+    imageset per case of `Heard`.
+
+    The associated type comes from the case's own declaration, so this stays
+    true when a case is added: the arm names the case, the declaration names
+    the enum, and `enum_cases()` names its members. Nothing is hardcoded.
+
+    Worth its own rule because a missing dream sprite fails the way art always
+    fails — silently. The bubble draws, and what is inside it is nothing, on a
+    screen that takes a hundred and fifty sessions and five seasons to fill.
+    """
+    have = imagesets()
+    path = os.path.join(SOURCE, "Model", "Dream.swift")
+    source = open(path).read()
+    # `    case sound(Heard)` — one associated type per Dream case.
+    types = dict(re.findall(r"\n    case (\w+)\((\w+)\)", source))
+
+    for case, prefix, suffix in re.findall(
+        r'case \.(\w+)\(let \w+\): "([a-z0-9_]*)\\\(\w+\.rawValue\)([a-z0-9_]*)"',
+        source,
+    ):
+        owner = types.get(case)
+        if owner not in enums:
+            failures.append(
+                f"Dream.swift: .{case} builds an asset name out of "
+                f"{owner or 'an unknown type'}, which is not a CaseIterable "
+                f"enum the checker can enumerate"
+            )
+            continue
+        for name in enums[owner]:
+            asset = f"{prefix}{name}{suffix}"
+            if asset not in have:
+                failures.append(
+                    f"Dream.swift: .{case} of {owner}.{name} wants "
+                    f"'{asset}', which has no imageset"
+                )
 
 
 def check_members(failures, launch_options):
@@ -352,6 +392,7 @@ def main():
     check_assets(failures)
     check_members(failures, launch_options)
     enums = enum_cases()
+    check_dream_assets(failures, enums)
     check_switch_exhaustiveness(failures, enums)
     check_constellation_links(failures)
 

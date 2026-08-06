@@ -10,8 +10,13 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 SR = 22050
-RES = "/home/user/iosPomodoro/Pawmodoro/Resources"
-ICONSET = "/home/user/iosPomodoro/Pawmodoro/Assets.xcassets/AppIcon.appiconset"
+# Derived from this file's own location, like every other generator here.
+# These were absolute paths into the Linux container they were written in,
+# which meant the one generator that makes *audio* could only be run on the
+# one machine that cannot hear it.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RES = os.path.join(ROOT, "Pawmodoro", "Resources")
+ICONSET = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets", "AppIcon.appiconset")
 
 # Theme colors (match Theme.swift)
 CREAM = (252, 245, 227)
@@ -217,6 +222,155 @@ def make_ocean(dur=18.0, fade=1.0):
     foam = shaped_noise(n, rng, exponent=0.3, cutoff=9000) * (envelope ** 3) * 0.5
     swell = body * (0.18 + 0.82 * envelope)
     return seamless(normalize(swell + foam, 0.42), fade_n)
+
+
+# ============================================================================
+# The Second Shelf — Phase W's first six loops.
+#
+# Same rules as the first six: mono 22.05 kHz, seamless by crossfading the
+# tail over the head, peak well under 1.0 so a track can sit on top without
+# either of them clipping. Nothing here layers at runtime — every one is a
+# finished loop the existing decode-once `.loops` path plays on one node,
+# which is the law the music crash bought.
+# ============================================================================
+
+def make_drizzle(dur=12.0, fade=0.5):
+    """Rain, thinner. Not quieter — thinner.
+
+    The body is the rain recipe high-passed: take the weight out from under
+    it and what is left reads as drizzle rather than as rain heard through a
+    wall. Drops at a third the density, and higher, because small drops on
+    hard ground is the sound being described.
+    """
+    rng = np.random.default_rng(101)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    body = shaped_noise(n, rng, exponent=0.15, cutoff=9000) * 0.7
+    # High-pass by subtracting a lowpassed copy of the same noise.
+    body = body - shaped_noise(n, np.random.default_rng(101), 0.15, cutoff=700) * 0.7
+    t = np.arange(n) / SR
+    body *= 0.88 + 0.12 * np.sin(2 * np.pi * 0.09 * t + 0.4)
+    drops = np.zeros(n)
+    for _ in range(int(dur * 18)):
+        start = rng.integers(0, n - 700)
+        length = int(rng.integers(120, 300))
+        env = np.exp(-np.linspace(0, 9, length))
+        freq = rng.uniform(2200.0, 5200.0)
+        tone = np.sin(2 * np.pi * freq * np.arange(length) / SR)
+        drops[start:start + length] += tone * env * rng.uniform(0.04, 0.16)
+    return seamless(normalize(body + drops, 0.34), fade_n)
+
+
+def make_wind(dur=16.0, fade=0.8):
+    """Two LFOs beating against each other, so it never quite repeats.
+
+    A single sweep is a machine. Two at 0.037 Hz and 0.053 Hz drift in and
+    out of phase over about eighty seconds, which is long enough that the
+    sixteen-second loop underneath stops being audible as a loop.
+    """
+    rng = np.random.default_rng(103)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    low = shaped_noise(n, rng, exponent=1.1, cutoff=900)
+    high = shaped_noise(n, rng, exponent=0.4, cutoff=6000)
+    a = 0.5 + 0.5 * np.sin(2 * np.pi * 0.037 * t)
+    b = 0.5 + 0.5 * np.sin(2 * np.pi * 0.053 * t + 2.0)
+    swell = 0.25 + 0.75 * (a * 0.6 + b * 0.4)
+    sig = low * swell + high * (swell ** 2) * 0.35
+    return seamless(normalize(sig, 0.38), fade_n)
+
+
+def make_creek(dur=14.0, fade=0.7):
+    """The ocean recipe at a quarter of the scale, and no wave cycle.
+
+    A creek is the same physics in miniature: moving water over stones,
+    band-passed high because there is no mass behind it. The bubbles are
+    what stop it being hiss — short rising chirps, densely scattered.
+    """
+    rng = np.random.default_rng(107)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    body = shaped_noise(n, rng, exponent=0.5, cutoff=5200)
+    body = body - shaped_noise(n, np.random.default_rng(107), 0.5, cutoff=400)
+    bubbles = np.zeros(n)
+    for _ in range(int(dur * 40)):
+        start = rng.integers(0, n - 500)
+        length = int(rng.integers(90, 220))
+        local = np.arange(length) / SR
+        f0 = rng.uniform(700.0, 1900.0)
+        chirp = np.sin(2 * np.pi * (f0 + 900.0 * local / (length / SR)) * local)
+        bubbles[start:start + length] += chirp * envelope(length, 0.01, 0.06) * rng.uniform(0.05, 0.18)
+    return seamless(normalize(body * 0.7 + bubbles, 0.36), fade_n)
+
+
+def make_library(dur=20.0, fade=1.0):
+    """A big quiet room, and somebody two tables away.
+
+    Mostly a room tone: very dark noise with a slow tilt. The events are the
+    whole feature — a page turned every few seconds, a pencil, once. They are
+    what make silence read as *a room being quiet* rather than as no signal.
+    """
+    rng = np.random.default_rng(109)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    room = shaped_noise(n, rng, exponent=1.6, cutoff=520) * 0.55
+    events = np.zeros(n)
+    for _ in range(int(dur * 0.5)):                       # page turns
+        start = rng.integers(0, n - 4000)
+        length = int(rng.integers(1600, 3200))
+        flick = shaped_noise(length, rng, exponent=0.2, cutoff=7000)
+        events[start:start + length] += flick * envelope(length, 0.02, 0.5) * rng.uniform(0.10, 0.22)
+    for _ in range(int(dur * 0.35)):                      # pencil
+        start = rng.integers(0, n - 3000)
+        length = int(rng.integers(900, 2000))
+        scratch = shaped_noise(length, rng, exponent=0.1, cutoff=4200)
+        scratch *= 0.6 + 0.4 * np.sin(2 * np.pi * 28.0 * np.arange(length) / SR)
+        events[start:start + length] += scratch * envelope(length, 0.05, 0.4) * rng.uniform(0.05, 0.12)
+    return seamless(normalize(room + events, 0.26), fade_n)
+
+
+def make_snowhush(dur=16.0, fade=0.9):
+    """The sound of sound being absorbed.
+
+    Snow takes the top off everything and gives nothing back, so this is the
+    darkest loop in the app and the quietest: peak 0.18 against rain's 0.42.
+    The eight-second breath is the only thing that happens, and it has to be
+    slow enough that you notice it only after a minute.
+    """
+    rng = np.random.default_rng(113)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    body = shaped_noise(n, rng, exponent=1.9, cutoff=340) * 0.8
+    breath = 0.72 + 0.28 * np.sin(2 * np.pi * (1.0 / 8.0) * t)
+    return seamless(normalize(body * breath, 0.18), fade_n)
+
+
+def make_temple(dur=24.0, fade=1.0):
+    """Pine wind, and a bell every forty seconds or so.
+
+    The bell is `make_farbell`'s voice at a longer decay, dropped in twice
+    across the loop at uneven spacing — the whole point of a temple bell is
+    that you stop expecting it and then it happens.
+    """
+    rng = np.random.default_rng(127)
+    fade_n = int(SR * fade)
+    n = int(SR * dur) + fade_n
+    t = np.arange(n) / SR
+    pines = shaped_noise(n, rng, exponent=1.3, cutoff=1500)
+    pines *= 0.45 + 0.55 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.041 * t + 0.9))
+    sig = pines * 0.55
+    for start_s in (3.5, 15.2):
+        begin = int(SR * start_s)
+        length = min(int(SR * 7.0), n - begin)
+        local = np.arange(length) / SR
+        bell = np.zeros(length)
+        for partial, gain in ((1.0, 1.0), (2.76, 0.34), (5.4, 0.12)):
+            bell += gain * np.sin(2 * np.pi * 196.0 * partial * local)
+        bell *= np.exp(-local * 0.85)
+        sig[begin:begin + length] += distant(bell, 1900.0) * 0.5
+    return seamless(normalize(sig, 0.30), fade_n)
 
 
 # ------------------------------------------------------------------- chime
@@ -462,6 +616,13 @@ if __name__ == "__main__":
     write_wav("forest.wav", make_forest())
     write_wav("cafe.wav", make_cafe())
     write_wav("ocean.wav", make_ocean())
+    # The Second Shelf — Phase W, batch one.
+    write_wav("drizzle.wav", make_drizzle())
+    write_wav("wind.wav", make_wind())
+    write_wav("creek.wav", make_creek())
+    write_wav("library.wav", make_library())
+    write_wav("snowhush.wav", make_snowhush())
+    write_wav("temple.wav", make_temple())
     print("Chime:")
     write_wav("chime.wav", make_chime())
     print("Things heard:")

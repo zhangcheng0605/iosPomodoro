@@ -38,11 +38,60 @@ struct AmbientSceneView: View {
         case .ocean: drawWaves(&canvas, size: size, t: t)
         case .cafe: drawSteam(&canvas, size: size, t: t)
         case .purr: drawHearts(&canvas, size: size, t: t)
+        // The Second Shelf. Three of the six have a weather to draw and
+        // three do not: a library, a creek and a temple bell are all sounds
+        // of a *place*, and inventing particles for them would put drifting
+        // motes over a meadow for no reason anybody could name. Silence in
+        // this switch is a decision, not an omission.
+        case .drizzle: drawDrizzle(&canvas, size: size, t: t)
+        case .wind: drawLeaves(&canvas, size: size, t: t)
+        case .snowhush: drawSnowfall(&canvas, size: size, t: t)
+        case .creek, .library, .temple: break
         case .off: break
         }
     }
 
     // MARK: Weathers
+
+    /// Rain's field at a third the density and half the length. Same drops,
+    /// so the two never look like different weather systems — drizzle is
+    /// rain with less of it, which is what the loop does to the sound too.
+    private func drawDrizzle(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
+        for drop in Field.drops.enumerated().filter({ $0.offset % 3 == 0 }).map(\.element) {
+            let depth = drop.depth
+            let speed = 190 + depth * 260
+            let y = ((drop.seedY * size.height) + t * speed)
+                .truncatingRemainder(dividingBy: size.height + 90) - 45
+            let x = drop.seedX * size.width + sin(t * 0.4 + drop.seedY * 6) * 6
+            let length = 5 + depth * 8
+
+            var path = Path()
+            path.move(to: CGPoint(x: x, y: y))
+            path.addLine(to: CGPoint(x: x - 1, y: y + length))
+            canvas.stroke(path, with: .color(tint.opacity(0.10 + depth * 0.14)),
+                          lineWidth: 1)
+        }
+    }
+
+    /// Snow: slow, and it drifts sideways rather than falling straight. The
+    /// season layer already draws snow for winter; this is the same idea for
+    /// somebody who chose the sound in July.
+    private func drawSnowfall(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
+        for flake in Field.drops.enumerated().filter({ $0.offset % 2 == 0 }).map(\.element) {
+            let depth = flake.depth
+            let speed = 26 + depth * 34
+            let y = ((flake.seedY * size.height) + t * speed)
+                .truncatingRemainder(dividingBy: size.height + 40) - 20
+            let x = flake.seedX * size.width
+                + sin(t * 0.30 + flake.seedY * 9) * (14 + depth * 20)
+            let r = 1.0 + depth * 1.6
+            canvas.fill(
+                Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+                with: .color(tint.opacity(0.18 + depth * 0.22))
+            )
+        }
+    }
+
 
     /// Two depths of streak, the near ones longer, faster and more opaque.
     private func drawRain(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {

@@ -96,6 +96,8 @@ final class TimerEngine {
     private(set) var arrivedLetter: Letter?
     /// The window-box, seeded by dreams and watered by showing up.
     let garden: Garden
+    /// What the places have been caught doing, and when they do it.
+    let timetable: Timetable
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -146,7 +148,8 @@ final class TimerEngine {
         memories: Anniversaries = Anniversaries(),
         fortunes: FortuneTeller = FortuneTeller(),
         travels: Travels = Travels(),
-        garden: Garden = Garden()
+        garden: Garden = Garden(),
+        timetable: Timetable = Timetable()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -165,6 +168,7 @@ final class TimerEngine {
         self.fortunes = fortunes
         self.travels = travels
         self.garden = garden
+        self.timetable = timetable
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled

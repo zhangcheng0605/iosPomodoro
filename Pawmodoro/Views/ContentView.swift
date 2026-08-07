@@ -32,6 +32,8 @@ struct ContentView: View {
 
                 scenery
 
+                clockwork
+
                 toys
 
                 stray
@@ -272,6 +274,33 @@ struct ContentView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.8), value: place)
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// Whatever the timetable says is happening at this place, this minute.
+    ///
+    /// Above the scenery, below everything touchable. Checked twice a
+    /// minute — a ferry that leaves at 8:00 sharp deserves punctuality —
+    /// and each event view mounts only for its own window, then unmounts
+    /// and takes its TimelineView with it.
+    @ViewBuilder
+    private var clockwork: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            if let event = ClockworkEvent.active(
+                at: context.date, place: engine.settings.place
+            ) {
+                if event == .meadowHeron {
+                    ClockworkHeronView(timetable: engine.timetable)
+                        .id(event)
+                } else {
+                    ClockworkEventView(
+                        event: event, timetable: engine.timetable,
+                        tint: Theme.bark
+                    )
+                    .id(event)
+                }
+            }
         }
         .allowsHitTesting(false)
     }

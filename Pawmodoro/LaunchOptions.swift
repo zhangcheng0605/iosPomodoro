@@ -50,12 +50,14 @@ enum StorageKeys {
     static let travels = "pawmodoro.travels"
     /// The window-box: pockets, the seed on offer, the day's berry yield.
     static let garden = "pawmodoro.garden"
+    /// Timetabled place events personally witnessed, with learned dates.
+    static let timetable = "pawmodoro.timetable"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown, fortunes, travels, garden,
+        nightKnown, fortunes, travels, garden, timetable,
     ]
 }
 
@@ -133,6 +135,13 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroClock") else { return nil }
         let hour = value(after: "-PawmodoroClock").flatMap(Int.init) ?? 12
         return DayPart.from(hour: hour)
+    }()
+
+    /// The pinned hour itself, for the things that keep minutes rather than
+    /// day-parts — the timetabled place events read this.
+    static let forcedClockHour: Int? = {
+        guard arguments.contains("-PawmodoroClock") else { return nil }
+        return value(after: "-PawmodoroClock").flatMap(Int.init) ?? 12
     }()
 
     /// Start at a particular place, e.g. `-PawmodoroPlace cloudspire`. Reaching
@@ -385,6 +394,7 @@ enum LaunchOptions {
     static let resetState = false
     static let celebrate = false
     static let forcedDayPart: DayPart? = nil
+    static let forcedClockHour: Int? = nil
     static let forcedPlace: Place? = nil
     static let unlockPlaces = false
     static let forcedBuddy: Buddy? = nil

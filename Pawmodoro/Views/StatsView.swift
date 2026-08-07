@@ -13,6 +13,7 @@ struct StatsView: View {
                 VStack(spacing: 20) {
                     AlmanacView()
                     bondCard
+                    TastesCard()
                     summaryGrid
                     weekChart
                     if log.totalSessions == 0 {

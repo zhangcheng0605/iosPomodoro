@@ -10,6 +10,9 @@ struct BuddyView: View {
     @State private var heartSeed = 0
     @State private var lastPet = Date.distantPast
     @State private var touch = TouchTracker.shared
+    /// A caption that outranks the computed one for a few seconds — the
+    /// buddy's answer to a snack, a snub, a full belly.
+    @State private var remark: String?
 
     private let spriteSize: CGFloat = 104
 
@@ -86,7 +89,18 @@ struct BuddyView: View {
             // The zzz and the hearts live inside the buddy's own cell, not the
             // row: when the stray sits down the buddy shifts left to make room,
             // and effects anchored to the row would be left hanging beside it.
-            HStack(spacing: 6) {
+            HStack(spacing: 10) {
+                // The sill: one snack, waiting to be slid over. Out of reach
+                // during focus, exactly like the toys.
+                if let snack = sillSnack {
+                    SnackSillChip(
+                        snack: snack,
+                        verdictForDrop: { snackVerdict() },
+                        onLanded: { snackLanded($0) }
+                    )
+                    .transition(.opacity)
+                }
+
                 ZStack {
                     sprite
                         .contentShape(Rectangle())
@@ -129,6 +143,7 @@ struct BuddyView: View {
             }
             .animation(.easeInOut, value: isNapping)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: strayIsAlongside)
+            .animation(.easeInOut(duration: 0.35), value: sillSnack)
 
             Text(caption)
                 .font(.footnote)
@@ -146,6 +161,14 @@ struct BuddyView: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(named: isNapping ? "Check on \(name)" : "Pet \(name)") {
             pet()
+        }
+        .accessibilityActions {
+            // The drop without the drag: same verdict, same answer.
+            if let snack = sillSnack {
+                Button("Give \(name) \(snack.label)") {
+                    snackLanded(snackVerdict())
+                }
+            }
         }
         .onAppear { animator.setBase(restingPose) }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
@@ -218,6 +241,70 @@ struct BuddyView: View {
             .modifier(DriftUp(active: !reduceMotion))
     }
 
+    // MARK: The sill
+
+    /// What's on the sill, when it's reachable. During a running focus phase
+    /// the sill is simply out of reach, behind the same rule as the toys.
+    private var sillSnack: Snack? {
+        guard !(engine.isRunning && !engine.phase.isBreak) else { return nil }
+        return engine.pantry.sill
+    }
+
+    /// Pure functions only — the chip animates to match the outcome before
+    /// anything is actually eaten.
+    private func snackVerdict() -> SnackDropVerdict {
+        guard let snack = engine.pantry.sill else { return .full }
+        guard engine.pantry.hasAppetite() else { return .full }
+        return buddy.reaction(to: snack) == .notMyThing ? .snubbed : .taken
+    }
+
+    private func snackLanded(_ verdict: SnackDropVerdict) {
+        switch verdict {
+        case .taken:
+            guard let reaction = engine.pantry.feed(buddy) else { return }
+            animator.play(.happy, for: buddy)
+            if reaction == .bliss {
+                HapticsDirector.shared.purr()
+                SoundPlayer.shared.playPurr()
+                burstHearts(3)
+                say("\(name) — \(buddy.blissRemark)", for: 5)
+            } else {
+                HapticsDirector.shared.stamp()
+                addHeart()
+                say("\(name) nibbles — approved", for: 3.5)
+            }
+        case .snubbed:
+            // Records the datum; the snack stays on the sill. A refusal is
+            // knowledge too, which is why the Tastes card still fills in.
+            engine.pantry.feed(buddy)
+            HapticsDirector.shared.nudge()
+            say("\(name) \(buddy.snubRemark)", for: 4.5)
+        case .full:
+            HapticsDirector.shared.nudge()
+            say("\(name) pats a full belly — tomorrow, maybe", for: 3.5)
+        }
+    }
+
+    /// Hearts in a small stagger, so three read as delight, not a stack.
+    private func burstHearts(_ count: Int) {
+        for index in 0..<count {
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(index) * 180_000_000)
+                addHeart()
+            }
+        }
+    }
+
+    /// Put a line under the buddy for a few seconds, then hand the caption
+    /// back to the computed one.
+    private func say(_ text: String, for seconds: TimeInterval) {
+        remark = text
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            if remark == text { remark = nil }
+        }
+    }
+
     // MARK: Petting
 
     private var petGesture: some Gesture {
@@ -274,6 +361,10 @@ struct BuddyView: View {
     }
 
     private var caption: String {
+        // A fresh reaction outranks everything: it *is* the moment.
+        if let remark {
+            return remark
+        }
         if animator.isPlayingTransient(at: Date()), isNapping {
             return "shhh — \(name) is dreaming"
         }
@@ -297,6 +388,11 @@ struct BuddyView: View {
         }
         switch engine.runState {
         case .idle:
+            // The sill outranks the expedition remark: a snack is something
+            // to *do*, and it teaches the drag without a tutorial.
+            if let snack = sillSnack {
+                return "there's \(snack.label) on the sill — slide it over"
+            }
             // A preset nobody remarks on is a settings change; one the cat
             // notices is a decision about the afternoon. Classic is the
             // default and passes without comment.

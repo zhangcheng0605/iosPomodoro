@@ -24,10 +24,12 @@ enum StorageKeys {
     /// The day she came inside. Can't be derived from her name: accepting the
     /// default name stores no override at all.
     static let strayJoined = "pawmodoro.strayJoined"
+    /// The sill, the day's appetite, and which buddy has tried which snack.
+    static let pantry = "pawmodoro.pantry"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined, dreams, heard,
+        strayFirstSeen, strayJoined, dreams, heard, pantry,
     ]
 }
 
@@ -248,6 +250,17 @@ enum LaunchOptions {
         let stage = value(after: "-PawmodoroStray").flatMap(Int.init) ?? 0
         return (1...5).contains(stage) ? stage : nil
     }()
+
+    /// Stock the sill without finishing a session, e.g. `-PawmodoroSnack
+    /// sardine`. Each reaction tier is a different pairing away.
+    static let forcedSnack: String? = {
+        guard arguments.contains("-PawmodoroSnack") else { return nil }
+        return value(after: "-PawmodoroSnack")
+    }()
+
+    /// Mark every snack as tried by every buddy, for looking at a full
+    /// Tastes card.
+    static let fillTastes = isSet("-PawmodoroFillTastes")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -270,6 +283,8 @@ enum LaunchOptions {
     static let forcedTheme: AppTheme? = nil
     static let forcedTrack: String? = nil
     static let forcedStrayStage: Int? = nil
+    static let forcedSnack: String? = nil
+    static let fillTastes = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

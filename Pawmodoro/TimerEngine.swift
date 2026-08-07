@@ -72,6 +72,7 @@ final class TimerEngine {
     let album: Album
     let stray: Stray
     let dreams: DreamDiary
+    let pantry: Pantry
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -86,7 +87,8 @@ final class TimerEngine {
         journal: Journal = Journal(),
         album: Album = Album(),
         stray: Stray = Stray(),
-        dreams: DreamDiary = DreamDiary()
+        dreams: DreamDiary = DreamDiary(),
+        pantry: Pantry = Pantry()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -95,6 +97,7 @@ final class TimerEngine {
         self.album = album
         self.stray = stray
         self.dreams = dreams
+        self.pantry = pantry
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -114,6 +117,12 @@ final class TimerEngine {
         stray.seedForDebug()
         if let forced = LaunchOptions.forcedTrack, MusicCatalog.track(id: forced) != nil {
             self.settings.music = forced
+        }
+        if let raw = LaunchOptions.forcedSnack, let snack = Snack(rawValue: raw) {
+            pantry.forceSill(snack)
+        }
+        if LaunchOptions.fillTastes {
+            pantry.fillForDebug()
         }
     }
 
@@ -248,6 +257,8 @@ final class TimerEngine {
 
     /// Call when the app returns to the foreground.
     func syncAfterWake() {
+        // Overnight housekeeping first: a snack left out is gone by morning.
+        pantry.sweep()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {
@@ -702,6 +713,9 @@ final class TimerEngine {
                     dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
                 )
             }
+            // The session's warm epilogue: the world sets out one snack for
+            // the buddy. The sill holds one at most, so this never stacks.
+            pantry.setOut(for: settings.place, season: Season.current())
             // Checked after the log is written, so this session counts toward
             // the threshold it might have just crossed.
             arrival = newlyReachedPlace()

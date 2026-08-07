@@ -52,12 +52,14 @@ enum StorageKeys {
     static let garden = "pawmodoro.garden"
     /// Timetabled place events personally witnessed, with learned dates.
     static let timetable = "pawmodoro.timetable"
+    /// The photographs: parameter records, and the day of the last shot.
+    static let photos = "pawmodoro.photos"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown, fortunes, travels, garden, timetable,
+        nightKnown, fortunes, travels, garden, timetable, photos,
     ]
 }
 
@@ -385,6 +387,12 @@ enum LaunchOptions {
 
     /// One of each plant, already in bloom (against any seeded history).
     static let forceBloom = isSet("-PawmodoroBloom")
+
+    /// Regrant today's photograph, however many were already taken.
+    static let regrantPhoto = isSet("-PawmodoroPhoto")
+
+    /// Today's photograph renders immediately instead of overnight.
+    static let developNow = isSet("-PawmodoroDevelop")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -425,6 +433,8 @@ enum LaunchOptions {
     static let returnNow = false
     static let forcedSeed: String? = nil
     static let forceBloom = false
+    static let regrantPhoto = false
+    static let developNow = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

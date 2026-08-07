@@ -26,6 +26,7 @@ struct StatsView: View {
                     GardenView()
                     KeepsakeDrawerView()
                     MailboxView()
+                    PhotoShelfView()
                     TimetableView()
                     FortuneShelf()
                 }

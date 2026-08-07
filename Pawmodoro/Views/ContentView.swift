@@ -16,6 +16,9 @@ struct ContentView: View {
     /// Whether a stage-two stray has been sent off this phase. Nothing about
     /// her is ever persisted as lost, so this lives no longer than the phase.
     @State private var straySpooked = false
+    /// The camera's brief blink. Under Reduce Motion the click alone
+    /// carries it — the flash never mounts.
+    @State private var shutter = false
 
     var body: some View {
         NavigationStack {
@@ -92,6 +95,14 @@ struct ContentView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+
+                if shutter {
+                    Theme.cream
+                        .opacity(0.55)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
 
                 if settling {
                     SettleInView(onFinish: finishSettling)
@@ -516,6 +527,33 @@ struct ContentView: View {
         HStack(spacing: 8) {
             ForEach(Ambience.allCases) { option in
                 ambienceButton(for: option)
+            }
+            // Today's one photograph, while it's still unspent. Out of
+            // reach during focus like everything else that isn't the timer.
+            if engine.photos.shotAvailable(),
+               !(engine.isRunning && !engine.phase.isBreak) {
+                Button {
+                    if engine.snapPhoto() {
+                        withAnimation(.easeOut(duration: 0.2)) { shutter = true }
+                        Task {
+                            try? await Task.sleep(nanoseconds: 250_000_000)
+                            withAnimation(.easeIn(duration: 0.3)) { shutter = false }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.footnote.weight(.semibold))
+                        .frame(width: 38, height: 32)
+                        .background(
+                            RoundedRectangle(cornerRadius: 11)
+                                .fill(Theme.surface.opacity(0.6))
+                        )
+                        .foregroundStyle(Theme.bark.opacity(0.7))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.squishy(pressedScale: 0.86))
+                .accessibilityLabel("Take today's photograph")
             }
         }
     }

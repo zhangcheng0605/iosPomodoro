@@ -98,6 +98,8 @@ final class TimerEngine {
     let garden: Garden
     /// What the places have been caught doing, and when they do it.
     let timetable: Timetable
+    /// One photograph a day, developing overnight.
+    let photos: PhotoAlbum
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -149,7 +151,8 @@ final class TimerEngine {
         fortunes: FortuneTeller = FortuneTeller(),
         travels: Travels = Travels(),
         garden: Garden = Garden(),
-        timetable: Timetable = Timetable()
+        timetable: Timetable = Timetable(),
+        photos: PhotoAlbum = PhotoAlbum()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -169,6 +172,7 @@ final class TimerEngine {
         self.travels = travels
         self.garden = garden
         self.timetable = timetable
+        self.photos = photos
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -254,6 +258,12 @@ final class TimerEngine {
         }
         if LaunchOptions.forceBloom {
             garden.bloomForDebug()
+        }
+        if LaunchOptions.regrantPhoto {
+            photos.regrantForDebug()
+        }
+        if LaunchOptions.developNow {
+            photos.developNowForDebug()
         }
         // Anyone whose hidden clock ran out while the app was closed.
         resolveJourneys()
@@ -363,6 +373,33 @@ final class TimerEngine {
     func claimArrivedLetter() -> Letter? {
         defer { arrivedLetter = nil }
         return arrivedLetter
+    }
+
+    // MARK: The camera
+
+    /// Take today's one photograph of whatever is true right now. The
+    /// record quantizes to the resting keyframe — a mid-animation frame
+    /// can't be stored, by construction.
+    @discardableResult
+    func snapPhoto(on date: Date = Date()) -> Bool {
+        guard runState != .running || phase.isBreak else { return false }
+        guard photos.shotAvailable(on: date) else { return false }
+        let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: date)
+        let tucked = tuckIn.isTuckedNow(on: date)
+            && !(settings.buddy.isNocturnal && part == .night)
+        let event = ClockworkEvent.active(at: date, place: settings.place)
+        let moonFull = MoonPhase.isFull()
+        photos.snap(PhotoRecord(
+            id: UUID(), date: date, place: settings.place.rawValue,
+            dayPart: part.rawValue, buddy: settings.buddy.rawValue,
+            tucked: tucked, event: event?.rawValue, moonFull: moonFull,
+            caption: PhotoAlbum.caption(
+                place: settings.place, part: part, buddyName: buddyName,
+                tucked: tucked, event: event, moonFull: moonFull
+            )
+        ))
+        HapticsDirector.shared.detent()
+        return true
     }
 
     // MARK: The window-box

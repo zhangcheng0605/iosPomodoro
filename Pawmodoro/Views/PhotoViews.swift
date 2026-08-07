@@ -1,0 +1,108 @@
+import SwiftUI
+
+/// One developed photograph, re-rendered from its parameter record by the
+/// same art that was on screen when the shutter clicked. The scene keeps
+/// its captured hour forever; the caption keeps everything the little
+/// render can't draw.
+struct PhotoCard: View {
+    let record: PhotoRecord
+
+    private var place: Place? { Place(rawValue: record.place) }
+    private var part: DayPart? { DayPart(rawValue: record.dayPart) }
+    private var buddy: Buddy? { Buddy(rawValue: record.buddy) }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack(alignment: .bottom) {
+                if let place, let part {
+                    Image(place.assetName(for: part))
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 120, height: 96)
+                        .clipped()
+                }
+                if let buddy {
+                    ZStack {
+                        BuddySprite(
+                            buddy: buddy,
+                            sleeping: record.tucked,
+                            size: 34
+                        )
+                        if record.tucked {
+                            Image("fx_blanket_over")
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 33)
+                                .offset(y: 5)
+                        }
+                    }
+                    .padding(.bottom, 4)
+                }
+            }
+            .background(Theme.cream)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Theme.cream, lineWidth: 4)
+            )
+            .shadow(color: Theme.bark.opacity(0.18), radius: 4, y: 2)
+
+            Text(record.caption)
+                .font(.system(size: 9))
+                .foregroundStyle(Theme.bark.opacity(0.65))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 126)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("A photograph: \(record.caption)")
+    }
+}
+
+/// The photo shelf: developed shots, and today's still in the bath.
+struct PhotoShelfView: View {
+    @Environment(TimerEngine.self) private var engine
+
+    private let columns = [GridItem(.adaptive(minimum: 130), spacing: 14)]
+
+    var body: some View {
+        let developed = engine.photos.photos
+            .filter { engine.photos.isDeveloped($0) }
+            .suffix(8)
+            .reversed()
+        let developing = engine.photos.developing()
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "camera.fill")
+                Text("Photographs")
+                Spacer()
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.blossom)
+
+            if developing == nil && developed.isEmpty {
+                Text("One shot a day, of whatever is true when you take it. "
+                     + "It develops overnight.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.bark.opacity(0.65))
+            } else {
+                if developing != nil {
+                    Text("One in the bath — it'll be ready in the morning.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.bark.opacity(0.65))
+                }
+                LazyVGrid(columns: columns, spacing: 14) {
+                    ForEach(Array(developed)) { record in
+                        PhotoCard(record: record)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+    }
+}

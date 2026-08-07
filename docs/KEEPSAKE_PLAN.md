@@ -1,13 +1,16 @@
 # Pawmodoro Keepsake Plan — the app gives things back
 
-> **Status: planned, not yet built.** Drafted August 2026, after the
-> Companion and Clockwork waves (both written, both awaiting their first
-> Mac build). Fifth plan document. The first four built inward — feel,
-> world, relationship, time. This one builds **outward**: the records,
-> poems, cards and home-screen presence the app hands back after two
-> waves of quietly keeping notes. Its references are the most-copied
-> famous features in modern apps, each with its dark half amputated as
-> usual.
+> **Status: written end to end on Linux, never compiled.** Drafted and
+> then built August 2026, in the same blind sitting style as the
+> Companion and Clockwork waves — all three now await their first Mac
+> build together, and the usual odds apply (expect a handful of
+> type-checker errors; see RESUME_HERE.md). Fifth plan document. The
+> first four built inward — feel, world, relationship, time. This one
+> builds **outward**: the records, poems, cards and home-screen presence
+> the app hands back after two waves of quietly keeping notes. Its
+> references are the most-copied famous features in modern apps, each
+> with its dark half amputated as usual. Every phase below carries an
+> **As built** section recording where the code diverged from the plan.
 
 ## The thesis: the artifact is the feature
 
@@ -69,6 +72,27 @@ the same loop annualized: a guaranteed rich parcel at a known cadence.
 **New flags:** `-PawmodoroSeasonLetter <season>` (compose now),
 `-PawmodoroYearCard` (the annual sequence, from seeded stats).
 
+### As built
+
+`Model/Chronicle.swift` + `Views/YearKeptView.swift`. The Chronicle
+detects a season turn by remembering the `"year.season"` key it was
+inside at last look (`lastSeenKey`), so a season that ended while the
+app was closed still gets its letter on the next open; letters cap at
+twelve and archive **inside the mailbox card** under "FROM THE SEASONS"
+(two most recent, tappable to share) rather than on a screen of their
+own. The sentence bank recounts five sources — hours, first-met species,
+night stars, letters home, photographs; the planned repertoire, garden
+and setlist lines were cut, because five true sentences read as a
+letter and eight read as inventory. The morning caption announces a
+fresh letter after a homecoming and the night's evidence, before the
+hello. A Year, Kept is five fixed cards (cover, hours, wild, sky,
+closing) in a page TabView, presented as a `fullScreenCover` whenever
+`yearDue` stands — presented, never announced, so it cannot be missed —
+with years counted as days-since-first-session / 365 and per-card
+export through the AK sheet. The planned "what the buddies learned"
+card was folded into the buddy book (AN) instead, where it already
+lives per-buddy.
+
 ---
 
 ## Phase AK — Kept cards, shared (Wordle's real invention)
@@ -89,6 +113,16 @@ mints beautiful moments with nowhere to go.
   no counts on any exported card.
 
 **New flags:** none — rides the existing card flags.
+
+### As built
+
+`Views/ShareCard.swift`: `CardExporter` wraps `ImageRenderer` at scale 3
+over a `Theme.cream` ground; `ShareableCardSheet` renders exactly once,
+in `.task` when the sheet opens — never in a grid body — then hands the
+image to `ShareLink`. The provenance line reads "Pawmodoro — kept, not
+scored." Wired first to photographs (the shelf's cards became buttons)
+and then to everything this wave minted: papers, letters, Year cards,
+haiku.
 
 ---
 
@@ -120,6 +154,26 @@ to its fiction:
 **New flags:** none (widgets take no launch arguments; preview via the
 widget gallery).
 
+### As built
+
+The plan's one wrong assumption: the Live Activity ships **no** sprites
+(its art is two emoji), so the extension needed its own catalog.
+`tools/generate_widget_assets.py` fills `PawmodoroWidgets/Assets.xcassets`
+by copying the 25 needed sprites **byte-for-byte** from the app catalog —
+never re-rendering, so the container's newer Pillow cannot move a pixel —
+and draws the wave's one new sprite, `widget_nightcap`. The widget itself
+(`PawmodoroWidgets/PawmodoroHomeWidget.swift`) is v1 exactly as planned:
+`TimelineProvider` entries at the 5/8/17/21 boundaries, buddy pose a pure
+function of the clock, Luna on watch at night, the night-cap on December
+nights, no numbers anywhere, and a cat fallback when the App Group suite
+is absent or names a buddy the catalog doesn't know. The app mirrors
+buddy and place into `group.com.pawmodoro` on every settings change
+(place is unread until v2). The sky-tinted `containerBackground` uses
+literal colours — the Live Activity's documented exception, extended.
+`docs/LIVE_ACTIVITY.md` now walks both files and the catalog into the
+same one-time target step, and notes the App Group itself is optional
+in v1.
+
 ---
 
 ## Phase AM — The Haiku Bench (Ghost of Tsushima)
@@ -147,6 +201,25 @@ still and picking three lines. That is nearly a Pomodoro already.
 **New flags:** `-PawmodoroBench` (open it on launch),
 `-PawmodoroAnthology` (seed three poems).
 
+### As built
+
+The entry is a **toolbar scroll button, shown only while idle** — not a
+bench chip in the scene — so the toy layer's gesture stack is untouched
+and the phase shipped with zero new art. `Model/Haiku.swift` holds the
+pools: every line is a lowercase, end-unpunctuated fragment (first lines
+2 per place + 2 per day-part + 2 universal; middles 8–10 with one
+seasonal; thirds 8–9 the same), three picks per line by day hash, so any
+first sits over any middle over any third — parsing beat syllable
+counting, and nothing is 5-7-5. In the sheet the buddy is a still
+resting sprite with a caption; the finished poem's slow blink is a line
+of text, not an animation. The quote-back is `Anthology.quoteBack()`: a
+middle line at least fourteen days old surfaces in the idle vignettes'
+rare branch, once per poem, ever (quoted IDs persist with the poems
+under `StorageKeys.anthology`, cap forty). The plan's "anniversary
+engine gains poems as a memory subject" was **not** built — the
+quote-back already carries that callback, and two systems replaying the
+same poem would make it a rerun.
+
 ---
 
 ## Phase AN — The Buddy Book (Usagi Shima's BunBook, Webkinz's papers)
@@ -172,6 +245,18 @@ dossier needs and shows none of it in one place.
 **Guilt-proof:** the book states what happened; blank lines render as
 "still finding out", never as empty slots with counts.
 **New flags:** none — every existing seed flag already fills it.
+
+### As built
+
+`Views/BuddyBookView.swift`, opened from a "The buddy book" row in
+Settings' buddy section — one row rather than a tap on the picker or the
+bond card, because the picker's tap already means "choose" and
+overloading it would misfire. All facts derive exactly as planned:
+sessions together from the widened log, the quirk as one flat line per
+buddy, tastes only as discovered, tricks at their true tier, journeys
+from the letters that came home, the fives' one dry line past five
+pre-empts. The papers sit on top, exportable through AK, and Soot's read
+verbatim as planned.
 
 ---
 
@@ -199,6 +284,25 @@ Pawmodoro's pane is glass; winter gives it frost.
 
 **New flags:** `-PawmodoroFrost` (frost now, any season or hour).
 
+### As built
+
+`Views/FrostView.swift`, mounted in ContentView above the scene and toy
+layers and below the UI — the frost is on the glass, so a drag wipes
+instead of stirring petals, and the timer's text keeps its own backing
+capsules. The veil and specks are `Theme.cream` at low opacity (each
+theme tints its own frost); wipes are `.destinationOut` strokes inside
+one `drawLayer`, a thumb wide. Coverage is estimated as stroke length ×
+width with overlap counted generously — past ~60% of the pane the
+remainder releases in one slow breath. A **started focus sets the
+melted flag for the day** rather than merely hiding the view, so the
+frost that "melted while you worked" stays melted; the flag is @State,
+never persisted, per the no-record rule. The mid-morning melt sleeps to
+the 10:00 wall clock on a `.task` (the idle-life loop's precedent — no
+Timer), and `-PawmodoroFrost` skips that melt so there's time to wipe.
+Reduce Motion pre-clears a centered ellipse, leaving frost as an edge
+vignette with no gesture attached. The Stray pebble line went into the
+idle vignette table in the same commit, as planned.
+
 ---
 
 ## Phase AP — The Golden Hour Call (BeReal, opted into)
@@ -224,6 +328,22 @@ beside the settle-in toggle:
 photo's already taken, and structurally incapable of mentioning a missed
 one.
 **New flags:** `-PawmodoroGoldenHour` (arm today's call in 10 seconds).
+
+### As built
+
+`goldenHourCall` on PomodoroSettings (lenient decode, off by default),
+a toggle in Behaviour with the promise spelled out in the footer.
+`FortuneTeller.bestBand` went private → internal so the call aims by the
+fortune's own mirror: dawn 6:00–8:00 for a demonstrated morning person,
+dusk 17:00–21:00 otherwise, the minute hash-picked from the day number.
+`TimerEngine.armGoldenHour()` replaces the single pending request
+(identifier `pawmodoro.goldenHour`) on launch, on every foregrounding
+and on every settings change, and cancels it when the toggle is off,
+the shot is spent, or today's window has already passed — the call
+never rolls overnight, because an invitation kept overnight is a
+reminder. `snapPhoto()` cancels it too. The notification is silent (no
+sound — a lighting tip should not chime) and its wording rotates
+through three templates by day, so consecutive days never repeat.
 
 ---
 

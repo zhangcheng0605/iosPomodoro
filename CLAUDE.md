@@ -34,9 +34,14 @@ phase carries an **As built** section. The fourth plan,
 timetabled places, one-shot photos, star stories, pale coats), is now **also
 written end to end on Linux** — both waves await their first Mac build and
 walk together; expect a handful of type-checker errors, per the usual
-Linux-blind odds. A fifth plan, `docs/KEEPSAKE_PLAN.md` (season letters, a
-yearly recap, share-as-image, the home-screen widget, haiku, the buddy
-book), is drafted and not yet built. The earlier two plans are **both
+Linux-blind odds. The fifth plan, `docs/KEEPSAKE_PLAN.md` (season letters, a
+yearly recap, share-as-image, the home-screen widget, haiku, frost
+mornings, the golden hour call, the buddy book), is now **also written
+end to end on Linux** — so three waves await that first Mac build
+together. Note the widget (Phase AL) and the Live Activity share the
+same one-time Xcode target step, and `PawmodoroWidgets/` now carries its
+own asset catalog, filled by `tools/generate_widget_assets.py` with
+byte-for-byte copies. The earlier two plans are **both
 built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
 seen running, D (Live Activity) written but needing a one-time Xcode target
 step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
@@ -127,6 +132,12 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroPale` | Every sighting wears the pale coat (pair with `-PawmodoroSighting`) |
 | `-PawmodoroShower` | Tonight is a falling-star night |
 | `-PawmodoroVignette <n>` | Fire an idle vignette a few seconds after launch |
+| `-PawmodoroSeasonLetter <id>` | Compose a season's letter now, e.g. `autumn` |
+| `-PawmodoroYearCard` | Present the anniversary card sequence at launch |
+| `-PawmodoroBench` | Open the haiku bench at launch |
+| `-PawmodoroAnthology` | Seed three finished poems, dated weeks back |
+| `-PawmodoroFrost` | Frost the pane now, any season or hour; skips the melt |
+| `-PawmodoroGoldenHour` | Arm the golden hour call ~10s out (background the app) |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

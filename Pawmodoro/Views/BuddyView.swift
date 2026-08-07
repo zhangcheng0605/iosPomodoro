@@ -17,6 +17,16 @@ struct BuddyView: View {
     /// While this contains now, the paw is up and a tap on the buddy is a
     /// high five rather than a pet.
     @State private var fiveWindow: ClosedRange<Date>?
+    /// The moth vignette on screen, if one is.
+    @State private var helloMoth: Hello?
+    /// True through the first beats of the new-spot hello: the buddy is
+    /// drawn asleep somewhere it usually isn't, then wakes.
+    @State private var helloAsleep = false
+    /// The peek hello slides the whole sprite in through this.
+    @State private var helloOffset: CGSize = .zero
+    /// The rare leaf hello: shown at the feet, never banked — the gesture
+    /// is the gift.
+    @State private var helloLeaf = false
 
     private let spriteSize: CGFloat = 104
 
@@ -114,8 +124,72 @@ struct BuddyView: View {
 
                 ZStack {
                     sprite
+                        .offset(helloOffset)
                         .contentShape(Rectangle())
                         .gesture(petGesture)
+
+                    if let helloMoth {
+                        HelloMothView(
+                            lands: helloMoth == .mothLands, spriteSize: spriteSize
+                        )
+                    }
+
+                    // Yesterday, still attached. Tappable except during
+                    // focus — a burr can wait twenty-five minutes.
+                    if let burr = engine.doorstep.burr {
+                        Button {
+                            popBurr(burr)
+                        } label: {
+                            Image(burr.assetName)
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Circle())
+                        .offset(
+                            x: buddy.burrAnchor.width * spriteSize,
+                            y: buddy.burrAnchor.height * spriteSize
+                        )
+                        .allowsHitTesting(!(engine.isRunning && !engine.phase.isBreak))
+                        .transition(.opacity)
+                        .task {
+                            // Ignored long enough, the buddy shakes it off
+                            // itself — nothing is ever left to nag.
+                            try? await Task.sleep(nanoseconds: 90_000_000_000)
+                            engine.doorstep.popBurr()
+                        }
+                    }
+
+                    // What was carried home, set down at the feet. Tap to
+                    // keep it.
+                    if let find = visibleFind {
+                        Button {
+                            bankFind()
+                        } label: {
+                            Image(find.assetName)
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 26, height: 26)
+                                .padding(6)
+                                .background(Circle().fill(Theme.cream.opacity(0.85)))
+                        }
+                        .buttonStyle(.plain)
+                        .offset(x: spriteSize * 0.46, y: spriteSize * 0.40)
+                        .transition(.opacity)
+                    } else if helloLeaf {
+                        Image("keep_sprig")
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .offset(x: spriteSize * 0.46, y: spriteSize * 0.42)
+                            .transition(.opacity)
+                            .allowsHitTesting(false)
+                    }
 
                     // The blanket, over the sleeping buddy. All twelve
                     // asleep poses fill the lower half of the same grid, so
@@ -209,6 +283,12 @@ struct BuddyView: View {
             if let fiveWindow, fiveWindow.contains(Date()) {
                 Button("High five \(name)") { landFive() }
             }
+            if let find = visibleFind {
+                Button("Keep the \(find.name.lowercased())") { bankFind() }
+            }
+            if let burr = engine.doorstep.burr {
+                Button("Brush off \(burr.label)") { popBurr(burr) }
+            }
         }
         .onAppear { animator.setBase(restingPose) }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
@@ -223,13 +303,21 @@ struct BuddyView: View {
             }
             openFiveWindow()
         }
-        .task { revealMorningIfDue() }
-        .onChange(of: scenePhase) { _, phase in
-            // The blanket's thank-you can only arrive on the first look of
-            // the morning, and an app left in memory overnight re-enters
-            // here rather than through launch.
-            guard phase == .active else { return }
+        .task {
+            playHello()
             revealMorningIfDue()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // The blanket's thank-you and the doorstep can only arrive on
+            // the first look of the day, and an app left in memory overnight
+            // re-enters here rather than through launch. The short wait lets
+            // the engine's own foreground pass decide the new day first.
+            guard phase == .active else { return }
+            Task {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                playHello()
+                revealMorningIfDue()
+            }
         }
     }
 
@@ -269,6 +357,11 @@ struct BuddyView: View {
     /// a bounce, a stir, a wake-up — is a thing the buddy is *doing*, and a
     /// glance is only where it happens to be looking.
     private func frameName(at date: Date) -> String {
+        // The new-spot hello opens on a buddy asleep somewhere new; the
+        // wake-up that follows is the vignette's whole plot.
+        if helloAsleep {
+            return buddy.frame("asleep")
+        }
         if !animator.isPlayingTransient(at: date), pawRaised(at: date) {
             // The raised bounce frame stands in for buddies whose paw-up
             // hasn't been drawn yet — up on the toes, expectant.
@@ -278,6 +371,80 @@ struct BuddyView: View {
             return buddy.frame(x < 0.5 ? "look_l" : "look_r")
         }
         return animator.frameName(for: buddy, at: date)
+    }
+
+    // MARK: The doorstep
+
+    /// The find at the feet, out of reach during focus like everything else.
+    private var visibleFind: Keepsake? {
+        guard !(engine.isRunning && !engine.phase.isBreak) else { return nil }
+        return engine.doorstep.find
+    }
+
+    /// Play today's greeting, if it hasn't played. Once per day: claiming
+    /// clears it, and the doorstep won't deal a second one until tomorrow.
+    private func playHello() {
+        guard let hello = engine.doorstep.claimHello() else { return }
+        say(hello.caption(name), for: 6)
+        guard !reduceMotion else { return }
+        switch hello {
+        case .bigStretch:
+            animator.play(.waking, for: buddy)
+        case .shake:
+            animator.play(.happy, for: buddy)
+        case .mothChase, .mothLands:
+            helloMoth = hello
+            Task {
+                try? await Task.sleep(nanoseconds: 6_000_000_000)
+                helloMoth = nil
+            }
+        case .peek:
+            helloOffset = CGSize(width: -46, height: 0)
+            withAnimation(.spring(duration: 0.8, bounce: 0.3)) {
+                helloOffset = .zero
+            }
+        case .newSpot:
+            helloAsleep = true
+            Task {
+                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                helloAsleep = false
+                animator.play(.waking, for: buddy)
+            }
+        case .leafGift:
+            withAnimation(.easeInOut(duration: 0.4)) { helloLeaf = true }
+            Task {
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                withAnimation(.easeInOut(duration: 0.8)) { helloLeaf = false }
+            }
+        case .slowMorning, .carriedHome:
+            // The caption carries the first; the find at the feet is the
+            // whole show for the second.
+            break
+        }
+    }
+
+    /// Pick the find up: it moves to the drawer, with its provenance.
+    private func bankFind() {
+        guard let banked = engine.doorstep.bankFind(
+            into: engine.drawer, place: engine.settings.place, finder: buddy
+        ) else { return }
+        HapticsDirector.shared.stamp()
+        if !reduceMotion {
+            animator.play(.happy, for: buddy)
+        }
+        say("\(banked.name.lowercased()) — \(banked.note). Kept", for: 5)
+    }
+
+    private func popBurr(_ burr: Burr) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            engine.doorstep.popBurr()
+        }
+        HapticsDirector.shared.detent()
+        if !reduceMotion {
+            animator.play(.happy, for: buddy)
+        }
+        say("\(burr.label) from yesterday, off with a shake — "
+            + "\(name) hadn't noticed and does not care", for: 5)
     }
 
     // MARK: The high five

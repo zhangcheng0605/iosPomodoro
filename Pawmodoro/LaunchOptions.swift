@@ -30,10 +30,15 @@ enum StorageKeys {
     static let fives = "pawmodoro.fives"
     /// The night the blanket went on, and whether its morning has been said.
     static let tuckIn = "pawmodoro.tuckIn"
+    /// The last open, the last greeted day, and which rare hellos have shown.
+    static let doorstep = "pawmodoro.doorstep"
+    /// Everything ever carried home, with its provenance.
+    static let drawer = "pawmodoro.drawer"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
+        doorstep, drawer,
     ]
 }
 
@@ -277,6 +282,29 @@ enum LaunchOptions {
     /// Pretend the blanket went on last night: today carries the blessing
     /// and the morning line, without waiting out a real night.
     static let tuckedYesterday = isSet("-PawmodoroTucked")
+
+    /// Force a greeting vignette, e.g. `-PawmodoroHello mothLands`. The rare
+    /// two are one-in-sixteen mornings otherwise.
+    static let forcedHello: String? = {
+        guard arguments.contains("-PawmodoroHello") else { return nil }
+        return value(after: "-PawmodoroHello")
+    }()
+
+    /// Put a find at the buddy's feet, e.g. `-PawmodoroFind seaglass` —
+    /// the honest trigger is six hours away, which is not a way to check art.
+    static let forcedFind: String? = {
+        guard arguments.contains("-PawmodoroFind") else { return nil }
+        return value(after: "-PawmodoroFind")
+    }()
+
+    /// Stick a burr on the buddy, e.g. `-PawmodoroBurr salt`.
+    static let forcedBurr: String? = {
+        guard arguments.contains("-PawmodoroBurr") else { return nil }
+        return value(after: "-PawmodoroBurr")
+    }()
+
+    /// One of every keepsake in the drawer, for looking at the grid.
+    static let fillDrawer = isSet("-PawmodoroFillDrawer")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -303,6 +331,10 @@ enum LaunchOptions {
     static let fillTastes = false
     static let fiveCount: Int? = nil
     static let tuckedYesterday = false
+    static let forcedHello: String? = nil
+    static let forcedFind: String? = nil
+    static let forcedBurr: String? = nil
+    static let fillDrawer = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

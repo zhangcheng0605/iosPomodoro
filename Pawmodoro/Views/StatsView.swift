@@ -23,6 +23,7 @@ struct StatsView: View {
                     StarAtlasView()
                     JournalView()
                     DreamDiaryView()
+                    KeepsakeDrawerView()
                 }
                 .padding()
             }

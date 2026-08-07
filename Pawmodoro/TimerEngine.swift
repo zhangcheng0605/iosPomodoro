@@ -75,6 +75,8 @@ final class TimerEngine {
     let pantry: Pantry
     let fives: FiveCounter
     let tuckIn: TuckIn
+    let doorstep: Doorstep
+    let drawer: KeepsakeDrawer
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -92,7 +94,9 @@ final class TimerEngine {
         dreams: DreamDiary = DreamDiary(),
         pantry: Pantry = Pantry(),
         fives: FiveCounter = FiveCounter(),
-        tuckIn: TuckIn = TuckIn()
+        tuckIn: TuckIn = TuckIn(),
+        doorstep: Doorstep = Doorstep(),
+        drawer: KeepsakeDrawer = KeepsakeDrawer()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -104,6 +108,8 @@ final class TimerEngine {
         self.pantry = pantry
         self.fives = fives
         self.tuckIn = tuckIn
+        self.doorstep = doorstep
+        self.drawer = drawer
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -135,6 +141,26 @@ final class TimerEngine {
         }
         if LaunchOptions.tuckedYesterday {
             tuckIn.seedYesterdayForDebug()
+        }
+        // The doorstep decides once per calendar day, at the first open.
+        // After the forced place and buddy above, so a forced morning is
+        // the morning it would have been there. The forced flags below then
+        // override whatever the day rolled.
+        doorstep.arrive(
+            place: self.settings.place, buddy: self.settings.buddy,
+            season: Season.current()
+        )
+        if let raw = LaunchOptions.forcedHello, let hello = Hello(rawValue: raw) {
+            doorstep.forceHello(hello)
+        }
+        if let raw = LaunchOptions.forcedFind, let find = Keepsake(rawValue: raw) {
+            doorstep.forceFind(find)
+        }
+        if let raw = LaunchOptions.forcedBurr, let burr = Burr(rawValue: raw) {
+            doorstep.forceBurr(burr)
+        }
+        if LaunchOptions.fillDrawer {
+            drawer.fillForDebug()
         }
     }
 
@@ -269,8 +295,12 @@ final class TimerEngine {
 
     /// Call when the app returns to the foreground.
     func syncAfterWake() {
-        // Overnight housekeeping first: a snack left out is gone by morning.
+        // Overnight housekeeping first: a snack left out is gone by morning,
+        // and an app re-entered on a new day gets its doorstep moment.
         pantry.sweep()
+        doorstep.arrive(
+            place: settings.place, buddy: settings.buddy, season: Season.current()
+        )
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {

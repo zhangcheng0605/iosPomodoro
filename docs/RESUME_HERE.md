@@ -54,9 +54,30 @@ preserved in the session scratchpad), Release 41 MB vs the 45 ceiling.
    bells, 65 tracks — never heard by anyone. Priorities: the retuned rain
    family; Rain + "Windowpane Study" together (the whole Rainy Day Tapes
    claim is that they duet); one bell at night volume.
-4. **Older-plan opens:** alternate app icons; E2's full accessory wave
-   (~200 imagesets); the "Now playing" radio chip (radio's pick is currently
-   unobservable — noted by the W5 builder).
+4. **Older-plan opens:** E2's full accessory wave and the "Now playing" radio
+   chip were both taken on 8 Aug — see the commits. **Alternate app icons**
+   are still open; the investigation is done, so this is a short job now:
+
+   - There is exactly one `AppIcon.appiconset`, and `project.pbxproj` sets
+     `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` twice (lines 250 and 281,
+     Debug and Release).
+   - Adding alternates needs two more build settings on both configurations:
+     `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` (space-separated) and
+     `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`. That is an
+     additive settings change, not a target change — unlike the Widget
+     Extension it does **not** need Xcode's GUI, and it reverts by deleting
+     the two lines.
+   - `tools/generate_assets.py:672 make_icon()` already draws the icon and
+     writes it to `ICONSET`; alternates want that parameterised by palette
+     rather than a second function, so the seasonal icons come out of the
+     same drawing the shipped one does.
+   - Runtime is `UIApplication.shared.setAlternateIconName(_:)`, which must
+     go behind `Platform.swift`'s fence like every other UIKit call, and
+     wants a picker in Settings beside the theme row.
+   - iOS shows a system alert every time the icon changes and there is no
+     supported way to suppress it. Decide whether that is acceptable before
+     building the picker — it may argue for tying the icon to the theme
+     rather than offering a separate control.
 5. **On-device checks that needed a real phone:** camera shutter→keep round
    trip, the new-moon night, Reduce Motion eat-fade, haptics.
 

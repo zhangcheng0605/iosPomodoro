@@ -37,6 +37,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    JourneyRoster()
+                } header: {
+                    Text("Little journeys")
+                } footer: {
+                    Text("An off-duty buddy comes back when it comes back — "
+                         + "with a letter, and something for the drawer. "
+                         + "Picking a traveler for duty calls them straight home.")
+                }
+
+                Section {
                     PlacePicker { showPaywall = true }
                 } header: {
                     Text("Where you are")

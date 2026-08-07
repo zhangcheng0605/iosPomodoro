@@ -46,12 +46,14 @@ enum StorageKeys {
     static let nightKnown = "pawmodoro.nightKnown"
     /// The fortune slips drawn so far, newest last.
     static let fortunes = "pawmodoro.fortunes"
+    /// Who is away on a little journey, and every letter that came home.
+    static let travels = "pawmodoro.travels"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown, fortunes,
+        nightKnown, fortunes, travels,
     ]
 }
 
@@ -352,6 +354,16 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroFortune") else { return nil }
         return value(after: "-PawmodoroFortune").flatMap(Int.init) ?? 0
     }()
+
+    /// Seed a journey already due home, e.g. `-PawmodoroJourney owl.peaks`.
+    /// The honest wait is six to thirty-six hidden hours.
+    static let forcedJourney: String? = {
+        guard arguments.contains("-PawmodoroJourney") else { return nil }
+        return value(after: "-PawmodoroJourney")
+    }()
+
+    /// Everyone still out on a journey knocks at launch.
+    static let returnNow = isSet("-PawmodoroReturnNow")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -387,6 +399,8 @@ enum LaunchOptions {
     static let pounceEscapes = false
     static let nightCaller: String? = nil
     static let forcedFortune: Int? = nil
+    static let forcedJourney: String? = nil
+    static let returnNow = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

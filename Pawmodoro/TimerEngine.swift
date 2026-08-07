@@ -90,6 +90,10 @@ final class TimerEngine {
     let fortunes: FortuneTeller
     /// The freshly drawn slip, for the caption to read out once.
     private(set) var drawnSlip: Fortune?
+    /// Who is away, and every letter that ever came home.
+    let travels: Travels
+    /// The newest homecoming, for the caption to announce once.
+    private(set) var arrivedLetter: Letter?
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -138,7 +142,8 @@ final class TimerEngine {
         drawer: KeepsakeDrawer = KeepsakeDrawer(),
         repertoire: Repertoire = Repertoire(),
         memories: Anniversaries = Anniversaries(),
-        fortunes: FortuneTeller = FortuneTeller()
+        fortunes: FortuneTeller = FortuneTeller(),
+        travels: Travels = Travels()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -155,6 +160,7 @@ final class TimerEngine {
         self.repertoire = repertoire
         self.memories = memories
         self.fortunes = fortunes
+        self.travels = travels
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -225,6 +231,18 @@ final class TimerEngine {
         if let row = LaunchOptions.forcedFortune {
             drawFortuneIfDue(row: row)
         }
+        if let forced = LaunchOptions.forcedJourney {
+            let parts = forced.split(separator: ".").map(String.init)
+            if parts.count == 2, let buddy = Buddy(rawValue: parts[0]),
+               let place = Place(rawValue: parts[1]) {
+                travels.seedForDebug(buddy: buddy, place: place)
+            }
+        }
+        if LaunchOptions.returnNow {
+            travels.hurryAllForDebug()
+        }
+        // Anyone whose hidden clock ran out while the app was closed.
+        resolveJourneys()
         if let days = LaunchOptions.rememberDaysAgo {
             memories.forceForDebug(daysAgo: days, journal: journal)
         }
@@ -266,6 +284,68 @@ final class TimerEngine {
             place: slip.biasPlace.flatMap(Place.init(rawValue:)),
             weight: 4, oneShot: false
         ))
+    }
+
+    // MARK: Little journeys
+
+    /// See a buddy off. If the sill holds a snack, the first traveler of
+    /// the day packs it — knotted into the furoshiki, one caption's worth
+    /// of provisions.
+    func sendOnJourney(_ buddy: Buddy, to place: Place) {
+        guard buddy != settings.buddy, !travels.isAway(buddy) else { return }
+        let packed = pantry.packForRoad()
+        travels.send(buddy, to: place, packing: packed)
+    }
+
+    /// Resolve every journey that is due — including a traveler recalled by
+    /// being picked for duty, who comes straight home when called. Letters
+    /// compose here, where the journal and the drawer live.
+    func resolveJourneys(now: Date = Date()) {
+        for journey in travels.due(now: now, selected: settings.buddy) {
+            guard let buddy = Buddy(rawValue: journey.buddy),
+                  let place = Place(rawValue: journey.destination)
+            else {
+                // A record from a future version this build can't read:
+                // leave it be rather than eat it.
+                continue
+            }
+            let season = Season.current()
+            let snack = journey.snack.flatMap(Snack.init(rawValue:))
+            // The tip: a species the journal is missing at that place.
+            let gap = Species.allCases.first {
+                !journal.hasSeen($0) && !$0.isPhenomenon
+                    && $0.places.contains(place) && $0.rarity != .mythic
+            }
+            let keepsake = Keepsake.find(
+                at: place, season: season,
+                day: Snack.dayNumber(for: journey.returnsAt)
+            )
+            let text = LetterPress.compose(
+                buddyName: settings.displayName(for: buddy), place: place,
+                season: season, snack: snack,
+                snackReaction: snack.map { buddy.reaction(to: $0) }, gap: gap
+            )
+            let letter = Letter(
+                id: UUID(), date: now, buddy: journey.buddy,
+                place: journey.destination, text: text,
+                keepsake: keepsake.rawValue, reportedSpecies: gap?.rawValue
+            )
+            drawer.add(keepsake, place: place, finder: buddy, on: now)
+            if let gap {
+                setBias(SightingBias(
+                    source: "journey.\(journey.buddy)", species: gap,
+                    place: place, weight: 6, oneShot: true
+                ))
+            }
+            travels.complete(journey, letter: letter)
+            arrivedLetter = letter
+        }
+    }
+
+    /// The homecoming announcement, read out once by the caption.
+    func claimArrivedLetter() -> Letter? {
+        defer { arrivedLetter = nil }
+        return arrivedLetter
     }
 
     /// Last night's sill visitor, waiting for the morning's first look.
@@ -451,6 +531,7 @@ final class TimerEngine {
         )
         repertoire.consolidate()
         memories.lookBack(log: log, journal: journal, stray: stray)
+        resolveJourneys()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {
@@ -466,6 +547,9 @@ final class TimerEngine {
         if runState == .idle {
             remaining = phaseDuration
         }
+        // Picking a buddy who is away recalls it: the traveler comes
+        // straight home when called, letter and all.
+        resolveJourneys()
         refreshAmbience()
     }
 

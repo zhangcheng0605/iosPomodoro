@@ -273,6 +273,16 @@ final class Pantry {
         save()
     }
 
+    /// The sill snack, taken for the road — a traveler packs it without it
+    /// counting as a meal. Nothing is owed if the sill is bare.
+    func packForRoad() -> Snack? {
+        guard let snack = sill else { return nil }
+        sill = nil
+        sillDate = nil
+        save()
+        return snack
+    }
+
     /// Whether the buddy has room today.
     func hasAppetite(on date: Date = Date()) -> Bool {
         guard let fedOn, calendar.isDate(fedOn, inSameDayAs: date) else { return true }

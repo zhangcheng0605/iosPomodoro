@@ -400,12 +400,18 @@ struct BuddyView: View {
         }
     }
 
-    /// One small event per morning, in a strict order: evidence of the
-    /// night outranks a live hello (and leaves the hello claimed for the
-    /// day's next foregrounding), and the blanket's thank-you outranks the
-    /// caption either way.
+    /// One small event per look, in a strict order: a homecoming outranks
+    /// everything (someone is at the door), evidence of the night outranks
+    /// a live hello (which keeps for the day's next look), and the
+    /// blanket's thank-you rides over the caption either way.
     private func greetTheMorning() {
-        if let visit = engine.claimNightVisit() {
+        if let letter = engine.claimArrivedLetter() {
+            let traveler = Buddy(rawValue: letter.buddy)
+                .map { engine.settings.displayName(for: $0) } ?? "someone"
+            let from = Place(rawValue: letter.place)?.name ?? "somewhere"
+            say("\(traveler) is back from \(from) — a letter and something "
+                + "for the drawer", for: 7)
+        } else if let visit = engine.claimNightVisit() {
             var line = NightCaller.evidence(for: visit.species, snack: visit.snack)
             if visit.memento != nil {
                 line += ". It left something — it's in the drawer"

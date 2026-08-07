@@ -46,6 +46,13 @@ struct ContentView: View {
 
                 seasonal
 
+                // Winter's one sensation: on cold mornings the pane wakes
+                // frosted, and a finger clears it. Above the scene and the
+                // toys — the frost is on the glass, so the wipe wins while
+                // it stands — and below the UI, whose text carries its own
+                // backing anyway.
+                FrostView()
+
                 // Something tiny that settles on the buddy or the ring. Above
                 // the scene, below the UI: it lands *on* things, so it has to
                 // be in front of them.

@@ -690,6 +690,8 @@ struct BuddyView: View {
             "\(name) digs, briefly, for reasons",
             "\(name) stretches one leg. Just the one",
             "\(name) sits facing the wall — correctly, somehow",
+            "\(name) nudges the pebble toward the edge of the shelf. "
+                + "Slowly. While watching you",
         ]
         return generic[abs(seed) % generic.count]
     }

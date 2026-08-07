@@ -441,6 +441,10 @@ enum LaunchOptions {
     /// Seed three finished poems, dated weeks back, so the anthology has
     /// pages and the quote-back is within reach.
     static let seedAnthology = isSet("-PawmodoroAnthology")
+
+    /// Frost the pane now, any season, any hour — and skip the
+    /// mid-morning melt, so there's time to wipe it.
+    static let frostNow = isSet("-PawmodoroFrost")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -491,6 +495,7 @@ enum LaunchOptions {
     static let forcedYearCard = false
     static let openBench = false
     static let seedAnthology = false
+    static let frostNow = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

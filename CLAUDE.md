@@ -25,10 +25,13 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.
 
-**Current focus:** `docs/COMPANION_PLAN.md` — the third plan document, drafted
-and not yet built: pet interactions (feeding, tuck-in, high five, greeting
-vignettes, tricks, the anniversary engine), phases V–Z. The earlier two are
-**both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
+**Current focus:** `docs/COMPANION_PLAN.md` — the third plan document, and its
+build order is now **written end to end on Linux, never compiled**: phases V–Z
+(feeding, the high five, tuck-in, the doorstep, tricks, the anniversary
+engine) plus the small-magic wave (pounce, slow blink, summit nap). Every
+phase carries an **As built** section; the whole wave needs its first Mac
+build and walk — expect a handful of type-checker errors, per the usual
+Linux-blind odds. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
 seen running, D (Live Activity) written but needing a one-time Xcode target
 step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
 covers content and its build order is finished except alternate app icons. Each phase
@@ -95,6 +98,17 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroSeedGap` | History with a one-day hole, for the gentle streak |
 | `-PawmodoroSeason <id>` | Force a time of year, e.g. `autumn`, `sakura`, `winter` |
 | `-PawmodoroBond <n>` | Seed n completed sessions, to preview every bond level |
+| `-PawmodoroSnack <id>` | Stock the sill, e.g. `sardine` — each reaction tier is a pairing away |
+| `-PawmodoroFillTastes` | Every buddy has tried every snack, for the Tastes card |
+| `-PawmodoroFives <n>` | Seed lifetime high fives; 5+ shows the pre-empted paw |
+| `-PawmodoroTucked` | Pretend the blanket went on last night: blessed morning today |
+| `-PawmodoroHello <id>` | Force a greeting vignette, e.g. `mothLands` |
+| `-PawmodoroFind <id>` | Put a find at the buddy's feet, e.g. `seaglass` |
+| `-PawmodoroBurr <id>` | Stick a burr on the buddy, e.g. `salt` |
+| `-PawmodoroFillDrawer` | One of every keepsake in the drawer |
+| `-PawmodoroTrick <id.tier>` | Pin and play a trick, e.g. `spin.2` |
+| `-PawmodoroRemember <n>` | Surface a memory dated n days back |
+| `-PawmodoroPounce` | The break's closing pounce always misses (the rare variant) |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

@@ -1,5 +1,14 @@
 # Resume here
 
+> **Newest first: the Companion wave (Aug 2026) is written and has never met
+> a compiler.** One Linux session built all of `docs/COMPANION_PLAN.md` —
+> feeding, the high five, tuck-in, the doorstep, tricks, the anniversary
+> engine, and three small delights — one commit per phase, checkers green,
+> As-built notes at the bottom of that plan. The next Mac session starts
+> there: build Debug and Release, expect a handful of type-checker errors
+> (the usual Linux-blind odds), then walk the twelve new flags in the
+> CLAUDE.md table. The two items below it in the queue are unchanged.
+
 One long Linux session took the build order from item 11 to the end of item 16
 and cleared the backlog behind it. A Mac session (Aug 2026) then compiled all
 of it — Debug and Release — and walked the feature table in the simulator.

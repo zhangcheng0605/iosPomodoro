@@ -1,11 +1,14 @@
 # Pawmodoro Companion Plan — the pet that knows you
 
-> **Status: planned, not yet built.** Drafted August 2026 against the code as
-> of `claude/pet-interactions-retention-7caoj8`. This is the third plan
-> document: [DELIGHT_PLAN.md](DELIGHT_PLAN.md) made the app feel alive,
-> [CONTENT_PLAN.md](CONTENT_PLAN.md) gave it a world, and this one gives the
-> buddy a *relationship*. Build phase by phase, in order, one "As built"
-> section per phase as the code lands — same discipline as the other two.
+> **Status: built end to end on Linux (Aug 2026), never compiled.** All of
+> V–Z and the small-magic wave are written, one commit per phase, with every
+> divergence recorded in an **As built** section at the bottom of this file.
+> `check_swift.py`, `check_contrast.py` and `check_stray.py` all pass; the
+> wave still needs its first Mac build, the Debug *and* Release compile, and
+> a walk of the flag table — same as every Linux-authored wave before it.
+> This is the third plan document: [DELIGHT_PLAN.md](DELIGHT_PLAN.md) made
+> the app feel alive, [CONTENT_PLAN.md](CONTENT_PLAN.md) gave it a world,
+> and this one gives the buddy a *relationship*.
 
 ## The thesis: Tamagotchi, inverted
 
@@ -536,3 +539,80 @@ Mochi in"), same pattern as petting today.
 Each session ends the standard way: checkers green, `--demo` walk of the
 changed screen, light + dark screenshots, CLAUDE.md flag table updated,
 commit.
+
+---
+
+## As built (one Linux session, Aug 2026 — not yet compiled)
+
+Where the code diverged from the plan above, and why. Everything else
+shipped as written.
+
+**Art, generally.** All new art lives in `tools/generate_companion_props.py`,
+which imports the sprite helpers but never re-emits shipped imagesets — the
+container's Pillow is newer than the one that authored the catalog, and
+re-running the old `__main__` would have moved pixels this wave never
+touched. 38 new imagesets; a contact sheet was eyeballed and one sprite (the
+feather, which read as a pane of glass) redrawn.
+
+**V — the sill.** As planned, with one shape change the brand judge forced
+early: the sill holds **one** snack, not a capped stack — `setOut` is a
+no-op while a snack is waiting. The eating animation is the snack chip
+flying and shrinking plus the existing happy burst; the planned shared
+munch overlay was cut as unnecessary once the flight read as eating. A snub
+leaves the snack on the sill and still fills the Tastes card — a refusal is
+knowledge too.
+
+**W1 — the five.** The raised paw is a `pawUpFrame` frame slot with bespoke
+art for cat, dog and Soot only; everyone else holds `happy_1` (up on the
+toes) until drawn — the `BuddyFrames` drip-content rule, applied on day
+one. The "slightly bigger confetti burst" was cut: the slap, hop and hearts
+carry the moment, and the celebration overlay stays untouched. The pre-empt
+gates on lifetime fives, never consecutive — the reviewed-out hidden-streak
+reset never existed in code.
+
+**W2 — tuck-in.** The blanket is one shared overlay drawn over any asleep
+pose (all twelve fill the lower half of the same grid) — zero per-buddy
+frames. The morning payoff is a guaranteed dream roll for the whole blessed
+day plus the morning caption; the diary entry itself is not annotated with
+the blanket (that needed a diary schema change for one adjective). A tuck
+after midnight blesses the *following* day — noted as a quirk, accepted.
+
+**X — the doorstep.** Burrs pop with a shake and a caption but bank
+nothing: salt in a drawer is an absurdity the one-collection rule didn't
+need. Rare hellos are recorded in state but have no page yet — the drawer
+card was enough collection UI for one wave. The find takes the greeting
+slot (`Hello.carriedHome`) rather than stacking a hello *and* a gift.
+An untapped find is replaced by the next day's decisions: unwitnessed, it
+simply never happened, like a visit.
+
+**Y — repertoire.** The plan's generator-derived silhouette trick frames
+became **runtime transforms over existing frames**: the spin is a mirror
+scale through zero width (reads as a paper-doll turn; rotation would break
+the pixel grid), the leap is offset arcs. Zero new art, all twelve buddies
+perform from day one, bespoke style frames remain the drip-content path.
+Tricks surface in the celebration; the dream-diary and buddy-visit weaves
+wait for their host features. `-PawmodoroTrick` takes `spin.2` (dotted, one
+token) because valued flags read one token by design.
+
+**Z — on this day.** Sources: journal first-sightings, the stray's two
+dates, and the first session ever. Postcards and constellation completions
+were left out — postcards duplicate journal/arrival dates, and figure
+completion dates aren't stored (derived star counts have no calendar). The
+bubble is not tap-through to the referenced page; a tap acknowledges with a
+heart. Both cuts are v2 candidates.
+
+**Small magic.** Summit Nap is the static nap plus the best-week flag,
+derived entirely from the log — the tap-to-shuffle and the flat-week
+sunbeam were cut. The slow blink's initiation fires after the day's first
+hello (bond ≥ close), which also means Reduce Motion skips it along with
+the vignettes — worth revisiting so the caption at least lands. The
+pounce's escaped-digit caption plays immediately rather than on the next
+focus phase.
+
+**Unwalked, stated plainly.** Nothing in this wave has been compiled or
+seen running. Beyond the usual first-build errors, the rows that most want
+real eyes: the blanket overlay's fit across all twelve asleep silhouettes,
+the burr anchors (same class of bug as the stray's hot-spring seat), the
+sill drag threshold under pane latency, the stroke recognizer's thresholds
+against real fingers, and every caption's fit in the capsule on an SE-width
+screen.

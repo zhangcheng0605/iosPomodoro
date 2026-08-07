@@ -589,6 +589,109 @@ def fx_slip():
     return gs.outline_silhouette(g)
 
 
+# --- The dream garden -----------------------------------------------------------
+#
+# Three plants, four stages each, on one 16x20 grid: soil with a tip, a
+# seedling, a budding stem, and the bloom. What each grows from is Swift's
+# business (memory dreams, travel dreams, the surreal); the art only knows
+# how to be a plant.
+
+CALLFLOWER_PALETTE = {
+    T: (0, 0, 0, 0), OUTLINE: (104, 78, 62, 255),
+    BODY: (110, 152, 86, 255), SHADE: (84, 122, 66, 255),
+    CREAM: (240, 158, 144, 255), PINK: (250, 196, 186, 255),
+    ACCENT: (128, 94, 62, 255), GLINT: (255, 240, 220, 255),
+}
+BERRYBUSH_PALETTE = {
+    T: (0, 0, 0, 0), OUTLINE: (86, 96, 58, 255),
+    BODY: (122, 148, 82, 255), SHADE: (94, 118, 64, 255),
+    CREAM: (240, 168, 84, 255), PINK: (252, 208, 140, 255),
+    ACCENT: (128, 94, 62, 255), GLINT: (255, 244, 214, 255),
+}
+MOONBELL_PALETTE = {
+    T: (0, 0, 0, 0), OUTLINE: (92, 100, 128, 255),
+    BODY: (118, 138, 112, 255), SHADE: (92, 112, 90, 255),
+    CREAM: (214, 224, 248, 255), PINK: (240, 244, 254, 255),
+    ACCENT: (128, 94, 62, 255), GLINT: (255, 252, 236, 255),
+}
+
+PLANT_W, PLANT_H = 16, 20
+
+
+def _soil(d):
+    d.ellipse([2, 15, 13, 19], fill=ACCENT)
+
+
+def plant_stage(kind, stage):
+    g = gs.new_grid(PLANT_W, PLANT_H)
+    d = ImageDraw.Draw(g)
+    _soil(d)
+    if stage == 0:                                        # a tip in the soil
+        d.line([(8, 13), (8, 15)], fill=BODY)
+        d.point((8, 12), fill=SHADE)
+        return gs.outline_silhouette(g)
+    if stage == 1:                                        # a seedling
+        d.line([(8, 9), (8, 15)], fill=BODY)
+        d.ellipse([4, 8, 8, 11], fill=BODY)
+        d.ellipse([8, 9, 12, 12], fill=SHADE)
+        return gs.outline_silhouette(g)
+    if stage == 2:                                        # budding
+        d.line([(8, 5), (8, 15)], fill=BODY)
+        d.ellipse([3, 9, 7, 12], fill=BODY)
+        d.ellipse([9, 10, 13, 13], fill=SHADE)
+        d.ellipse([6, 3, 10, 7], fill=SHADE)              # the closed bud
+        d.point((8, 4), fill=CREAM)
+        return gs.outline_silhouette(g)
+    # Stage 3: the bloom, per kind.
+    d.line([(8, 7), (8, 15)], fill=BODY)
+    d.ellipse([3, 10, 7, 13], fill=BODY)
+    d.ellipse([9, 11, 13, 14], fill=SHADE)
+    if kind == "callflower":                              # an open trumpet
+        d.polygon([(4, 6), (12, 6), (10, 1), (6, 1)], fill=CREAM)
+        d.ellipse([5, 4, 11, 8], fill=CREAM)
+        d.ellipse([7, 5, 9, 7], fill=PINK)
+        d.point((8, 2), fill=GLINT)
+    elif kind == "berrybush":                             # a crown of berries
+        d.ellipse([3, 2, 13, 9], fill=BODY)
+        for x, y in ((5, 4), (9, 3), (11, 6), (6, 7)):
+            d.ellipse([x - 1, y - 1, x + 1, y + 1], fill=CREAM)
+        d.point((9, 4), fill=GLINT)
+    else:                                                 # moonbell: hanging bells
+        d.line([(8, 2), (8, 7)], fill=BODY)
+        for cx, cy in ((5, 4), (11, 5)):
+            d.polygon([(cx - 2, cy), (cx + 2, cy), (cx + 1, cy + 3),
+                       (cx - 1, cy + 3)], fill=CREAM)
+            d.point((cx, cy + 4), fill=PINK)
+        d.point((8, 1), fill=GLINT)
+    return gs.outline_silhouette(g)
+
+
+PLANTS = [
+    ("callflower", CALLFLOWER_PALETTE),
+    ("berrybush", BERRYBUSH_PALETTE),
+    ("moonbell", MOONBELL_PALETTE),
+]
+
+
+def plant_soil():
+    """An empty pocket: just tended earth, hopeful by construction."""
+    g = gs.new_grid(PLANT_W, PLANT_H)
+    d = ImageDraw.Draw(g)
+    _soil(d)
+    d.point((5, 15), fill=CREAM)
+    return gs.outline_silhouette(g)
+
+
+def plant_seed():
+    """The seed a dream drops, waiting on the sill to be planted."""
+    g = gs.new_grid(12, 12)
+    d = ImageDraw.Draw(g)
+    d.ellipse([3, 3, 8, 9], fill=CREAM)
+    d.point((5, 5), fill=GLINT)
+    d.line([(6, 1), (7, 3)], fill=BODY)
+    return gs.outline_silhouette(g)
+
+
 # --- The three bespoke paw-up frames -------------------------------------------
 #
 # High-five frames for the two free buddies (and Soot, who is the cat's
@@ -683,3 +786,10 @@ if __name__ == "__main__":
     gs.to_png(cat_pawup(), gs.CAT_PALETTE, "buddy_cat_pawup")
     gs.to_png(dog_pawup(), gs.DOG_PALETTE, "buddy_dog_pawup")
     gs.to_png(cat_pawup(), gs.STRAY_PALETTE, "buddy_stray_pawup")
+    print("The garden:")
+    for kind, palette in PLANTS:
+        for stage in range(4):
+            gs.to_png(plant_stage(kind, stage), palette, f"plant_{kind}_{stage}")
+    gs.to_png(plant_soil(), CALLFLOWER_PALETTE, "plant_soil")
+    gs.to_png(plant_seed(), CALLFLOWER_PALETTE, "plant_seed")
+    gs.to_png(fx_slip(), SLIP_PALETTE, "fx_slip")

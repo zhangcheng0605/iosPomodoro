@@ -323,13 +323,19 @@ final class Pantry {
         tried[buddy.rawValue]?.count ?? 0
     }
 
+    /// Put a snack on the sill from outside the session loop — the garden's
+    /// berrybush does this, and the debug flag rides the same door.
+    func stock(_ snack: Snack) {
+        sill = snack
+        sillDate = Date()
+        save()
+    }
+
     // MARK: Debug
 
     /// `-PawmodoroSnack <id>` — stock the sill without finishing a session.
     func forceSill(_ snack: Snack) {
-        sill = snack
-        sillDate = Date()
-        save()
+        stock(snack)
     }
 
     /// `-PawmodoroFillTastes` — every buddy has tried everything.

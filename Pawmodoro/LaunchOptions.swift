@@ -48,12 +48,14 @@ enum StorageKeys {
     static let fortunes = "pawmodoro.fortunes"
     /// Who is away on a little journey, and every letter that came home.
     static let travels = "pawmodoro.travels"
+    /// The window-box: pockets, the seed on offer, the day's berry yield.
+    static let garden = "pawmodoro.garden"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown, fortunes, travels,
+        nightKnown, fortunes, travels, garden,
     ]
 }
 
@@ -364,6 +366,16 @@ enum LaunchOptions {
 
     /// Everyone still out on a journey knocks at launch.
     static let returnNow = isSet("-PawmodoroReturnNow")
+
+    /// A dream seed on offer right now, e.g. `-PawmodoroSeed callflower` —
+    /// the honest source is a kept dream.
+    static let forcedSeed: String? = {
+        guard arguments.contains("-PawmodoroSeed") else { return nil }
+        return value(after: "-PawmodoroSeed") ?? "callflower"
+    }()
+
+    /// One of each plant, already in bloom (against any seeded history).
+    static let forceBloom = isSet("-PawmodoroBloom")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -401,6 +413,8 @@ enum LaunchOptions {
     static let forcedFortune: Int? = nil
     static let forcedJourney: String? = nil
     static let returnNow = false
+    static let forcedSeed: String? = nil
+    static let forceBloom = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

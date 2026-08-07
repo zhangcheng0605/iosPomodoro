@@ -132,6 +132,20 @@ struct BuddyView: View {
             // row: when the stray sits down the buddy shifts left to make room,
             // and effects anchored to the row would be left hanging beside it.
             HStack(spacing: 10) {
+                // The window-box's showpiece: whatever is furthest along,
+                // just visible at the edge of the scene. Not a control —
+                // the garden itself lives on the stats screen.
+                if let showpiece = gardenShowpiece {
+                    Image(showpiece)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 26, height: 32)
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+
                 // The sill: one snack, waiting to be slid over. Out of reach
                 // during focus, exactly like the toys.
                 if let snack = sillSnack {
@@ -840,6 +854,16 @@ struct BuddyView: View {
     }
 
     // MARK: The sill
+
+    /// The furthest-along pocket's sprite, for the pot at the scene's edge.
+    private var gardenShowpiece: String? {
+        let pockets = engine.garden.pockets.compactMap { $0 }
+        guard let best = pockets.max(by: {
+            engine.garden.stage(of: $0, log: engine.log)
+                < engine.garden.stage(of: $1, log: engine.log)
+        }), let kind = PlantKind(rawValue: best.kind) else { return nil }
+        return kind.stageAsset(engine.garden.stage(of: best, log: engine.log))
+    }
 
     /// What's on the sill, when it's reachable. During a running focus phase
     /// the sill is simply out of reach, behind the same rule as the toys —

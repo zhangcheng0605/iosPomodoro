@@ -94,6 +94,8 @@ final class TimerEngine {
     let travels: Travels
     /// The newest homecoming, for the caption to announce once.
     private(set) var arrivedLetter: Letter?
+    /// The window-box, seeded by dreams and watered by showing up.
+    let garden: Garden
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -143,7 +145,8 @@ final class TimerEngine {
         repertoire: Repertoire = Repertoire(),
         memories: Anniversaries = Anniversaries(),
         fortunes: FortuneTeller = FortuneTeller(),
-        travels: Travels = Travels()
+        travels: Travels = Travels(),
+        garden: Garden = Garden()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -161,6 +164,7 @@ final class TimerEngine {
         self.memories = memories
         self.fortunes = fortunes
         self.travels = travels
+        self.garden = garden
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -241,8 +245,17 @@ final class TimerEngine {
         if LaunchOptions.returnNow {
             travels.hurryAllForDebug()
         }
+        if let raw = LaunchOptions.forcedSeed, let kind = PlantKind(rawValue: raw) {
+            garden.offerForDebug(kind: kind)
+        }
+        if LaunchOptions.forceBloom {
+            garden.bloomForDebug()
+        }
         // Anyone whose hidden clock ran out while the app was closed.
         resolveJourneys()
+        // The garden's standing effects: blooms press the bias seam, and a
+        // carrying berrybush restocks a bare sill once a day.
+        tendGarden()
         if let days = LaunchOptions.rememberDaysAgo {
             memories.forceForDebug(daysAgo: days, journal: journal)
         }
@@ -346,6 +359,56 @@ final class TimerEngine {
     func claimArrivedLetter() -> Letter? {
         defer { arrivedLetter = nil }
         return arrivedLetter
+    }
+
+    // MARK: The window-box
+
+    /// Plant the offered seed. The garden mutates; the engine re-presses
+    /// whatever the blooms are calling for.
+    func plantSeed(in slot: Int) {
+        garden.plantOffered(in: slot)
+        tendGarden()
+    }
+
+    /// Pick an open bloom: the pocket returns to soil and the plant hands
+    /// over what it was holding — berries to the sill, a keepsake to the
+    /// drawer for the others.
+    func pickBloom(at slot: Int) {
+        guard let picked = garden.pick(slot: slot, log: log) else { return }
+        switch PlantKind(rawValue: picked.kind) {
+        case .berrybush:
+            pantry.stock(.cloudberry)
+        case .callflower:
+            drawer.add(.sprig, place: settings.place, finder: settings.buddy)
+        case .moonbell:
+            drawer.add(.snowdrop, place: settings.place, finder: settings.buddy)
+        case nil:
+            break
+        }
+        tendGarden()
+    }
+
+    /// The garden's standing effects, re-derived whenever anything could
+    /// have changed: blooming callflowers and moonbells press the bias
+    /// seam; a carrying berrybush restocks a bare sill once a day.
+    private func tendGarden() {
+        biases.removeAll { $0.source.hasPrefix("garden.") }
+        for bloom in garden.blooms(log: log) {
+            let species: Species? = switch PlantKind(rawValue: bloom.pocket.kind) {
+            case .callflower: bloom.pocket.species.flatMap(Species.init(rawValue:))
+            case .moonbell: .moth
+            case .berrybush, nil: nil
+            }
+            if let species {
+                setBias(SightingBias(
+                    source: "garden.\(bloom.slot)", species: species,
+                    place: nil, weight: 5, oneShot: false
+                ))
+            }
+        }
+        if garden.claimDailyYield(log: log), pantry.sill == nil {
+            pantry.stock(.cloudberry)
+        }
     }
 
     /// Last night's sill visitor, waiting for the morning's first look.
@@ -532,6 +595,7 @@ final class TimerEngine {
         repertoire.consolidate()
         memories.lookBack(log: log, journal: journal, stray: stray)
         resolveJourneys()
+        tendGarden()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {
@@ -998,6 +1062,9 @@ final class TimerEngine {
             // unrecorded. Dreams are like that.
             if let dream {
                 dreams.add(dream, daysAfter: daysSinceMeeting(dream))
+                // And a kept dream drops a seed by the windowsill — the
+                // garden grows what the dreams dreamed.
+                garden.offerSeed(from: dream)
             }
             // You only keep what you stayed for.
             if let sighting {

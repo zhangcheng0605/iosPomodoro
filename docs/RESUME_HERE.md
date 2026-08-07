@@ -1,13 +1,18 @@
 # Resume here
 
-> **Newest first: the Companion wave (Aug 2026) is written and has never met
-> a compiler.** One Linux session built all of `docs/COMPANION_PLAN.md` —
-> feeding, the high five, tuck-in, the doorstep, tricks, the anniversary
-> engine, and three small delights — one commit per phase, checkers green,
-> As-built notes at the bottom of that plan. The next Mac session starts
-> there: build Debug and Release, expect a handful of type-checker errors
-> (the usual Linux-blind odds), then walk the twelve new flags in the
-> CLAUDE.md table. The two items below it in the queue are unchanged.
+> **Newest first: TWO waves are written and have never met a compiler.**
+> One Linux session built all of `docs/COMPANION_PLAN.md` (feeding, the
+> high five, tuck-in, the doorstep, tricks, the anniversary engine, three
+> small delights); a second built all of `docs/CLOCKWORK_PLAN.md` (the
+> widened session log and its trim bugfix, little journeys, the fortune
+> slip, the dream garden, timetabled places, one-shot photos, star
+> stories, the night caller, the saturday set, pale coats, meteor nights,
+> idle vignettes). One commit per phase, checkers green, As-built notes at
+> the bottom of each plan. The next Mac session starts here: build Debug
+> and Release, expect a handful of type-checker errors (the usual
+> Linux-blind odds across ~5k new lines), then walk the twenty-seven new
+> flags in the CLAUDE.md table. The two items below in the queue are
+> unchanged.
 
 One long Linux session took the build order from item 11 to the end of item 16
 and cleared the backlog behind it. A Mac session (Aug 2026) then compiled all

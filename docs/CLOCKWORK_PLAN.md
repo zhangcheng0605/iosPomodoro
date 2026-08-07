@@ -1,11 +1,13 @@
 # Pawmodoro Clockwork Plan — a world that keeps its own hours
 
-> **Status: planned, not yet built.** Drafted August 2026, immediately after
-> the Companion wave ([COMPANION_PLAN.md](COMPANION_PLAN.md), written and
-> awaiting its first Mac build). Fourth plan document. The first made the
-> app feel alive, the second gave it a world, the third gave the buddy a
-> relationship — this one gives the world **time**: things that happen
-> whether or not you are watching, and are waiting for you when you return.
+> **Status: built end to end on Linux (Aug 2026), never compiled.** All of
+> AA–AI and the second small-magic wave are written, one commit per phase,
+> divergences recorded in the **As built** section at the bottom. All three
+> checkers pass; the wave shares its first Mac build with the Companion
+> wave. Fourth plan document. The first made the app feel alive, the second
+> gave it a world, the third gave the buddy a relationship — this one gives
+> the world **time**: things that happen whether or not you are watching,
+> and are waiting for you when you return.
 
 ## The thesis: steal the clock, leave the whip
 
@@ -514,3 +516,69 @@ clock they already read.
 
 Each session ends the standard way: checkers green, flag table updated,
 As built notes, commit.
+
+---
+
+## As built (one Linux session, Aug 2026 — not yet compiled)
+
+Where the code diverged from the plan above. Everything else shipped as
+written, in nine commits (AA, AG, AC, AB, AD, AE, AF+AH, AI, magic).
+
+**AA.** As specced, plus a subtlety: any debug flag that replaces the
+session records also clears the lifetime counter and first-session anchor,
+so seeding reseeds both — otherwise an earlier run's larger seed kept the
+bond pinned high. The anniversary engine now reads the stored anchor.
+Bundled cleanup: `DreamBubble` and `MemoryBubble` carried identical bubble
+shells; both now ride one `ThoughtBubbleShell`.
+
+**AG.** The sill evidence is carried by the caption, the journal tier and
+the drawer memento — the planned paw-print/nibbled-sprite overlays were
+cut as a second art pass the moment didn't need. A memento's drawer row
+says "with a visitor", which fell out of the finder-fallback for free.
+
+**AB.** The packing gesture became policy: the first traveler of the day
+packs the sill snack automatically (the letter notes it); a drag-onto-
+furoshiki ritual can upgrade it later. The tiny map dot was cut. The
+Travel Frog photo variant stays future work — letters, souvenirs and the
+armed sighting carry the homecoming.
+
+**AC.** The slip's disposal ritual (tuck vs. tie) was cut with the shrine
+corner; the slip self-tucks into the phase chip and files into the shelf.
+Drawn facts are limited to five sources at launch; the template ban held.
+
+**AD.** Three plants, not eight: the callflower carries any dreamed
+species as payload, which is most of the variety the eight would have
+bought. Blooms persist until picked; picking pays out (berries to the
+sill, a keepsake otherwise). The pot-chip on the main screen is display
+only.
+
+**AE.** Six events. The heron borrows the wildlife art outright. The
+`-PawmodoroClock` flag now also exposes its pinned hour
+(`forcedClockHour`), widening each window to the whole hour for the walk.
+
+**AF.** Photos render in the *current* theme — the scenes are exported
+art and theme-independent, so only the card chrome shifts; the plan's
+stored-theme fidelity wasn't worth a parallel palette path. The develop
+flag re-dates the shot to yesterday, which is what developed *means* here.
+
+**AH.** Stars open per constellation row (a sheet of that figure's
+nights) rather than per-star canvas hit-testing — same memory palace,
+honest tap targets, VoiceOver included. Comet-tailed atlas stars became a
+line in the star's story instead of per-star tail rendering; the meteors
+themselves are the visible spectacle.
+
+**AI.** The gramophone is an SF-symbol chip, not a sprite; the stamp
+happens at granting (the track is cued for the next run, and stamping on
+actual playback would have meant a playback callback for one sentence).
+
+**Magic.** The pale transform keeps ink and outline in slate so
+silhouettes survive night scenes — verified on a contact sheet against a
+dark backdrop. Idle vignettes are driven by a slot-hashed task loop
+(content pure, timing by sleep), roughly every twenty minutes of idle.
+
+**Unwalked, stated plainly.** Nothing here has met a compiler. The rows
+that most want real eyes: the see-off menu inside the Settings form, the
+clockwork anchors over all eight scenes, the photo card's scaledToFill
+crop, the meteor pass sharing the night sky with the starfield, and the
+stroke recognizer's thresholds are unchanged from the companion wave's
+still-unverified numbers.

@@ -29,11 +29,12 @@ is blocked on the user.
 build order is now **written end to end on Linux, never compiled**: phases V–Z
 (feeding, the high five, tuck-in, the doorstep, tricks, the anniversary
 engine) plus the small-magic wave (pounce, slow blink, summit nap). Every
-phase carries an **As built** section; the whole wave needs its first Mac
-build and walk — expect a handful of type-checker errors, per the usual
-Linux-blind odds. A fourth plan, `docs/CLOCKWORK_PLAN.md` (journeys, the
-fortune slip, the dream garden, timetabled places, one-shot photos), is
-drafted and not yet built. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
+phase carries an **As built** section. The fourth plan,
+`docs/CLOCKWORK_PLAN.md` (journeys, the fortune slip, the dream garden,
+timetabled places, one-shot photos, star stories, pale coats), is now **also
+written end to end on Linux** — both waves await their first Mac build and
+walk together; expect a handful of type-checker errors, per the usual
+Linux-blind odds. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
 seen running, D (Live Activity) written but needing a one-time Xcode target
 step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
 covers content and its build order is finished except alternate app icons. Each phase
@@ -111,6 +112,18 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroTrick <id.tier>` | Pin and play a trick, e.g. `spin.2` |
 | `-PawmodoroRemember <n>` | Surface a memory dated n days back |
 | `-PawmodoroPounce` | The break's closing pounce always misses (the rare variant) |
+| `-PawmodoroNightCaller <id>` | Force last night's sill visitor, e.g. `tanuki` |
+| `-PawmodoroFortune <n>` | Draw the day's slip at launch, pinned to template row n |
+| `-PawmodoroJourney <buddy.place>` | Seed a journey already due home, e.g. `owl.peaks` |
+| `-PawmodoroReturnNow` | Every traveler still out knocks at launch |
+| `-PawmodoroSeed <kind>` | A dream seed on offer, e.g. `callflower` |
+| `-PawmodoroBloom` | One of each plant, already in bloom |
+| `-PawmodoroPhoto` | Regrant today's photograph |
+| `-PawmodoroDevelop` | Today's photograph renders now instead of overnight |
+| `-PawmodoroSet <trackID>` | The weekend request, on any day |
+| `-PawmodoroPale` | Every sighting wears the pale coat (pair with `-PawmodoroSighting`) |
+| `-PawmodoroShower` | Tonight is a falling-star night |
+| `-PawmodoroVignette <n>` | Fire an idle vignette a few seconds after launch |
 
 Without `-PawmodoroFastTimers`, verifying a phase transition means waiting 25
 minutes. Without `-PawmodoroSeedStats`, the stats screen is empty.

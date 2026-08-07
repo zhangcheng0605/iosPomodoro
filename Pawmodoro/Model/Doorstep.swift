@@ -71,10 +71,10 @@ enum Hello: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Keepsakes
+// MARK: - Trinkets
 
 /// A small found thing, carried home and kept.
-enum Keepsake: String, Codable, CaseIterable, Identifiable {
+enum Trinket: String, Codable, CaseIterable, Identifiable {
     case seaglass, mapleleaf, feather, button, ribbon, bottlecap
     case shell, pinecone, bell, sprig, stone, snowdrop
 
@@ -123,17 +123,17 @@ enum Keepsake: String, Codable, CaseIterable, Identifiable {
     /// not price affection by output.
     static func find(
         at place: Place, season: Season?, day: Int
-    ) -> Keepsake {
+    ) -> Trinket {
         // A season's find takes every other seasonal day it is eligible.
         if let season {
-            let seasonal: Keepsake? = switch season {
+            let seasonal: Trinket? = switch season {
             case .autumn: .mapleleaf
             case .winter: .snowdrop
             case .sakura, .fireflies, .lanterns: nil
             }
             if let seasonal, day % 2 == 0 { return seasonal }
         }
-        let table: [Keepsake] = switch place {
+        let table: [Trinket] = switch place {
         case .meadow: [.button, .feather, .sprig]
         case .woods: [.pinecone, .feather, .sprig]
         case .harbor: [.seaglass, .shell, .bottlecap]
@@ -158,7 +158,7 @@ struct KeepsakeRecord: Codable, Equatable, Identifiable {
     let finder: String
 }
 
-/// Every keepsake ever carried home. The plan's one collection surface —
+/// Every trinket ever carried home. The plan's one collection surface —
 /// anything else that banks an object banks it here, never into a second
 /// drawer.
 @Observable
@@ -172,9 +172,9 @@ final class KeepsakeDrawer {
         load()
     }
 
-    func add(_ keepsake: Keepsake, place: Place, finder: Buddy, on date: Date = Date()) {
+    func add(_ trinket: Trinket, place: Place, finder: Buddy, on date: Date = Date()) {
         items.append(KeepsakeRecord(
-            id: UUID(), keepsake: keepsake.rawValue, date: date,
+            id: UUID(), keepsake: trinket.rawValue, date: date,
             place: place.rawValue, finder: finder.rawValue
         ))
         save()
@@ -183,10 +183,10 @@ final class KeepsakeDrawer {
     /// `-PawmodoroFillDrawer` — one of everything, for looking at the grid.
     func fillForDebug() {
         let calendar = Calendar.current
-        for (index, keepsake) in Keepsake.allCases.enumerated() {
+        for (index, trinket) in Trinket.allCases.enumerated() {
             let date = calendar.date(byAdding: .day, value: -index, to: Date()) ?? Date()
             items.append(KeepsakeRecord(
-                id: UUID(), keepsake: keepsake.rawValue, date: date,
+                id: UUID(), keepsake: trinket.rawValue, date: date,
                 place: Place.allCases[index % Place.allCases.count].rawValue,
                 finder: Buddy.cat.rawValue
             ))
@@ -281,7 +281,7 @@ final class Doorstep {
     /// Today's greeting, if it hasn't been played yet this launch.
     private(set) var hello: Hello?
     /// What was carried home, until it is picked up.
-    private(set) var find: Keepsake?
+    private(set) var find: Trinket?
     /// What yesterday left attached, until it is popped.
     private(set) var burr: Burr?
 
@@ -318,7 +318,7 @@ final class Doorstep {
         if away >= Self.awayThreshold {
             // The gift takes the greeting slot: the arrival IS the hello.
             // One per day, however long the gap — absence is never graded.
-            find = Keepsake.find(at: place, season: season, day: day)
+            find = Trinket.find(at: place, season: season, day: day)
             hello = .carriedHome
         } else {
             hello = Hello.pick(seed: seed)
@@ -340,7 +340,7 @@ final class Doorstep {
     }
 
     /// Pick the find up off the ground and into the drawer.
-    func bankFind(into drawer: KeepsakeDrawer, place: Place, finder: Buddy) -> Keepsake? {
+    func bankFind(into drawer: KeepsakeDrawer, place: Place, finder: Buddy) -> Trinket? {
         guard let find else { return nil }
         drawer.add(find, place: place, finder: finder)
         self.find = nil
@@ -355,7 +355,7 @@ final class Doorstep {
     // MARK: Debug
 
     func forceHello(_ forced: Hello) { hello = forced }
-    func forceFind(_ forced: Keepsake) { find = forced }
+    func forceFind(_ forced: Trinket) { find = forced }
     func forceBurr(_ forced: Burr) { burr = forced }
 
     /// Deterministic across launches, unlike `String.hashValue`, which is

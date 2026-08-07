@@ -22,7 +22,7 @@ struct SoundStudioView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     ambienceSection
                     mixerSection
-                    ForEach(MusicCatalog.shelf) { collection in
+                    ForEach(MusicCatalog.shelf.filter(isShown)) { collection in
                         shelf(for: collection)
                     }
                 }
@@ -47,7 +47,8 @@ struct SoundStudioView: View {
             Text("Ambience")
                 .font(.headline)
                 .foregroundStyle(Theme.bark)
-            AmbiencePicker { showPaywall = true }
+            // Ambience is not in the cart, so every lock here is a paywall lock.
+            AmbiencePicker { _ in showPaywall = true }
         }
     }
 
@@ -196,8 +197,25 @@ struct SoundStudioView: View {
             return remaining > 0
                 ? "\(remaining) more session\(remaining == 1 ? "" : "s") to reach \(place.name)"
                 : "Reach \(place.name)"
+        // A found tape says what kind of hour finds it and never how many are
+        // left, unlike the line above. That asymmetry is deliberate: an
+        // arrival is a distance and a number is the honest way to say one,
+        // while "two more rainy sessions" would turn sitting through the rain
+        // into an errand — and the errand would be to wait for bad weather.
+        case .found(let finding):
+            return finding.findingLine
         case .free:
             return collection.blurb
         }
+    }
+
+    /// Whether the shelf shows a collection at all.
+    ///
+    /// Locked mixtapes are shown with their lock line, always — except Soot's,
+    /// for the reason `MusicFinding.isHidden` gives.
+    private func isShown(_ collection: MusicCollection) -> Bool {
+        guard case .found(let finding) = collection.gate, finding.isHidden
+        else { return true }
+        return engine.isUnlocked(collection.gate, hasPlus: store.hasPlus)
     }
 }

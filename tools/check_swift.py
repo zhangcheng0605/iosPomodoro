@@ -116,7 +116,8 @@ def imagesets():
     }
 
 
-ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_")
+ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_",
+                  "dream_", "snail_")
 
 
 def check_assets(failures):
@@ -155,6 +156,176 @@ def check_assets(failures):
             )
 
 
+def check_dream_ids(failures):
+    """`Dream.id` and `Dream.from(id:)` must name the same set of prefixes.
+
+    The diary is a dictionary keyed on `Dream.id`, and `from(id:)` is what
+    turns those keys back into dreams. Add a case, write its `id`, forget its
+    arm in `from(id:)`, and the compiler is perfectly happy: every entry of
+    that kind simply stops decoding, and the only symptom is a dream quietly
+    missing from a page nobody can count. Nothing else in the toolchain can
+    see it.
+    """
+    path = os.path.join(SOURCE, "Model", "Dream.swift")
+    source = open(path).read()
+
+    # `case .memory(let species): "memory.\(species.rawValue)"`. The literal
+    # dot is what separates these from the `asset` switch two properties
+    # down, whose arms build `dream_heard_\(…)` with no dot at all — the
+    # first version of this rule left it out and matched nothing, which it
+    # announced by failing on every prefix at once.
+    written = set(re.findall(r'case \.\w+\(let \w+\): "(\w+)\.\\\(', source))
+    read = set(re.findall(r'case "(\w+)": return ', source))
+
+    for prefix in sorted(written - read):
+        failures.append(
+            f"Dream.swift: id() writes '{prefix}.…' but from(id:) has no arm "
+            f"for it — every dream of that kind would stop decoding"
+        )
+    for prefix in sorted(read - written):
+        failures.append(
+            f"Dream.swift: from(id:) reads '{prefix}.…' but id() never "
+            f"writes it"
+        )
+
+
+def check_dream_assets(failures, enums):
+    """`case .sound(let sound): "dream_heard_\\(sound.rawValue)"` -> one
+    imageset per case of `Heard`.
+
+    The associated type comes from the case's own declaration, so this stays
+    true when a case is added: the arm names the case, the declaration names
+    the enum, and `enum_cases()` names its members. Nothing is hardcoded.
+
+    Worth its own rule because a missing dream sprite fails the way art always
+    fails — silently. The bubble draws, and what is inside it is nothing, on a
+    screen that takes a hundred and fifty sessions and five seasons to fill.
+    """
+    have = imagesets()
+    path = os.path.join(SOURCE, "Model", "Dream.swift")
+    source = open(path).read()
+    # `    case sound(Heard)` — one associated type per Dream case.
+    types = dict(re.findall(r"\n    case (\w+)\((\w+)\)", source))
+
+    for case, prefix, suffix in re.findall(
+        r'case \.(\w+)\(let \w+\): "([a-z0-9_]*)\\\(\w+\.rawValue\)([a-z0-9_]*)"',
+        source,
+    ):
+        owner = types.get(case)
+        if owner not in enums:
+            failures.append(
+                f"Dream.swift: .{case} builds an asset name out of "
+                f"{owner or 'an unknown type'}, which is not a CaseIterable "
+                f"enum the checker can enumerate"
+            )
+            continue
+        for name in enums[owner]:
+            asset = f"{prefix}{name}{suffix}"
+            if asset not in have:
+                failures.append(
+                    f"Dream.swift: .{case} of {owner}.{name} wants "
+                    f"'{asset}', which has no imageset"
+                )
+
+
+def check_platform_guards(failures):
+    """Every `import UIKit` must be behind a `canImport` or an `os(macOS)` fence.
+
+    The app builds for two platforms now, and an unguarded UIKit import is the
+    single most likely way to break the Mac target — it compiles perfectly on
+    iOS, so nothing on this side of the build notices. `Platform.swift` is the
+    one file allowed to import it plainly, because it *is* the fence.
+
+    The same goes for the UIKit-only types the app still names: `UIImage`,
+    `UIColor` and the feedback generators all have `Platform*` aliases now, and
+    reaching for the concrete one is how the aliases quietly stop being used.
+    """
+    allowed = {"Pawmodoro/Platform/Platform.swift"}
+    banned = ("UIImage", "UIColor", "UIScreen", "UIApplication", "UIDevice",
+              "UIImpactFeedbackGenerator", "UINotificationFeedbackGenerator",
+              "UIGraphicsImageRenderer")
+
+    for path in swift_files():
+        name = rel(path)
+        if name in allowed:
+            continue
+        source = open(path).read()
+        stripped = strip(source)
+        guarded = "#if canImport(UIKit)" in source or "#if os(macOS)" in source \
+            or "#if os(iOS)" in source
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            if re.match(r"^import UIKit\s*$", line) and not guarded:
+                failures.append(
+                    f"{name}:{index}: `import UIKit` with no #if guard — this "
+                    f"compiles on iOS and breaks the Mac target, which nothing "
+                    f"on this side of the build can notice")
+        if guarded:
+            continue
+        for symbol in banned:
+            if re.search(rf"\b{symbol}\b", stripped):
+                failures.append(
+                    f"{name}: uses `{symbol}` with no platform guard — there is "
+                    f"a `Platform`-prefixed alias for it in Platform.swift")
+                break
+
+
+def check_debug_only_symbols(failures):
+    """A type declared inside `#if DEBUG` must not be named outside one.
+
+    `LaunchOptions` flags all have Release stand-ins, so a branch guarded by
+    one folds away — but the *symbol* on the other side of it still has to
+    exist. A whole file wrapped in `#if DEBUG` has no Release stand-in by
+    design, so naming it from ordinary code builds perfectly in Debug and
+    fails only in Release.
+
+    Found the hard way: `SnapshotSeed.fill(scrapbook)` sat behind
+    `if LaunchOptions.seedScrapbook`, which is a `false` constant in Release
+    — and Release still failed, because a constant `false` stops the branch
+    running, not the name being resolved.
+    """
+    debug_only = {}
+    for path in swift_files():
+        source = open(path).read()
+        if not source.lstrip().startswith("#if DEBUG"):
+            continue
+        # The whole file is Debug-only: collect the types it declares.
+        for kind, name in re.findall(
+                r"^(enum|struct|final class|class) (\w+)", strip(source), re.M):
+            debug_only[name] = rel(path)
+    if not debug_only:
+        return
+
+    for path in swift_files():
+        name = rel(path)
+        source = open(path).read()
+        if source.lstrip().startswith("#if DEBUG"):
+            continue
+        stripped = strip(source)
+        # Which line ranges are inside a #if DEBUG fence?
+        guarded_lines = set()
+        depth = 0
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            bare = line.strip()
+            if re.match(r"#if\s+DEBUG", bare):
+                depth += 1
+            elif bare.startswith("#if"):
+                if depth:
+                    depth += 1
+            elif bare.startswith("#endif") and depth:
+                depth -= 1
+            if depth:
+                guarded_lines.add(index)
+        for index, line in enumerate(stripped.splitlines(), start=1):
+            if index in guarded_lines:
+                continue
+            for symbol, home in debug_only.items():
+                if re.search(rf"\b{symbol}\b", line):
+                    failures.append(
+                        f"{name}:{index}: names `{symbol}`, which is declared "
+                        f"inside `#if DEBUG` in {home} — this builds in Debug "
+                        f"and fails the Release build")
+
+
 def check_members(failures, launch_options):
     """`Theme.x` and `LaunchOptions.x` that were never declared."""
     theme = open(os.path.join(SOURCE, "Theme.swift")).read()
@@ -170,28 +341,66 @@ def check_members(failures, launch_options):
                 failures.append(f"{rel(path)}: LaunchOptions.{name} does not exist")
 
 
+def check_duplicate_enums(failures, duplicates):
+    """Two enums with the same simple name make this file blind.
+
+    `enum_cases` keys on the bare name, so `Grove.Stage` and `Stray.Stage`
+    merge into one case list — and every `switch self` over either is then
+    checked against the union. That produces confident, wrong failures in one
+    direction and silent blindness in the other, which is worse. Renaming one
+    is a two-minute fix and the alternative is a checker nobody believes.
+    """
+    for name, owners in sorted(duplicates.items()):
+        failures.append(
+            f"two enums are both called '{name}' ({', '.join(sorted(owners))})"
+            f" — check_swift.py matches on the simple name, so it cannot tell "
+            f"their switches apart. Rename one."
+        )
+
+
 def enum_cases():
-    """Every CaseIterable enum the app owns, and its cases."""
+    """Every CaseIterable enum the app owns, and its cases.
+
+    Returns the map and, separately, any name declared more than once — see
+    `check_duplicate_enums`, which turns that into a failure rather than
+    letting the two quietly merge.
+    """
     found = {}
+    duplicates = {}
     for path in swift_files():
-        source = open(path).read()
-        for match in re.finditer(
-            r"enum (\w+):[^\n{]*CaseIterable[^\n{]*\{(.*?)\n(?:    )?\}",
-            source, re.S,
-        ):
-            name, body = match.group(1), match.group(2)
+        lines = open(path).read().splitlines()
+        for index, line in enumerate(lines):
+            header = re.match(r"^([ ]*)enum (\w+):([^{]*)\{", line)
+            if not header or "CaseIterable" not in header.group(3):
+                continue
+            outer, name = header.group(1), header.group(2)
+            indent = outer + "    "
+            # Walked line by line rather than matched with one regex, because
+            # a regex has to choose between two failures and there is no third
+            # option. Stopping at the first closing brace folds a nested
+            # enum's cases into its parent — `Accessory` came back owning
+            # `.head` and `.neck` from its own `Slot`, and the checker reported
+            # four confident, wrong non-exhaustive switches. Stopping at the
+            # *matching* brace instead swallows the nested enum whole, because
+            # `finditer` will not return overlapping matches: `Species.Rarity`
+            # silently stopped being checked at all. Walking sees both.
             cases = []
-            for line in body.splitlines():
-                arm = re.match(r"\s*case (\w+)(?: = .*)?$", line)
+            for row in lines[index + 1:]:
+                if row.startswith(outer + "}"):
+                    break
+                arm = re.match(re.escape(indent) + r"case (\w+)(?: = .*)?$", row)
                 if arm:
                     cases.append(arm.group(1))
-                else:
-                    listed = re.match(r"\s*case (\w+(?:, \w+)+)$", line)
-                    if listed:
-                        cases.extend(n.strip() for n in listed.group(1).split(","))
+                    continue
+                listed = re.match(
+                    re.escape(indent) + r"case (\w+(?:, \w+)+)$", row)
+                if listed:
+                    cases.extend(n.strip() for n in listed.group(1).split(","))
             if cases:
+                if name in found and found[name] != cases:
+                    duplicates.setdefault(name, set()).add(rel(path))
                 found[name] = cases
-    return found
+    return found, duplicates
 
 
 def blank(source):
@@ -235,15 +444,22 @@ def blank(source):
 
 
 def enclosing_scopes(code):
-    """Every `enum X { … }`'s extent, innermost last when sorted by start.
+    """Every `enum X { … }` and `extension X { … }`'s extent, innermost last
+    when sorted by start.
 
     Needed because enums nest: `Dream` declares `Surreal` inside itself, and a
     naive "most recent enum seen" rule blames the inner one for every switch in
     the outer one after it. That produced six false failures, which is worse
     than none — a checker nobody believes is a checker nobody runs.
+
+    Extensions count because half the app's tables live in one — `Buddy`'s
+    dream lines, `Heard`'s and `Season`'s, `Place`'s. Before this they were
+    invisible here: a new buddy broke four switches and the checker reported
+    three of them, which reads as "you're done" and is the worst answer a
+    checker can give.
     """
     scopes = []
-    for match in re.finditer(r"\benum (\w+)\b[^\n{]*\{", code):
+    for match in re.finditer(r"\b(?:enum|extension) (\w+)\b[^\n{]*\{", code):
         start = match.end() - 1
         depth = 0
         for index in range(start, len(code)):
@@ -351,7 +567,18 @@ def main():
     check_storage_keys(failures)
     check_assets(failures)
     check_members(failures, launch_options)
-    enums = enum_cases()
+    check_platform_guards(failures)
+    check_debug_only_symbols(failures)
+    enums, duplicate_enums = enum_cases()
+    check_duplicate_enums(failures, duplicate_enums)
+    # An ambiguous name is dropped rather than checked against a merged case
+    # list. Reporting "switch over Stage is missing .home" in a file that has
+    # never heard of the stray is a confident wrong answer, and a wall of them
+    # buries the one message that says what to actually do.
+    for name in duplicate_enums:
+        enums.pop(name, None)
+    check_dream_ids(failures)
+    check_dream_assets(failures, enums)
     check_switch_exhaustiveness(failures, enums)
     check_constellation_links(failures)
 

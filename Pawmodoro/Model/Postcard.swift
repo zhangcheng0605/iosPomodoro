@@ -19,10 +19,35 @@ struct Postcard: Codable, Equatable, Identifiable {
     /// Set when something was seen the same day — the two keepsake systems
     /// feed each other.
     let sighting: String?
+    /// Focus minutes at the moment the card was made. Only the panorama uses
+    /// it, and it uses it to redraw the exact wood that stood there.
+    ///
+    /// Optional so that every card written before the panorama existed still
+    /// decodes — Swift's synthesised `Decodable` calls `decodeIfPresent` for
+    /// an Optional and leaves it nil, which is the same argument
+    /// `SightingRecord.weather` made when the weather arrived.
+    let minutes: Int?
 
     enum Occasion: String, Codable {
         case arrival
         case cycle
+        /// A hundred hours of focus, and a picture of the whole wood it grew.
+        ///
+        /// The only card in the album that is not about a *place* — it is
+        /// about the homestead, which is nowhere, and it is the one thing in
+        /// this app that takes four months of daily use to reach. `place` is
+        /// still filled in with wherever you happened to be sitting, because
+        /// a postcard with a blank field is a bug waiting to be found by
+        /// somebody's decoder.
+        case panorama
+        /// Every hour on the dial, at least once. The one card that is about
+        /// a *time* rather than a place — `place` still records where you
+        /// happened to be when the last hour landed, because a postcard with
+        /// a blank field is a bug waiting for somebody's decoder.
+        ///
+        /// Minted once and never again: the ring cannot un-fill, so a second
+        /// one could only ever be a duplicate.
+        case belltower
     }
 
     var resolvedPlace: Place { Place(rawValue: place) ?? .meadow }

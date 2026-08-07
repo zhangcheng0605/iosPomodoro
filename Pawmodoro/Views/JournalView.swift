@@ -221,7 +221,33 @@ struct JournalView: View {
         // relationship over collection, which is the whole point of the page.
         if journal.isRegular(species) { return species.regularNote }
         let date = record.firstSeen.formatted(.dateTime.day().month(.abbreviated))
-        return record.count > 1 ? "\(date) · seen \(record.count)×" : date
+        if record.count > 1 { return "\(date) · seen \(record.count)×" }
+        // Something met exactly once has a thin caption — a date and nothing
+        // else — and that is precisely the sighting worth saying more about.
+        // The count takes over as soon as there is one, because "seen 6×" is
+        // the more interesting fact by then.
+        if let raw = record.weather, let sky = Weather(rawValue: raw) {
+            return "\(date) · in \(sky.hintPhrase)"
+        }
+        return date
+    }
+
+    /// Where, when and — for anything met since the sky started having moods
+    /// — what it was doing. The sentence a field journal actually keeps.
+    ///
+    /// Weather is optional in the record because nothing backfills it, so this
+    /// silently reads the same as it always did for older sightings rather
+    /// than announcing a gap.
+    private func firstSeenLine(_ record: SightingRecord) -> String {
+        let place = Place(rawValue: record.place)?.name ?? record.place
+        var line = "First seen in \(place)"
+        if let part = DayPart(rawValue: record.dayPart) {
+            line += ", \(part.almanacWhen)"
+        }
+        if let raw = record.weather, let sky = Weather(rawValue: raw) {
+            line += ", in \(sky.hintPhrase)"
+        }
+        return line + "."
     }
 
     private func accessibilityLabel(for species: Species, record: SightingRecord?) -> String {
@@ -230,7 +256,7 @@ struct JournalView: View {
         }
         let date = record.firstSeen.formatted(.dateTime.day().month(.wide))
         return "\(species.name), \(species.rarity.label). "
-            + "First seen \(date), seen \(record.count) time\(record.count == 1 ? "" : "s"). "
-            + species.note
+            + "Seen \(record.count) time\(record.count == 1 ? "" : "s"), first on \(date). "
+            + firstSeenLine(record) + " " + species.note
     }
 }

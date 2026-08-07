@@ -7,10 +7,16 @@ struct ContentView: View {
     @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
     @State private var showStats = false
+    /// `-PawmodoroCart` only. There is no button to the cart on this screen
+    /// and there must not be one — fence 8 keeps the timer clear of the
+    /// economy. It lives one tap deeper, in Settings.
+    @State private var showCart = LaunchOptions.openCart
     @State private var showPaywall = false
     @State private var showStudio = false
     @State private var showStrayNaming = false
     @State private var showBench = false
+    @State private var showScrapbook = false
+    @State private var showTipJar = false
     /// True while the three breaths are running. The engine knows nothing
     /// about this — `start()` is simply called later.
     @State private var settling = false
@@ -38,11 +44,17 @@ struct ContentView: View {
 
                 clockwork
 
+                tide
+
+                snail
+
                 toys
 
                 stray
 
                 sky
+
+                weather
 
                 seasonal
 
@@ -91,8 +103,14 @@ struct ContentView: View {
                     BuddyView()
                         .padding(.top, 18)
 
-                    pawPrints
-                        .padding(.top, 14)
+                    // Only when nothing is counting down. A treat offered
+                    // mid-focus would be a reason to touch the screen during
+                    // the one stretch of time this app exists to leave alone.
+                    if engine.runState != .running || engine.phase.isBreak {
+                        TreatTray()
+                            .padding(.top, 8)
+                            .transition(.opacity)
+                    }
 
                     Spacer(minLength: 12)
 
@@ -125,7 +143,11 @@ struct ContentView: View {
                         secondary: Theme.blossom,
                         streak: engine.log.currentStreak,
                         buddyName: engine.buddyName,
-                        onDismiss: { engine.completion = nil }
+                        onDismiss: { engine.completion = nil },
+                        onTip: {
+                            engine.completion = nil
+                            showTipJar = true
+                        }
                     )
                     .id(completion.id)
                     .transition(.opacity)
@@ -151,6 +173,21 @@ struct ContentView: View {
                                              ? Theme.bark : Theme.blossom)
                     }
                     .accessibilityLabel("Sound Studio")
+                }
+                // The gentle nudge to photograph where you sit today: one
+                // glyph, no new row, and gone entirely while focus runs —
+                // nothing invites a touch during the stretch this app exists
+                // to leave alone.
+                if !(engine.isRunning && !engine.phase.isBreak) {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showScrapbook = true
+                        } label: {
+                            Image(systemName: "camera")
+                                .foregroundStyle(Theme.bark)
+                        }
+                        .accessibilityLabel("Keep a picture of where you are sitting")
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -193,6 +230,26 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showBench) {
                 HaikuBenchView()
+            }
+            .sheet(isPresented: $showCart) {
+                CartView()
+            }
+            .sheet(isPresented: $showScrapbook) {
+                ScrapbookView()
+            }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
+            }
+            // The only question the Drift ever asks. Phrased so that neither
+            // answer is the "good" one: the app genuinely does not know
+            // whether you were sitting there, and pretending to would be
+            // worse than asking.
+            .alert("Still drifting?", isPresented: driftQuestion) {
+                Button("Count it") { engine.endDrift(keep: true) }
+                Button("Let it go", role: .cancel) { engine.endDrift(keep: false) }
+            } message: {
+                Text("This open hour has been running for "
+                     + "\(engine.remainingText). Should it count?")
             }
             // She comes back next time you start. Being spooked costs the rest
             // of the phase and nothing else — there is no state anywhere that
@@ -244,7 +301,22 @@ struct ContentView: View {
                         place: engine.settings.place.rawValue,
                         dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
                         buddy: engine.settings.buddy.rawValue,
-                        occasion: .arrival, sessions: 3, sighting: Species.stag.rawValue
+                        occasion: .arrival, sessions: 3,
+                        sighting: Species.stag.rawValue, minutes: nil
+                    ))
+                }
+                // The other end of the album: four months of daily sitting,
+                // in one flag. There is no honest way to reach this by hand.
+                if LaunchOptions.panorama,
+                   !engine.album.cards.contains(where: { $0.occasion == .panorama }) {
+                    engine.album.add(Postcard(
+                        id: UUID(), date: Date(),
+                        place: engine.settings.place.rawValue,
+                        dayPart: (LaunchOptions.forcedDayPart ?? DayPart.current()).rawValue,
+                        buddy: engine.settings.buddy.rawValue,
+                        occasion: .panorama, sessions: engine.log.todaySessions,
+                        sighting: nil,
+                        minutes: Grove.panoramaHours * Grove.minutesPerTree
                     ))
                 }
                 guard LaunchOptions.celebrate else { return }
@@ -298,8 +370,15 @@ struct ContentView: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
             let place = engine.settings.place
+            // Named `today` rather than `weather`: this view has a `weather`
+            // layer property of its own, and a local shadowing it here reads
+            // like a typo even when it isn't.
+            let today = engine.weather
             ZStack {
-                SceneryView(place: place, part: part)
+                SceneryView(place: place, part: part, weather: today)
+                    // Weather is *not* in the id: changing it should cross-fade
+                    // the veil, not rebuild the scene. The place and the hour
+                    // are what swap the artwork underneath.
                     .id("\(place.rawValue)-\(part.rawValue)")
 
                 if let vignette = place.vignette,
@@ -356,6 +435,44 @@ struct ContentView: View {
         .allowsHitTesting(false)
     }
 
+    /// The water at Harbor Isle, and nowhere else.
+    ///
+    /// Directly on top of the scenery and under everything else, because the
+    /// shore is part of the picture rather than part of the app — the snail
+    /// has to be able to stand on it and the stray has to be able to sit above
+    /// it. Re-read every five minutes: the tide moves about a hundredth of its
+    /// range in that time, which is under a point of screen, and a `.periodic`
+    /// timeline stops dead when the app is backgrounded.
+    @ViewBuilder
+    private var tide: some View {
+        if engine.settings.place == .harbor {
+            TimelineView(.periodic(from: .now, by: 300)) { context in
+                TideView(
+                    level: Tide.level(at: context.date),
+                    tint: Theme.surface,
+                    mud: Theme.bark,
+                    rising: Tide.isRising(at: context.date)
+                )
+            }
+        }
+    }
+
+    /// The old snail, if she is crossing here this month.
+    ///
+    /// Above the scenery and below everything a finger can reach, which is
+    /// where she belongs: she is part of the place rather than part of the
+    /// app. Re-read once a minute like the sky, which is roughly two thousand
+    /// times more often than she moves.
+    ///
+    /// (Her doc comment had drifted onto `tide` when that was inserted
+    /// between the two; put back with its own member during the merge.)
+    @ViewBuilder
+    private var snail: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            SnailView(place: engine.settings.place, x: engine.snailX)
+        }
+    }
+
     /// What a finger does to the place you're in.
     ///
     /// Between the scenery and the stray on purpose: a tap on her still
@@ -388,6 +505,7 @@ struct ContentView: View {
             StrayView(
                 stage: stage,
                 progress: engine.isRunning ? engine.progress : nil,
+                weather: engine.weather,
                 spooked: $straySpooked
             )
         }
@@ -417,6 +535,31 @@ struct ContentView: View {
             && !engine.stray.hasJoined
             && engine.strayStage >= .home
             && engine.runState == .idle
+    }
+
+    /// What the sky is doing today.
+    ///
+    /// Above the sky wash so rain reads against the night tint, and below the
+    /// UI so nothing ever falls across the countdown — the same sandwich the
+    /// seasons sit in, because they are the same kind of layer.
+    ///
+    /// The one piece of coordination in here: if the player has chosen the
+    /// rain ambience and it is also raining, only one of the two draws. Two
+    /// independent rain fields on the same screen is a downpour nobody asked
+    /// for, and the ambience is the one the player actually picked.
+    @ViewBuilder
+    private var weather: some View {
+        let today = engine.weather
+        let ambienceIsRaining = engine.isRunning
+            && engine.settings.ambience == .rain
+        if !(ambienceIsRaining && today.suggests == .rain) {
+            WeatherView(
+                weather: today,
+                tint: Theme.bark,
+                accent: Theme.accent(for: engine.phase)
+            )
+            .id(today)
+        }
     }
 
     /// Whatever time of year it is, if it is any in particular.
@@ -459,6 +602,7 @@ struct ContentView: View {
                 if part.showsStars {
                     StarfieldView(
                         tint: Theme.bark,
+                        moon: Theme.sunshine,
                         nightSessions: engine.log.nightSessions
                     )
                     // Three windows a year, the sky sheds. Real dates only.
@@ -494,36 +638,6 @@ struct ContentView: View {
                 }
             }
             .animation(.easeInOut, value: engine.phase)
-    }
-
-    private var pawPrints: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<engine.pawsPerCycle, id: \.self) { index in
-                let earned = index < engine.filledPaws
-                Image(systemName: "pawprint.fill")
-                    .font(.title3)
-                    .foregroundStyle(earned ? Theme.blossom : Theme.bark.opacity(0.18))
-                    .scaleEffect(earned ? 1 : 0.85)
-                    .rotationEffect(.degrees(earned ? 0 : -8))
-                    // The newest paw lands last and hardest — it's the one that
-                    // was just earned.
-                    .animation(
-                        .spring(duration: 0.45, bounce: 0.55)
-                            .delay(earned ? Double(index) * 0.04 : 0),
-                        value: engine.filledPaws
-                    )
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Theme.cream.opacity(0.7)))
-        .onChange(of: engine.filledPaws) { previous, current in
-            if current > previous { HapticsDirector.shared.stamp() }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(engine.filledPaws) of \(engine.pawsPerCycle) focus sessions this cycle"
-        )
     }
 
     /// Three named crossings. One tap re-lengths all three phases; the dial on
@@ -567,13 +681,38 @@ struct ContentView: View {
         }
     }
 
+    /// Every ambience chip, in a row that scrolls sideways.
+    ///
+    /// A plain `HStack` worked when there were six of these; at nineteen it was
+    /// wider than any phone and SwiftUI just clipped both ends, leaving the
+    /// later chips unreachable. The reader scrolls the current choice into
+    /// view on appear so the selection is never hidden off-screen.
     private var ambienceRow: some View {
-        HStack(spacing: 8) {
-            ForEach(Ambience.allCases) { option in
-                ambienceButton(for: option)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Ambience.allCases) { option in
+                        ambienceButton(for: option)
+                            .id(option)
+                    }
+                }
+                .padding(.horizontal, 4)
             }
-            // Today's one photograph, while it's still unspent. Out of
-            // reach during focus like everything else that isn't the timer.
+            .onAppear {
+                if engine.settings.ambience != .off {
+                    proxy.scrollTo(engine.settings.ambience, anchor: .center)
+                }
+            }
+            // Today's one photograph of the *world*, while it's still
+            // unspent. Out of reach during focus like everything else that
+            // isn't the timer.
+            //
+            // Deliberately not a camera glyph. The merge brought in a second
+            // camera — the Scrapbook's, in the toolbar — and two identical
+            // icons on one screen for two unrelated things (a picture the
+            // world gives you, and a picture you take of your desk) is a
+            // screen nobody can read. This one is a framed picture, because
+            // that is what it produces.
             if engine.photos.shotAvailable(),
                !(engine.isRunning && !engine.phase.isBreak) {
                 Button {
@@ -585,7 +724,7 @@ struct ContentView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "camera.fill")
+                    Image(systemName: "photo.on.rectangle")
                         .font(.footnote.weight(.semibold))
                         .frame(width: 38, height: 32)
                         .background(
@@ -597,7 +736,7 @@ struct ContentView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.squishy(pressedScale: 0.86))
-                .accessibilityLabel("Take today's photograph")
+                .accessibilityLabel("Keep today's picture of this place")
             }
         }
     }
@@ -605,6 +744,10 @@ struct ContentView: View {
     private func ambienceButton(for option: Ambience) -> some View {
         let unlocked = store.isUnlocked(option)
         let selected = engine.settings.ambience == option
+        // The weather suggests; it never chooses. A ring, not a switch — and
+        // not on something already playing or something not owned, because a
+        // glow you cannot act on is just noise.
+        let suggested = unlocked && !selected && engine.weather.suggests == option
 
         return Button {
             if unlocked {
@@ -626,6 +769,17 @@ struct ContentView: View {
                         selected
                             ? Theme.onAccent
                             : Theme.bark.opacity(unlocked ? 0.7 : 0.35)
+                    )
+                    // Static, not pulsing. A ring that breathes on the main
+                    // screen is a thing the eye keeps returning to for the
+                    // rest of the session, and this is a hint, not an alert.
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 11)
+                            .strokeBorder(
+                                Theme.accent(for: engine.phase)
+                                    .opacity(suggested ? 0.8 : 0),
+                                lineWidth: 1.5
+                            )
                     )
 
                 if !unlocked {
@@ -649,6 +803,39 @@ struct ContentView: View {
                 ? "Ambience: \(option.label)"
                 : "Ambience: \(option.label), locked, requires Pawmodoro Plus"
         )
+        // A ring is invisible to VoiceOver, so the suggestion has to be said
+        // out loud too or it only exists for people who can see it.
+        .accessibilityHint(
+            suggested ? "Suggested \(engine.weather.suggestionNote ?? "")" : ""
+        )
+    }
+
+    private var driftQuestion: Binding<Bool> {
+        Binding(
+            get: { engine.driftNeedsAsking },
+            set: { if !$0 { engine.driftNeedsAsking = false } }
+        )
+    }
+
+    private var playSymbol: String {
+        if engine.isDrifting { return "water.waves" }
+        return engine.isRunning ? "pause.fill" : "play.fill"
+    }
+
+    private var playLabel: String {
+        if engine.isDrifting { return "Drifting" }
+        return engine.isRunning ? "Pause" : "Start"
+    }
+
+    /// The long press is the only way in and the only way out, so it has to be
+    /// said out loud — a gesture nobody is told about is a gesture that only
+    /// exists for the people who happened to hold the button down.
+    private var playHint: String {
+        if engine.isDrifting { return "Press and hold to come back in" }
+        if engine.runState == .idle, !engine.phase.isBreak {
+            return "Press and hold to cast off an open hour with no end time"
+        }
+        return ""
     }
 
     private var controls: some View {
@@ -666,9 +853,10 @@ struct ContentView: View {
             .accessibilityLabel("Restart phase")
 
             Button {
+                if engine.isDrifting { return }   // holding is the way back
                 beginOrToggle()
             } label: {
-                Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
+                Image(systemName: playSymbol)
                     .font(.largeTitle)
                     .frame(width: 84, height: 84)
                     .background(Circle().fill(Theme.accent(for: engine.phase)))
@@ -679,7 +867,23 @@ struct ContentView: View {
             // A little deeper than the rest: it's the biggest target and the
             // one press people repeat most.
             .buttonStyle(.squishy(pressedScale: 0.88))
-            .accessibilityLabel(engine.isRunning ? "Pause" : "Start")
+            // Long-press casts off, and long-press comes back. Both ends of a
+            // drift are deliberate for the same reason: the failure mode that
+            // matters is ending one by accident, and a session with no end
+            // time is exactly the session you would hate to lose by fumbling
+            // a tap.
+            .onLongPressGesture(minimumDuration: 0.6) {
+                withAnimation {
+                    if engine.isDrifting {
+                        engine.endDrift()
+                    } else if engine.runState == .idle, !engine.phase.isBreak {
+                        NotificationManager.shared.requestPermissionIfNeeded()
+                        engine.castOff()
+                    }
+                }
+            }
+            .accessibilityLabel(playLabel)
+            .accessibilityHint(playHint)
 
             Button {
                 withAnimation { engine.skipPhase() }

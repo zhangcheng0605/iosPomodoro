@@ -38,6 +38,27 @@ struct TimerRingView: View {
         return (Double(minutes - range.lowerBound) / span).clamped01()
     }
 
+    /// Rings are drawn from the outside in and stop at eight, which is three
+    /// and a bit hours. Past that they would be closer together than the
+    /// stroke is wide, and a solid disc says less than eight rings do.
+    private var maxRings: Int { 8 }
+
+    @ViewBuilder
+    private var treeRings: some View {
+        if engine.isDrifting {
+            let rings = min(engine.driftLaps, maxRings)
+            ForEach(0..<max(rings, 0), id: \.self) { index in
+                Circle()
+                    .stroke(
+                        Theme.accent(for: phase).opacity(0.30),
+                        lineWidth: 1.5
+                    )
+                    .padding(lineWidth + 6 + CGFloat(index) * 7)
+            }
+            .transition(.opacity)
+        }
+    }
+
     var body: some View {
         ZStack {
             // The timer face. Once there is scenery behind the app, the
@@ -74,8 +95,30 @@ struct TimerRingView: View {
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .opacity(isAdjustable ? 0 : 1)
+                // Faded rather than removed when another face is carrying the
+                // time: two things counting the same interval at full strength
+                // compete, and the ring is still the thing you can read from
+                // across the room.
+                .opacity(isAdjustable ? 0 : (engine.clockFace.isDrawn ? 1 : 0.3))
                 .animation(.linear(duration: 0.25), value: engine.progress)
+
+            // The chosen face, if it is not the ring. Drawn inside the dial
+            // and *under* the digits, which stay exactly where they are on
+            // their own capsule — swapping the face never moves the one thing
+            // on this screen anybody actually reads.
+            if !engine.clockFace.isDrawn {
+                ClockFaceView(face: engine.clockFace, progress: engine.progress)
+                    .frame(height: diameter * 0.46)
+                    .offset(y: -diameter * 0.05)
+                    .opacity(isAdjustable ? 0.35 : 1)
+                    .allowsHitTesting(false)
+            }
+
+            // One thin concentric ring per completed lap, laid inside the
+            // track. Two hours of deep work is five rings — time made visible
+            // in the same language the Homestead's trees will use, and the
+            // only record an open hour keeps of how long it has been.
+            treeRings
 
             knob
                 .opacity(isAdjustable ? 1 : 0)
@@ -222,8 +265,17 @@ struct TimerRingView: View {
         let buddy = engine.buddyName
         switch engine.runState {
         case .idle:
-            return isAdjustable ? "drag the ring to set \(phase.dialNoun)" : "ready when you are"
+            return isAdjustable
+                ? "drag the ring to set \(phase.dialNoun)"
+                : "ready when you are"
         case .running:
+            // No count, no target, no comparison with anything. The rings say
+            // how long it has been; this only says what is happening.
+            if engine.isDrifting {
+                return engine.driftLaps == 0
+                    ? "drifting — hold to come back"
+                    : "still going. hold to come back"
+            }
             if phase.isBreak {
                 return engine.settings.breatheOnBreaks
                     ? "breathe with \(buddy)"

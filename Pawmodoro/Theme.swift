@@ -63,6 +63,19 @@ enum Theme {
         palette.sky(part)?.color
     }
 
+    /// The tint for what the sky is doing today, laid over the place itself
+    /// rather than over the phase gradient. Nil when the weather is `clear`,
+    /// which is what the app looked like before weather existed.
+    static func weatherVeil(for weather: Weather) -> Color? {
+        palette.weather(weather)?.color
+    }
+
+    /// A time of day as its own colour, for the year ring's wedges. Not the
+    /// sky wash — see `Palette.ringTint(_:)` for why they must differ.
+    static func ringTint(for part: DayPart) -> Color {
+        palette.ringTint(part).color
+    }
+
     static func accent(for phase: TimerEngine.Phase) -> Color {
         switch phase {
         case .focus: blossom
@@ -76,7 +89,8 @@ enum Theme {
 enum DayPart: String, CaseIterable {
     case dawn, day, dusk, night
 
-    static func current(at date: Date = Date(), calendar: Calendar = .current) -> DayPart {
+    static func current(at date: Date = WorldCalendar.now,
+                        calendar: Calendar = WorldCalendar.calendar) -> DayPart {
         from(hour: calendar.component(.hour, from: date))
     }
 

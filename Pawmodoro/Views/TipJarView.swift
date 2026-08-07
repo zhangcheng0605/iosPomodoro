@@ -17,9 +17,17 @@ struct TipJarView: View {
                         Text("Tip jar")
                             .font(.title2.bold())
                             .foregroundStyle(Theme.bark)
-                        Text("Pawmodoro is free, and tipping unlocks nothing at all. It just keeps \(engine.buddyName) in treats.")
+                        Text("Tips unlock nothing at all. They keep "
+                             + "\(engine.buddyName) in treats — and me making "
+                             + "this app better for you.")
                             .font(.subheadline)
                             .foregroundStyle(Theme.bark.opacity(0.75))
+                            .multilineTextAlignment(.center)
+                        Text("Every new place, sound and small creature so far "
+                             + "was built in the evenings. A tip is how one "
+                             + "more of them gets built.")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.bark.opacity(0.6))
                             .multilineTextAlignment(.center)
                     }
 

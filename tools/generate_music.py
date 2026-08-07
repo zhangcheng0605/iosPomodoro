@@ -338,6 +338,40 @@ def lowpass(sig, cutoff, order=2):
     return np.fft.irfft(spec * (1.0 / (1.0 + (freq / cutoff) ** (2 * order)) ** 0.5), len(sig))
 
 
+def scoop(sig, low, high, depth):
+    """Take `depth` (0-1) out of a band and leave the rest alone.
+
+    This is how a track is made to *duet* with something rather than to be
+    mixed against it: the Rainy Day tapes cut the band the rain loop already
+    fills, so the two can play together at full level without either having to
+    be turned down. A raised-cosine skirt rather than a brick wall — a sharp
+    notch is audible as a hole, and the point is that nobody notices."""
+    spec = np.fft.rfft(sig)
+    freq = np.fft.rfftfreq(len(sig), 1.0 / SR)
+    band = np.clip((freq - low) / max(high - low, 1e-6), 0.0, 1.0)
+    shape = 0.5 - 0.5 * np.cos(2 * np.pi * band)   # 0 at the edges, 1 mid-band
+    return np.fft.irfft(spec * (1.0 - depth * shape), len(sig))
+
+
+# How a collection sits in the spectrum. Each is one deliberate sentence about
+# where that set of tracks is *meant* to be heard, expressed as filters rather
+# than as mixing advice nobody would follow.
+#
+#   rain     — the midrange left open for the rain family's loops, and the top
+#              given away entirely: rain owns the treble, so a tape that fights
+#              it there loses. What is left is body and sparkle either side.
+#   night    — darker than anything else in the catalogue. A 3 a.m. shift is a
+#              lamp and a sub, not a top end.
+#   lullaby  — barely graded at all. A music box is nearly all fundamental,
+#              and taking anything out of it makes it a sine.
+ROOMS = {
+    None:      {"lowpass": 7200},
+    "rain":    {"lowpass": 5200, "scoop": (1150, 3000, 0.42)},
+    "night":   {"lowpass": 4300},
+    "lullaby": {"lowpass": 6000},
+}
+
+
 def wobble(sig, rng, cents=6.0):
     """Tape flutter. The resampled index is renormalised to span exactly the
     original length — a loop whose length drifted by even a few samples would
@@ -352,9 +386,13 @@ def wobble(sig, rng, cents=6.0):
     return np.interp(index, np.arange(n), sig)
 
 
-def master(sig, rng):
+def master(sig, rng, room=None):
+    shape = ROOMS[room]
     sig = wobble(sig, rng)
-    sig = lowpass(sig, 7200)
+    sig = lowpass(sig, shape["lowpass"])
+    if "scoop" in shape:
+        low, high, depth = shape["scoop"]
+        sig = scoop(sig, low, high, depth)
     sig = np.tanh(sig * 1.35) / np.tanh(1.35)
 
     # Loudness and headroom fight each other: scaling down to fix a peak undoes
@@ -378,7 +416,8 @@ def master(sig, rng):
 
 class Track:
     def __init__(self, number, ident, title, collection, gate, bpm, key,
-                 progression, lead, texture, energy, meter=4):
+                 progression, lead, texture, energy, meter=4,
+                 space=1.0, room=None):
         self.number = number
         self.id = ident
         self.title = title
@@ -391,6 +430,14 @@ class Track:
         self.texture = texture
         self.energy = energy
         self.meter = meter
+        # How much of the bar is left empty. `energy` already says how busy a
+        # track is *rhythmically*; this says how often a note is played at all,
+        # and the two are genuinely different — Phase W's three collections are
+        # all energy 1 or 2 and would still be far too full at the density the
+        # first fifty were written at. Sparse is not the same as slow.
+        self.space = space
+        # Which shelf of ROOMS this track is filtered for.
+        self.room = room
 
     @property
     def is_minor(self):
@@ -448,7 +495,7 @@ def render(track):
             for index, step in enumerate(chord):
                 place(ep(hz(track.root + step), 2.6, rng.range(0.24, 0.33), rng),
                       when(0) + index * rng.range(0.004, 0.016) * SR)
-            if rng.chance(0.6):
+            if rng.chance(0.6 * track.space):
                 for step in chord[1:]:
                     place(ep(hz(track.root + step), 1.6, 0.18, rng), when(2))
         if "pad" in lead:
@@ -462,7 +509,7 @@ def render(track):
             voice = INSTRUMENTS[melody_voice]
             slots = [0.0, 1.0, 1.5, 2.0, 3.0, 3.5]
             for slot in slots:
-                if not rng.chance(0.42 if track.energy < 3 else 0.55):
+                if not rng.chance((0.42 if track.energy < 3 else 0.55) * track.space):
                     continue
                 if rng.chance(0.72):
                     step = rng.pick(chord)
@@ -492,7 +539,7 @@ def render(track):
     buf[:tail] += buf[total:total + tail]
     signal = buf[:total]
     signal = signal + bed(track.texture, total, rng)
-    return master(signal, rng), bar_samples
+    return master(signal, rng, track.room), bar_samples
 
 
 # --- Checks -----------------------------------------------------------------
@@ -557,6 +604,14 @@ COLLECTIONS = [
     ("nighttrain", "Night Train", "Rail rhythm at half speed.", "plus"),
     ("onsen", "Moonlit Onsen", "Mallets and plucks over water.", "plus"),
     ("starfall", "Starfall", "The sparsest set. Space between notes.", "plus"),
+    # Phase W's three. Not free, not bought, not travelled to — found, by
+    # playing a certain way. See MusicGate.found and MusicFinding.
+    ("rainyday", "Rainy Day Tapes", "Written to leave room for the rain.",
+     "found:rainyday"),
+    ("nightshift", "Night Shift", "For the hours nobody else is up for.",
+     "found:nightshift"),
+    ("soot", "Soot's Tape", "Five lullabies. Nobody knows where she got them.",
+     "found:soot"),
 ]
 
 TRACKS = [
@@ -619,6 +674,41 @@ TRACKS = [
     Track(48, "ridge_light", "Ridge Light", "starfall", "plus", 58, "F", "I-iii-IV-I", ["ep"], "wind", 1),
     Track(49, "perseid_tape", "Perseid Tape", "starfall", "plus", 56, "D", "i-iv-VII-III", ["musicbox"], "crickets", 1),
     Track(50, "hello_moon", "Hello, Moon", "starfall", "plus", 46, "C", "I-V-vi-IV", ["pad", "celesta"], "crickets", 1),
+
+    # --- Rainy Day Tapes ----------------------------------------------------
+    #
+    # These are the only tracks in the catalogue written to be heard *with*
+    # something else. Three rules follow from that and all three are in the
+    # recipes rather than in a mixing note: no texture bed (the rain loop is
+    # the bed, and a second one is mud), a brush kit and never a hat or a
+    # shaker (both live exactly where rain does and both lose), and the "rain"
+    # room, which takes 4 dB out of 1.2-3 kHz so the loop can sit in the gap.
+    Track(51, "windowpane_study", "Windowpane Study", "rainyday", "found:rainyday", 66, "C", "I-vi-IV-V", ["ep", "brush"], None, 1, space=0.78, room="rain"),
+    Track(52, "gutter_song", "Gutter Song", "rainyday", "found:rainyday", 62, "A", "i-VI-III-VII", ["pad", "sub"], None, 1, space=0.72, room="rain"),
+    Track(53, "second_umbrella", "Second Umbrella", "rainyday", "found:rainyday", 70, "F", "I-IV-vi-V", ["marimba", "brush"], None, 2, space=0.80, room="rain"),
+    Track(54, "wet_pavement", "Wet Pavement", "rainyday", "found:rainyday", 64, "D", "i-VII-VI-V", ["ep", "pad"], None, 1, space=0.70, room="rain"),
+    Track(55, "nothing_urgent", "Nothing Urgent", "rainyday", "found:rainyday", 68, "G", "I-iii-IV-I", ["musicbox", "pad", "brush"], None, 2, space=0.74, room="rain"),
+
+    # --- Night Shift --------------------------------------------------------
+    #
+    # Sub, pad and music box, and nothing above 4.3 kHz. Sister set to the star
+    # atlas: found on the same after-dark counter the crickets are.
+    Track(56, "third_coffee", "Third Coffee", "nightshift", "found:nightshift", 64, "C", "I-vi-IV-V", ["ep", "pad", "sub"], None, 1, space=0.76, room="night"),
+    Track(57, "the_building_is_empty", "The Building Is Empty", "nightshift", "found:nightshift", 60, "E", "i-VI-III-VII", ["pad", "musicbox"], None, 1, space=0.68, room="night"),
+    Track(58, "corridor_light", "Corridor Light", "nightshift", "found:nightshift", 66, "A", "i-VII-VI-V", ["musicbox", "sub", "pad"], "crackle", 1, space=0.72, room="night"),
+    Track(59, "small_hours", "Small Hours", "nightshift", "found:nightshift", 62, "F", "I-iii-IV-I", ["pad", "ep"], None, 1, space=0.70, room="night"),
+    Track(60, "nobody_is_awake", "Nobody Is Awake", "nightshift", "found:nightshift", 68, "D", "i-iv-VII-III", ["pad", "sub", "marimba"], "wind", 1, space=0.66, room="night"),
+
+    # --- Soot's Tape --------------------------------------------------------
+    #
+    # Music box throughout, over a pad so the box has something to ring into.
+    # Never for sale and never Plus: the one reward for the app's one hidden
+    # story, on exactly the terms the stray herself is on.
+    Track(61, "the_hedge", "The Hedge", "soot", "found:soot", 56, "A", "i-VI-III-VII", ["musicbox", "pad"], None, 1, space=0.62, room="lullaby"),
+    Track(62, "fence_post", "Fence Post", "soot", "found:soot", 60, "C", "I-iii-IV-I", ["musicbox", "pad"], None, 1, space=0.66, room="lullaby"),
+    Track(63, "six_feet_away", "Six Feet Away", "soot", "found:soot", 54, "E", "i-iv-VII-III", ["musicbox", "pad"], None, 1, space=0.58, room="lullaby"),
+    Track(64, "she_stayed", "She Stayed", "soot", "found:soot", 58, "F", "I-vi-IV-V", ["musicbox", "pad"], "crackle", 1, space=0.64, room="lullaby"),
+    Track(65, "indoor_cat", "Indoor Cat", "soot", "found:soot", 52, "C", "I-V-vi-IV", ["musicbox", "pad", "sub"], None, 1, space=0.60, room="lullaby"),
 ]
 
 
@@ -688,6 +778,8 @@ def swift_gate(gate):
         return ".plus"
     if gate.startswith("arrival:"):
         return f".arrival(.{gate.split(':')[1]})"
+    if gate.startswith("found:"):
+        return f".found(.{gate.split(':')[1]})"
     raise ValueError(gate)
 
 
@@ -717,9 +809,10 @@ def main():
               f"{track.bars:>2} bars  {seconds:5.1f}s  {size / 1024:5.0f} KB")
 
     megabytes = total_bytes / (1024 * 1024)
-    projected = megabytes / max(1, len(tracks)) * 50
+    projected = megabytes / max(1, len(tracks)) * len(TRACKS)
     print(f"\n  {megabytes:.2f} MB for {len(tracks)} tracks "
-          f"(all 50 would be ~{projected:.1f} MB, budget {TOTAL_BUDGET_MB:.0f} MB)")
+          f"(all {len(TRACKS)} would be ~{projected:.1f} MB, "
+          f"budget {TOTAL_BUDGET_MB:.0f} MB)")
     if projected > TOTAL_BUDGET_MB:
         raise AssertionError(f"projected catalogue {projected:.1f} MB exceeds budget")
 

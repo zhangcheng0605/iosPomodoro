@@ -11,7 +11,10 @@ struct PlacePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the place tapped. The four journey
+    /// places are never locked, so this is never nil in practice — but the
+    /// signature matches the other pickers so one caller can serve them all.
+    var onLockedTap: (CatalogItem?) -> Void
 
     private var part: DayPart {
         LaunchOptions.forcedDayPart ?? DayPart.current()
@@ -39,7 +42,7 @@ struct PlacePicker: View {
             if available {
                 engine.settings.place = place
             } else if reached, !owned {
-                onLockedTap()
+                onLockedTap(place.catalogItem)
             } else {
                 // Still ahead of you: there's nothing to buy, only sessions to
                 // finish, so say nothing and just decline.

@@ -99,8 +99,8 @@ struct KeepsakeDrawerView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Theme.cream.opacity(0.9))
-            if let keepsake = Keepsake(rawValue: record.keepsake) {
-                Image(keepsake.assetName)
+            if let trinket = Trinket(rawValue: record.keepsake) {
+                Image(trinket.assetName)
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
@@ -112,14 +112,14 @@ struct KeepsakeDrawerView: View {
 
     /// "Sea glass — the sea made it soft. Harbor Isle, with Mochi, Aug 7."
     private func provenance(for record: KeepsakeRecord) -> String {
-        guard let keepsake = Keepsake(rawValue: record.keepsake) else { return "" }
+        guard let trinket = Trinket(rawValue: record.keepsake) else { return "" }
         // A finder that isn't a buddy is a night visitor who left it.
         let finder = Buddy(rawValue: record.finder).map {
             engine.settings.displayName(for: $0)
         } ?? "a visitor"
         let place = Place(rawValue: record.place)?.name ?? "somewhere out there"
         let day = record.date.formatted(.dateTime.month(.abbreviated).day())
-        return "\(keepsake.name) — \(keepsake.note). \(place), with \(finder), \(day)."
+        return "\(trinket.name) — \(trinket.note). \(place), with \(finder), \(day)."
     }
 
     private func drawerAccessibilityLabel(items: [KeepsakeRecord]) -> String {

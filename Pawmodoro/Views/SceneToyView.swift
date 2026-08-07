@@ -45,7 +45,24 @@ final class TouchTracker {
     static let shared = TouchTracker()
 
     /// 0...1 across the width, or nil when nothing is touching.
+    ///
+    /// Fed by two hands: a finger on the scenery, and a treat being dragged
+    /// off the tray — the buddy watches whichever is moving, through the same
+    /// pupil shift, because to the buddy they are the same event: something
+    /// interesting, over there.
     var x: Double?
+
+    /// True while a dragged treat is within reach of the buddy, so it can
+    /// perk up *before* the hand arrives — the anticipation is what makes the
+    /// hand-over read as a relationship rather than a drop target.
+    var treatNear = false
+
+    /// Where the buddy's sprite sits, in global screen points. Written by
+    /// `BuddyView` from its own geometry, read by `TreatTray` to decide what
+    /// "near" and "handed over" mean. Ignored by observation on purpose: it
+    /// is only ever read inside gesture closures, and publishing every layout
+    /// pass would invalidate views that do not care.
+    @ObservationIgnored var buddyFrame: CGRect?
 
     private init() {}
 }

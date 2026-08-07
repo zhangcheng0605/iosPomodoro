@@ -81,7 +81,26 @@ final class SessionLog {
         firstSessionDate = nil
         defaults.removeObject(forKey: StorageKeys.lifetimeSessions)
         defaults.removeObject(forKey: StorageKeys.firstSession)
+        longestDrift = 0
         save()
+        defaults.removeObject(forKey: StorageKeys.longestDrift)
+    }
+
+    // MARK: The longest drift
+
+    /// The longest open hour anybody has sat, in seconds.
+    ///
+    /// Recorded, shown once in the almanac, and never used for anything else.
+    /// It is not a target, there is no next tier, and nothing anywhere invites
+    /// you to beat it — a personal best that the app kept asking about would
+    /// turn the one part of this with no clock on it into a race. It only ever
+    /// goes up, like everything else here.
+    private(set) var longestDrift: TimeInterval = 0
+
+    func recordLongestDrift(seconds: TimeInterval) {
+        guard seconds > longestDrift else { return }
+        longestDrift = seconds
+        defaults.set(seconds, forKey: StorageKeys.longestDrift)
     }
 
     private func load() {
@@ -91,6 +110,7 @@ final class SessionLog {
             return
         }
         records = decoded
+        longestDrift = defaults.double(forKey: StorageKeys.longestDrift)
     }
 
     private func save() {
@@ -110,6 +130,11 @@ final class SessionLog {
     func record(endedOn day: Date, calendar: Calendar = .current) -> SessionRecord? {
         records.last { calendar.isDate($0.endedAt, inSameDayAs: day) }
     }
+
+    /// Every completed focus minute ever. The grove plants a tree per hour of
+    /// it and the pouch drops an acorn per twenty minutes, so it had better be
+    /// one function rather than three copies of the same `reduce`.
+    var totalMinutes: Int { records.reduce(0) { $0 + $1.minutes } }
 
     var todaySessions: Int {
         let calendar = Calendar.current

@@ -4,6 +4,7 @@ struct StatsView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingClear = false
+    @State private var showTipJar = false
 
     private var log: SessionLog { engine.log }
 
@@ -12,13 +13,26 @@ struct StatsView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     AlmanacView()
+                    // Above everything: it is the one surface here that is
+                    // addressed to you rather than describing you.
+                    SundayPostView()
+                    // High on purpose, and once: buried at the bottom of
+                    // Settings the jar earned nothing, which helps nobody. It
+                    // leads with the honest part — tips unlock nothing — and
+                    // then says what they actually do.
+                    tipRow
                     bondCard
                     TastesCard()
+                    keepsakeShelf
+                    pouchLine
                     summaryGrid
                     weekChart
                     if log.totalSessions == 0 {
                         emptyState
                     }
+                    HomesteadView()
+                    YearRingView()
+                    ShelfOfHoursView()
                     AlbumView()
                     StarAtlasView()
                     JournalView()
@@ -59,7 +73,47 @@ struct StatsView: View {
             } message: {
                 Text("This erases every recorded focus session. It cannot be undone.")
             }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
+            }
         }
+    }
+
+    /// The warm little row to the tip jar. A row, not a banner: it sits in
+    /// the same visual voice as the bond card below it, asks once, and never
+    /// changes based on how long it has been ignored.
+    private var tipRow: some View {
+        Button {
+            showTipJar = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(Theme.blossom)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("The tip jar")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.bark)
+                    Text("Tips unlock nothing at all. They keep "
+                         + "\(engine.buddyName) in treats — and new things "
+                         + "arriving here.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.bark.opacity(0.65))
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.35))
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "The tip jar. Tips unlock nothing at all; they keep "
+                + "\(engine.buddyName) in treats and new things arriving here."
+        )
     }
 
     private var summaryGrid: some View {
@@ -97,6 +151,85 @@ struct StatsView: View {
 
     /// The bond meter. Five hearts and a line, and deliberately no bar: this
     /// is a thing to notice having happened, not a target to chase.
+    /// The pouch, as one line.
+    ///
+    /// Deliberately not a card, not a header, and nowhere near the timer —
+    /// fence 8. It sits with the other quiet readouts and says a number,
+    /// which is all a pouch has to say. No "spend it" button: the way to the
+    /// cart is through Settings, one tap further from focus than this.
+    private var pouchLine: some View {
+        HStack(spacing: 6) {
+            Image("acorn")
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 15)
+            Text(pouchText)
+                .font(.footnote)
+                .foregroundStyle(Theme.bark.opacity(0.6))
+            Spacer()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(pouchText)
+    }
+
+    private var pouchText: String {
+        let acorns = engine.acorns
+        switch acorns {
+        case 0: return "The pouch is empty. Twenty minutes of sitting fills it a little."
+        case 1: return "One acorn in the pouch."
+        default: return "\(acorns) acorns in the pouch."
+        }
+    }
+
+    /// What the buddy has left on the desk.
+    ///
+    /// No count, no "3 of 6", and no empty slots waiting to be filled — an
+    /// empty shelf shows nothing at all rather than six grey outlines, because
+    /// six grey outlines is a checklist and this is a windowsill. The whole
+    /// feature is that you find these by looking, so there is nothing anywhere
+    /// that says one has arrived.
+    @ViewBuilder
+    private var keepsakeShelf: some View {
+        if !engine.shelf.items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Left on the desk")
+                    .font(.headline)
+                    .foregroundStyle(Theme.bark)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .bottom, spacing: 14) {
+                        ForEach(Array(engine.shelf.items.enumerated()), id: \.offset) { _, keepsake in
+                            VStack(spacing: 4) {
+                                Image(keepsake.asset)
+                                    .interpolation(.none)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 34)
+                                Text(keepsake.name)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(Theme.bark.opacity(0.6))
+                                    .lineLimit(1)
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(keepsake.name). \(keepsake.note)")
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Theme.surface.opacity(0.55))
+                )
+                if let last = engine.shelf.items.last {
+                    Text(last.note)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.6))
+                }
+            }
+        }
+    }
+
     private var bondCard: some View {
         let bond = engine.bond
         let name = engine.buddyName

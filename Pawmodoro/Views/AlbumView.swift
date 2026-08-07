@@ -31,9 +31,15 @@ struct AlbumView: View {
                         ForEach(album.newestFirst) { card in
                             PostcardView(card: card, width: 210)
                                 .contextMenu {
+                                    // The card itself, not an image of it: see
+                                    // `PostcardExport`. Passing `Image`s here
+                                    // rasterised every postcard in the album,
+                                    // twice, at export size, just to draw the
+                                    // row — arguments are evaluated when the
+                                    // row is built, tap or no tap.
                                     ShareLink(
-                                        item: render(card),
-                                        preview: SharePreview("Postcard", image: render(card))
+                                        item: card,
+                                        preview: SharePreview(card.shareTitle)
                                     ) {
                                         Label("Share", systemImage: "square.and.arrow.up")
                                     }
@@ -44,16 +50,5 @@ struct AlbumView: View {
                 }
             }
         }
-    }
-
-    /// Rendered at export size on demand — nothing is stored as an image.
-    @MainActor
-    private func render(_ card: Postcard) -> Image {
-        let renderer = ImageRenderer(content: PostcardView(card: card, width: 640))
-        renderer.scale = 2
-        if let ui = renderer.uiImage {
-            return Image(uiImage: ui)
-        }
-        return Image(systemName: "photo")
     }
 }

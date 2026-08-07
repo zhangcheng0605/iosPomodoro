@@ -17,7 +17,13 @@ struct AlmanacView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             travelogue
+            tide
+            flyway
             aboutNow
+            // Below what is about and above where else there is, because the
+            // dial is not about today at all — it is the one thing on this
+            // page that took months and cannot be hurried.
+            ClockRingView()
             elsewhere
         }
         .padding(16)
@@ -28,23 +34,55 @@ struct AlmanacView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+            // Through WorldCalendar, so -PawmodoroDate moves the date printed
+            // here along with the sky, the moon and the weather under it.
+            Text(WorldCalendar.now
+                .formatted(.dateTime.weekday(.wide).day().month(.wide)))
                 .font(.headline)
                 .foregroundStyle(Theme.bark)
             HStack(spacing: 6) {
                 Image(systemName: moonSymbol)
                     .font(.caption)
                     .foregroundStyle(Theme.blossom)
-                Text("\(MoonPhase.name()) · \(dayPart.almanacWord)")
+                // The one place the weather is named in words. Everywhere else
+                // it is a veil and some particles, which is the right weight
+                // for it — but a thing with no name is a thing nobody can tell
+                // you about, and this is meant to be worth mentioning.
+                Text("\(MoonPhase.name()) · \(dayPart.almanacWord) · "
+                     + engine.weather.name.lowercased())
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.7))
             }
+            Text(engine.weather.line)
+                .font(.footnote.italic())
+                .foregroundStyle(Theme.bark.opacity(0.6))
             if MoonPhase.isFull() {
                 Text("A good night for the water's edge.")
                     .font(.footnote.italic())
                     .foregroundStyle(Theme.blossom)
             }
+            // Recorded, shown, and never challenged. There is no next tier and
+            // nothing anywhere asks you to beat it.
+            if let longest = longestDriftLine {
+                Text(longest)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.55))
+            }
         }
+    }
+
+    /// Only once there has been one, and phrased as a fact rather than a
+    /// record — "your longest" would make the open hour a thing to win.
+    private var longestDriftLine: String? {
+        let seconds = engine.log.longestDrift
+        guard seconds >= 60 else { return nil }
+        let minutes = Int(seconds / 60)
+        if minutes < 60 { return "The longest you have drifted: \(minutes) minutes." }
+        let hours = minutes / 60
+        let rest = minutes % 60
+        return rest == 0
+            ? "The longest you have drifted: \(hours) hours."
+            : "The longest you have drifted: \(hours)h \(rest)m."
     }
 
     private var moonSymbol: String {
@@ -116,7 +154,11 @@ struct AlmanacView: View {
                 place: place,
                 dayPart: dayPart,
                 focusMinutes: engine.settings.focusMinutes,
-                moonIsFull: MoonPhase.isFull()
+                moonIsFull: MoonPhase.isFull(),
+                // Today's real sky here, so "about now" means about now. Half
+                // the roster is weather-gated and a list that ignored that
+                // would be a list of things that are not, in fact, about.
+                weather: Weather.at(place)
             )
         }
     }
@@ -159,6 +201,96 @@ struct AlmanacView: View {
         return "\(possibleHere.count) about, \(unseen) you haven't met."
     }
 
+    // MARK: The tide
+
+    /// What the water is doing, and a curve of the day it is doing it in.
+    ///
+    /// Only at Harbor Isle, because only Harbor Isle has a sea. Shown whether
+    /// or not anything has been seen in it — unlike the flyway, which stays
+    /// silent until you have met it. The difference is that a tide is not a
+    /// *surprise*: it is the weather of the sea, it is there every day, and a
+    /// tide table is a thing anybody standing at a harbour can read off a
+    /// board. Hiding it would be hiding the ordinary.
+    ///
+    /// The one thing it never does is name what is out there. "Low water" is
+    /// an observation; "the octopus pools are open" is an errand.
+    @ViewBuilder
+    private var tide: some View {
+        if place == .harbor {
+            let now = WorldCalendar.now
+            let state = Tide.state(at: now)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("The water — \(state.name.lowercased())"
+                     + (Tide.isRising(at: now) ? ", coming in" : ", going out"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+                TideCurveView(now: now, tint: Theme.blossom, line: Theme.bark)
+                    .frame(height: 34)
+                Text(state.line)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.65))
+                // The classic tide-table sentence, and the app quietly
+                // teaching a real rhythm: high water is about fifty minutes
+                // later every day, forever, and nobody ever tells you that.
+                if let turn = Tide.nextTurn(after: now) {
+                    Text("It turns around \(turn.formatted(date: .omitted, time: .shortened)).")
+                        .font(.footnote.italic())
+                        .foregroundStyle(Theme.bark.opacity(0.55))
+                }
+            }
+        }
+    }
+
+    // MARK: The Flyway
+
+    /// What is going over, and what already went.
+    ///
+    /// Two hard rules, both of them about what is *absent* — see `Passage` for
+    /// why they are the whole design:
+    ///
+    /// 1. **A passage you have never seen is not mentioned.** No countdown, no
+    ///    greyed-out row, no "opens in nine days". Every other locked thing in
+    ///    this app shows a padlock; this is the one exception, for the same
+    ///    reason Soot is: the surprise is the content. You find out there are
+    ///    swans by looking up one February.
+    /// 2. **Nothing is ever in the future tense here.** A passage is happening
+    ///    or it has happened. The moment this section can say *the geese are
+    ///    due next week*, the app has started making appointments for people,
+    ///    and the next obvious step is a notification about one.
+    private var flyway: some View {
+        let seen = { (passage: Passage) in
+            passage.species.map(engine.journal.hasSeen) ?? false
+        }
+        let open = Passage.open().filter(seen)
+        let gone = Passage.closed().filter { seen($0.0) }
+        return VStack(alignment: .leading, spacing: 4) {
+            if !open.isEmpty || !gone.isEmpty {
+                Text("On the flyway")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+            }
+            ForEach(open) { passage in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(passage.name)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.bark)
+                    Text(passage.line)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.65))
+                }
+            }
+            // Past tense, and only the most recent — a list of six things that
+            // already happened is an inventory, and the point of the afterword
+            // is that the world went on while you were busy, not that you can
+            // audit it.
+            if let (passage, early) = gone.last, open.isEmpty {
+                Text(passage.afterword(early: early))
+                    .font(.footnote.italic())
+                    .foregroundStyle(Theme.bark.opacity(0.6))
+            }
+        }
+    }
+
     // MARK: Everywhere else
 
     private var elsewhere: some View {
@@ -174,7 +306,8 @@ struct AlmanacView: View {
                             place: other,
                             dayPart: dayPart,
                             focusMinutes: engine.settings.focusMinutes,
-                            moonIsFull: MoonPhase.isFull()
+                            moonIsFull: MoonPhase.isFull(),
+                            weather: Weather.at(other)
                         )
                     }.count
                     if count > 0 {

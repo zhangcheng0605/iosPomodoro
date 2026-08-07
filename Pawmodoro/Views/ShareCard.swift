@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// The share pass: any kept card, rendered once and handed to the system
 /// share sheet.
@@ -15,14 +14,21 @@ enum CardExporter {
     /// A card view, rendered at 3x on the app's cream ground.
     static func image<Content: View>(
         of content: Content, width: CGFloat = 360
-    ) -> UIImage? {
+    ) -> PlatformImage? {
         let framed = content
             .frame(width: width)
             .padding(20)
             .background(Theme.cream)
         let renderer = ImageRenderer(content: framed)
         renderer.scale = 3
+        // `uiImage` on iOS, `nsImage` on the Mac target — the one place
+        // this file has to know there are two platforms, and the reason it
+        // uses `PlatformImage` everywhere else instead of naming UIKit.
+        #if canImport(UIKit)
         return renderer.uiImage
+        #else
+        return renderer.nsImage
+        #endif
     }
 }
 
@@ -34,7 +40,7 @@ struct ShareableCardSheet<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @Environment(\.dismiss) private var dismiss
-    @State private var rendered: UIImage?
+    @State private var rendered: PlatformImage?
 
     var body: some View {
         NavigationStack {

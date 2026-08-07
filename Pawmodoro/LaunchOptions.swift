@@ -58,17 +58,56 @@ enum StorageKeys {
     static let setlist = "pawmodoro.setlist"
     /// Species once seen in the pale coat.
     static let paleCoats = "pawmodoro.paleCoats"
-    /// The season letters, and the year kept: the almanac's own records.
+    /// Two features ended up sharing this key's name after the merge, and
+    /// they share the key itself: the append-only event log lives here as a
+    /// bare JSON array (the seeding flags decode exactly that shape), while
+    /// the almanac's season letters and year card live at
+    /// `chronicleAlmanac` beside it. See `Chronicle`, which holds both.
     static let chronicle = "pawmodoro.chronicle"
+    /// The season letters and the year card, kept beside the event log rather
+    /// than inside it. Two features share the name `Chronicle` after the
+    /// merge; the event log must keep `chronicle` as a bare JSON array
+    /// because the seeding flags decode that exact shape from that exact key,
+    /// so the almanac half got its own sibling key.
+    static let chronicleAlmanac = "pawmodoro.chronicle.almanac"
     /// The finished haiku, and which have been quoted back.
     static let anthology = "pawmodoro.anthology"
+
+
+    /// The longest open hour, in seconds. A quiet almanac line and nothing
+    /// else — see `SessionLog.longestDrift`.
+    static let longestDrift = "pawmodoro.longestDrift"
+
+    /// Catalogue ids traded for. The only thing the economy stores — the
+    /// balance is derived from the session log, see `Acorns`.
+    static let owned = "pawmodoro.owned"
+
+    /// Things the buddy has left on the desk, in the order they arrived.
+    static let keepsakes = "pawmodoro.keepsakes"
+
+    /// The scrapbook's metadata. The photographs themselves are files in
+    /// Documents/Snapshots — `Scrapbook.prune()` keeps the two in step.
+    static let snapshots = "pawmodoro.snapshots"
+
+    /// The last day the buddy said hello. One date, and the only thing the
+    /// greeting stores — see `GreetingLog`.
+    static let greeted = "pawmodoro.greeted"
+
+    /// Which hours of the clock you have been sitting for when they struck.
+    ///
+    /// Its own key rather than being read back out of the `Chronicle`,
+    /// because the chronicle is capped and drops its oldest events: a dial
+    /// derived from it would quietly go dark again after a few years, and
+    /// nothing in this app is allowed to decay.
+    static let clockRing = "pawmodoro.clockRing"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
-        paleCoats, chronicle, anthology,
+        paleCoats, chronicle, anthology, longestDrift, owned, keepsakes,
+        snapshots, greeted, clockRing, chronicleAlmanac,
     ]
 }
 
@@ -239,8 +278,13 @@ enum LaunchOptions {
     }()
 
     /// Seed the log to a given length, e.g. `-PawmodoroBond 150`. Previews
-    /// every bond level — and, incidentally, every journey unlock — without
-    /// grinding three hundred sessions.
+    /// every bond level — and, incidentally, every journey unlock and every
+    /// homestead resident — without grinding three hundred sessions.
+    ///
+    /// The residents deliberately get no flag of their own: they are read off
+    /// `log.totalSessions`, which this already sets, and a second way to seed
+    /// the same number is a second thing to keep in step. `-PawmodoroBond 200`
+    /// is a full homestead.
     static let bondSessions: Int? = {
         guard arguments.contains("-PawmodoroBond") else { return nil }
         let count = value(after: "-PawmodoroBond").flatMap(Int.init) ?? 0
@@ -256,9 +300,259 @@ enum LaunchOptions {
         return Season(rawValue: raw)
     }()
 
+    /// Pin the world's calendar day: `-PawmodoroDate 2026-12-21`.
+    ///
+    /// Everything date-driven reads `WorldCalendar`, so this one flag moves
+    /// the season, the moon, and — as they arrive — the weather, the tide,
+    /// the migrations and the snail, all at once and in agreement. The clock
+    /// keeps running inside the pinned day; `-PawmodoroClock` still owns the
+    /// hour.
+    static let pinnedDay: Date? = {
+        guard arguments.contains("-PawmodoroDate"),
+              let raw = value(after: "-PawmodoroDate")
+        else { return nil }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.timeZone = Calendar.current.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: raw).map { Calendar.current.startOfDay(for: $0) }
+    }()
+
+    /// Pin today's weather at every place, e.g. `-PawmodoroWeather storm`.
+    ///
+    /// A storm is one day in thirty at one place, and golden only ever follows
+    /// one, so waiting for either is not a way to check a veil.
+    /// `-PawmodoroDate` reaches the same states honestly when you want to see
+    /// the roll itself working rather than one sky.
+    static let forcedWeather: Weather? = {
+        guard arguments.contains("-PawmodoroWeather"),
+              let raw = value(after: "-PawmodoroWeather")
+        else { return nil }
+        return Weather(rawValue: raw)
+    }()
+
+    /// Put the old snail at a point of her crossing, `-PawmodoroSnail 0` to
+    /// `100`, as a percentage. `-PawmodoroSnail -1` sends her away.
+    ///
+    /// The plan asked for this to be an alias into `-PawmodoroDate`, and it
+    /// isn't, for a concrete reason: her phase offset is *per place*, derived
+    /// from `WorldCalendar.seed`, so the date that puts her mid-crossing at
+    /// the meadow puts her somewhere else entirely at the woods — and the
+    /// place isn't known here, before the engine exists. This overrides the
+    /// derived value instead, exactly as `-PawmodoroWeather` does.
+    /// `-PawmodoroDate` still moves her honestly, along with everything else.
+    ///
+    /// Without it, checking the far end of her crossing means waiting about
+    /// six months.
+    static let forcedSnail: Double? = {
+        guard arguments.contains("-PawmodoroSnail"),
+              let raw = value(after: "-PawmodoroSnail"),
+              let percent = Double(raw)
+        else { return nil }
+        return percent < 0 ? -1 : min(100, percent) / 100
+    }()
+
+    /// Force the day's greeting, at a chosen warmth:
+    /// `-PawmodoroGreet gladder`. Without a value, whatever the real gap
+    /// earns.
+    ///
+    /// The warmest greeting needs a week away, and the app cannot be left
+    /// alone for a week during a verification pass. Forcing it also bypasses
+    /// `GreetingLog`, so it can be watched twice in a row.
+    static let forcedGreeting: Greeting.Warmth? = {
+        guard arguments.contains("-PawmodoroGreet") else { return nil }
+        guard let raw = value(after: "-PawmodoroGreet") else { return .daily }
+        return Greeting.Warmth(rawValue: raw) ?? .daily
+    }()
+
+    static let forceGreeting = isSet("-PawmodoroGreet")
+
+    /// Put the hundred-hour panoramic postcard in the album on launch.
+    ///
+    /// Its own flag rather than a side effect of `-PawmodoroBond 200`, because
+    /// the card is minted on a session *crossing* a hundred hours and seeding
+    /// history retroactively never crosses anything. Four months of daily
+    /// sitting is the only other way to see it.
+    static let panorama = isSet("-PawmodoroPanorama")
+
+    /// Pin the water at Harbor Isle: `-PawmodoroTide low`, `high`,
+    /// `springlow`, `mid`, or a bare number from 0 to 1.
+    ///
+    /// The tide turns every six hours and a spring low is a couple of hours
+    /// twice a day for a few days a fortnight, so waiting for one is not a way
+    /// to check the shore strip. Each named stage lands in the middle of its
+    /// own band rather than on its edge — pinning to a boundary is how you get
+    /// a screenshot that disagrees with the almanac line beside it.
+    static let forcedTide: Double? = {
+        guard arguments.contains("-PawmodoroTide"),
+              let raw = value(after: "-PawmodoroTide")
+        else { return nil }
+        switch raw.lowercased() {
+        case "springlow": return 0.04
+        case "low": return 0.18
+        case "mid": return 0.50
+        case "high": return 0.86
+        default: return Double(raw).map { min(1, max(0, $0)) }
+        }
+    }()
+
+    /// Hold one migration window open, e.g. `-PawmodoroPassage swans`.
+    ///
+    /// The only practical way to see the Flyway. A window is a fortnight
+    /// whose dates move every year, so `-PawmodoroDate` can reach one but
+    /// only after computing where it landed — and the comet's is four years
+    /// wide. This forces the named passage open and, deliberately, **holds
+    /// every other one shut**: seeing that the swans and the snow geese
+    /// cannot both be over the meadow in February is half of what there is to
+    /// check.
+    static let forcedPassage: Passage? = {
+        guard arguments.contains("-PawmodoroPassage"),
+              let raw = value(after: "-PawmodoroPassage")
+        else { return nil }
+        return Passage(rawValue: raw)
+    }()
+
+    /// Cast off an open hour on launch, instead of an idle countdown.
+    static let drift = isSet("-PawmodoroDrift")
+
+    /// Start a drift already n laps deep, e.g. `-PawmodoroLaps 5`.
+    ///
+    /// Backdates the cast-off rather than fast-forwarding anything, because
+    /// the whole feature is a function of one `Date` — so this reaches the
+    /// same state the honest route reaches, and every derived number agrees.
+    /// The honest route to five laps is two hours.
+    static let driftLaps: Int? = {
+        guard arguments.contains("-PawmodoroLaps") else { return nil }
+        let laps = value(after: "-PawmodoroLaps").flatMap(Int.init) ?? 0
+        return laps > 0 ? laps : nil
+    }()
+
+    /// Start on a clock face, e.g. `-PawmodoroClockFace incense`. Two of the
+    /// eight are earned by reaching places that take a hundred sessions.
+    static let forcedClockFace: ClockFace? = {
+        guard arguments.contains("-PawmodoroClockFace"),
+              let raw = value(after: "-PawmodoroClockFace")
+        else { return nil }
+        return ClockFace(rawValue: raw)
+    }()
+
+    /// Override the derived acorn total, e.g. `-PawmodoroAcorns 800`.
+    ///
+    /// The pouch is normally a pure function of the session log, so the honest
+    /// way to fill it is `-PawmodoroBond 200`. This exists for the other
+    /// direction: driving the *cannot afford it* half of the unlock sheet,
+    /// which a seeded history makes hard to reach.
+    static let forcedAcorns: Int? = {
+        guard arguments.contains("-PawmodoroAcorns") else { return nil }
+        return value(after: "-PawmodoroAcorns").flatMap(Int.init)
+    }()
+
+    /// Own the entire catalogue without Plus and without earning it, for
+    /// driving every owned state at once.
+    static let ownEverything = arguments.contains("-PawmodoroOwnEverything")
+
+    /// Open the Magpie's Cart on launch.
+    static let openCart = arguments.contains("-PawmodoroCart")
+
+    /// Dress the current buddy on launch, e.g. `-PawmodoroWear sunhat,bow`.
+    ///
+    /// A list rather than one, because the interesting question is always how
+    /// two pieces sit together — a hat and a collar at once is the composite
+    /// that catches an anchor being wrong.
+    /// Grant and show a den on launch, e.g. `-PawmodoroDen igloo`.
+    ///
+    /// Grants the *buddy's own* den rather than an arbitrary one — a den
+    /// belongs to a species — so this also switches the buddy to its owner.
+    /// Seed the keepsake shelf, e.g. `-PawmodoroKeepsakes 4`.
+    ///
+    /// The honest way to get one is a one-in-twenty-five roll after a session,
+    /// which is not a thing anybody can drive a simulator through.
+    /// Put three sample photographs in the scrapbook on launch.
+    ///
+    /// The simulator has no camera and its photo library is three stock
+    /// wallpapers, so without this the whole feature is unreachable in a pane.
+    /// The samples are generated at launch rather than bundled: three
+    /// flat-coloured rectangles are enough to judge a filter by, and shipping
+    /// real photographs inside the app would be shipping somebody's data.
+    static let seedScrapbook = arguments.contains("-PawmodoroSeedScrapbook")
+
+    static let seedKeepsakes: Int? = {
+        guard arguments.contains("-PawmodoroKeepsakes") else { return nil }
+        return value(after: "-PawmodoroKeepsakes").flatMap(Int.init)
+    }()
+
+    static let forcedDen: Den? = {
+        guard arguments.contains("-PawmodoroDen"),
+              let raw = value(after: "-PawmodoroDen")
+        else { return nil }
+        return Den(rawValue: raw)
+    }()
+
+    static let forcedWear: [Accessory] = {
+        guard arguments.contains("-PawmodoroWear"),
+              let raw = value(after: "-PawmodoroWear")
+        else { return [] }
+        return raw.split(separator: ",").compactMap {
+            Accessory(rawValue: String($0).trimmingCharacters(in: .whitespaces))
+        }
+    }()
+
+    /// Six weeks of plausible world events, for building anything that reads
+    /// the chronicle before the chronicle has had six weeks to fill up.
+    static let seedChronicle = isSet("-PawmodoroSeedChronicle")
+
+    /// Treat every found loop as already recorded, so the Second Shelf can be
+    /// heard without waiting for a storm.
+    static let unlockSounds = isSet("-PawmodoroUnlockSounds")
+
+    /// Earn all three found mixtapes, rather than unlocking them.
+    ///
+    /// Deliberately different from `-PawmodoroUnlockMusic`, which lies to
+    /// `isUnlocked` and leaves the world untouched. This writes the world the
+    /// honest way — five rainy sessions in the chronicle, ten after-dark
+    /// sessions in the log, a joined stray — so everything downstream of a
+    /// find is exercised too: the arrival rows, the Sunday Post's sentence,
+    /// the year ring's rim, and radio actually reaching for the new tracks.
+    /// The unlock flag reaches none of that.
+    static let findTapes = isSet("-PawmodoroFindTapes")
+
+    /// Pin which of the rain family's three renderings plays.
+    static let forcedVariant: Int? = {
+        guard arguments.contains("-PawmodoroVariant") else { return nil }
+        return value(after: "-PawmodoroVariant").flatMap(Int.init).map { max(0, min(2, $0)) }
+    }()
+
     /// Seed a history with a one-day hole in it, so both streak states can be
     /// looked at without waiting for a bad week.
     static let seedGap = isSet("-PawmodoroSeedGap")
+
+    /// Ring the hour bell five seconds after launch, once a phase is running.
+    ///
+    /// The honest way to hear one is to be mid-session at the top of an hour,
+    /// which is up to fifty-nine minutes of waiting for a three-second sound.
+    /// Deliberately ignores the Settings toggle, so the flag always makes a
+    /// noise and a silent run means the audio is wrong rather than the switch.
+    static let bell = isSet("-PawmodoroBell")
+
+    /// Which hour to pretend it is when `-PawmodoroBell` fires, e.g.
+    /// `-PawmodoroBell 3` for the night grade and the small-hours position on
+    /// the dial. Without a number it uses the hour it actually is.
+    static let bellHour: Int? = {
+        guard arguments.contains("-PawmodoroBell") else { return nil }
+        return value(after: "-PawmodoroBell").flatMap(Int.init).map { max(0, min(23, $0)) }
+    }()
+
+    /// Fill the clock ring, so the completed dial and the bell-tower card can
+    /// be looked at without living through twenty-four different hours.
+    ///
+    /// Takes an optional count — `-PawmodoroClockRing 23` leaves exactly one
+    /// position dark, which is the state worth checking: a dial one short of
+    /// closed must still say nothing about how many are missing.
+    static let clockRingHours: Int? = {
+        guard arguments.contains("-PawmodoroClockRing") else { return nil }
+        let count = value(after: "-PawmodoroClockRing").flatMap(Int.init) ?? 24
+        return max(0, min(24, count))
+    }()
 
     /// Guarantee a sound this session, e.g. `-PawmodoroHear owlcall`. These
     /// are the rarest things in the app and depend on both a place and an
@@ -271,13 +565,28 @@ enum LaunchOptions {
     }()
 
     /// Force a dream: `-PawmodoroDream surreal.yarn` for one in particular, or
-    /// just `memory` / `travel` / `surreal` for any of that kind. Waiting for a
-    /// one-in-four roll to land on the kind you wanted to look at is not a way
-    /// to check a bubble.
+    /// a kind on its own for any of that kind — `memory`, `regular`, `travel`,
+    /// `companion`, `visitor`, `sound`, `season`, `yours`, `surreal`. Waiting
+    /// for a one-in-four roll to land on the kind you wanted to look at is not
+    /// a way to check a bubble.
+    ///
+    /// A kind still has to be *reachable*: the pool is gated on having met the
+    /// thing, so `-PawmodoroDream sound` finds nothing until something has
+    /// been heard. Pair it with `-PawmodoroFillJournal 5`, `-PawmodoroBond`,
+    /// `-PawmodoroStray` or `-PawmodoroSeason` accordingly.
     static let forcedDream: String? = {
         guard arguments.contains("-PawmodoroDream") else { return nil }
         return value(after: "-PawmodoroDream")
     }()
+
+    /// Mark every dream as already dreamed, for looking at the diary.
+    ///
+    /// The page draws on five gated systems now, and the honest route to a
+    /// full one is a hundred and fifty sessions, five sightings of forty
+    /// species, all five seasons of a year and a cat who takes twelve days to
+    /// come in. `-PawmodoroFillJournal` does not reach it — that fills the
+    /// journal, and a dream still has to be rolled and stayed for.
+    static let fillDreams = isSet("-PawmodoroFillDreams")
 
     /// Seed the log with n sessions finished after dark, e.g.
     /// `-PawmodoroNightSessions 12`. The atlas is 45 nights of content and the
@@ -340,7 +649,7 @@ enum LaunchOptions {
         return value(after: "-PawmodoroBurr")
     }()
 
-    /// One of every keepsake in the drawer, for looking at the grid.
+    /// One of every trinket in the drawer, for looking at the grid.
     static let fillDrawer = isSet("-PawmodoroFillDrawer")
 
     /// Pin a trick at a tier and play it shortly after launch, e.g.
@@ -503,10 +812,36 @@ enum LaunchOptions {
     static let goldenHourSoon = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
+    static let fillDreams = false
     static let forcedHeard: Heard? = nil
     static let seedGap = false
+    static let pinnedDay: Date? = nil
+    static let seedChronicle = false
+    static let unlockSounds = false
+    static let findTapes = false
+    static let forcedVariant: Int? = nil
     static let forcedSeason: Season? = nil
+    static let forcedWeather: Weather? = nil
+    static let forcedSnail: Double? = nil
+    static let forcedPassage: Passage? = nil
+    static let forcedTide: Double? = nil
+    static let panorama = false
+    static let forcedGreeting: Greeting.Warmth? = nil
+    static let forceGreeting = false
+    static let drift = false
+    static let driftLaps: Int? = nil
+    static let forcedClockFace: ClockFace? = nil
     static let bondSessions: Int? = nil
+    static let forcedAcorns: Int? = nil
+    static let ownEverything = false
+    static let openCart = false
+    static let forcedWear: [Accessory] = []
+    static let forcedDen: Den? = nil
+    static let seedKeepsakes: Int? = nil
+    static let seedScrapbook = false
+    static let bell = false
+    static let bellHour: Int? = nil
+    static let clockRingHours: Int? = nil
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -549,6 +884,129 @@ enum LaunchOptions {
         if let bondSessions {
             seedSessionCount(bondSessions, into: defaults)
         }
+        if seedChronicle {
+            seedChronicleEvents(into: defaults)
+        }
+        if let clockRingHours {
+            seedClockRing(clockRingHours, into: defaults)
+        }
+        // Last, and after `seedChronicle` on purpose: that one *replaces* the
+        // event array, so anything appended before it would vanish.
+        if findTapes {
+            seedFoundTapes(into: defaults)
+        }
+    }
+
+    /// Earn all three found mixtapes the way the app would.
+    ///
+    /// Three separate writes, because the three gates ask three different
+    /// parts of the world — which is the design, and a flag that faked one
+    /// number would prove nothing about the other two.
+    private static func seedFoundTapes(into defaults: UserDefaults) {
+        let calendar = Calendar.current
+
+        // The rainy tally: five `.tape` rows, appended to whatever is there.
+        var events: [ChronicleEvent] = []
+        if let data = defaults.data(forKey: StorageKeys.chronicle),
+           let decoded = try? JSONDecoder().decode([ChronicleEvent].self, from: data) {
+            events = decoded
+        }
+        for index in 0..<MusicFinding.rainSessions {
+            let daysAgo = (MusicFinding.rainSessions - index) * 3
+            guard let at = calendar.date(byAdding: .day, value: -daysAgo, to: Date())
+            else { continue }
+            events.append(ChronicleEvent(
+                at: at, kind: .tape, subject: MusicFinding.rainyday.rawValue
+            ))
+        }
+        if let data = try? JSONEncoder().encode(events.sorted(by: { $0.at < $1.at })) {
+            defaults.set(data, forKey: StorageKeys.chronicle)
+        }
+
+        // The after-dark counter. Skipped when `-PawmodoroNightSessions` is
+        // also on, which has already written its own and would otherwise get
+        // ten more than it asked for.
+        if nightSessions == nil {
+            seedNightSessions(MusicFinding.nightSessions, into: defaults)
+        }
+
+        // And the cat, in the door. `strayFirstSeen` too: her stage is counted
+        // back from it, and a cat who has joined but never arrived is a state
+        // the app cannot otherwise be in.
+        if defaults.object(forKey: StorageKeys.strayFirstSeen) == nil,
+           let start = calendar.date(byAdding: .day, value: -14, to: Date()) {
+            defaults.set(start, forKey: StorageKeys.strayFirstSeen)
+        }
+        defaults.set(Date(), forKey: StorageKeys.strayJoined)
+    }
+
+    /// Fill the first `count` hours of the dial, working outward from the
+    /// ordinary working day so that a partial ring looks like somebody's
+    /// actual life rather than the numbers 0 to n.
+    ///
+    /// Compiled out of Release with the rest of this block, and it writes the
+    /// same `[String: Date]` shape `ClockRing` reads — see its `save()`.
+    private static func seedClockRing(_ count: Int, into defaults: UserDefaults) {
+        // Furthest from one in the afternoon last, which is `ClockRing`'s own
+        // idea of strange: the small hours are the ones you fill by accident,
+        // years in.
+        let order = (0..<24).sorted {
+            ClockRing.strangeness($0) < ClockRing.strangeness($1)
+        }
+        let calendar = Calendar.current
+        var flat: [String: Date] = [:]
+        for (index, hour) in order.prefix(count).enumerated() {
+            let daysAgo = 3 + index * 4
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: Date()),
+                  let at = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day)
+            else { continue }
+            flat[String(hour)] = at
+        }
+        guard let data = try? JSONEncoder().encode(flat) else { return }
+        defaults.set(data, forKey: StorageKeys.clockRing)
+    }
+
+    /// Six weeks of world events, thinning out toward the past the way a real
+    /// one would — most species are met early, then the pace slows because
+    /// there is less left to meet.
+    private static func seedChronicleEvents(into defaults: UserDefaults) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var events: [ChronicleEvent] = []
+
+        func add(_ kind: ChronicleEvent.Kind, _ subject: String, daysAgo: Int, hour: Int) {
+            guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: today),
+                  let at = calendar.date(byAdding: .hour, value: hour, to: day)
+            else { return }
+            events.append(ChronicleEvent(at: at, kind: kind, subject: subject))
+        }
+
+        let species = Species.allCases.map(\.rawValue)
+        for index in 0..<26 {
+            // Sightings thin out: day 41 down to day 1, front-loaded.
+            let daysAgo = 42 - Int(pow(Double(index), 1.35))
+            guard daysAgo > 0 else { break }
+            add(.sighting, species[index % species.count], daysAgo: daysAgo, hour: 9 + index % 10)
+        }
+        for (index, sound) in Heard.allCases.enumerated() {
+            add(.heard, sound.rawValue, daysAgo: 38 - index * 7, hour: 21)
+        }
+        for (index, place) in Place.journey.prefix(4).enumerated() {
+            add(.arrival, place.rawValue, daysAgo: 40 - index * 12, hour: 11)
+        }
+        for (index, level) in Bond.allCases.prefix(3).enumerated() {
+            add(.bond, String(level.rawValue), daysAgo: 39 - index * 14, hour: 18)
+        }
+        add(.figure, ConstellationAtlas.all[0].id, daysAgo: 20, hour: 22)
+        add(.stray, String(Stray.Stage.watching.rawValue), daysAgo: 16, hour: 17)
+        add(.stray, String(Stray.Stage.beside.rawValue), daysAgo: 4, hour: 17)
+        for (index, dream) in Dream.Surreal.allCases.prefix(4).enumerated() {
+            add(.dream, "surreal.\(dream.rawValue)", daysAgo: 30 - index * 8, hour: 14)
+        }
+
+        let ordered = events.sorted { $0.at < $1.at }
+        guard let data = try? JSONEncoder().encode(ordered) else { return }
+        defaults.set(data, forKey: StorageKeys.chronicle)
     }
 
     /// Exactly `count` completed sessions, spread back over the past fortnight

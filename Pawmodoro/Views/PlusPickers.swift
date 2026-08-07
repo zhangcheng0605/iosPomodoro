@@ -13,7 +13,10 @@ struct BuddyPicker: View {
     @Environment(StoreManager.self) private var store
 
     /// Called when the user taps something they don't own yet.
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -44,7 +47,7 @@ struct BuddyPicker: View {
             if unlocked {
                 engine.settings.buddy = buddy
             } else {
-                onLockedTap()
+                onLockedTap(buddy.catalogItem)
             }
         } label: {
             VStack(spacing: 4) {
@@ -92,7 +95,10 @@ struct AmbiencePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ForEach(Ambience.allCases) { option in
@@ -101,14 +107,20 @@ struct AmbiencePicker: View {
     }
 
     private func row(for option: Ambience) -> some View {
-        let unlocked = store.isUnlocked(option)
+        // A found loop is free but not given: Plus does not open it and the
+        // cart does not stock it. Both roads have to agree it is yours.
+        let unlocked = store.isUnlocked(option) && engine.hasFound(option)
         let selected = engine.settings.ambience == option
+        let suggested = unlocked && !selected && engine.weather.suggests == option
 
         return Button {
             if unlocked {
                 engine.settings.ambience = option
             } else {
-                onLockedTap()
+                // Ambience is Plus-only and the cart does not stock it — the
+                // sound shelf is Phase W's business, not the magpie's. Nil
+                // sends the caller to the paywall, unchanged.
+                onLockedTap(nil)
             }
         } label: {
             HStack(spacing: 12) {
@@ -117,6 +129,14 @@ struct AmbiencePicker: View {
                     .foregroundStyle(unlocked ? Theme.blossom : Theme.bark.opacity(0.4))
                 Text(option.label)
                     .foregroundStyle(Theme.bark.opacity(unlocked ? 1 : 0.5))
+                // Why, in three words. The list keeps its order — see the
+                // Phase V As-built note: a settings list that rearranges
+                // itself with the sky is the app moving your furniture.
+                if suggested, let note = engine.weather.suggestionNote {
+                    Text(note)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.bark.opacity(0.5))
+                }
                 Spacer()
                 if !unlocked {
                     Image(systemName: "lock.fill")
@@ -139,7 +159,10 @@ struct ThemePicker: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
 
-    var onLockedTap: () -> Void
+    /// Passed the catalogue entry for the thing tapped, or nil for something
+    /// Plus gates but the cart does not sell. The caller shows the unlock
+    /// sheet for the first and the paywall for the second.
+    var onLockedTap: (CatalogItem?) -> Void
 
     var body: some View {
         ForEach(AppTheme.allCases) { theme in
@@ -155,7 +178,7 @@ struct ThemePicker: View {
             if unlocked {
                 engine.settings.theme = theme
             } else {
-                onLockedTap()
+                onLockedTap(theme.catalogItem)
             }
         } label: {
             HStack(spacing: 12) {

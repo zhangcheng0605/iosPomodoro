@@ -19,6 +19,13 @@ struct PomodoroSettings: Codable, Equatable {
     /// Names the user has given their buddies, keyed by species. Empty means
     /// "use the name it came with".
     var buddyNames: [String: String] = [:]
+    /// What each buddy is wearing, as `"<buddy>.<slot>" -> accessory id`.
+    ///
+    /// Per buddy rather than one global outfit: the hat belongs to the cat,
+    /// and switching to the owl and back should find her still wearing it.
+    /// Keyed by strings for the same reason `buddyNames` is — retiring a
+    /// buddy or an accessory can never make somebody's settings undecodable.
+    var worn: [String: String] = [:]
     /// The music track id, or nil for silence. Ambience and music are separate
     /// channels; free plays one at a time, Plus layers them.
     var music: String?
@@ -40,14 +47,32 @@ struct PomodoroSettings: Codable, Equatable {
     /// asks first.
     var goldenHourCall: Bool = false
 
+    /// Which face the timer wears. The plan asked for its own `StorageKeys`
+    /// entry; it is a setting, it rides in the settings blob with every other
+    /// one, and `-PawmodoroResetState` clears it through `StorageKeys.settings`
+    /// exactly as it clears the theme and the buddy. A second key would have
+    /// been a second thing to remember.
+    var clockFace: ClockFace = .ring
+
+    /// One soft strike at the top of each real hour, while a phase is running.
+    ///
+    /// On by default, and this is the one default worth defending: the strike
+    /// is three seconds, it arrives at most once a session, and off by default
+    /// would mean a feature almost nobody ever meets. It is also the only
+    /// sound in the app that arrives *unasked* while you are working, which is
+    /// why it gets a switch of its own rather than riding on the ambience
+    /// volume — somebody who wants silence has to be able to say so in one
+    /// tap, without also giving up the rain.
+    var hourBellEnabled: Bool = true
+
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerLongBreak
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
-        case breatheOnBreaks, place, buddyNames
+        case breatheOnBreaks, place, buddyNames, worn
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
-        case liveActivityEnabled, goldenHourCall
+        case liveActivityEnabled, goldenHourCall, clockFace, hourBellEnabled
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -80,6 +105,8 @@ struct PomodoroSettings: Codable, Equatable {
             ?? fallback.place
         buddyNames = try container.decodeIfPresent([String: String].self, forKey: .buddyNames)
             ?? fallback.buddyNames
+        worn = try container.decodeIfPresent([String: String].self, forKey: .worn)
+            ?? fallback.worn
         music = try container.decodeIfPresent(String.self, forKey: .music)
         musicVolume = try container.decodeIfPresent(Double.self, forKey: .musicVolume)
             ?? fallback.musicVolume
@@ -96,6 +123,12 @@ struct PomodoroSettings: Codable, Equatable {
         goldenHourCall = try container.decodeIfPresent(
             Bool.self, forKey: .goldenHourCall
         ) ?? fallback.goldenHourCall
+        clockFace = try container.decodeIfPresent(
+            ClockFace.self, forKey: .clockFace
+        ) ?? fallback.clockFace
+        hourBellEnabled = try container.decodeIfPresent(
+            Bool.self, forKey: .hourBellEnabled
+        ) ?? fallback.hourBellEnabled
     }
 
     // MARK: Naming
@@ -108,6 +141,33 @@ struct PomodoroSettings: Codable, Equatable {
         let custom = buddyNames[buddy.rawValue]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return custom.isEmpty ? buddy.name : custom
+    }
+
+    // MARK: The wardrobe
+
+    private func wornKey(_ buddy: Buddy, _ slot: Accessory.Slot) -> String {
+        "\(buddy.rawValue).\(slot.rawValue)"
+    }
+
+    func worn(_ slot: Accessory.Slot, on buddy: Buddy) -> Accessory? {
+        worn[wornKey(buddy, slot)].flatMap(Accessory.init(rawValue:))
+    }
+
+    /// Everything this buddy has on, in slot order.
+    func outfit(for buddy: Buddy) -> [Accessory] {
+        Accessory.Slot.allCases.compactMap { worn($0, on: buddy) }
+    }
+
+    /// Passing nil takes the slot's piece off. Wearing a second thing in the
+    /// same slot replaces the first — there is no inventory to manage and no
+    /// way to end up wearing two hats.
+    mutating func wear(_ accessory: Accessory?, on buddy: Buddy, in slot: Accessory.Slot) {
+        let key = wornKey(buddy, slot)
+        if let accessory, accessory.slot == slot {
+            worn[key] = accessory.rawValue
+        } else {
+            worn.removeValue(forKey: key)
+        }
     }
 
     /// Storing an empty (or unchanged) name clears the override, so the field

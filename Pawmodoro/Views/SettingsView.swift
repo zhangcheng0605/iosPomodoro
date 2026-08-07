@@ -8,6 +8,20 @@ struct SettingsView: View {
     @State private var showPaywall = false
     @State private var showTipJar = false
     @State private var showBuddyBook = false
+    @State private var showCart = false
+    @State private var showScrapbook = false
+    /// The locked thing somebody just tapped, if the cart sells it.
+    @State private var unlocking: CatalogItem?
+
+    /// What a padlock does, everywhere in this screen.
+    ///
+    /// Something the cart sells opens the unlock sheet, which shows the price
+    /// *and* the Plus road. Anything else — ambience, today — still goes
+    /// straight to the paywall, because there is no acorn road to offer and
+    /// pretending otherwise would be worse than the padlock.
+    private func lockedTap(_ item: CatalogItem?) {
+        if let item { unlocking = item } else { showPaywall = true }
+    }
 
     var body: some View {
         @Bindable var engine = engine
@@ -15,7 +29,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    BuddyPicker { showPaywall = true }
+                    BuddyPicker(onLockedTap: lockedTap)
                     HStack {
                         Text("Name")
                         Spacer()
@@ -41,10 +55,12 @@ struct SettingsView: View {
                                 .foregroundStyle(Theme.blossom)
                         }
                     }
+                    WardrobePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Your buddy")
                 } footer: {
-                    Text("Leave the name blank to go back to \(engine.settings.buddy.name).")
+                    Text("Leave the name blank to go back to \(engine.settings.buddy.name). "
+                         + "What they wear is remembered per buddy.")
                 }
 
                 Section {
@@ -58,7 +74,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    PlacePicker { showPaywall = true }
+                    PlacePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Where you are")
                 } footer: {
@@ -85,7 +101,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    AmbiencePicker { showPaywall = true }
+                    AmbiencePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Ambience")
                 } footer: {
@@ -93,7 +109,11 @@ struct SettingsView: View {
                 }
 
                 Section("Theme") {
-                    ThemePicker { showPaywall = true }
+                    ThemePicker(onLockedTap: lockedTap)
+                }
+
+                Section("The cabinet of clocks") {
+                    ClockFacePicker()
                 }
 
                 Section {
@@ -103,6 +123,7 @@ struct SettingsView: View {
                     Toggle("Settle in before focus", isOn: $engine.settings.settleInBeforeFocus)
                     Toggle("Lock screen countdown", isOn: $engine.settings.liveActivityEnabled)
                     Toggle("Golden hour call", isOn: $engine.settings.goldenHourCall)
+                    Toggle("Bell on the hour", isOn: $engine.settings.hourBellEnabled)
                 } header: {
                     Text("Behaviour")
                 } footer: {
@@ -112,9 +133,14 @@ struct SettingsView: View {
                          + "no battery. The golden hour call is at most one "
                          + "quiet notification a day, when the light is good "
                          + "and the camera hasn't been used — letting it pass "
-                         + "costs nothing, and is never mentioned.")
+                         + "costs nothing, and is never mentioned. The bell "
+                         + "marks the top of each hour while you are sitting, "
+                         + "in the voice of wherever you are, and is quieter "
+                         + "the later it gets.")
                 }
 
+                scrapbookSection
+                cartSection
                 plusSection
 
                 Section {
@@ -139,9 +165,68 @@ struct SettingsView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(item: $unlocking) { UnlockSheet(item: $0) }
+            .sheet(isPresented: $showCart) { CartView() }
+            .sheet(isPresented: $showScrapbook) { ScrapbookView() }
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
+        }
+    }
+
+    /// The way into the one commercial room, and the only mention of the
+    /// economy anywhere outside it and the stats sheet. Never badged, never
+    /// with a count on it — fence 8: the balance does not follow you around.
+    /// The way into the scrapbook. In Settings beside the cart rather than on
+    /// the timer, for the same reason: nothing goes between somebody and the
+    /// countdown.
+    private var scrapbookSection: some View {
+        Section {
+            Button {
+                showScrapbook = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .foregroundStyle(Theme.blossom)
+                        .frame(width: 22)
+                    Text("Where you were")
+                        .foregroundStyle(Theme.bark)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.bark.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text("Keep a picture of wherever you are sitting. They stay on this "
+                 + "device — the app has no way to send them anywhere.")
+        }
+    }
+
+    private var cartSection: some View {
+        Section {
+            Button {
+                showCart = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image("magpie_0")
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 24)
+                    Text("The magpie's cart")
+                        .foregroundStyle(Theme.bark)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.bark.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text("The wood drops an acorn every twenty minutes you sit. "
+                 + "She trades.")
         }
     }
 

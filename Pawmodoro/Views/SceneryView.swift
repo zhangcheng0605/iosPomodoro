@@ -11,6 +11,10 @@ import SwiftUI
 struct SceneryView: View {
     let place: Place
     let part: DayPart
+    /// What the sky is doing here today. A second veil over the first, which
+    /// is why the scene pipeline stays eight places by four times of day
+    /// rather than becoming eight by four by nine.
+    var weather: Weather = .clear
 
     /// How much of the theme background is laid back over the artwork.
     /// Raising this fades the place; lowering it risks the countdown.
@@ -25,6 +29,7 @@ struct SceneryView: View {
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .clipped()
                 .overlay(Theme.cream.opacity(Self.veil))
+                .overlay(weatherVeil)
         }
         // Last, so the artwork reaches the top and bottom edges rather than
         // stopping at the safe area with the phase gradient showing above it.
@@ -32,6 +37,17 @@ struct SceneryView: View {
         .allowsHitTesting(false)
             .accessibilityHidden(true)
             .transition(.opacity)
+    }
+
+    /// Kept as its own view so a clear day composites nothing at all rather
+    /// than a fully transparent layer — the common case stays the cheap one.
+    @ViewBuilder
+    private var weatherVeil: some View {
+        if let tint = Theme.weatherVeil(for: weather), weather.veilOpacity > 0 {
+            tint
+                .opacity(weather.veilOpacity)
+                .animation(.easeInOut(duration: 1.2), value: weather)
+        }
     }
 }
 

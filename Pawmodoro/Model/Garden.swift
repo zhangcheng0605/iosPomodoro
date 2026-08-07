@@ -85,14 +85,29 @@ final class Garden {
     // MARK: Seeds
 
     static func seed(from dream: Dream, on date: Date) -> DreamSeed {
+        // Three plants, twenty-one kinds of dream. The sort is by what the
+        // dream was *about* rather than by which system produced it:
+        //
+        // - a callflower remembers a creature, so it is the only one that
+        //   carries a species and the only one those two kinds can grow;
+        // - a berrybush is somewhere you went or something you were given —
+        //   the journeys, the water, the wood, the house;
+        // - a moonbell is for everything that was never a place or an animal:
+        //   a sound, an hour, a season, the sky, and the frankly strange.
+        //
+        // Written as one switch rather than a default so that the next kind
+        // of dream has to be sorted deliberately — `check_swift.py` will fail
+        // the build until somebody decides which plant it becomes.
         switch dream {
-        case .memory(let species):
+        case .memory(let species), .regular(let species):
             DreamSeed(kind: PlantKind.callflower.rawValue,
                       species: species.rawValue, offeredOn: date)
-        case .travel:
+        case .travel, .adrift, .flight, .tidal, .wood, .neighbour,
+             .den, .brought, .snapshot:
             DreamSeed(kind: PlantKind.berrybush.rawValue,
                       species: nil, offeredOn: date)
-        case .surreal:
+        case .surreal, .companion, .visitor, .sound, .season, .sky,
+             .hour, .magpie, .finery, .yours:
             DreamSeed(kind: PlantKind.moonbell.rawValue,
                       species: nil, offeredOn: date)
         }

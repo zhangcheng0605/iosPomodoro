@@ -1,6 +1,8 @@
 import CoreHaptics
 import Foundation
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// Every haptic the app plays, in one place.
 ///
@@ -52,7 +54,9 @@ final class HapticsDirector {
         guard isEnabled else { return }
         let eased = 0.35 + 0.45 * max(0, min(1, progress))
         guard supportsHaptics else {
+            #if canImport(UIKit)
             UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: eased)
+            #endif
             return
         }
         // Two taps, close together: a heartbeat, not a metronome.
@@ -66,7 +70,9 @@ final class HapticsDirector {
     func complete() {
         guard isEnabled else { return }
         guard supportsHaptics else {
+            #if canImport(UIKit)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
+            #endif
             return
         }
         play(events: [
@@ -76,7 +82,12 @@ final class HapticsDirector {
         ])
     }
 
-    /// A paw print landing.
+    /// Something small landing: a seed going in, a plant coming up.
+    ///
+    /// Originally the paw-print row's tap. That row was removed on the
+    /// owner's instruction and this went with it as dead code — then the
+    /// merge brought in a garden that had been calling it all along, so it
+    /// is back, with a name that no longer points at the thing that died.
     func stamp() {
         transient(intensity: 0.6, sharpness: 0.55, fallback: .rigid)
     }
@@ -86,7 +97,9 @@ final class HapticsDirector {
     func purr(duration: TimeInterval = 1.3) {
         guard isEnabled else { return }
         guard supportsHaptics, let engine = runningEngine() else {
+            #if canImport(UIKit)
             UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.5)
+            #endif
             return
         }
 
@@ -118,7 +131,9 @@ final class HapticsDirector {
             let pattern = try CHHapticPattern(events: [event], parameterCurves: [curve])
             try engine.makePlayer(with: pattern).start(atTime: CHHapticTimeImmediate)
         } catch {
+            #if canImport(UIKit)
             UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.5)
+            #endif
         }
     }
 
@@ -127,11 +142,13 @@ final class HapticsDirector {
     private func transient(
         intensity: Float,
         sharpness: Float,
-        fallback: UIImpactFeedbackGenerator.FeedbackStyle
+        fallback: FeedbackStyle
     ) {
         guard isEnabled else { return }
         guard supportsHaptics else {
+            #if canImport(UIKit)
             UIImpactFeedbackGenerator(style: fallback).impactOccurred()
+            #endif
             return
         }
         play(events: [transientEvent(at: 0, intensity: intensity, sharpness: sharpness)])

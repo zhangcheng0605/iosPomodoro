@@ -1,3 +1,9 @@
+// iOS only, in the strongest sense: the whole file compiles out.
+//
+// There is no accelerometer in a Mac, so there is nothing to detect and no
+// sensible fallback — a snow globe you shake by pressing a key is not a snow
+// globe. macOS gets a menu item instead; see `PawmodoroApp`.
+#if canImport(UIKit)
 import SwiftUI
 import UIKit
 
@@ -43,3 +49,5 @@ struct ShakeDetector: UIViewControllerRepresentable {
         }
     }
 }
+
+#endif

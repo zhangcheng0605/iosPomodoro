@@ -61,6 +61,10 @@ struct BuddyView: View {
 
     private var isAtHome: Bool { engine.settings.place == buddy.homePlace }
 
+    /// What this buddy has on. Per buddy, so switching to the owl and back
+    /// finds the cat still in her hat.
+    private var outfit: [Accessory] { engine.settings.outfit(for: buddy) }
+
     /// Whether the buddy is asleep *right now* — which the owl inverts after
     /// dark. Drives the zzz, the petting response and the caption.
     private var isNapping: Bool {
@@ -289,6 +293,18 @@ struct BuddyView: View {
                             .offset(y: -spriteSize * 0.22)
                     }
                 }
+                // Where the sprite is, for the treat tray below. The tray
+                // cannot see this view's geometry — they are siblings — so
+                // the frame travels the same channel the finger's position
+                // already does. Offsets (hearts, the dream bubble) do not
+                // move layout, so this is the sprite's own square.
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { touch.buddyFrame = proxy.frame(in: .global) }
+                        .onChange(of: proxy.frame(in: .global)) { _, frame in
+                            touch.buddyFrame = frame
+                        }
+                })
 
                 if strayIsAlongside {
                     // Smaller, and she keeps a little distance: she is sitting
@@ -360,6 +376,10 @@ struct BuddyView: View {
         .accessibilityAction(named: isNapping ? "Check on \(name)" : "Pet \(name)") {
             pet()
         }
+        // Everything the sighted hand can reach, offered by name. One block
+        // rather than two stacked modifiers: a second `.accessibilityActions`
+        // is not documented to accumulate, and the whole point of this list is
+        // that nothing quietly falls off it.
         .accessibilityActions {
             // The drop without the drag: same verdict, same answer.
             if let snack = sillSnack {
@@ -379,9 +399,40 @@ struct BuddyView: View {
             if let burr = engine.doorstep.burr {
                 Button("Brush off \(burr.label)") { popBurr(burr) }
             }
+            // A touch region cannot be aimed at without sight, so each spot
+            // gets its own action. The favourite is not marked in any of these
+            // labels: finding it is the feature, and a list that gave it away
+            // would take the feature from exactly the people this is for.
+            if !isNapping {
+                ForEach(TouchSpot.allCases) { spot in
+                    Button("Touch \(spot.name)") { touchNamed(spot) }
+                }
+            }
         }
-        .onAppear { animator.setBase(restingPose) }
+        .onAppear {
+            animator.setBase(restingPose)
+            engine.greetIfOwed()
+            playGreetingIfOwed()
+        }
+        .onChange(of: engine.greeting) { _, hello in
+            guard hello != nil else { return }
+            playGreetingIfOwed()
+        }
+        // The bounce only for the favourite. A bounce for everything would
+        // make the favourite unfindable, which is the whole feature.
+        .onChange(of: engine.offered?.reception) { _, reception in
+            guard reception?.isDelighted == true, !isNapping else { return }
+            animator.play(.happy, for: buddy)
+        }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
+        // A treat has come within reach: the buddy sits up and takes notice.
+        // Reuses the `stirring` one-shot — for an awake buddy that is the
+        // alert, eyes-open frame, which reads as perking up — rather than
+        // `happy`, so the delighted bounce stays the favourite's alone.
+        .onChange(of: touch.treatNear) { _, near in
+            guard near, !isNapping else { return }
+            animator.play(.stirring, for: buddy)
+        }
         .onChange(of: engine.completion) { _, completion in
             // The payoff for *finishing* a focus session: the buddy opens its
             // eyes, stretches, and is pleased with you. Driven by the
@@ -480,7 +531,8 @@ struct BuddyView: View {
                 buddy: buddy,
                 assetName: BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0),
                 size: spriteSize,
-                sleeping: isNapping
+                sleeping: isNapping,
+                outfit: outfit
             )
         } else {
             TimelineView(.periodic(from: .now, by: tickInterval)) { context in
@@ -488,7 +540,8 @@ struct BuddyView: View {
                     buddy: buddy,
                     assetName: frameName(at: context.date),
                     size: spriteSize,
-                    sleeping: isNapping
+                    sleeping: isNapping,
+                    outfit: outfit
                 )
             }
             // A `TimelineView` keeps the schedule it was built with, so without
@@ -530,7 +583,7 @@ struct BuddyView: View {
     // MARK: The doorstep
 
     /// The find at the feet, out of reach during focus like everything else.
-    private var visibleFind: Keepsake? {
+    private var visibleFind: Trinket? {
         guard !(engine.isRunning && !engine.phase.isBreak) else { return nil }
         return engine.doorstep.find
     }
@@ -668,9 +721,9 @@ struct BuddyView: View {
                 return "\(name) says, mostly to itself: “\(line)”"
             }
             if seed % 2 == 0, let last = engine.drawer.items.last,
-               let keepsake = Keepsake(rawValue: last.keepsake) {
+               let trinket = Trinket(rawValue: last.keepsake) {
                 return "\(name) sniffs the spot where the "
-                    + "\(keepsake.name.lowercased()) lay"
+                    + "\(trinket.name.lowercased()) lay"
             }
             if let trick = Trick.allCases.first(where: {
                 engine.repertoire.tier(buddy, $0) > 0
@@ -955,6 +1008,30 @@ struct BuddyView: View {
         say("the blanket did its work — \(name) is full of dreams today", for: 6)
     }
 
+    // MARK: The day's greeting
+
+    /// Stretch, look up, bounce — and that is the existing `waking` one-shot,
+    /// unchanged.
+    ///
+    /// No new pose and no new art. `waking` is already eyes-open, then a
+    /// stretch for the buddies that have one, then the pleased bounce, which
+    /// is exactly what the plan asked a greeting to be. Inventing a second
+    /// animation that looked the same would be two things to keep in step for
+    /// no gain — the standing quirk rule, applied to a whole feature.
+    ///
+    /// The caption is what carries the *warmth*: it holds for
+    /// `Warmth.seconds`, which is longer than the animation, so a gladder
+    /// greeting lingers after the bounce has finished rather than needing its
+    /// own longer bounce.
+    private func playGreetingIfOwed() {
+        guard let hello = engine.greeting, !isNapping else { return }
+        animator.play(.waking, for: buddy)
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(hello.seconds * 1_000_000_000))
+            engine.endGreeting()
+        }
+    }
+
     /// Follows whichever pose is on screen, so a slow breathing loop doesn't
     /// keep ticking at the rate a finished bounce needed.
     private var tickInterval: TimeInterval {
@@ -1052,11 +1129,17 @@ struct BuddyView: View {
 
     private var petGesture: some Gesture {
         // A zero-distance drag catches both a tap and a stroke; strokes keep
-        // firing on a throttle so scratching the buddy stays rewarding.
+        // firing on a throttle so scratching the buddy stays rewarding. The
+        // location is what turned this from a button into a creature: the
+        // buddy now knows *where* your hand is.
+        //
         // A touch that begins and then holds truly still is something else:
         // eye contact. Hold it most of a second and the buddy answers with
         // the slow blink — the animal signal for "I trust you, and I can't
-        // be bothered to prove it harder than this."
+        // be bothered to prove it harder than this." The two read the same
+        // gesture: the travel test that decides a hold is also what tells a
+        // stroke from a still finger, and the location goes to the touch
+        // regions either way.
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if petHoldBegan == nil {
@@ -1076,7 +1159,7 @@ struct BuddyView: View {
                     value.location.y - value.startLocation.y
                 )
                 if travel > 14 { petHoldMoved = true }
-                pet(throttle: 0.4)
+                pet(at: value.location, throttle: 0.4)
             }
             .onEnded { _ in
                 petHoldBegan = nil
@@ -1099,7 +1182,19 @@ struct BuddyView: View {
         }
     }
 
-    private func pet(throttle: TimeInterval = 0.25) {
+    /// Where a touch landed, in the drawing grid's own units.
+    ///
+    /// The sprite is drawn `scaledToFit` into a `spriteSize` square, and the
+    /// grid is square too, so the conversion is one division — and it is the
+    /// same space `BuddyAnchors` and `Accessory.placement` already work in,
+    /// which is why the touch regions could be derived from the anchors the
+    /// wardrobe measures instead of needing a third table of their own.
+    private func gridPoint(_ location: CGPoint) -> CGPoint {
+        let unit = spriteSize / BuddyAnchors.canvas
+        return CGPoint(x: location.x / unit, y: location.y / unit)
+    }
+
+    private func pet(at location: CGPoint? = nil, throttle: TimeInterval = 0.25) {
         let now = Date()
         // While the paw is up, a touch is a high five — the pet can wait.
         if let fiveWindow, fiveWindow.contains(now) {
@@ -1110,12 +1205,49 @@ struct BuddyView: View {
         lastPet = now
 
         if isNapping {
-            // Mid-focus: the buddy stirs but never wakes. No penalty, no guilt.
+            // Mid-focus: the buddy stirs but never wakes. No penalty, no guilt,
+            // and no touch vocabulary either — a sleeping animal does not have
+            // opinions about where you put your hand, and the fiction that
+            // focus is sacred outranks the new feature.
             animator.play(.stirring, for: buddy)
             HapticsDirector.shared.nudge()
             return
         }
 
+        let spot = location.flatMap {
+            TouchSpot.at(gridPoint($0), on: currentAsset)
+        }
+        engine.touched(spot)
+
+        animator.play(.happy, for: buddy)
+        // The favourite gets the softer, longer haptic — the one difference
+        // between finding it and not that is felt rather than read.
+        if engine.foundFavourite {
+            HapticsDirector.shared.purr()
+            HapticsDirector.shared.purr()
+        } else {
+            HapticsDirector.shared.purr()
+        }
+        SoundPlayer.shared.playPurr()
+        addHeart()
+    }
+
+    /// The frame currently on screen, which is what the touch regions are
+    /// measured against. Anchors are per *frame*, so asking the resting pose
+    /// while a bounce is playing would put the chin in the wrong place.
+    private var currentAsset: String {
+        reduceMotion
+            ? BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0)
+            : frameName(at: Date())
+    }
+
+    /// The accessibility path: a named spot rather than a location.
+    ///
+    /// Named `touchNamed` because `touch` is already the finger tracker this
+    /// view holds — the two would compile side by side and read as a bug.
+    private func touchNamed(_ spot: TouchSpot) {
+        lastPet = .distantPast
+        engine.touched(spot)
         animator.play(.happy, for: buddy)
         HapticsDirector.shared.purr()
         SoundPlayer.shared.playPurr()
@@ -1150,8 +1282,34 @@ struct BuddyView: View {
             : "the stray"
     }
 
+    /// One line, and a strict order of who gets it.
+    ///
+    /// Two rules decide the whole chain. A sleeping buddy outranks everything,
+    /// because the fiction that focus is sacred is older than any of the
+    /// features below it. Then the one-shots — things that happened a second
+    /// ago and expire on their own — above the ambient lines that describe a
+    /// state and will still be true in a minute.
+    ///
+    /// Inside the one-shots the order is by *how long each holds the screen*,
+    /// shortest first, so that two arriving together are both seen instead of
+    /// the longer one swallowing the shorter. That is why the day's greeting
+    /// (3–4.5s) sits above `remark` (3.5–8s): on most mornings the doorstep
+    /// deals a hello *and* a greeting is owed, and with `remark` first the
+    /// greeting would expire unseen every single time. Ordered this way the
+    /// greeting plays, ends, and the remark is still there underneath it.
     private var caption: String {
-        // A fresh reaction outranks everything: it *is* the moment.
+        if animator.isPlayingTransient(at: Date()), isNapping {
+            return "shhh — \(name) is dreaming"
+        }
+        // The hello, ahead of everything except a sleeping buddy. It is the
+        // first thing on screen on a new day and it is over in a few seconds;
+        // anything that outranked it would mean somebody who opens the app,
+        // gets a resident and a greeting on the same morning never sees the
+        // greeting at all.
+        if let hello = engine.greeting {
+            return "\(name) \(hello.line)"
+        }
+        // A fresh reaction outranks everything below: it *is* the moment.
         if let remark {
             return remark
         }
@@ -1161,8 +1319,31 @@ struct BuddyView: View {
         if preemptRaised {
             return "\(name)'s paw is already up. It knew"
         }
-        if animator.isPlayingTransient(at: Date()), isNapping {
-            return "shhh — \(name) is dreaming"
+        // Ahead of everything else, because it is the rarest thing this line
+        // ever says: eight of these in a lifetime of the app, against a soak
+        // every other break. It lasts the one break and is then gone for good.
+        if let resident = engine.residentArrived {
+            return "\(name) has noticed — \(resident.arrivalLine)"
+        }
+        // Said once, the first time a thing is worn, and then never again —
+        // an accessory that keeps being remarked on is an accessory you take
+        // off. Cleared as soon as the caption has had a turn.
+        if let wearing = engine.justWore {
+            return "\(name) \(wearing.firstWornLine)"
+        }
+        // What you just handed over. Above the touch spots because a treat is
+        // a bigger thing to have done than a stroke, and both are replies to
+        // something that happened a second ago.
+        if let given = engine.offered {
+            return "\(name) \(given.treat.line(for: given.reception, isFirstFavourite: given.isFirstFavourite))"
+        }
+        // What your hand just found. Above the quirk poses because it is a
+        // reply to something you did a second ago, and below the sleeping
+        // remark because focus outranks everything.
+        if let spot = engine.touchedSpot {
+            return engine.foundFavourite
+                ? "\(name) \(buddy.favouriteLine)"
+                : "\(name) \(spot.line)"
         }
         // Ahead of the quirk poses on purpose: a soak happens every other
         // break, and the two of them sitting together is the payoff of a

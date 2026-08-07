@@ -46,3 +46,24 @@ will then be served at
 `https://zhangcheng0605.github.io/iosPomodoro/PRIVACY` — use that as your
 privacy policy URL. Delete this note before publishing if you'd rather it not
 appear on the page.
+
+
+## The Scrapbook (added with the Hearth era)
+
+Pawmodoro can keep photographs you choose, of wherever you happen to be
+sitting. Three things are true of them and are enforced in code rather than by
+policy:
+
+- **They never leave your device.** The app makes no network calls at all.
+  There is no account, no sync, no upload, and no code path that could send an
+  image anywhere.
+- **Location data is removed on import.** Every photograph is re-encoded
+  through `SnapshotImport.prepare` before it is written, which drops all EXIF
+  metadata including GPS. `tools/check_film.py` fails the build if that
+  re-encode is removed.
+- **Nothing is read without you choosing it.** The picker is `PhotosPicker`,
+  which hands the app only the images you select and needs no library
+  permission at all.
+
+Photographs live in the app's own Documents folder and are deleted with the
+app. Removing one in the app deletes the file immediately.

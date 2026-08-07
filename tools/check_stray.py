@@ -62,9 +62,27 @@ UNSTANDABLE = {
 # The screens the layout has to survive. The short one is the real test: its
 # aspect is far from the artwork's, so `scaledToFill` crops the scene hard and
 # every fraction lands somewhere different.
+def _mac_window():
+    """`Platform.macWindow`, out of the real Swift."""
+    source = open(os.path.join(
+        ROOT, "Pawmodoro", "Platform", "Platform.swift")).read()
+    found = re.search(
+        r"static let macWindow = CGSize\(width: ([\d.]+), height: ([\d.]+)\)",
+        source)
+    if not found:
+        raise SystemExit("could not parse Platform.macWindow")
+    return (int(float(found.group(1))), int(float(found.group(2))))
+
+
 DEVICES = (
     ("iPhone 16", 393, 852),
     ("iPhone SE", 375, 667),
+    # The Mac window, parsed rather than typed — `Platform.macWindow` decides
+    # it and this has to follow. The app now runs on a second platform where
+    # she is placed by the same fractions of a differently-shaped screen, and
+    # a ground line that holds on two phones and fails on a laptop would be
+    # invisible from here.
+    ("Mac window",) + _mac_window(),
 )
 
 
@@ -101,11 +119,28 @@ def parse_stages():
         for name, body in re.findall(r'case \.(\w+): \[([^\]]+)\]', source)
     )
 
+    # Every column, not each stage's own.
+    #
+    # `Stage.x(in:)` swaps the sides in the wet — she comes in tight against
+    # whichever edge she is not usually on and waits it out — so a stage can
+    # now stand at any column in the table. Testing each at its own would have
+    # said nothing about the half of the time she is at the other one, and
+    # putting her on the open sea at Harbor is exactly the bug this file was
+    # written for.
+    #
+    # Only the columns the *scene* stages use: 0.5 belongs to `away`, `beside`
+    # and `home`, which are indoors, have `.zero` size and no scene frames at
+    # all. The first version of this cross-test included it and reported the
+    # cat standing in the Onsen's hot spring — a true statement about a
+    # position nothing ever draws her at.
+    outdoors = ("eyes", "edge", "watching")
+    every = sorted({columns[name] for name in outdoors if name in columns})
     stages = []
-    for name in ("eyes", "edge", "watching"):
+    for name in outdoors:
         if name not in columns or name not in sizes or name not in frames:
             raise SystemExit(f"could not parse stage '{name}' out of Stray.swift")
-        stages.append((name, columns[name], sizes[name], frames[name]))
+        for column in every:
+            stages.append((name, column, sizes[name], frames[name]))
     return float(ground.group(1)), stages
 
 

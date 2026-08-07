@@ -873,6 +873,502 @@ def dream_moonrabbit():
     return outline_silhouette(g)
 
 
+# --- Dreams: the backfill ---------------------------------------------------
+#
+# Five sources fed the dream pool nothing at all: the bond, the regulars, the
+# things you can only hear, the seasons, and the stray's later stages. Two of
+# them need no art — a regular reuses `wild_*_regular`, which is already a
+# sepia sketch with the marking on it, and the stray already has three sprites
+# of her own. The other three are drawn here.
+#
+# The five sounds are drawn as *sounds*, not as their sources. A whale you can
+# look at is not what the journal promised; those five are heard and never
+# seen, and the rule has to survive the dream. So what is drawn is the thing
+# that reached you — the swell, the horn going away, two calls and then
+# nothing — never the animal that sent it.
+#
+# These carry no `outline_silhouette`: a 1px ring around a 2px stroke closes
+# the gaps and the whole shape turns into a blot. Solid shapes below still get
+# one, the way the surreal six do.
+
+
+def dream_heard_whalesong():
+    """A long way out, and answering something you didn't hear.
+
+    Long wavelength drawn as long wavelength: three widely-spaced fronts
+    rolling in from off the left edge, fading as they arrive."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for radius, fill in ((6, OUTLINE), (11, SHADE), (16, BODY)):
+        d.arc([-3 - radius, 12 - radius, -3 + radius, 12 + radius],
+              -58, 58, fill=fill, width=2)
+    return g
+
+
+def dream_heard_trainhorn():
+    """From somewhere past Starfall, going away.
+
+    Centred off the top-right corner, so the fronts arrive downward and to the
+    left — coming from somewhere you are not, which is the whole of it."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for radius, fill in ((5, OUTLINE), (10, SHADE), (15, BODY)):
+        d.arc([19 - radius, 1 - radius, 19 + radius, 1 + radius],
+              100, 190, fill=fill, width=2)
+    return g
+
+
+def dream_heard_owlcall():
+    """Twice, from the dark side of the wood. Then nothing.
+
+    Two calls and a great deal of empty canvas. The emptiness is the note."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for cx, cy in ((5, 5), (12, 12)):
+        for radius, fill in ((4, OUTLINE), (7, SHADE)):
+            d.arc([cx - radius, cy - radius, cx + radius, cy + radius],
+                  -55, 55, fill=fill, width=2)
+    return g
+
+
+def dream_heard_distantthunder():
+    """Somewhere behind the hills, and not coming this way.
+
+    Two fronts arriving from off the bottom-left and a ridge line across the
+    middle: the hills are the point of it — the sound is *behind* something,
+    which is why there is nothing to look at."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for radius, fill in ((7, OUTLINE), (12, SHADE), (17, BODY)):
+        d.arc([-2 - radius, 22 - radius, -2 + radius, 22 + radius],
+              -70, 10, fill=fill, width=2)
+    d.line([(0, 15), (5, 11), (10, 14), (15, 9), (19, 13)], fill=OUTLINE)
+    return g
+
+
+def dream_heard_foghorn():
+    """Two long notes, and nothing you could see agreed there was a boat.
+
+    Wide, flat fronts — a foghorn is the longest wavelength in the app — and
+    a waterline under them with nothing on it."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for y, fill in ((4, BODY), (8, SHADE), (12, OUTLINE)):
+        d.arc([-8, y - 5, 14, y + 5], -70, 70, fill=fill, width=2)
+    d.line([(0, 16), (19, 16)], fill=SHADE)
+    return g
+
+
+def dream_heard_geesesouth():
+    """High up, and all of them talking at once.
+
+    A skein: seven marks in a broken V. Drawn as the shape a flock makes
+    rather than as birds, because at twenty pixels a goose is a smudge and a
+    skein is unmistakable."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for x, y in ((9, 3), (6, 6), (12, 6), (3, 9), (15, 9), (1, 12), (17, 12)):
+        d.line([(x - 1, y + 1), (x, y)], fill=OUTLINE)
+        d.line([(x, y), (x + 1, y + 1)], fill=OUTLINE)
+    return g
+
+
+def dream_heard_farbell():
+    """One stroke from the Keep, before anyone is up.
+
+    The only one of the five that spreads in every direction rather than
+    arriving from somewhere: closed rings, not arcs."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([8, 8, 11, 11], fill=OUTLINE)
+    d.ellipse([5, 5, 14, 14], outline=SHADE)
+    d.ellipse([1, 1, 18, 18], outline=BODY)
+    return g
+
+
+def dream_heard_windchime():
+    """Someone's garden, four notes, no wind you can feel.
+
+    Four lengths, four notes. The bar they hang from is what says this is an
+    object somebody hung up rather than weather."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.line([(3, 3), (16, 3)], fill=SHADE, width=1)
+    for x, length in ((4, 9), (8, 14), (12, 7), (16, 12)):
+        d.line([(x, 4), (x, 3 + length)], fill=OUTLINE)
+        d.ellipse([x - 1, 3 + length, x + 1, 5 + length], fill=SHADE)
+    return g
+
+
+def dream_season_sakura():
+    """Blossom season, which is over before you have finished noticing it."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for dx, dy in ((0, -5), (5, -2), (3, 4), (-3, 4), (-5, -2)):
+        d.ellipse([10 + dx - 3, 10 + dy - 3, 10 + dx + 3, 10 + dy + 3], fill=BODY)
+    d.ellipse([8, 8, 12, 12], fill=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_season_fireflies():
+    """Firefly nights. Drawn as light rather than as insects — at this size a
+    firefly is a dot, and a dot is not worth dreaming about."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for cx, cy in ((5, 6), (13, 9), (8, 15)):
+        # Four short dashes standing off the core, not a closed ring: a ring
+        # at this size reads as a coin. Single points read as nothing at all,
+        # which is what the first attempt did.
+        d.ellipse([cx - 1, cy - 1, cx + 1, cy + 1], fill=OUTLINE)
+        for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            d.line([(cx + dx * 3, cy + dy * 3), (cx + dx * 4, cy + dy * 4)],
+                   fill=SHADE)
+    return g
+
+
+def dream_season_autumn():
+    """Leaf fall. One leaf, because a drift of them at twenty pixels is mud."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.polygon([(10, 2), (15, 8), (13, 14), (10, 17), (7, 14), (5, 8)], fill=BODY)
+    d.line([(10, 4), (10, 16)], fill=SHADE)
+    for y, reach in ((7, 3), (10, 3), (13, 2)):
+        d.line([(10, y), (10 - reach, y + 1)], fill=SHADE)
+        d.line([(10, y), (10 + reach, y + 1)], fill=SHADE)
+    d.line([(10, 16), (10, 19)], fill=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_season_winter():
+    """Snow. Six spokes, because a snowflake with any other number is wrong and
+    somebody always notices."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for a, b in (((10, 2), (10, 18)), ((3, 6), (17, 14)), ((3, 14), (17, 6))):
+        d.line([a, b], fill=OUTLINE)
+    for (x, y), (dx, dy) in (
+        ((10, 5), (2, 2)), ((10, 15), (2, -2)),
+        ((6, 8), (0, 3)), ((14, 12), (0, -3)),
+        ((6, 12), (0, -3)), ((14, 8), (0, 3)),
+    ):
+        d.line([(x, y), (x - dx, y + dy)], fill=SHADE)
+        d.line([(x, y), (x + dx, y + dy)], fill=SHADE)
+    return g
+
+
+def dream_season_lanterns():
+    """Lantern days. An ellipse rather than a rounded rectangle on purpose:
+    Pillow fills rounded corners differently between versions, and a lantern
+    that changes shape when the toolchain updates is not a lantern."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.line([(10, 0), (10, 3)], fill=SHADE)
+    d.rectangle([8, 3, 12, 4], fill=SHADE)           # the cap it hangs from
+    d.ellipse([3, 5, 17, 15], fill=BODY)             # the paper
+    for x in (7, 10, 13):
+        d.line([(x, 6), (x, 14)], fill=SHADE)        # its ribs
+    d.rectangle([8, 15, 12, 16], fill=SHADE)
+    d.line([(10, 16), (10, 19)], fill=SHADE)         # the tassel
+    return outline_silhouette(g)
+
+
+def dream_yours_chair():
+    """The chair you sit in. The first thing a buddy dreams about that is
+    yours rather than the world's — see `Bond.friendly`, whose whole
+    description is that it settles the moment you sit down."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.rectangle([4, 2, 6, 12], fill=SHADE)           # the back
+    d.rectangle([4, 12, 16, 14], fill=BODY)          # the seat
+    d.rectangle([4, 14, 6, 18], fill=SHADE)          # back leg
+    d.rectangle([14, 14, 16, 18], fill=SHADE)        # front leg
+    return outline_silhouette(g)
+
+
+def dream_yours_doorway():
+    """The door, at about the usual time. `Bond.close` is the level where the
+    buddy waits by it before you have decided to go anywhere."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.rectangle([3, 1, 16, 19], fill=SHADE)          # the frame
+    d.rectangle([5, 3, 14, 19], fill=CREAM)          # the light behind it
+    d.polygon([(5, 3), (11, 5), (11, 19), (5, 19)], fill=BODY)   # the door, ajar
+    d.point((12, 12), fill=OUTLINE)                  # the handle
+    return outline_silhouette(g)
+
+
+def dream_yours_desk():
+    """The desk, and your mug going cold on it. `Bond.devoted` is where the
+    buddy has picked a side of it."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.rectangle([1, 11, 18, 13], fill=BODY)          # the top
+    d.rectangle([2, 13, 4, 18], fill=SHADE)          # legs
+    d.rectangle([15, 13, 17, 18], fill=SHADE)
+    # The mug is drawn a tone darker than the desk and given its own line
+    # where the two meet: `outline_silhouette` only rings the outside of
+    # everything drawn, so same-coloured shapes that touch merge into one
+    # lump — which is exactly what the first version of this was.
+    d.rectangle([7, 5, 11, 11], fill=SHADE)
+    d.line([(7, 5), (11, 5)], fill=CREAM)            # the rim, so it reads open
+    d.line([(12, 7), (13, 7)], fill=SHADE)           # its handle
+    d.line([(13, 7), (13, 9)], fill=SHADE)
+    d.line([(12, 9), (13, 9)], fill=SHADE)
+    d.line([(6, 11), (12, 11)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def dream_sky_puddle():
+    """What the rain leaves behind, and the best thing about rain.
+
+    Two goes at the splash before this one: concentric ripples in the water
+    read as beans (a closed shape inside a shape of the same tone has no edge
+    to be seen by), and ticks flicking up out of it read as antennae. One dark
+    ring on the *bright* middle has the tone contrast to be a ripple."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 12, 18, 18], fill=BODY)            # the puddle, seen flat
+    d.ellipse([4, 13, 15, 17], fill=CREAM)           # what it is reflecting
+    d.ellipse([8, 14, 12, 16], outline=SHADE)        # where one just landed
+    d.line([(10, 3), (10, 9)], fill=SHADE)           # and the next one coming
+    return outline_silhouette(g)
+
+
+def dream_sky_thunder():
+    """Further off each time, which is how a storm says goodnight.
+
+    The bolt hangs clear of the cloud by a pixel on purpose:
+    `outline_silhouette` rings the *union* of everything drawn, so a bolt
+    touching the cloud gets no line between them and the pair reads as one
+    lumpy bag. The gap buys it its own outline."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    for box in ([1, 3, 9, 9], [6, 1, 15, 8], [11, 4, 18, 9]):
+        d.ellipse(box, fill=SHADE)                   # three lobes and
+    d.rectangle([2, 6, 17, 9], fill=SHADE)           # a flat underside
+    d.polygon([(11, 11), (7, 16), (10, 16), (8, 19), (14, 14), (11, 14)],
+              fill=BODY)
+    return outline_silhouette(g)
+
+
+def dream_sky_afterglow():
+    """The day after a storm: washed clean, and lit from the side.
+
+    Drawn as the same cloud `dream_sky_thunder` has, leaving — which is what
+    golden weather actually is, and makes the pair read as one story told a
+    day apart. Rays were tried first and stair-stepped into a solid hatched
+    mass; light drawn as light needs somewhere dark to come out from."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([11, 1, 19, 9], fill=CREAM)            # the sun, mostly behind
+    for box in ([1, 6, 9, 13], [5, 4, 14, 12], [10, 7, 17, 13]):
+        d.ellipse(box, fill=SHADE)                   # the last of the cloud
+    d.rectangle([2, 9, 16, 13], fill=SHADE)
+    d.rectangle([0, 17, 19, 19], fill=BODY)          # the ground, lit again
+    return outline_silhouette(g)
+
+
+def dream_adrift_rings():
+    """A cut log with more rings in it than you remember counting.
+
+    The open hour's own metaphor, handed back to it: the ring lays one down per
+    lap, and this is what that looks like after a while."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 18, 18], fill=BODY)
+    for inset in (2, 4, 6, 8):
+        d.ellipse([1 + inset, 1 + inset, 18 - inset, 18 - inset], outline=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_adrift_nomap():
+    """A boat with no oars, and nowhere it needs to be."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.polygon([(2, 9), (17, 9), (14, 14), (5, 14)], fill=BODY)   # the hull
+    d.line([(9, 3), (9, 9)], fill=SHADE)                          # a mast
+    d.polygon([(10, 4), (14, 9), (10, 9)], fill=CREAM)            # one small sail
+    for y, x0, x1 in ((16, 0, 8), (18, 6, 19)):                   # open water
+        d.line([(x0, y), (x1, y)], fill=SHADE)
+    return outline_silhouette(g)
+
+
+def dream_adrift_deep():
+    """Something very large, already going down, and the water closing.
+
+    Drawn as an absence rather than as an animal: a back and a fin sliding
+    under, with the surface still marked where it was. A whole creature would
+    make this a sighting somebody had — the deep-drift roster is where those
+    live — and the dream is about the part you did *not* see.
+    """
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    surface = 12
+    # A back and a fin, and nothing below the line.
+    #
+    # The first version filled everything under the surface with water, which
+    # made the sprite a solid rectangle — every other dream in the diary is a
+    # shape floating in an empty bubble, and one heavy block among them reads
+    # as a rendering fault rather than as a picture. `nomap` says "open water"
+    # with two short broken lines; this says it the same way.
+    d.chord([2, surface - 5, 17, surface + 4], 180, 360, fill=BODY)
+    d.polygon([(9, surface - 4), (11, surface - 10), (12, surface - 3)],
+              fill=SHADE)                                        # the fin
+    d.line([(2, surface), (17, surface)], fill=CREAM)            # the waterline
+    for x0, x1 in ((0, 4), (7, 12), (15, 19)):                   # broken water
+        d.line([(x0, surface + 3), (x1, surface + 3)], fill=SHADE)
+    return outline_silhouette(g)
+
+
+# --- The grove -------------------------------------------------------------
+#
+# One tree per completed focus hour, at three growth stages. Drawn here rather
+# than in a generator of their own because they are sprites in the sprite
+# style, not scenery: `generate_scenes.py` draws whole places into palette
+# grids, and a tree is fourteen pixels of trunk.
+#
+# The three sizes are drawn separately rather than scaled from one. A scaled
+# sapling is a full tree with fewer pixels, which reads as a distant tree
+# instead of a young one — and the wood has to say "this grew", not "this is
+# further away".
+
+GROVE_PALETTE = {
+    T: (0, 0, 0, 0),
+    OUTLINE: (58, 48, 38, 255),
+    BODY: (108, 142, 88, 255),      # canopy
+    SHADE: (78, 108, 66, 255),      # its underside
+    CREAM: (140, 172, 112, 255),    # the lit top
+    PINK: (108, 142, 88, 255),
+    EYE: (58, 48, 38, 255),
+    GLINT: (140, 172, 112, 255),
+    NOSE: (96, 74, 52, 255),        # trunk
+    ACCENT: (96, 74, 52, 255),
+}
+
+
+def grove_sapling():
+    """One hour. Two leaves and a stick, and it never gets smaller."""
+    g = new_grid(10, 12)
+    d = ImageDraw.Draw(g)
+    d.line([(5, 5), (5, 11)], fill=NOSE)
+    d.ellipse([1, 3, 5, 7], fill=BODY)
+    d.ellipse([5, 2, 9, 6], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def grove_young():
+    """Six hours. A trunk with a shape to it."""
+    g = new_grid(16, 20)
+    d = ImageDraw.Draw(g)
+    d.rectangle([7, 11, 9, 19], fill=NOSE)
+    d.line([(8, 13), (4, 10)], fill=NOSE)
+    d.line([(8, 14), (12, 11)], fill=NOSE)
+    d.ellipse([2, 5, 10, 13], fill=SHADE)
+    d.ellipse([6, 2, 14, 11], fill=BODY)
+    d.ellipse([5, 1, 11, 6], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def grove_full():
+    """Twenty-six hours. Done growing, and it stays done."""
+    g = new_grid(24, 30)
+    d = ImageDraw.Draw(g)
+    d.rectangle([10, 17, 14, 29], fill=NOSE)
+    d.line([(12, 20), (6, 15)], fill=NOSE, width=2)
+    d.line([(12, 21), (18, 16)], fill=NOSE, width=2)
+    d.ellipse([1, 8, 13, 20], fill=SHADE)
+    d.ellipse([10, 7, 22, 19], fill=SHADE)
+    d.ellipse([4, 2, 20, 16], fill=BODY)
+    d.ellipse([7, 1, 17, 9], fill=CREAM)
+    return outline_silhouette(g)
+
+
+# --- The old snail ----------------------------------------------------------
+#
+# Drawn on a grid matched to her own aspect rather than a square one, the way
+# the stray's stage sprites are: `scaledToFit` letterboxes a square into a wide
+# frame and she would end up smaller than she is meant to be.
+#
+# Her palette is the stray's problem in miniature. She is fourteen points wide
+# on a screen that can be a night scene in a dark theme, so the shell carries a
+# pale band for the same reason the cat carries a pale outline — one strong
+# edge is all a silhouette needs. `tools/check_snail.py` measures whether it
+# works, at every x of every place she crosses.
+
+SNAIL_PALETTE = {
+    T: (0, 0, 0, 0),
+    OUTLINE: (74, 58, 44, 255),
+    BODY: (198, 182, 156, 255),     # the foot, pale enough to read at night
+    SHADE: (150, 130, 104, 255),
+    CREAM: (236, 226, 206, 255),    # the band across the shell
+    PINK: (198, 182, 156, 255),
+    EYE: (52, 42, 34, 255),
+    GLINT: (252, 248, 238, 255),
+    NOSE: (150, 130, 104, 255),
+    ACCENT: (168, 146, 118, 255),
+}
+
+# Eighteen by thirteen. Fourteen by nine was tried first and produced a blot:
+# shell, foot and stalks all landed on top of one another, and every shape ran
+# to the border, so `outline_silhouette` — which rings the union of everything
+# drawn — had nothing to draw a line between and nowhere to draw it. Four more
+# rows and an inset on every shape is what separates a snail from a bean.
+SNAIL_W, SNAIL_H = 18, 13
+
+
+def snail(stretched=False):
+    """Two frames, and the difference between them is not travel.
+
+    She moves about two points a *day*; a walk cycle would be a lie told sixty
+    times a second. What changes is how far the eye stalks reach. That is the
+    whole animation, and at this size it is enough."""
+    g = new_grid(SNAIL_W, SNAIL_H)
+    d = ImageDraw.Draw(g)
+    reach = 1 if stretched else 0
+
+    d.ellipse([1, 9, 16, 11], fill=BODY)                 # the foot, long and low
+    d.ellipse([1, 6, 6, 11], fill=BODY)                  # the head, facing left
+    d.ellipse([6, 1, 15, 10], fill=SHADE)                # the shell
+    # A shell is a spiral, and two open arcs say so. A closed ring at this
+    # size reads as a doughnut instead.
+    d.arc([8, 3, 13, 8], 200, 60, fill=CREAM)
+    d.arc([9, 4, 12, 7], 30, 250, fill=CREAM)
+    d.line([(3, 7), (2, 3 - reach)], fill=BODY)          # eye stalks
+    d.line([(5, 6), (6, 2 - reach)], fill=BODY)
+    d.point((2, 2 - reach), fill=EYE)
+    d.point((6, 1 - reach), fill=EYE)
+    return outline_silhouette(g)
+
+
+def fx_candle(lit=True):
+    """A candle for the Shelf of Hours, lit or put out.
+
+    A template like the other effects, so the app tints it — a lit candle in
+    the theme's own accent, an unlit one in faded bark. That also means the
+    *only* difference between these two sprites is the silhouette: a flame, or
+    a thread of smoke going the other way. At this size that reads better than
+    colour would have, and it reads identically in all eight themes."""
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # The body, tall and narrow, sitting on a small dish.
+    d.rectangle([15, 16, 24, 34], fill=OUTLINE)
+    d.rectangle([11, 35, 28, 37], fill=OUTLINE)
+    # A drip down one side, so it reads as wax rather than a pillar.
+    d.rectangle([15, 18, 16, 25], fill=T)
+    d.rectangle([15, 20, 16, 23], fill=OUTLINE)
+    d.line([(19, 12), (19, 16)], fill=OUTLINE)          # the wick
+    if lit:
+        # The flame: a teardrop, wider low and pinched at the top.
+        d.ellipse([16, 5, 22, 13], fill=OUTLINE)
+        d.polygon([(19, 1), (22, 8), (16, 8)], fill=OUTLINE)
+    else:
+        # Put out: two curls of smoke leaving. Drawn to the *left*, so the two
+        # frames never look like the same shape at a glance.
+        d.arc([12, 2, 20, 10], 250, 40, fill=OUTLINE)
+        d.arc([14, 7, 20, 13], 60, 220, fill=OUTLINE)
+    return g
+
+
 def fx_bubble(shift=0):
     """The thought bubble the dream sits inside.
 
@@ -1273,6 +1769,13 @@ if __name__ == "__main__":
     print("Sprites:")
     for species, palette, awake, asleep, stretch, quirks in BUDDIES:
         build_frames(species, palette, awake, asleep, stretch, quirks)
+    print("The snail:")
+    to_png(snail(), SNAIL_PALETTE, "snail_0")
+    to_png(snail(stretched=True), SNAIL_PALETTE, "snail_1")
+    print("The grove:")
+    for name, draw in (("sapling", grove_sapling), ("young", grove_young),
+                       ("full", grove_full)):
+        to_png(draw(), GROVE_PALETTE, f"grove_{name}")
     print("The stray:")
     to_png(stray_eyes(), STRAY_PALETTE, "stray_eyes")
     to_png(stray_distant(), STRAY_PALETTE, "stray_distant")
@@ -1283,10 +1786,38 @@ if __name__ == "__main__":
         ("fishballoon", dream_fishballoon), ("yarn", dream_yarn),
         ("tub", dream_tub), ("meadow", dream_meadow),
         ("train", dream_train), ("moonrabbit", dream_moonrabbit),
+        # The backfill. Names are `dream_<group>_<case>` and the group matches
+        # the enum the case comes from, which is what lets check_swift.py
+        # expand `"dream_heard_\(sound.rawValue)"` and tell you a sprite is
+        # missing rather than leaving a blank bubble to find in the simulator.
+        ("heard_whalesong", dream_heard_whalesong),
+        ("heard_trainhorn", dream_heard_trainhorn),
+        ("heard_owlcall", dream_heard_owlcall),
+        ("heard_farbell", dream_heard_farbell),
+        ("heard_windchime", dream_heard_windchime),
+        ("heard_distantthunder", dream_heard_distantthunder),
+        ("heard_foghorn", dream_heard_foghorn),
+        ("heard_geesesouth", dream_heard_geesesouth),
+        ("season_sakura", dream_season_sakura),
+        ("season_fireflies", dream_season_fireflies),
+        ("season_autumn", dream_season_autumn),
+        ("season_winter", dream_season_winter),
+        ("season_lanterns", dream_season_lanterns),
+        ("yours_chair", dream_yours_chair),
+        ("yours_doorway", dream_yours_doorway),
+        ("yours_desk", dream_yours_desk),
+        ("sky_puddle", dream_sky_puddle),
+        ("sky_thunder", dream_sky_thunder),
+        ("sky_afterglow", dream_sky_afterglow),
+        ("adrift_rings", dream_adrift_rings),
+        ("adrift_nomap", dream_adrift_nomap),
+        ("adrift_deep", dream_adrift_deep),
     ):
         to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")
     to_png(fx_zzz(), FX_PALETTE, "fx_zzz", template=True)
     to_png(fx_heart(), FX_PALETTE, "fx_heart", template=True)
+    to_png(fx_candle(), FX_PALETTE, "fx_candle_lit", template=True)
+    to_png(fx_candle(lit=False), FX_PALETTE, "fx_candle_out", template=True)
     to_png(fx_bubble(), FX_PALETTE, "fx_bubble_0", template=True)
     to_png(fx_bubble(shift=1), FX_PALETTE, "fx_bubble_1", template=True)

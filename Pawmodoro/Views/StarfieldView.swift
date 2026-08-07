@@ -10,6 +10,9 @@ import SwiftUI
 /// scenery.
 struct StarfieldView: View {
     let tint: Color
+    /// The moon's colour — `Theme.sunshine` from the call site, so the disc is
+    /// a bright warm yellow that still belongs to whatever theme is on.
+    let moon: Color
     /// Focus sessions finished after dark, from `SessionLog.nightSessions`.
     /// Everything drawn here is a function of this one number.
     let nightSessions: Int
@@ -38,9 +41,62 @@ struct StarfieldView: View {
     }
 
     private func draw(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
+        drawMoon(&canvas, size: size)
         drawScatter(&canvas, size: size, t: t)
         drawConstellations(&canvas, size: size)
         drawWanderers(&canvas, size: size, t: t)
+    }
+
+    /// Tonight's moon, at its real phase.
+    ///
+    /// Drawn first, so the figures and the scatter always read as in front of
+    /// it. It sits in the sky band's top-right, in the slot between The Ferry
+    /// and The Whale — a full atlas grazes it at the edges and no more. Static
+    /// on purpose: the moon does not twinkle, so Reduce Motion shows exactly
+    /// the same disc. Phase comes from `MoonPhase`, which already honours
+    /// `-PawmodoroMoon`.
+    private func drawMoon(_ canvas: inout GraphicsContext, size: CGSize) {
+        let age = MoonPhase.age()
+        let illumination = MoonPhase.illumination()
+        let band = ConstellationAtlas.skyBottom - ConstellationAtlas.skyTop
+        let center = CGPoint(
+            x: 0.86 * size.width,
+            y: (ConstellationAtlas.skyTop + 0.42 * band) * size.height
+        )
+        let radius = min(size.width, size.height) * 0.055
+
+        func disc(_ at: CGPoint, _ r: Double) -> Path {
+            Path(ellipseIn: CGRect(x: at.x - r, y: at.y - r,
+                                   width: r * 2, height: r * 2))
+        }
+
+        // A soft halo, then the whole disc as faint earthshine — so even a
+        // near-new moon is unmistakably *there* rather than a missing circle.
+        canvas.fill(disc(center, radius * 1.55), with: .color(moon.opacity(0.16)))
+        canvas.fill(disc(center, radius), with: .color(moon.opacity(0.28)))
+
+        guard illumination > 0.02 else { return }
+
+        if illumination > 0.97 {
+            canvas.fill(disc(center, radius), with: .color(moon.opacity(0.95)))
+            return
+        }
+
+        // The lit part: the bright disc with a same-size shadow disc punched
+        // out of it. The shadow sits fully over the moon at new and slides
+        // clean off at full; waxing keeps the lit edge on the right, waning on
+        // the left. Two circles, not an ellipse terminator — a cartoon
+        // crescent, which is the honest register for this sky.
+        let slide = 2 * radius * illumination
+        let shadowCenter = CGPoint(
+            x: center.x + (age < 0.5 ? -slide : slide),
+            y: center.y
+        )
+        canvas.drawLayer { layer in
+            layer.fill(disc(center, radius), with: .color(moon.opacity(0.95)))
+            layer.blendMode = .clear
+            layer.fill(disc(shadowCenter, radius), with: .color(.black))
+        }
     }
 
     /// The background stars that were always here.
@@ -52,9 +108,12 @@ struct StarfieldView: View {
             // as sky, and the only part with no text over it.
             let y = ((n * 0.7548776662).truncatingRemainder(dividingBy: 1)) * size.height * 0.34
             let twinkle = 0.5 + 0.5 * sin(t * 0.9 + n * 1.7)
-            let r = 1.0 + (n.truncatingRemainder(dividingBy: 3)) * 0.5
+            let r = 1.3 + (n.truncatingRemainder(dividingBy: 3)) * 0.55
 
-            dot(&canvas, x: x, y: y, r: r, opacity: 0.18 + twinkle * 0.3)
+            // The floor used to be 0.18, which on a phone outdoors read as
+            // pitch black. The owner asked for a bright night, so the dimmest
+            // a star ever gets is now most of the way on.
+            dot(&canvas, x: x, y: y, r: r, opacity: 0.5 + twinkle * 0.35)
         }
     }
 
@@ -134,7 +193,7 @@ struct StarfieldView: View {
 #Preview("A sky part-built") {
     ZStack {
         Color.black
-        StarfieldView(tint: .white, nightSessions: 12)
+        StarfieldView(tint: .white, moon: .yellow, nightSessions: 12)
     }
     .ignoresSafeArea()
 }
@@ -142,7 +201,7 @@ struct StarfieldView: View {
 #Preview("Every figure, plus wanderers") {
     ZStack {
         Color.black
-        StarfieldView(tint: .white, nightSessions: 95)
+        StarfieldView(tint: .white, moon: .yellow, nightSessions: 95)
     }
     .ignoresSafeArea()
 }

@@ -23,6 +23,24 @@ final class MusicPlayer {
     private(set) var current: MusicTrack?
     private var started = false
     private var radioTask: Task<Void, Never>?
+    /// The format the player nodes are currently wired to the mixer with.
+    ///
+    /// This has to equal the scheduled buffer's format exactly. See
+    /// `startEngineIfNeeded(format:)` — getting it wrong is fatal, not
+    /// degraded.
+    private var connectedFormat: AVAudioFormat?
+    private var sessionConfigured = false
+    private var nodesAttached = false
+    private var configObserver: NSObjectProtocol?
+    /// Most-recently-used track ids, oldest first.
+    private var bufferOrder: [String] = []
+
+    /// A decoded track is ~2.4 MB of float samples (27 s, mono, 22.05 kHz).
+    /// Keeping all fifty would be roughly 120 MB of dirty memory held for the
+    /// life of the app — and radio mode walks the whole catalogue on its own,
+    /// so it is reachable without the user doing anything unusual. Three is
+    /// enough for a crossfade plus the track behind it.
+    private static let maxCachedBuffers = 3
 
     /// Radio asks for the next track when the current one has gone round a few
     /// times. Rotating on phase boundaries instead would leave a 27-second loop
@@ -42,7 +60,11 @@ final class MusicPlayer {
     func play(_ track: MusicTrack, crossfade: TimeInterval = 1.6) {
         guard track != current else { return }
         guard let buffer = buffer(for: track) else { return }
-        guard startEngineIfNeeded() else { return }
+        guard startEngineIfNeeded(format: buffer.format) else { return }
+        // Belt and braces: `scheduleBuffer` raises an Objective-C exception on
+        // a format mismatch, and Swift cannot catch it — the process dies. If
+        // the wiring somehow didn't take, drop the track instead of the app.
+        guard let connectedFormat, connectedFormat.isEqual(buffer.format) else { return }
 
         let outgoing = players[active]
         active = (active + 1) % players.count
@@ -65,13 +87,10 @@ final class MusicPlayer {
         radioTask?.cancel()
         guard nextForRadio != nil else { return }
         let seconds = Double(track.loopFrames) / 22_050.0 * 3.0
-        radioTask = Task { [weak self] in
+        radioTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                guard let self, let next = self.nextForRadio?() else { return }
-                self.play(next, crossfade: 2.4)
-            }
+            guard !Task.isCancelled, let self, let next = self.nextForRadio?() else { return }
+            self.play(next, crossfade: 2.4)
         }
     }
 
@@ -102,30 +121,119 @@ final class MusicPlayer {
 
     // MARK: Plumbing
 
-    private func startEngineIfNeeded() -> Bool {
-        guard !started else { return true }
-        for player in players {
-            engine.attach(player)
+    /// Brings the engine up, wired for exactly this buffer format.
+    ///
+    /// The player→mixer connection **must** carry the buffer's own format.
+    /// Connecting with `nil` uses the hardware's format instead — stereo
+    /// 48 kHz on an iPhone — and every track here is mono 22.05 kHz. The
+    /// mismatch only shows on a device, because the Simulator happens to
+    /// negotiate a compatible format, and it kills the app rather than
+    /// failing quietly: `scheduleBuffer` raises
+    /// `_outputFormat.channelCount == buffer.format.channelCount`.
+    ///
+    /// The mixer→main connection stays `nil` on purpose: an `AVAudioMixerNode`
+    /// is the thing that *does* the sample-rate conversion, so that is where
+    /// the two worlds are allowed to meet.
+    private func startEngineIfNeeded(format: AVAudioFormat) -> Bool {
+        configureSessionIfNeeded()
+
+        // Attachment is tracked separately from `started`: if `engine.start()`
+        // ever fails, `started` goes back to false, and attaching an
+        // already-attached node the next time round is its own exception.
+        if !nodesAttached {
+            for player in players {
+                engine.attach(player)
+            }
+            engine.attach(mixer)
+            nodesAttached = true
+            observeConfigurationChanges()
         }
-        engine.attach(mixer)
-        for player in players {
-            engine.connect(player, to: mixer, format: nil)
+
+        if connectedFormat == nil || !connectedFormat!.isEqual(format) {
+            // Both hops are rebuilt: a configuration change tears the whole
+            // graph down, not just the half we own.
+            engine.connect(mixer, to: engine.mainMixerNode, format: nil)
+            for player in players {
+                player.stop()
+                engine.disconnectNodeOutput(player)
+                engine.connect(player, to: mixer, format: format)
+            }
+            connectedFormat = format
         }
-        engine.connect(mixer, to: engine.mainMixerNode, format: nil)
+
         mixer.outputVolume = volume
-        do {
-            try engine.start()
-            started = true
-            return true
-        } catch {
-            return false
+
+        // `suspend()` pauses the engine, and a paused engine cannot start a
+        // player node — that throws too. Always confirm it is actually
+        // running rather than trusting `started`.
+        if !engine.isRunning {
+            do {
+                try engine.start()
+            } catch {
+                started = false
+                return false
+            }
         }
+        started = true
+        return engine.isRunning
+    }
+
+    /// Records a track as most recently used, and drops the coldest buffers
+    /// once there are more than `maxCachedBuffers` of them.
+    ///
+    /// The track currently playing is never evicted — its buffer is scheduled
+    /// on a live player node, and the loop reads from it forever.
+    private func cache(_ buffer: AVAudioPCMBuffer, for id: String) {
+        buffers[id] = buffer
+        touch(id)
+        while bufferOrder.count > Self.maxCachedBuffers,
+              let coldest = bufferOrder.first(where: { $0 != current?.id }) {
+            bufferOrder.removeAll { $0 == coldest }
+            buffers.removeValue(forKey: coldest)
+        }
+    }
+
+    private func touch(_ id: String) {
+        bufferOrder.removeAll { $0 == id }
+        bufferOrder.append(id)
+    }
+
+    /// Unplugging headphones, or a Bluetooth device arriving, changes the
+    /// hardware format and makes the engine throw its graph away. The cached
+    /// `connectedFormat` would then be a lie, and the next `scheduleBuffer`
+    /// would raise exactly the exception this class exists to avoid.
+    private func observeConfigurationChanges() {
+        guard configObserver == nil else { return }
+        configObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.connectedFormat = nil
+            guard let track = self.current else { return }
+            self.current = nil
+            self.play(track, crossfade: 0.3)
+        }
+    }
+
+    /// Music shares the session with the ambience channel, on the same
+    /// category, so the two layer instead of interrupting one another.
+    private func configureSessionIfNeeded() {
+        guard !sessionConfigured else { return }
+        sessionConfigured = true
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, mode: .default)
+        try? session.setActive(true)
     }
 
     /// Decodes the track once and trims it to the generator's exact loop
     /// length, dropping the encoder's priming frames.
     private func buffer(for track: MusicTrack) -> AVAudioPCMBuffer? {
-        if let cached = buffers[track.id] { return cached }
+        if let cached = buffers[track.id] {
+            touch(track.id)
+            return cached
+        }
         guard let url = Self.url(for: track),
               let file = try? AVAudioFile(forReading: url)
         else { return nil }
@@ -141,7 +249,7 @@ final class MusicPlayer {
         guard decoded.frameLength > wanted,
               let trimmed = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: wanted)
         else {
-            buffers[track.id] = decoded
+            cache(decoded, for: track.id)
             return decoded
         }
 
@@ -161,7 +269,7 @@ final class MusicPlayer {
             }
         }
         trimmed.frameLength = wanted
-        buffers[track.id] = trimmed
+        cache(trimmed, for: track.id)
         return trimmed
     }
 

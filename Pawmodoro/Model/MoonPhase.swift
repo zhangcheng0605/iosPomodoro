@@ -17,7 +17,7 @@ enum MoonPhase {
     /// The debug override lands here rather than only in `isFull`, so the
     /// almanac's phase name and its icon agree with it — otherwise a forced
     /// full moon shows "waning gibbous" beside a full-moon teaser.
-    static func age(on date: Date = Date()) -> Double {
+    static func age(on date: Date = WorldCalendar.now) -> Double {
         if let forced = LaunchOptions.forcedMoon { return forced ? 0.5 : 0.0 }
         let days = date.timeIntervalSince(reference) / 86_400.0
         let cycles = days / synodic
@@ -25,17 +25,17 @@ enum MoonPhase {
     }
 
     /// How lit the disc is, 0...1.
-    static func illumination(on date: Date = Date()) -> Double {
+    static func illumination(on date: Date = WorldCalendar.now) -> Double {
         (1 - cos(2 * .pi * age(on: date))) / 2
     }
 
     /// True for roughly three nights around full — the moon rabbit's window.
     /// Wide enough to be catchable, narrow enough to stay rare.
-    static func isFull(on date: Date = Date()) -> Bool {
+    static func isFull(on date: Date = WorldCalendar.now) -> Bool {
         abs(age(on: date) - 0.5) < 0.05
     }
 
-    static func name(on date: Date = Date()) -> String {
+    static func name(on date: Date = WorldCalendar.now) -> String {
         let phase = age(on: date)
         switch phase {
         case ..<0.03, 0.97...: return "New moon"

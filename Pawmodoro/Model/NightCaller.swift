@@ -64,7 +64,7 @@ enum NightCaller {
         let species: Species
         let snack: Snack
         /// The rare thank-you, straight into the drawer.
-        let memento: Keepsake?
+        let memento: Trinket?
     }
 
     /// Roughly two nights in three, the snack tempts someone; one visit in
@@ -77,12 +77,12 @@ enum NightCaller {
         let seed = Doorstep.stableHash("night.\(night).\(snack.rawValue)")
         guard seed % 3 != 0 else { return nil }
         let species = visitor(for: snack, moonIsFull: moonIsFull)
-        let memento: Keepsake? = seed % 6 == 1 ? mementoLeft(by: species) : nil
+        let memento: Trinket? = seed % 6 == 1 ? mementoLeft(by: species) : nil
         return Visit(species: species, snack: snack, memento: memento)
     }
 
     /// What a visitor leaves, when one does.
-    private static func mementoLeft(by species: Species) -> Keepsake {
+    private static func mementoLeft(by species: Species) -> Trinket {
         switch species {
         case .tawnyowl: .feather
         case .tanuki: .bottlecap

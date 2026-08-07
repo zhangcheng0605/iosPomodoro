@@ -78,6 +78,7 @@ final class TimerEngine {
     let doorstep: Doorstep
     let drawer: KeepsakeDrawer
     let repertoire: Repertoire
+    let memories: Anniversaries
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -98,7 +99,8 @@ final class TimerEngine {
         tuckIn: TuckIn = TuckIn(),
         doorstep: Doorstep = Doorstep(),
         drawer: KeepsakeDrawer = KeepsakeDrawer(),
-        repertoire: Repertoire = Repertoire()
+        repertoire: Repertoire = Repertoire(),
+        memories: Anniversaries = Anniversaries()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -113,6 +115,7 @@ final class TimerEngine {
         self.doorstep = doorstep
         self.drawer = drawer
         self.repertoire = repertoire
+        self.memories = memories
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -167,6 +170,11 @@ final class TimerEngine {
         }
         // Whatever was practiced before today has been slept on.
         repertoire.consolidate()
+        // And the buddy checks its calendar of the two of you.
+        memories.lookBack(log: log, journal: journal, stray: stray)
+        if let days = LaunchOptions.rememberDaysAgo {
+            memories.forceForDebug(daysAgo: days, journal: journal)
+        }
         if let forced = LaunchOptions.forcedTrick {
             let parts = forced.split(separator: ".").map(String.init)
             if let first = parts.first, let trick = Trick(rawValue: first) {
@@ -329,6 +337,7 @@ final class TimerEngine {
             place: settings.place, buddy: settings.buddy, season: Season.current()
         )
         repertoire.consolidate()
+        memories.lookBack(log: log, journal: journal, stray: stray)
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {

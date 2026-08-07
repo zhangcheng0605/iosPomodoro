@@ -36,11 +36,13 @@ enum StorageKeys {
     static let drawer = "pawmodoro.drawer"
     /// Each buddy's trick tiers and unslept practice days.
     static let repertoire = "pawmodoro.repertoire"
+    /// Which anniversaries the buddy has already brought up.
+    static let anniversaries = "pawmodoro.anniversaries"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
-        doorstep, drawer, repertoire,
+        doorstep, drawer, repertoire, anniversaries,
     ]
 }
 
@@ -315,6 +317,14 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroTrick") else { return nil }
         return value(after: "-PawmodoroTrick")
     }()
+
+    /// Surface a memory dated n days back, e.g. `-PawmodoroRemember 21` —
+    /// arranging a real three-week anniversary takes three weeks.
+    static let rememberDaysAgo: Int? = {
+        guard arguments.contains("-PawmodoroRemember") else { return nil }
+        let days = value(after: "-PawmodoroRemember").flatMap(Int.init) ?? 0
+        return days > 0 ? days : nil
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -346,6 +356,7 @@ enum LaunchOptions {
     static let forcedBurr: String? = nil
     static let fillDrawer = false
     static let forcedTrick: String? = nil
+    static let rememberDaysAgo: Int? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

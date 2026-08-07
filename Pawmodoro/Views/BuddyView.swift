@@ -229,6 +229,16 @@ struct BuddyView: View {
                             .transition(.opacity)
                     }
 
+                    // An anniversary, held up in the dream bubble's spot —
+                    // awake and idle, so the two can never collide. Tap to
+                    // acknowledge; starting a session leaves it for later.
+                    if engine.runState == .idle, let memory = engine.memories.today {
+                        MemoryBubble(memory: memory)
+                            .offset(x: -spriteSize * 0.42, y: -spriteSize * 0.52)
+                            .transition(.opacity)
+                            .onTapGesture { acknowledgeMemory() }
+                    }
+
                     ForEach(hearts) { heart in
                         HeartParticle(drift: heart.drift, reduceMotion: reduceMotion)
                             .offset(y: -spriteSize * 0.22)
@@ -475,6 +485,15 @@ struct BuddyView: View {
         }
         say("\(burr.label) from yesterday, off with a shake — "
             + "\(name) hadn't noticed and does not care", for: 5)
+    }
+
+    /// The memory has been looked at, which is all it asked.
+    private func acknowledgeMemory() {
+        withAnimation(.easeInOut(duration: 0.4)) {
+            engine.memories.dismiss()
+        }
+        HapticsDirector.shared.nudge()
+        addHeart()
     }
 
     // MARK: Tricks
@@ -814,6 +833,10 @@ struct BuddyView: View {
         }
         switch engine.runState {
         case .idle:
+            // A memory outranks the day's errands: it exists only today.
+            if let memory = engine.memories.today {
+                return memory.line(name: name, strayName: strayName)
+            }
             // The tucked line is the ritual's receipt, and it holds the
             // caption for the rest of the evening.
             if isTuckedAsleep, let clock = engine.tuckIn.tuckClock {

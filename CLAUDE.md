@@ -25,11 +25,13 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 where the build order stopped, what has and hasn't been seen running, and what
 is blocked on the user.
 
-**Current focus:** two plan documents, worked phase by phase, and **both are
-now built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and seen
-running, D (Live Activity) written but needing a one-time Xcode target step,
-E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md` covers
-content and its build order is finished except alternate app icons. Each phase
+**Current focus:** `docs/COMPANION_PLAN.md` — the third plan document, drafted
+and not yet built: pet interactions (feeding, tuck-in, high five, greeting
+vignettes, tricks, the anniversary engine), phases V–Z. The earlier two are
+**both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
+seen running, D (Live Activity) written but needing a one-time Xcode target
+step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
+covers content and its build order is finished except alternate app icons. Each phase
 carries an **As built** section recording where the code diverged from the
 plan — read the relevant one before touching that code. Known quirk: the iOS
 26.3 simulator runtime is missing the primary emoji font, so emoji in `Text`

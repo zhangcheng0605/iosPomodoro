@@ -12,6 +12,13 @@ import SwiftUI
 enum CardExporter {
 
     /// A card view, rendered at 3x on the app's cream ground.
+    ///
+    /// **The content must not read `@Environment` objects.** `ImageRenderer`
+    /// lays out what it is given in a fresh environment, so an
+    /// `@Environment(TimerEngine.self)` inside a card is a trap in the
+    /// environment getter and takes the process with it — not a blank image,
+    /// a crash. `PapersCard` did exactly this and killed the app on every
+    /// tap of "Share the papers". Pass values in as plain properties.
     static func image<Content: View>(
         of content: Content, width: CGFloat = 360
     ) -> PlatformImage? {

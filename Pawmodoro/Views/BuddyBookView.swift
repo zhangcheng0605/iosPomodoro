@@ -13,11 +13,16 @@ struct BuddyBookSheet: View {
 
     private var name: String { engine.settings.displayName(for: buddy) }
 
+    /// Read here, where there *is* an engine, and handed to the card.
+    private var firstSession: Date? {
+        engine.log.records.first { $0.buddy == buddy.rawValue }?.endedAt
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    PapersCard(buddy: buddy)
+                    PapersCard(buddy: buddy, name: name, firstSession: firstSession)
 
                     Button {
                         sharingPapers = true
@@ -42,7 +47,7 @@ struct BuddyBookSheet: View {
             }
             .sheet(isPresented: $sharingPapers) {
                 ShareableCardSheet(title: "\(name)'s papers") {
-                    PapersCard(buddy: buddy)
+                    PapersCard(buddy: buddy, name: name, firstSession: firstSession)
                 }
             }
         }
@@ -141,10 +146,18 @@ struct BuddyBookSheet: View {
 /// exportable. Soot's say what only hers can.
 struct PapersCard: View {
     let buddy: Buddy
-
-    @Environment(TimerEngine.self) private var engine
-
-    private var name: String { engine.settings.displayName(for: buddy) }
+    /// Passed in, never read from the environment.
+    ///
+    /// This card is handed to `ImageRenderer` by the share sheet, and a
+    /// renderer lays its content out in a *fresh* environment — one where
+    /// `TimerEngine` was never installed. Reading `@Environment(TimerEngine.self)`
+    /// here therefore trapped inside the environment getter and took the whole
+    /// process down the moment anybody tapped "Share the papers". Both call
+    /// sites already know the name.
+    let name: String
+    /// The first session ever finished with this buddy, for the same reason:
+    /// the renderer has no engine to ask.
+    let firstSession: Date?
 
     var body: some View {
         VStack(spacing: 10) {
@@ -195,9 +208,8 @@ struct PapersCard: View {
             return "Arrived on her own recognizance. Twelve days in the hedge. "
                 + "Stays because she decided to."
         }
-        let first = engine.log.records.first { $0.buddy == buddy.rawValue }
-        if let first {
-            let day = first.endedAt.formatted(.dateTime.month(.wide).day().year())
+        if let firstSession {
+            let day = firstSession.formatted(.dateTime.month(.wide).day().year())
             return "First session together: \(day). "
                 + "Home turf: \(buddy.homePlace.name)."
         }

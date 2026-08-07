@@ -127,6 +127,17 @@ struct TimerRingView: View {
                 Text(engine.remainingText)
                     .font(.system(size: 56, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    // A countdown is always "25:00" — five glyphs, and 56pt is
+                    // sized for exactly that. A *drift* counts up and grows an
+                    // hours field at sixty minutes, and "1:16:05" is seven: it
+                    // wrapped onto a second line, ran to the rim of the face
+                    // and pushed the status line out from under it. One line,
+                    // shrunk only as far as it has to be — a string that fits
+                    // is never touched, so the ordinary countdown is drawn at
+                    // 56pt exactly as before. The floor is generous enough for
+                    // "99:59:59", which is more drift than anybody will sit.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .foregroundStyle(Theme.bark)
                     .contentTransition(.numericText())
 

@@ -47,7 +47,19 @@ struct HomesteadView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.6))
 
-            wood
+            if isBare {
+                bareGround
+            } else {
+                wood
+
+                // Under the wood, never over it. See `nextLine`.
+                if let line = nextLine {
+                    Text(line)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.bark.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
 
             if let line = residentLine {
                 Text(line)
@@ -85,6 +97,38 @@ struct HomesteadView: View {
 
     // MARK: The scene
 
+    /// Nothing has arrived yet — no tree, no neighbour, no den. Its own state
+    /// rather than a wood with zero things in it, because `HomesteadScene`
+    /// draws its own ground and an empty one is a 180pt slab of `Theme.surface`
+    /// with nothing on it, which reads as art that failed to load rather than
+    /// as ground nobody has planted.
+    ///
+    /// Deliberately checks the residents and the den too: fifteen short
+    /// sessions settle the pond before a single hour has been banked, and a
+    /// pond alone is not a bare homestead.
+    private var isBare: Bool {
+        trees.isEmpty && residents.isEmpty && den == nil
+    }
+
+    /// The empty homestead: the same card, shorter, saying what it is.
+    ///
+    /// Short on purpose — a full-height frame promises a picture, and there
+    /// isn't one yet. The caption above already says how a tree arrives, so
+    /// this only has to name the state.
+    private var bareGround: some View {
+        Text("Open ground. Nothing planted here yet.")
+            .font(.footnote)
+            .foregroundStyle(Theme.bark.opacity(0.6))
+            .frame(maxWidth: .infinity)
+            .frame(height: 96)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Theme.surface.opacity(0.55))
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
+    }
+
     private var wood: some View {
         HomesteadScene(trees: trees, residents: residents, den: den,
                        dayPart: dayPart, buddy: engine.settings.buddy)
@@ -95,14 +139,6 @@ struct HomesteadView: View {
                 .fill(Theme.surface.opacity(0.55))
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(alignment: .bottomTrailing) {
-            if let line = nextLine {
-                Text(line)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.bark.opacity(0.45))
-                    .padding(8)
-            }
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -110,6 +146,15 @@ struct HomesteadView: View {
     /// Deliberately an observation rather than a countdown. "38 minutes to
     /// your next tree" is a target; "the next one is about 38 minutes away" is
     /// a fact about a wood.
+    ///
+    /// It used to sit in the card's bottom-right corner, and that corner is
+    /// not empty: the trees run to y 0.97 and the old well stands at
+    /// (0.91, 0.97). At a hundred and nineteen trees the sentence ran straight
+    /// through the bench and the well — neither the words nor the sprites
+    /// readable, and no backing could have fixed it, because a capsule big
+    /// enough to carry the text is a capsule big enough to bury the well.
+    /// Same bug the residents had, and the wood always wins the same way: it
+    /// is a picture, so the words go underneath it.
     private var nextLine: String? {
         guard !trees.isEmpty,
               let remaining = Grove.minutesToNextTree(from: minutes)

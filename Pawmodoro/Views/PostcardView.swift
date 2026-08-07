@@ -13,6 +13,7 @@ struct PostcardView: View {
     var width: CGFloat = 320
 
     private var scale: CGFloat { width / 320 }
+    private var pictureHeight: CGFloat { 168 * scale }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,12 +50,10 @@ struct PostcardView: View {
     /// which is what a tower is at that distance anyway.
     private var bellTowerPicture: some View {
         ZStack(alignment: .bottom) {
-            Image(card.resolvedPlace.assetName(for: card.resolvedDayPart))
-                .interpolation(.none)
-                .resizable()
-                .scaledToFill()
-                .frame(width: width, height: 168 * scale)
-                .clipped()
+            sceneImage(
+                card.resolvedPlace.assetName(for: card.resolvedDayPart),
+                feet: 8 * scale
+            )
 
             // High enough that the buddy stands *under* the arch rather than
             // in front of it — the card is called "beneath a bell tower" and
@@ -74,7 +73,7 @@ struct PostcardView: View {
             }
             .padding(8 * scale)
         }
-        .frame(width: width, height: 168 * scale)
+        .frame(width: width, height: pictureHeight)
     }
 
     /// The hundred-hour card: the whole wood, wide, with the buddy standing in
@@ -100,7 +99,7 @@ struct PostcardView: View {
                 buddy: card.resolvedBuddy,
                 animated: false
             )
-            .frame(width: width, height: 168 * scale)
+            .frame(width: width, height: pictureHeight)
 
             BuddySprite(buddy: card.resolvedBuddy, sleeping: false, size: 48 * scale)
                 .offset(y: -6 * scale)
@@ -114,17 +113,15 @@ struct PostcardView: View {
             }
             .padding(8 * scale)
         }
-        .frame(width: width, height: 168 * scale)
+        .frame(width: width, height: pictureHeight)
     }
 
     private var placePicture: some View {
         ZStack(alignment: .bottom) {
-            Image(card.resolvedPlace.assetName(for: card.resolvedDayPart))
-                .interpolation(.none)
-                .resizable()
-                .scaledToFill()
-                .frame(width: width, height: 168 * scale)
-                .clipped()
+            sceneImage(
+                card.resolvedPlace.assetName(for: card.resolvedDayPart),
+                feet: 10 * scale
+            )
 
             BuddySprite(buddy: card.resolvedBuddy, sleeping: false, size: 56 * scale)
                 .offset(y: -10 * scale)
@@ -139,7 +136,63 @@ struct PostcardView: View {
             }
             .padding(8 * scale)
         }
-        .frame(width: width, height: 168 * scale)
+        .frame(width: width, height: pictureHeight)
+    }
+
+    // MARK: The place, cropped to the part of it worth posting
+
+    /// The scene art, cropped so the card shows the *place* rather than the
+    /// sky above it.
+    ///
+    /// A scene is painted phone-shaped — 396×858 — and a card's picture is
+    /// 320×168, so most of the painting has to go. `scaledToFill` throws away
+    /// the top and the bottom equally, and the middle band of every scene in
+    /// this app is sky: all eight places came out as the same wash of blue
+    /// with a ridge in it and the buddy hanging above nothing. At the album's
+    /// two-hundred-card cap that is two hundred cards nobody can tell apart,
+    /// which is how this was reported — a count with a wall of blanks under
+    /// it. The count was right; the pictures were the bug.
+    ///
+    /// So the crop is anchored rather than centred, on the one line the app
+    /// already agrees about: `Stray.groundLine`, the fraction of the artwork
+    /// a creature standing in it has its feet on. Put that line under the
+    /// buddy's feet and the window fills with the horizon, the ground, and
+    /// whatever the place has built on it — the cottage, the pines, the
+    /// harbour's island, Cloudspire hanging in the air.
+    ///
+    /// `feet` is how far the buddy's soles sit above the bottom edge, which
+    /// differs per card because the bell tower stands the buddy slightly
+    /// higher. Everything else about the crop is the same for all of them.
+    private func sceneImage(_ name: String, feet: CGFloat) -> some View {
+        // The whole painting, drawn at the card's width.
+        let full = width * Self.sceneAspect(name)
+        // Where the visible window starts. Clamped, so art that is ever
+        // exported closer to square cannot slide the window off either end.
+        let top = min(
+            max(0, CGFloat(Stray.groundLine) * full - pictureHeight + feet),
+            max(0, full - pictureHeight)
+        )
+        return Image(name)
+            .interpolation(.none)      // keep the pixel edges crisp
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: full)
+            .offset(y: -top)
+            .frame(width: width, height: pictureHeight, alignment: .top)
+            .clipped()
+    }
+
+    /// How tall the scene art is for its width — measured, not written down.
+    ///
+    /// The scenes are generated by `tools/generate_scenes.py`; re-exporting
+    /// them at another size with the number hard-coded here would slide every
+    /// postcard quietly off the ground, and nothing in the toolchain looks at
+    /// this. The fallback is the shape that generator exports today.
+    private static func sceneAspect(_ name: String) -> CGFloat {
+        guard let art = PlatformImage.asset(name), art.size.width > 0 else {
+            return 858.0 / 396.0
+        }
+        return art.size.height / art.size.width
     }
 
     private var stamp: some View {

@@ -34,7 +34,10 @@ phase carries an **As built** section. The fourth plan,
 timetabled places, one-shot photos, star stories, pale coats), is now **also
 written end to end on Linux** — both waves await their first Mac build and
 walk together; expect a handful of type-checker errors, per the usual
-Linux-blind odds. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
+Linux-blind odds. A fifth plan, `docs/KEEPSAKE_PLAN.md` (season letters, a
+yearly recap, share-as-image, the home-screen widget, haiku, the buddy
+book), is drafted and not yet built. The earlier two plans are **both
+built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
 seen running, D (Live Activity) written but needing a one-time Xcode target
 step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
 covers content and its build order is finished except alternate app icons. Each phase

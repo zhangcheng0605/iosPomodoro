@@ -113,5 +113,6 @@ struct PawmodoroLiveActivity: Widget {
 struct PawmodoroWidgetsBundle: WidgetBundle {
     var body: some Widget {
         PawmodoroLiveActivity()
+        PawmodoroHomeWidget()
     }
 }

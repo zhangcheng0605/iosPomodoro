@@ -709,6 +709,16 @@ final class TimerEngine {
         settings.save()
         ThemeManager.shared.theme = settings.theme
         HapticsDirector.shared.isEnabled = settings.hapticsEnabled
+        // The home-screen widget reads the buddy's identity from the App
+        // Group suite. Without the entitlement the write lands in a
+        // private container and the widget's cat fallback holds — so this
+        // is safe to run before the group is ever configured. Not in
+        // StorageKeys on purpose: it's a mirror, not state; the app never
+        // reads it back.
+        if let suite = UserDefaults(suiteName: "group.com.pawmodoro") {
+            suite.set(settings.buddy.rawValue, forKey: "widget.buddy")
+            suite.set(settings.place.rawValue, forKey: "widget.place")
+        }
         if runState == .idle {
             remaining = phaseDuration
         }

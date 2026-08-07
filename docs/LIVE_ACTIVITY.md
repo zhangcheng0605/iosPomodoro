@@ -17,6 +17,18 @@
 > tick `PawmodoroActivityAttributes.swift` for both targets.** Five minutes
 > rather than forty-five. The app builds and runs right now without any of it —
 > `Activity.request` simply returns nil with no extension present.
+>
+> **The same step now also ships the home-screen buddy** (keepsake plan,
+> Phase AL). When you drag files into the target, include
+> `PawmodoroWidgets/PawmodoroHomeWidget.swift` and the
+> `PawmodoroWidgets/Assets.xcassets` catalog beside it (buddy sprites,
+> copied byte-for-byte by `tools/generate_widget_assets.py`, plus the
+> December night-cap). No further wiring: the widget is a pure function
+> of the wall clock, reads the buddy's identity from the
+> `group.com.pawmodoro` App Group *if you add one* (both targets →
+> Signing & Capabilities → App Groups), and falls back to the cat
+> without it. The App Group is optional in v1 — skip it and everything
+> still works, just always as the cat.
 
 
 A running Pomodoro on the lock screen is the single best remaining feature for

@@ -310,6 +310,34 @@ struct BuddyView: View {
                     }
                     .transition(.opacity)
                 }
+
+                // The weekend request: a note in mind, waiting to be
+                // granted. Off-hours only, like every chip.
+                if let request = weekendRequest {
+                    Button {
+                        engine.acceptSaturdayRequest()
+                        HapticsDirector.shared.detent()
+                        say("\(request.title), then — stamped into the setlist", for: 5)
+                    } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Theme.cream.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Theme.bark.opacity(0.14), lineWidth: 1)
+                                )
+                            Image(systemName: "music.note")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Theme.blossom)
+                        }
+                        .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                    .accessibilityLabel(
+                        "Grant \(name)'s request: \(request.title)"
+                    )
+                }
             }
             .animation(.easeInOut, value: isNapping)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: strayIsAlongside)
@@ -815,6 +843,14 @@ struct BuddyView: View {
             && !(buddy.isNocturnal && dayPart == .night)
     }
 
+    /// This week's request, when it's grantable: weekends, off-hours, and
+    /// not while the buddy is under the blanket.
+    private var weekendRequest: MusicTrack? {
+        guard !(engine.isRunning && !engine.phase.isBreak) else { return nil }
+        guard !isTuckedAsleep else { return nil }
+        return engine.saturdayRequest
+    }
+
     /// The blanket is offered while idle, in the buddy's own bedtime window,
     /// once per day.
     private var showsTuckChip: Bool {
@@ -1078,6 +1114,10 @@ struct BuddyView: View {
             // to *do*, and it teaches the drag without a tutorial.
             if let snack = sillSnack {
                 return "there's \(snack.label) on the sill — slide it over"
+            }
+            // The weekend request, when nothing else is asking.
+            if let request = weekendRequest {
+                return "\(name) has a request — \(request.title)"
             }
             // A preset nobody remarks on is a settings change; one the cat
             // notices is a decision about the afternoon. Classic is the

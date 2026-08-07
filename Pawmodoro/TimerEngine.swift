@@ -100,6 +100,8 @@ final class TimerEngine {
     let timetable: Timetable
     /// One photograph a day, developing overnight.
     let photos: PhotoAlbum
+    /// The weekend requests, stamped as they're granted.
+    let setlist: SetlistBox
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -152,7 +154,8 @@ final class TimerEngine {
         travels: Travels = Travels(),
         garden: Garden = Garden(),
         timetable: Timetable = Timetable(),
-        photos: PhotoAlbum = PhotoAlbum()
+        photos: PhotoAlbum = PhotoAlbum(),
+        setlist: SetlistBox = SetlistBox()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -173,6 +176,7 @@ final class TimerEngine {
         self.garden = garden
         self.timetable = timetable
         self.photos = photos
+        self.setlist = setlist
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -373,6 +377,37 @@ final class TimerEngine {
     func claimArrivedLetter() -> Letter? {
         defer { arrivedLetter = nil }
         return arrivedLetter
+    }
+
+    // MARK: The weekend request
+
+    /// What the buddy would like to hear, if it's the weekend and this
+    /// week's request hasn't been granted yet. `-PawmodoroSet` bypasses the
+    /// calendar, because waiting for Saturday is not a way to check a chip.
+    var saturdayRequest: MusicTrack? {
+        if let forced = LaunchOptions.forcedSet {
+            let track = MusicCatalog.track(id: forced)
+            return track.flatMap { setlist.hasStamped($0.id) ? nil : $0 }
+        }
+        guard Calendar.current.isDateInWeekend(Date()) else { return nil }
+        let hasPlus = storeHasPlus || LaunchOptions.unlockMusic
+        let unlocked = MusicCatalog.tracks.filter {
+            isUnlocked($0.gate, hasPlus: hasPlus)
+        }
+        let week = Calendar.current.component(.weekOfYear, from: Date())
+            &+ Calendar.current.component(.yearForWeekOfYear, from: Date()) &* 60
+        guard let track = setlist.request(week: week, from: unlocked) else {
+            return nil
+        }
+        return setlist.hasStamped(track.id) ? nil : track
+    }
+
+    /// Grant it: the track is cued for the next run and stamped forever.
+    func acceptSaturdayRequest() {
+        guard let track = saturdayRequest else { return }
+        settings.music = track.id
+        setlist.stamp(track.id)
+        settingsDidChange()
     }
 
     // MARK: The camera

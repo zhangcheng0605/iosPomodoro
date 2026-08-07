@@ -28,6 +28,7 @@ struct StatsView: View {
                     MailboxView()
                     PhotoShelfView()
                     TimetableView()
+                    SetlistView()
                     FortuneShelf()
                 }
                 .padding()

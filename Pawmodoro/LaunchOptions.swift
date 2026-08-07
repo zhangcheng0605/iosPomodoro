@@ -54,12 +54,14 @@ enum StorageKeys {
     static let timetable = "pawmodoro.timetable"
     /// The photographs: parameter records, and the day of the last shot.
     static let photos = "pawmodoro.photos"
+    /// Tracks played by weekend request, with their stamp dates.
+    static let setlist = "pawmodoro.setlist"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown, fortunes, travels, garden, timetable, photos,
+        nightKnown, fortunes, travels, garden, timetable, photos, setlist,
     ]
 }
 
@@ -393,6 +395,13 @@ enum LaunchOptions {
 
     /// Today's photograph renders immediately instead of overnight.
     static let developNow = isSet("-PawmodoroDevelop")
+
+    /// The weekend request, on any day, for a given track:
+    /// `-PawmodoroSet kettle_song`.
+    static let forcedSet: String? = {
+        guard arguments.contains("-PawmodoroSet") else { return nil }
+        return value(after: "-PawmodoroSet")
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -435,6 +444,7 @@ enum LaunchOptions {
     static let forceBloom = false
     static let regrantPhoto = false
     static let developNow = false
+    static let forcedSet: String? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

@@ -102,13 +102,17 @@ struct SettingsView: View {
                     Toggle("Breathing ring on breaks", isOn: $engine.settings.breatheOnBreaks)
                     Toggle("Settle in before focus", isOn: $engine.settings.settleInBeforeFocus)
                     Toggle("Lock screen countdown", isOn: $engine.settings.liveActivityEnabled)
+                    Toggle("Golden hour call", isOn: $engine.settings.goldenHourCall)
                 } header: {
                     Text("Behaviour")
                 } footer: {
                     Text("Settling in takes three slow breaths before the "
                          + "countdown starts. Tap anywhere to skip it. The lock "
                          + "screen countdown is drawn by the system, so it costs "
-                         + "no battery.")
+                         + "no battery. The golden hour call is at most one "
+                         + "quiet notification a day, when the light is good "
+                         + "and the camera hasn't been used — letting it pass "
+                         + "costs nothing, and is never mentioned.")
                 }
 
                 plusSection

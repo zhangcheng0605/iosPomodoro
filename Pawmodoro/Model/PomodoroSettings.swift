@@ -34,6 +34,11 @@ struct PomodoroSettings: Codable, Equatable {
     /// default — it costs nothing (the system draws it from an end date) and
     /// it is the whole point of having built it.
     var liveActivityEnabled: Bool = true
+    /// One quiet notification a day, at a good-light minute, only on days
+    /// the camera's shot is still unspent. Off by default: it is the only
+    /// feature in five waves that invites an open, which is exactly why it
+    /// asks first.
+    var goldenHourCall: Bool = false
 
     init() {}
 
@@ -42,7 +47,7 @@ struct PomodoroSettings: Codable, Equatable {
         case hapticsEnabled, autoStartNextPhase, buddy, ambience, theme
         case breatheOnBreaks, place, buddyNames
         case music, musicVolume, ambienceVolume, radioMode, settleInBeforeFocus
-        case liveActivityEnabled
+        case liveActivityEnabled, goldenHourCall
     }
 
     /// Decode leniently: settings saved by an earlier version of the app are
@@ -88,6 +93,9 @@ struct PomodoroSettings: Codable, Equatable {
         liveActivityEnabled = try container.decodeIfPresent(
             Bool.self, forKey: .liveActivityEnabled
         ) ?? fallback.liveActivityEnabled
+        goldenHourCall = try container.decodeIfPresent(
+            Bool.self, forKey: .goldenHourCall
+        ) ?? fallback.goldenHourCall
     }
 
     // MARK: Naming

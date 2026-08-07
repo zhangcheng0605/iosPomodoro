@@ -445,6 +445,10 @@ enum LaunchOptions {
     /// Frost the pane now, any season, any hour — and skip the
     /// mid-morning melt, so there's time to wipe it.
     static let frostNow = isSet("-PawmodoroFrost")
+
+    /// Arm the golden hour call ~10 seconds out, ignoring the window and
+    /// the shot — background the app (Cmd+Shift+H) to see the banner.
+    static let goldenHourSoon = isSet("-PawmodoroGoldenHour")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -496,6 +500,7 @@ enum LaunchOptions {
     static let openBench = false
     static let seedAnthology = false
     static let frostNow = false
+    static let goldenHourSoon = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

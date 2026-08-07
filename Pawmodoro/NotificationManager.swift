@@ -48,4 +48,48 @@ final class NotificationManager {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [phaseEndIdentifier])
     }
+
+    // MARK: The golden hour call
+
+    private let goldenHourIdentifier = "pawmodoro.goldenHour"
+
+    /// BeReal's whole company was one notification: *now is the moment.*
+    /// This is that, opted into and aimed at the camera — one a day at
+    /// most, no sound, replaced wholesale each time it's re-armed, and
+    /// never with the same wording two days running (the template index
+    /// rotates with the day). Letting the minute pass costs nothing and
+    /// is never mentioned anywhere.
+    func scheduleGoldenHour(
+        at date: Date, place: String, buddyName: String, template: Int
+    ) {
+        cancelGoldenHour()
+        let interval = date.timeIntervalSinceNow
+        guard interval > 0 else { return }
+
+        let bodies = [
+            "The light at \(place) is about to do something. Bring the camera.",
+            "\(buddyName) is watching the sky over \(place). The camera's still loaded.",
+            "Good light coming to \(place). One shot, whenever you like.",
+        ]
+        let content = UNMutableNotificationContent()
+        content.title = "Golden hour"
+        content.body = bodies[abs(template) % bodies.count]
+        // Deliberately silent: a lighting tip should not chime.
+
+        let request = UNNotificationRequest(
+            identifier: goldenHourIdentifier,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(
+                timeInterval: interval, repeats: false
+            )
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Taking the photo, turning the setting off, or the shot already
+    /// being spent all land here.
+    func cancelGoldenHour() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [goldenHourIdentifier])
+    }
 }

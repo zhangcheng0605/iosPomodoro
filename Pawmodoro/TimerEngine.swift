@@ -309,6 +309,7 @@ final class TimerEngine {
                 forcedTrickPreview = (trick, tier)
             }
         }
+        armGoldenHour()
     }
 
     /// Set by `-PawmodoroTrick`, played by `BuddyView` shortly after launch —
@@ -458,7 +459,59 @@ final class TimerEngine {
             )
         ))
         HapticsDirector.shared.detent()
+        // The shot is spent, so the day's call has nothing left to say.
+        NotificationManager.shared.cancelGoldenHour()
         return true
+    }
+
+    // MARK: The golden hour call
+
+    /// Arm (or clear) the day's one invitation. Runs on launch, on every
+    /// foregrounding and on every settings change, replacing whatever was
+    /// pending — so the pending state always reflects the current truth:
+    /// opted in, shot unspent, window still ahead.
+    ///
+    /// The minute is hash-picked inside the day's best light — dusk, or
+    /// dawn for a demonstrated morning person, the fortune's mirror trick
+    /// aimed at the camera. If today's window has already passed, nothing
+    /// is scheduled and tomorrow's foreground pass gets its turn: the
+    /// call never rolls over, because an invitation kept overnight is a
+    /// reminder, and reminders are the thing this app does not send.
+    private func armGoldenHour(now: Date = Date()) {
+        guard settings.goldenHourCall else {
+            NotificationManager.shared.cancelGoldenHour()
+            return
+        }
+        NotificationManager.shared.requestPermissionIfNeeded()
+        let day = Snack.dayNumber(for: now)
+        if LaunchOptions.goldenHourSoon {
+            NotificationManager.shared.scheduleGoldenHour(
+                at: now.addingTimeInterval(10), place: settings.place.name,
+                buddyName: buddyName, template: day % 3
+            )
+            return
+        }
+        guard photos.shotAvailable(on: now) else {
+            NotificationManager.shared.cancelGoldenHour()
+            return
+        }
+        // Dusk 17–21 by default; dawn 6–8 when the log shows a morning
+        // person. The same band read the fortune slip uses.
+        let window: (startHour: Int, minutes: Int) =
+            FortuneTeller.bestBand(log: log) == .morning ? (6, 120) : (17, 240)
+        let minute = Doorstep.stableHash("golden.\(day)") % window.minutes
+        guard let windowStart = Calendar.current.date(
+            bySettingHour: window.startHour, minute: 0, second: 0, of: now
+        ) else { return }
+        let fireAt = windowStart.addingTimeInterval(TimeInterval(minute) * 60)
+        guard fireAt > now else {
+            NotificationManager.shared.cancelGoldenHour()
+            return
+        }
+        NotificationManager.shared.scheduleGoldenHour(
+            at: fireAt, place: settings.place.name,
+            buddyName: buddyName, template: day % 3
+        )
     }
 
     // MARK: The window-box
@@ -697,6 +750,7 @@ final class TimerEngine {
         resolveJourneys()
         tendGarden()
         chronicle.check(log: log, journal: journal, travels: travels, photos: photos)
+        armGoldenHour()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {
@@ -726,6 +780,8 @@ final class TimerEngine {
         // straight home when called, letter and all.
         resolveJourneys()
         refreshAmbience()
+        // The toggle acts immediately, in both directions.
+        armGoldenHour()
     }
 
     /// Falls back to the free content if Pawmodoro Plus isn't (or is no longer)

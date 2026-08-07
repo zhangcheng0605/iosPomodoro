@@ -131,11 +131,13 @@ final class FortuneTeller {
         )
     }
 
-    private enum Band { case morning, afternoon, evening }
+    enum Band { case morning, afternoon, evening }
 
     /// Which third of the day holds the most finished sessions — nil until
     /// the log has enough to say anything (an empty oracle stays quiet).
-    private static func bestBand(log: SessionLog) -> Band? {
+    /// Internal rather than private because the golden hour call aims by
+    /// the same mirror: a demonstrated morning person gets dawn light.
+    static func bestBand(log: SessionLog) -> Band? {
         guard log.records.count >= 8 else { return nil }
         let calendar = Calendar.current
         var counts: [Band: Int] = [.morning: 0, .afternoon: 0, .evening: 0]

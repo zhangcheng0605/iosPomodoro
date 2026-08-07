@@ -65,6 +65,10 @@ struct SceneToyView: View {
     let enabled: Bool
     let tint: Color
     let accent: Color
+    /// Called when a finished stroke reads as a trick cue. The toys still
+    /// played along the way — a circle drawn on water also rippled, which is
+    /// half the charm of teaching the spin at the Harbor.
+    var onTrick: (Trick) -> Void = { _ in }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -72,6 +76,9 @@ struct SceneToyView: View {
     @State private var seed = 0
     @State private var firefly: Firefly?
     @State private var lastRipple = Date.distantPast
+    /// The stroke in progress, for the cue reader. Capped so an idle drag
+    /// can't grow an unbounded array.
+    @State private var stroke: [CGPoint] = []
 
     /// How long she takes to dim out after being let go. Shared by the fade
     /// maths and the reaper, so the canvas unmounts exactly when she vanishes.
@@ -122,6 +129,9 @@ struct SceneToyView: View {
                 // Tracked first and unconditionally: the eyes follow a finger
                 // even in a place with nothing to stir.
                 TouchTracker.shared.x = value.location.x / max(size.width, 1)
+                if stroke.count < 600 {
+                    stroke.append(value.location)
+                }
                 switch activeToy {
                 case .firefly:
                     follow(value.location)
@@ -137,6 +147,11 @@ struct SceneToyView: View {
             }
             .onEnded { value in
                 TouchTracker.shared.x = nil
+                // A finished stroke might have been a cue all along.
+                if let trick = StrokeReader.trick(from: stroke) {
+                    onTrick(trick)
+                }
+                stroke = []
                 let travel = hypot(value.translation.width, value.translation.height)
                 switch activeToy {
                 case .water where travel > 40:

@@ -77,6 +77,7 @@ final class TimerEngine {
     let tuckIn: TuckIn
     let doorstep: Doorstep
     let drawer: KeepsakeDrawer
+    let repertoire: Repertoire
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -96,7 +97,8 @@ final class TimerEngine {
         fives: FiveCounter = FiveCounter(),
         tuckIn: TuckIn = TuckIn(),
         doorstep: Doorstep = Doorstep(),
-        drawer: KeepsakeDrawer = KeepsakeDrawer()
+        drawer: KeepsakeDrawer = KeepsakeDrawer(),
+        repertoire: Repertoire = Repertoire()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -110,6 +112,7 @@ final class TimerEngine {
         self.tuckIn = tuckIn
         self.doorstep = doorstep
         self.drawer = drawer
+        self.repertoire = repertoire
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -162,6 +165,30 @@ final class TimerEngine {
         if LaunchOptions.fillDrawer {
             drawer.fillForDebug()
         }
+        // Whatever was practiced before today has been slept on.
+        repertoire.consolidate()
+        if let forced = LaunchOptions.forcedTrick {
+            let parts = forced.split(separator: ".").map(String.init)
+            if let first = parts.first, let trick = Trick(rawValue: first) {
+                let tier = parts.count > 1 ? Int(parts[1]) ?? 0 : 0
+                repertoire.seedForDebug(trick, tier: tier, buddy: self.settings.buddy)
+                forcedTrickPreview = (trick, tier)
+            }
+        }
+    }
+
+    /// Set by `-PawmodoroTrick`, played by `BuddyView` shortly after launch —
+    /// drawing a clean circle through the simulator pane's input latency is
+    /// exactly the class of gesture the walk table calls unverifiable.
+    @ObservationIgnored var forcedTrickPreview: (trick: Trick, tier: Int)?
+
+    /// A drawn cue landed on the scene. The bond gates the vocabulary — a
+    /// slot not yet open simply doesn't answer, which is indistinguishable
+    /// from not having found the cue, so nothing ever reads as refused.
+    func cueTrick(_ trick: Trick) {
+        guard runState != .running || phase.isBreak else { return }
+        guard bond >= trick.requiredBond else { return }
+        repertoire.cue(trick, buddy: settings.buddy)
     }
 
     // MARK: Derived values
@@ -301,6 +328,7 @@ final class TimerEngine {
         doorstep.arrive(
             place: settings.place, buddy: settings.buddy, season: Season.current()
         )
+        repertoire.consolidate()
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {

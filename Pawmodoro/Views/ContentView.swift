@@ -290,7 +290,8 @@ struct ContentView: View {
                 toy: engine.settings.place.toy(at: part),
                 enabled: !(engine.isRunning && !engine.phase.isBreak),
                 tint: Theme.bark,
-                accent: Theme.blossom
+                accent: Theme.blossom,
+                onTrick: { engine.cueTrick($0) }
             )
         }
     }

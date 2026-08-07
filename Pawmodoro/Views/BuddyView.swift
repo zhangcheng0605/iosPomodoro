@@ -27,6 +27,11 @@ struct BuddyView: View {
     /// The rare leaf hello: shown at the feet, never banked — the gesture
     /// is the gift.
     @State private var helloLeaf = false
+    /// The trick machinery: a horizontal mirror scale (a flip through zero
+    /// width reads as a paper-doll turn, and never breaks the pixel grid the
+    /// way rotation would) and a travel offset for the leap.
+    @State private var trickScaleX: CGFloat = 1
+    @State private var trickOffset: CGSize = .zero
 
     private let spriteSize: CGFloat = 104
 
@@ -124,6 +129,8 @@ struct BuddyView: View {
 
                 ZStack {
                     sprite
+                        .scaleEffect(x: trickScaleX, y: 1)
+                        .offset(trickOffset)
                         .offset(helloOffset)
                         .contentShape(Rectangle())
                         .gesture(petGesture)
@@ -302,10 +309,33 @@ struct BuddyView: View {
                 animator.play(.waking, for: buddy)
             }
             openFiveWindow()
+            // A mastered trick joins the celebration — once the stretch and
+            // the paw have had their moment.
+            if let trick = engine.repertoire.celebrationTrick(
+                for: buddy, day: Snack.dayNumber(for: Date())
+            ) {
+                Task {
+                    try? await Task.sleep(nanoseconds: 6_200_000_000)
+                    if engine.runState == .idle {
+                        engine.repertoire.showOff(trick, tier: Repertoire.masteredTier)
+                    }
+                }
+            }
+        }
+        .onChange(of: engine.repertoire.attempt) { _, attempt in
+            guard let attempt else { return }
+            performTrick(attempt)
         }
         .task {
             playHello()
             revealMorningIfDue()
+            // `-PawmodoroTrick spin.2`: play the pinned trick soon after
+            // launch, because the pane can't draw a clean circle.
+            if let preview = engine.forcedTrickPreview {
+                engine.forcedTrickPreview = nil
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                engine.repertoire.showOff(preview.trick, tier: preview.tier)
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             // The blanket's thank-you and the doorstep can only arrive on
@@ -445,6 +475,91 @@ struct BuddyView: View {
         }
         say("\(burr.label) from yesterday, off with a shake — "
             + "\(name) hadn't noticed and does not care", for: 5)
+    }
+
+    // MARK: Tricks
+
+    /// Perform whatever the repertoire put on stage: the caption tells the
+    /// truth about the tier, the body does its best.
+    private func performTrick(_ attempt: Repertoire.Attempt) {
+        let line = attempt.trick.remark(tier: attempt.tier, name: name)
+        say(attempt.announcedGrowth
+            ? "practiced in dreams overnight — \(line)" : line, for: 5)
+        guard !reduceMotion else {
+            // The travel goes, the story stays.
+            engine.repertoire.clearAttempt()
+            return
+        }
+        Task {
+            switch attempt.trick {
+            case .spin: await performSpin(tier: attempt.tier)
+            case .leap: await performLeap(tier: attempt.tier)
+            }
+            engine.repertoire.clearAttempt()
+        }
+    }
+
+    /// The spin: mirror-flips through zero width, which reads as a
+    /// paper-doll turn and keeps every pixel on the grid. Tier zero is one
+    /// slow half-hearted turn that resolves into a dignified sit.
+    private func performSpin(tier: Int) async {
+        let step = min(max(tier, 0), Repertoire.masteredTier)
+        let flips = [1, 2, 3, 4][step]
+        let beat = [0.42, 0.3, 0.24, 0.18][step]
+        for _ in 0..<flips {
+            withAnimation(.linear(duration: beat)) { trickScaleX = -1 }
+            try? await Task.sleep(nanoseconds: UInt64(beat * 1_000_000_000))
+            withAnimation(.linear(duration: beat)) { trickScaleX = 1 }
+            try? await Task.sleep(nanoseconds: UInt64(beat * 1_000_000_000))
+        }
+        if step == 0 {
+            withAnimation(.easeOut(duration: 0.18)) {
+                trickOffset = CGSize(width: 0, height: 4)
+            }
+            try? await Task.sleep(nanoseconds: 420_000_000)
+            withAnimation(.spring(duration: 0.4, bounce: 0.4)) {
+                trickOffset = .zero
+            }
+        }
+        if step >= Repertoire.masteredTier {
+            animator.play(.happy, for: buddy)
+            burstHearts(2)
+        }
+    }
+
+    /// The leap: crouch, arc, land, trot back. Higher tiers go higher and
+    /// farther; the mastered one turns over at the apex.
+    private func performLeap(tier: Int) async {
+        let step = min(max(tier, 0), Repertoire.masteredTier)
+        let height: [CGFloat] = [8, 20, 32, 42]
+        let span: [CGFloat] = [2, 14, 26, 38]
+        withAnimation(.easeIn(duration: 0.18)) {
+            trickOffset = CGSize(width: 0, height: 3)
+        }
+        try? await Task.sleep(nanoseconds: 220_000_000)
+        withAnimation(.easeOut(duration: 0.26)) {
+            trickOffset = CGSize(width: span[step] * 0.6, height: -height[step])
+        }
+        if step >= Repertoire.masteredTier {
+            withAnimation(.linear(duration: 0.26)) { trickScaleX = -1 }
+        }
+        try? await Task.sleep(nanoseconds: 280_000_000)
+        withAnimation(.easeIn(duration: 0.22)) {
+            // Tier zero comes down a pixel too hard. The ground disagrees.
+            trickOffset = CGSize(width: span[step], height: step == 0 ? 4 : 0)
+        }
+        if step >= Repertoire.masteredTier {
+            withAnimation(.linear(duration: 0.22)) { trickScaleX = 1 }
+        }
+        try? await Task.sleep(nanoseconds: 340_000_000)
+        withAnimation(.spring(duration: 0.5, bounce: 0.35)) {
+            trickOffset = .zero
+        }
+        try? await Task.sleep(nanoseconds: 420_000_000)
+        if step >= Repertoire.masteredTier {
+            animator.play(.happy, for: buddy)
+            burstHearts(2)
+        }
     }
 
     // MARK: The high five

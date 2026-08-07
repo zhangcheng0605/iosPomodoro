@@ -34,11 +34,13 @@ enum StorageKeys {
     static let doorstep = "pawmodoro.doorstep"
     /// Everything ever carried home, with its provenance.
     static let drawer = "pawmodoro.drawer"
+    /// Each buddy's trick tiers and unslept practice days.
+    static let repertoire = "pawmodoro.repertoire"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
-        doorstep, drawer,
+        doorstep, drawer, repertoire,
     ]
 }
 
@@ -305,6 +307,14 @@ enum LaunchOptions {
 
     /// One of every keepsake in the drawer, for looking at the grid.
     static let fillDrawer = isSet("-PawmodoroFillDrawer")
+
+    /// Pin a trick at a tier and play it shortly after launch, e.g.
+    /// `-PawmodoroTrick spin.2`. Drawing a clean circle through the
+    /// simulator pane's input latency is not a way to check an animation.
+    static let forcedTrick: String? = {
+        guard arguments.contains("-PawmodoroTrick") else { return nil }
+        return value(after: "-PawmodoroTrick")
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -335,6 +345,7 @@ enum LaunchOptions {
     static let forcedFind: String? = nil
     static let forcedBurr: String? = nil
     static let fillDrawer = false
+    static let forcedTrick: String? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

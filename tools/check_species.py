@@ -276,6 +276,28 @@ def main():
                 f"wild_{name}_regular exists, but a phenomenon is never an "
                 f"individual")
 
+        # The pale coat, on the same terms as the marked variant — and this
+        # one is here because it got through. `generate_pale_coats.py` was run
+        # once at 41 species and never again; the roster reached 81 and
+        # `TimerEngine.rollSighting` kept rolling the one-in-three-hundred
+        # coat for every one of them. Thirty-six animals had no pale sprite,
+        # so the rarest event in the app drew an empty rectangle and wrote it
+        # into the journal as if it had been seen. Nothing else could notice:
+        # the asset name is built by interpolation, so `check_swift.py` cannot
+        # resolve it, and the odds are long enough that testing would not have
+        # met one either.
+        for suffix in ("pale_0", "pale_1"):
+            exists = logical_size(f"wild_{name}_{suffix}") is not None
+            if not spec["isPhenomenon"] and not exists:
+                failures.append(
+                    f"wild_{name}_{suffix}: missing — every species that can "
+                    f"roll the pale coat needs one, or the sighting draws "
+                    f"nothing. Run tools/generate_pale_coats.py")
+            elif spec["isPhenomenon"] and exists:
+                failures.append(
+                    f"wild_{name}_{suffix} exists, but a rainbow has no coat "
+                    f"to pale")
+
         drawn = logical_size(f"wild_{name}_0")
         if drawn:
             laid_out = spec["size"][0] / spec["size"][1]

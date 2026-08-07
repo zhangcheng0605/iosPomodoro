@@ -19,10 +19,25 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import check_species
 import generate_wildlife as gw
 
-# A rainbow has no coat to pale.
-PHENOMENA = ("rainbow", "meteors", "aurora")
+
+def phenomena():
+    """Which species have no coat to pale, read out of `Species.swift`.
+
+    This was a hard-coded `("rainbow", "meteors", "aurora")` and it went stale
+    twice over. The roster grew from 41 species to 81 and this script was
+    never re-run, so 36 animals could roll the one-in-three-hundred pale coat
+    with no sprite to draw — an invisible animal on the rarest event in the
+    app. Four more phenomena shipped after the tuple was written, so a re-run
+    would have handed a moon-washed coat to a fogbow.
+
+    Asking the Swift is the fix for both: there is one list of what a
+    phenomenon is, and it is the one the app itself uses.
+    """
+    return {name for name, spec in check_species.parse_specs().items()
+            if spec["isPhenomenon"]}
 
 
 def pale(palette):
@@ -48,11 +63,14 @@ def pale(palette):
 
 
 if __name__ == "__main__":
+    skip = phenomena()
     print("Pale coats:")
+    drawn = 0
     for name, draw in gw.SPECIES.items():
-        if name in PHENOMENA:
+        if name in skip:
             continue
         coat = pale(gw.P[name])
         gw.to_png(draw(True), coat, f"wild_{name}_pale_0")
         gw.to_png(draw(False), coat, f"wild_{name}_pale_1")
-    print(f"  {len(gw.SPECIES) - len(PHENOMENA)} species, two frames each")
+        drawn += 1
+    print(f"  {drawn} species, two frames each ({len(skip)} phenomena skipped)")

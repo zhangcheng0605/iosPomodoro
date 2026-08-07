@@ -1141,6 +1141,7 @@ final class TimerEngine {
         stray.noticeIfReady(log: log)
 
         var seen: Species?
+        var sawPale = false
         if let sighting {
             seen = sighting.species
             journal.add(
@@ -1152,6 +1153,7 @@ final class TimerEngine {
             // checklist. Same rule as the countdown's completion path.
             if sighting.pale {
                 journal.addPaleSeen(sighting.species)
+                sawPale = true
             }
         }
         if let dream {
@@ -1184,7 +1186,8 @@ final class TimerEngine {
             completedFigure: figure,
             dreamed: dream,
             bondReached: bond,
-            driftLaps: banking.laps
+            driftLaps: banking.laps,
+            sawPale: sawPale
         )
         sighting = nil
         dream = nil
@@ -2117,6 +2120,7 @@ final class TimerEngine {
 
         var arrival: Place?
         var seen: Species?
+        var sawPale = false
         var figure: Constellation?
         var bond: Bond?
         if finished == .focus {
@@ -2164,6 +2168,7 @@ final class TimerEngine {
                 // never a checklist.
                 if sighting.pale {
                     journal.addPaleSeen(sighting.species)
+                    sawPale = true
                 }
             }
             // The session's warm epilogue: the world sets out one snack for
@@ -2234,7 +2239,8 @@ final class TimerEngine {
             saw: seen,
             completedFigure: figure,
             dreamed: finished == .focus ? dream : nil,
-            bondReached: bond
+            bondReached: bond,
+            sawPale: sawPale
         )
         sighting = nil
         dream = nil

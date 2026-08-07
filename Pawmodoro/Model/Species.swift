@@ -479,6 +479,11 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     var sketchAsset: String { "wild_\(rawValue)_sketch" }
     /// The marked variant, once this species has become an individual.
     var regularAsset: String { "wild_\(rawValue)_regular" }
+    /// The moon-washed coat, for the one sighting in three hundred that wears
+    /// it. Frame 0 in full colour rather than a sketch: the colour *is* the
+    /// event, and pressing it into sepia would take away the only thing that
+    /// made it different.
+    var paleAsset: String { "wild_\(rawValue)_pale_0" }
 
     // MARK: Regulars
 

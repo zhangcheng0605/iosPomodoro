@@ -25,6 +25,13 @@ struct PhaseCompletion: Identifiable, Equatable {
     /// How many laps an open hour ran for, or nil if this was a countdown.
     /// Nothing is compared against anything: the card says how long you sat.
     var driftLaps: Int?
+    /// Whether what you saw was wearing the moon-washed coat.
+    ///
+    /// The card was congratulating you with the ordinary animal — an everyday
+    /// brown stag on the one sighting in three hundred that was not one. The
+    /// journal remembers the pale coat forever; the moment it happened said
+    /// nothing about it.
+    var sawPale: Bool = false
 
     /// Only finishing focus earns confetti; breaks get a quieter beat, so the
     /// big moment stays rare enough to keep meaning something.

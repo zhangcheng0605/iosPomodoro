@@ -196,13 +196,24 @@ struct CelebrationView: View {
     /// whole reason the journal exists.
     @ViewBuilder
     private func sightingCard(_ seen: Species) -> some View {
-        Image(seen.sketchAsset)
+        // The pale coat gets its own drawing, in colour. The card used to
+        // congratulate you with the ordinary sepia sketch — an everyday brown
+        // stag on the one sighting in three hundred that had not been one —
+        // and the only place the moon-washed coat was ever acknowledged was a
+        // small star in the journal, found later, if you went looking.
+        Image(completion.sawPale ? seen.paleAsset : seen.sketchAsset)
             .interpolation(.none)
             .resizable()
             .scaledToFit()
             .frame(height: 46)
-        title("You saw a \(seen.name.lowercased())")
-        footnote(seen.note)
+        title(completion.sawPale
+              ? "A \(seen.name.lowercased()), in the pale coat"
+              : "You saw a \(seen.name.lowercased())")
+        // No odds and no count, here or anywhere: the journal marks it forever
+        // with a star and never says how lucky it was.
+        footnote(completion.sawPale
+                 ? "Every so often one comes through like this."
+                 : seen.note)
     }
 
     /// The rarest card of all — five of these in three hundred sessions.
@@ -296,6 +307,10 @@ struct CelebrationView: View {
     /// type checker — the view code around it was fine.
     private var cardAccessibilityLabel: String {
         if let seen = completion.saw {
+            if completion.sawPale {
+                return "You saw a \(seen.name), in the pale coat. "
+                    + "Every so often one comes through like this."
+            }
             return "You saw a \(seen.name). \(seen.note)"
         }
         if let bond = completion.bondReached {

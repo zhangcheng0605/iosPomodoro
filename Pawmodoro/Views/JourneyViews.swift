@@ -68,14 +68,17 @@ struct JourneyRoster: View {
     }
 }
 
-/// The mailbox: every letter that ever came home, newest first.
+/// The mailbox: every letter that ever came home, newest first — and the
+/// letters the seasons write, kept in the same drawer.
 struct MailboxView: View {
     @Environment(TimerEngine.self) private var engine
+    @State private var openSeasonLetter: SeasonLetter?
 
     private static let shown = 4
 
     var body: some View {
         let letters = Array(engine.travels.mailbox.suffix(Self.shown).reversed())
+        let seasonLetters = Array(engine.chronicle.letters.suffix(2).reversed())
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
@@ -102,10 +105,31 @@ struct MailboxView: View {
                     letterRow(letter)
                 }
             }
+
+            if !seasonLetters.isEmpty {
+                Text("FROM THE SEASONS")
+                    .font(.caption2.weight(.bold))
+                    .tracking(2)
+                    .foregroundStyle(Theme.bark.opacity(0.45))
+                    .padding(.top, 4)
+                ForEach(seasonLetters) { letter in
+                    Button {
+                        openSeasonLetter = letter
+                    } label: {
+                        LetterCard(letter: letter)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+        .sheet(item: $openSeasonLetter) { letter in
+            ShareableCardSheet(title: "A letter from \(letter.title.lowercased())") {
+                LetterCard(letter: letter)
+            }
+        }
     }
 
     private var awayLine: String {

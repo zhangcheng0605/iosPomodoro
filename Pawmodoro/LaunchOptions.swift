@@ -58,13 +58,15 @@ enum StorageKeys {
     static let setlist = "pawmodoro.setlist"
     /// Species once seen in the pale coat.
     static let paleCoats = "pawmodoro.paleCoats"
+    /// The season letters, and the year kept: the almanac's own records.
+    static let chronicle = "pawmodoro.chronicle"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
-        paleCoats,
+        paleCoats, chronicle,
     ]
 }
 
@@ -419,6 +421,17 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroVignette") else { return nil }
         return value(after: "-PawmodoroVignette").flatMap(Int.init) ?? 1
     }()
+
+    /// Compose a season's letter right now, e.g.
+    /// `-PawmodoroSeasonLetter autumn` — the honest wait is a season.
+    static let forcedSeasonLetter: String? = {
+        guard arguments.contains("-PawmodoroSeasonLetter") else { return nil }
+        return value(after: "-PawmodoroSeasonLetter") ?? "autumn"
+    }()
+
+    /// Present the anniversary sequence at launch — the honest wait
+    /// is a year.
+    static let forcedYearCard = isSet("-PawmodoroYearCard")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -465,6 +478,8 @@ enum LaunchOptions {
     static let paleCoat = false
     static let forceShower = false
     static let forcedVignette: Int? = nil
+    static let forcedSeasonLetter: String? = nil
+    static let forcedYearCard = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

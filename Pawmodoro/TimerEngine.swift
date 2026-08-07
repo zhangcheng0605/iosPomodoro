@@ -102,6 +102,8 @@ final class TimerEngine {
     let photos: PhotoAlbum
     /// The weekend requests, stamped as they're granted.
     let setlist: SetlistBox
+    /// The season letters, and the year kept: the almanac's own records.
+    let chronicle: Chronicle
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -155,7 +157,8 @@ final class TimerEngine {
         garden: Garden = Garden(),
         timetable: Timetable = Timetable(),
         photos: PhotoAlbum = PhotoAlbum(),
-        setlist: SetlistBox = SetlistBox()
+        setlist: SetlistBox = SetlistBox(),
+        chronicle: Chronicle = Chronicle()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -177,6 +180,7 @@ final class TimerEngine {
         self.timetable = timetable
         self.photos = photos
         self.setlist = setlist
+        self.chronicle = chronicle
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -274,6 +278,19 @@ final class TimerEngine {
         // The garden's standing effects: blooms press the bias seam, and a
         // carrying berrybush restocks a bare sill once a day.
         tendGarden()
+        // The almanac looks at the calendar: a season that turned while the
+        // app was closed gets its letter, and a completed year comes due.
+        chronicle.check(log: log, journal: journal, travels: travels, photos: photos)
+        if let raw = LaunchOptions.forcedSeasonLetter,
+           let season = Season(rawValue: raw) {
+            chronicle.composeForDebug(
+                season: season, log: log, journal: journal,
+                travels: travels, photos: photos
+            )
+        }
+        if LaunchOptions.forcedYearCard {
+            chronicle.forceYearForDebug()
+        }
         if let days = LaunchOptions.rememberDaysAgo {
             memories.forceForDebug(daysAgo: days, journal: journal)
         }
@@ -672,6 +689,7 @@ final class TimerEngine {
         memories.lookBack(log: log, journal: journal, stray: stray)
         resolveJourneys()
         tendGarden()
+        chronicle.check(log: log, journal: journal, travels: travels, photos: photos)
         guard runState == .running, let end = endDate else { return }
         remaining = max(0, end.timeIntervalSinceNow)
         if remaining <= 0 {

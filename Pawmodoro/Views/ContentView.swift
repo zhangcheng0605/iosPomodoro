@@ -187,6 +187,17 @@ struct ContentView: View {
             .fullScreenCover(isPresented: onboardingPresented) {
                 OnboardingView()
             }
+            // The year, kept: due from the day the anniversary rolls past,
+            // standing until seen — presented, never announced, so it
+            // cannot be missed.
+            .fullScreenCover(isPresented: Binding(
+                get: { engine.chronicle.yearDue != nil },
+                set: { if !$0 { engine.chronicle.yearPresented() } }
+            )) {
+                YearKeptView(years: engine.chronicle.yearDue ?? 1) {
+                    engine.chronicle.yearPresented()
+                }
+            }
             .onChange(of: engine.settings) { _, _ in
                 engine.settingsDidChange()
             }

@@ -462,6 +462,8 @@ struct BuddyView: View {
                 line += ". It left something — it's in the drawer"
             }
             say(line, for: 7)
+        } else if engine.chronicle.claimFreshLetter() != nil {
+            say("a letter from the season — it's in the mailbox", for: 6)
         } else {
             playHello()
         }

@@ -32,11 +32,9 @@ struct CelebrationView: View {
                 confetti
             }
             if completion.showsCard {
-                card
+                placedCard
             }
         }
-        .allowsHitTesting(completion.showsCard)
-        .onTapGesture { onDismiss() }
         .task {
             // The card lingers a little after the paws settle, then leaves on
             // its own — nobody should have to dismiss a congratulation.
@@ -103,6 +101,41 @@ struct CelebrationView: View {
     }
 
     // MARK: The cycle card
+
+    /// The card, sat over the dial rather than in the middle of the screen, and
+    /// taking taps only where it actually is.
+    ///
+    /// Centred in a full-screen `ZStack` it landed squarely on the buddy — and
+    /// the buddy's paw is up for a high five during exactly these seconds,
+    /// because both are triggered by the same completion. The card was winning
+    /// twice over: it covered the paw, and a full-screen `allowsHitTesting`
+    /// plus a container `onTapGesture` swallowed the tap that would have
+    /// landed the five. So a whole earned interaction was unreachable on every
+    /// session that finished a cycle, saw an animal, or reached a bond.
+    ///
+    /// The dial is the right home for it anyway: the phase it is reporting on
+    /// has ended, so the countdown underneath has nothing left to say, while
+    /// the half of the screen below belongs to the buddy.
+    private var placedCard: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                Spacer(minLength: 0).frame(height: geo.size.height * cardTopFraction)
+                card
+                    // Taps land on the card and nowhere else: everything
+                    // outside it falls through to the buddy underneath.
+                    .contentShape(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    )
+                    .onTapGesture { onDismiss() }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// How far down the screen the card's top edge sits. Chosen so the tallest
+    /// card still clears the buddy on the shortest supported phone.
+    private let cardTopFraction: CGFloat = 0.22
 
     private var card: some View {
         // Each branch lives in its own small view: as one six-way if/else

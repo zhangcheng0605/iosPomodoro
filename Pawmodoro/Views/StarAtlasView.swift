@@ -59,6 +59,14 @@ struct ConstellationFigure: View {
 /// by travelling somewhere.
 struct StarAtlasView: View {
     @Environment(TimerEngine.self) private var engine
+    /// Which figure's nights are open, if any — every lit star can tell
+    /// its night back (see `StarStoriesView`).
+    @State private var openFigure: OpenFigure?
+
+    private struct OpenFigure: Identifiable {
+        let index: Int
+        var id: Int { index }
+    }
 
     private var nights: Int { engine.log.nightSessions }
 
@@ -86,8 +94,23 @@ struct StarAtlasView: View {
             VStack(spacing: 10) {
                 ForEach(Array(ConstellationAtlas.all.enumerated()), id: \.element.id) {
                     index, figure in
-                    row(index: index, figure: figure)
+                    // A started figure opens: its stars are your own nights,
+                    // and each one can be asked what happened.
+                    Button {
+                        if ConstellationAtlas.litStars(of: index, nightSessions: nights) > 0 {
+                            openFigure = OpenFigure(index: index)
+                        }
+                    } label: {
+                        row(index: index, figure: figure)
+                    }
+                    .buttonStyle(.plain)
                 }
+            }
+            .sheet(item: $openFigure) { open in
+                StarNightsSheet(
+                    figureIndex: open.index,
+                    figure: ConstellationAtlas.all[open.index]
+                )
             }
 
             if wanderers > 0 {

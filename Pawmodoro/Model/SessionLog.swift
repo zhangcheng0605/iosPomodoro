@@ -123,6 +123,20 @@ final class SessionLog {
             .reduce(0) { $0 + $1.minutes }
     }
 
+    /// The after-dark sessions themselves, oldest first — the k-th of these
+    /// IS the atlas's k-th star, which is what lets a star tell its night
+    /// back. Records the trim has eaten simply aren't tellable; the count
+    /// above survives, the stories are best-effort by design.
+    var nightRecords: [SessionRecord] {
+        let calendar = Calendar.current
+        return records.filter { record in
+            let part = LaunchOptions.forcedDayPart
+                ?? DayPart.from(hour: calendar.component(.hour, from: record.endedAt))
+            return part == .night
+        }
+        .sorted { $0.endedAt < $1.endedAt }
+    }
+
     /// Sessions finished after dark — the only input the star atlas has.
     ///
     /// A pure function over the log, like the journey unlocks: the sky keeps

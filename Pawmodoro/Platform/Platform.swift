@@ -92,6 +92,21 @@ extension PlatformImage {
         return NSImage(contentsOfFile: path)
         #endif
     }
+
+    /// PNG bytes, for the one thing that leaves the phone: a shared postcard.
+    ///
+    /// `UIImage.pngData()` has no `NSImage` counterpart — the Mac route goes
+    /// through a bitmap representation — so like everything else that differs
+    /// between the two, it is spelled out once here and nowhere else.
+    var pngBytes: Data? {
+        #if canImport(UIKit)
+        return pngData()
+        #else
+        guard let tiff = tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
+        return bitmap.representation(using: .png, properties: [:])
+        #endif
+    }
 }
 
 extension Image {

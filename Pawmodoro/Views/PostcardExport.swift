@@ -20,10 +20,21 @@ import UniformTypeIdentifiers
 ///
 /// `ImageRenderer` stays on the main actor. That is not a detail to tidy away:
 /// it is `@MainActor`-isolated, and the render walks a SwiftUI view tree.
-extension Postcard: Transferable {
+/// A postcard together with the name it should be signed with.
+///
+/// The transferable item is this rather than the bare `Postcard` because the
+/// buddy's name lives in settings, and nothing inside an `ImageRenderer` can
+/// reach settings — it lays content out in a fresh environment. A static
+/// `transferRepresentation` on `Postcard` could not have looked it up either.
+/// So the album, which does have the environment, resolves the name once and
+/// hands it over with the card.
+struct SignedPostcard: Transferable {
+    let card: Postcard
+    let name: String
+
     static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .png) { card in
-            try await card.exportedPNG()
+        DataRepresentation(exportedContentType: .png) { signed in
+            try await signed.exportedPNG()
         }
         .suggestedFileName("Pawmodoro postcard.png")
     }
@@ -31,9 +42,19 @@ extension Postcard: Transferable {
     /// One render, on the main actor, after a tap.
     @MainActor
     func exportedPNG() throws -> Data {
-        let renderer = ImageRenderer(content: PostcardView(card: self, width: 640))
+        let renderer = ImageRenderer(
+            content: PostcardView(card: card, width: 640, name: name)
+        )
         renderer.scale = 2
-        guard let data = renderer.uiImage?.pngData() else {
+        #if canImport(UIKit)
+        // Fenced like every other raw UIKit call in this app: `ImageRenderer`
+        // exposes `uiImage` on iOS and `nsImage` on the Mac, and the Mac
+        // target is the one nothing on the Linux side can compile.
+        let image = renderer.uiImage
+        #else
+        let image = renderer.nsImage
+        #endif
+        guard let data = image?.pngBytes else {
             throw ExportFailure.couldNotRender
         }
         return data
@@ -42,6 +63,9 @@ extension Postcard: Transferable {
     enum ExportFailure: Error {
         case couldNotRender
     }
+}
+
+extension Postcard {
 
     /// What the share sheet is told it is about, from the stored facts alone —
     /// no drawing, which is the whole point of not passing it an image.

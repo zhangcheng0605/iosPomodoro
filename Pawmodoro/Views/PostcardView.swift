@@ -11,6 +11,17 @@ struct PostcardView: View {
     let card: Postcard
     /// The album shows these small; export renders one large.
     var width: CGFloat = 320
+    /// What to sign the card with, passed in rather than looked up.
+    ///
+    /// Buddies can be renamed, and the rule is that a rename reaches every
+    /// caption — this one especially, since a postcard is the one artefact of
+    /// this app that leaves the phone. It cannot read the environment to find
+    /// out: the share sheet hands this view to `ImageRenderer`, which lays its
+    /// content out in a *fresh* environment where no settings were ever
+    /// installed. That is the same trap that took the whole process down on
+    /// the buddy's papers card. So the name arrives as a plain value, and
+    /// falls back to the factory name only when nobody supplied one.
+    var name: String?
 
     private var scale: CGFloat { width / 320 }
     private var pictureHeight: CGFloat { 168 * scale }
@@ -231,7 +242,7 @@ struct PostcardView: View {
 
     // MARK: Words
 
-    private var buddyName: String { card.resolvedBuddy.name }
+    private var buddyName: String { name ?? card.resolvedBuddy.name }
 
     private var headline: String {
         switch card.occasion {

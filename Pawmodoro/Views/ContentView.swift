@@ -280,8 +280,11 @@ struct ContentView: View {
                 if engine.isRunning,
                    let sighting = engine.sighting,
                    let phase = sighting.phase(at: engine.progress) {
-                    WildlifeView(species: sighting.species, phase: phase)
-                        .id(sighting.species)
+                    WildlifeView(
+                        species: sighting.species, phase: phase,
+                        pale: sighting.pale
+                    )
+                    .id(sighting.species)
                 }
             }
             .animation(.easeInOut(duration: 0.8), value: place)
@@ -421,6 +424,10 @@ struct ContentView: View {
                         tint: Theme.bark,
                         nightSessions: engine.log.nightSessions
                     )
+                    // Three windows a year, the sky sheds. Real dates only.
+                    if ShowerCalendar.isShowerNight(on: context.date) {
+                        MeteorShowerView()
+                    }
                 }
             }
         }

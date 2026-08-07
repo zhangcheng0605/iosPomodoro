@@ -56,12 +56,15 @@ enum StorageKeys {
     static let photos = "pawmodoro.photos"
     /// Tracks played by weekend request, with their stamp dates.
     static let setlist = "pawmodoro.setlist"
+    /// Species once seen in the pale coat.
+    static let paleCoats = "pawmodoro.paleCoats"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
+        paleCoats,
     ]
 }
 
@@ -402,6 +405,20 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroSet") else { return nil }
         return value(after: "-PawmodoroSet")
     }()
+
+    /// Every decided sighting wears the pale coat. Pair with
+    /// `-PawmodoroSighting stag` to see the moon-white stag on demand.
+    static let paleCoat = isSet("-PawmodoroPale")
+
+    /// Tonight is a falling-star night, whatever the calendar says.
+    static let forceShower = isSet("-PawmodoroShower")
+
+    /// Fire an idle vignette a few seconds after launch, e.g.
+    /// `-PawmodoroVignette 3` to pin the table row.
+    static let forcedVignette: Int? = {
+        guard arguments.contains("-PawmodoroVignette") else { return nil }
+        return value(after: "-PawmodoroVignette").flatMap(Int.init) ?? 1
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -445,6 +462,9 @@ enum LaunchOptions {
     static let regrantPhoto = false
     static let developNow = false
     static let forcedSet: String? = nil
+    static let paleCoat = false
+    static let forceShower = false
+    static let forcedVignette: Int? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

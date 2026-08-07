@@ -180,6 +180,17 @@ struct JournalView: View {
                 .scaledToFit()
                 .frame(height: 42)
                 .opacity(seen ? 1 : 0.28)
+                // The pale-coat star: once, ever, this one crossed the scene
+                // in the moon-washed coat. A memory mark, not a checklist —
+                // there is no count of these anywhere.
+                .overlay(alignment: .topTrailing) {
+                    if journal.hasPaleSeen(species) {
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Theme.blossom)
+                            .offset(x: 3, y: -2)
+                    }
+                }
 
             Text(seen ? species.name : "?")
                 .font(.caption2.weight(.semibold))

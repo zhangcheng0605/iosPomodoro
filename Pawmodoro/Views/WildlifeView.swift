@@ -7,13 +7,18 @@ import SwiftUI
 /// out of step, and the animal is guaranteed to have left before the chime.
 struct Sighting: Equatable {
     let species: Species
+    /// The moon-washed coat — roughly one crossing in three hundred, odds
+    /// displayed nowhere. The only way to hunt one is to keep doing
+    /// sessions, which is the app's whole point.
+    let pale: Bool
     /// Fractions of the phase. Both well short of 1 — the last stretch belongs
     /// to the countdown, not to a distraction.
     let start: Double
     let end: Double
 
-    init(species: Species) {
+    init(species: Species, pale: Bool = false) {
         self.species = species
+        self.pale = pale
         // A little scatter so two sessions in a row don't feel scripted.
         let begin = Double.random(in: 0.32...0.46)
         self.start = begin
@@ -35,6 +40,8 @@ struct WildlifeView: View {
     let species: Species
     /// 0...1 across the appearance.
     let phase: Double
+    /// Drawn in the moon-washed coat instead of its own.
+    var pale: Bool = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var started = Date()
@@ -60,13 +67,19 @@ struct WildlifeView: View {
     @ViewBuilder
     private var sprite: some View {
         if reduceMotion {
-            image(named: species.frames[0])
+            image(named: frameName(0))
         } else {
             TimelineView(.periodic(from: .now, by: 1 / framesPerSecond)) { context in
                 let tick = Int(context.date.timeIntervalSince(started) * framesPerSecond)
-                image(named: species.frames[tick % species.frames.count])
+                image(named: frameName(tick % species.frames.count))
             }
         }
+    }
+
+    /// The pale variants sit beside the base frames in the catalog, one
+    /// palette transform over the same drawings.
+    private func frameName(_ index: Int) -> String {
+        pale ? "wild_\(species.rawValue)_pale_\(index)" : species.frames[index]
     }
 
     private func image(named name: String) -> some View {

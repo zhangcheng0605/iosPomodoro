@@ -52,6 +52,11 @@ enum NightStory {
             lines.append("You heard \(sound.name.lowercased()) that night.")
         }
 
+        // A star earned under a shower keeps the fact forever.
+        if let shower = ShowerCalendar.name(on: record.endedAt, calendar: calendar) {
+            lines.append("It was \(shower). This star came down with company.")
+        }
+
         if lines.count == 1 {
             lines.append("A night session, from before the notes got good.")
         }

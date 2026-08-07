@@ -429,6 +429,9 @@ struct BuddyView: View {
                 engine.repertoire.showOff(preview.trick, tier: preview.tier)
             }
         }
+        .task(id: engine.runState == .idle) {
+            await runIdleLife()
+        }
         .onChange(of: scenePhase) { _, phase in
             // The morning's small events can only arrive on the first look
             // of the day, and an app left in memory overnight re-enters here
@@ -611,6 +614,77 @@ struct BuddyView: View {
         }
         HapticsDirector.shared.nudge()
         addHeart()
+    }
+
+    // MARK: A life of its own
+
+    /// The Sims' voyeur loop, stateless and with a real past: every so
+    /// often while idle, the buddy does a small thing on its own. The slot
+    /// schedule and the choice are pure functions of (buddy, time) — no
+    /// vignette log exists, deliberately, so absence subtracts nothing —
+    /// and the rare entries replay the buddy's own records: the drawer,
+    /// the half-learned trick, the favorite snack.
+    private func runIdleLife() async {
+        guard engine.runState == .idle else { return }
+        if let forced = LaunchOptions.forcedVignette {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            playVignette(seed: forced)
+        }
+        let slotLength: TimeInterval = 420
+        while !Task.isCancelled, engine.runState == .idle {
+            // Find the next slot this buddy does something — about one
+            // slot in three, so roughly every twenty minutes of idle.
+            var slot = Int(Date().timeIntervalSinceReferenceDate / slotLength) + 1
+            while Doorstep.stableHash("life.\(buddy.rawValue).\(slot)") % 3 != 0 {
+                slot += 1
+            }
+            let fireAt = Double(slot) * slotLength
+            let wait = max(1, fireAt - Date().timeIntervalSinceReferenceDate)
+            try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            guard !Task.isCancelled, engine.runState == .idle, remark == nil,
+                  !isTuckedAsleep
+            else { continue }
+            playVignette(seed: Doorstep.stableHash("life.pick.\(buddy.rawValue).\(slot)"))
+        }
+    }
+
+    private func playVignette(seed: Int) {
+        say(vignetteLine(seed: seed), for: 7)
+        if !reduceMotion, seed % 2 == 0 {
+            animator.play(.happy, for: buddy)
+        }
+    }
+
+    private func vignetteLine(seed: Int) -> String {
+        // The rare entries prove the buddy remembers the same things you
+        // do — material no generic pet has, because no generic pet kept
+        // your drawer.
+        if seed % 5 == 0 {
+            if seed % 2 == 0, let last = engine.drawer.items.last,
+               let keepsake = Keepsake(rawValue: last.keepsake) {
+                return "\(name) sniffs the spot where the "
+                    + "\(keepsake.name.lowercased()) lay"
+            }
+            if let trick = Trick.allCases.first(where: {
+                engine.repertoire.tier(buddy, $0) > 0
+                    && !engine.repertoire.hasMastered(buddy, $0)
+            }) {
+                return "\(name) practices \(trick.name), quietly, badly, "
+                    + "believing itself unobserved"
+            }
+            if engine.pantry.hasTried(buddy, buddy.favoriteSnack) {
+                return "\(name) checks the sill. Optimistically"
+            }
+        }
+        let generic = [
+            "\(name) washes a face that was already clean",
+            "\(name) chases the tail. The tail wins",
+            "\(name) watches a bird only \(name) can see",
+            "\(name) digs, briefly, for reasons",
+            "\(name) stretches one leg. Just the one",
+            "\(name) sits facing the wall — correctly, somehow",
+        ]
+        return generic[abs(seed) % generic.count]
     }
 
     // MARK: The last-second pounce

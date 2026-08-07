@@ -808,7 +808,7 @@ final class TimerEngine {
         let part = LaunchOptions.forcedDayPart ?? DayPart.current()
 
         if let forced = LaunchOptions.forcedSighting {
-            sighting = Sighting(species: forced)
+            sighting = decidedSighting(forced)
             return
         }
 
@@ -826,7 +826,7 @@ final class TimerEngine {
         // whole system is invisible until it has happened once.
         if !journal.hasSeenAnything(at: settings.place),
            let welcome = eligible.filter({ $0.rarity == .common }).randomElement() {
-            sighting = Sighting(species: welcome)
+            sighting = decidedSighting(welcome)
             return
         }
 
@@ -836,7 +836,7 @@ final class TimerEngine {
             guard eligible.contains(bias.species) else { continue }
             let odds = min(0.85, bias.species.rarity.chance * bias.weight)
             if Double.random(in: 0..<1) < odds {
-                sighting = Sighting(species: bias.species)
+                sighting = decidedSighting(bias.species)
                 if bias.oneShot { clearBias(source: bias.source) }
                 return
             }
@@ -847,9 +847,18 @@ final class TimerEngine {
         let ordered = eligible.filter { $0.rarity == .mythic }.shuffled()
             + eligible.filter { $0.rarity != .mythic }.shuffled()
         for species in ordered where Double.random(in: 0..<1) < species.rarity.chance {
-            sighting = Sighting(species: species)
+            sighting = decidedSighting(species)
             return
         }
+    }
+
+    /// Every decided sighting rolls once more for the pale coat — roughly
+    /// one in three hundred, never shown as a number anywhere. Phenomena
+    /// have no coat to pale.
+    private func decidedSighting(_ species: Species) -> Sighting {
+        let pale = !species.isPhenomenon
+            && (LaunchOptions.paleCoat || Int.random(in: 0..<300) == 0)
+        return Sighting(species: species, pale: pale)
     }
 
     // MARK: Micro-encounters
@@ -1150,6 +1159,11 @@ final class TimerEngine {
                     at: settings.place,
                     dayPart: LaunchOptions.forcedDayPart ?? DayPart.current()
                 )
+                // The pale coat marks the sketch forever — a memory mark,
+                // never a checklist.
+                if sighting.pale {
+                    journal.addPaleSeen(sighting.species)
+                }
             }
             // The session's warm epilogue: the world sets out one snack for
             // the buddy. The sill holds one at most, so this never stacks.

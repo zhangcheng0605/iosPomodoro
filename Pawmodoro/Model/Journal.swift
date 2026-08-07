@@ -28,6 +28,9 @@ final class Journal {
     /// overnight, which is what makes it a gift of absence. Same own-key
     /// pattern as `heard`, for the same decoding reason.
     private(set) var nightKnown: [String: Date] = [:]
+    /// Species once seen in the pale coat. One bit per species, marked with
+    /// a small star on the sketch — a memory, never a set to complete.
+    private(set) var paleSeen: [String: Date] = [:]
 
     @ObservationIgnored private let defaults: UserDefaults
     private static let storageKey = StorageKeys.journal
@@ -81,6 +84,18 @@ final class Journal {
         guard nightKnown[species.rawValue] == nil else { return }
         nightKnown[species.rawValue] = date
         saveNightKnown()
+    }
+
+    // MARK: The pale coats
+
+    func hasPaleSeen(_ species: Species) -> Bool {
+        paleSeen[species.rawValue] != nil
+    }
+
+    func addPaleSeen(_ species: Species, on date: Date = Date()) {
+        guard paleSeen[species.rawValue] == nil else { return }
+        paleSeen[species.rawValue] = date
+        savePaleSeen()
     }
 
     // MARK: Reading
@@ -160,9 +175,11 @@ final class Journal {
         records = [:]
         heard = [:]
         nightKnown = [:]
+        paleSeen = [:]
         save()
         saveHeard()
         saveNightKnown()
+        savePaleSeen()
     }
 
     /// Debug only — fills the journal so the seen state can be looked at
@@ -200,6 +217,10 @@ final class Journal {
            let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
             nightKnown = decoded
         }
+        if let data = defaults.data(forKey: StorageKeys.paleCoats),
+           let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
+            paleSeen = decoded
+        }
     }
 
     private func save() {
@@ -215,5 +236,10 @@ final class Journal {
     private func saveNightKnown() {
         guard let data = try? JSONEncoder().encode(nightKnown) else { return }
         defaults.set(data, forKey: StorageKeys.nightKnown)
+    }
+
+    private func savePaleSeen() {
+        guard let data = try? JSONEncoder().encode(paleSeen) else { return }
+        defaults.set(data, forKey: StorageKeys.paleCoats)
     }
 }

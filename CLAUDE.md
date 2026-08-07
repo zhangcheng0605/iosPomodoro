@@ -21,6 +21,27 @@ network calls, no test target. The whole app is `Pawmodoro/`.
 > ear. The feature table in `docs/RESUME_HERE.md` records the outcome of
 > every row.
 
+> ## 🔀 The two branches are merged, and the merged app has been walked (8 Aug 2026)
+>
+> Seven bugs came out of the walk, all fixed and all seen on screen — see the
+> table in `docs/NEXT_UPDATE.md`. Two are worth carrying as lessons:
+>
+> **An `ImageRenderer` lays its content out in a *fresh* environment.** Reading
+> `@Environment` inside a view you hand to one traps in the environment getter
+> and takes the process down. That is what "Share the papers" did. Anything
+> rendered for export takes what it needs as plain values — which is also why
+> a postcard is now signed by a `SignedPostcard` carrying the name, rather than
+> looking it up.
+>
+> **A generator that is run once is a generator that goes stale silently.**
+> `generate_pale_coats.py` ran at 41 species and never again; the roster
+> reached 81, and 36 animals could roll the one-in-three-hundred pale coat with
+> no sprite — an empty rectangle crossing the scene, written into the journal
+> as if it had been seen. Its phenomenon list was a hard-coded tuple that had
+> also drifted. The fix was to make it *ask the Swift* (`check_species.parse_specs`)
+> rather than keep its own copy, which is the same rule the checkers already
+> live by. If a tool has a list that another file also has, it is already wrong.
+
 > ## 📮 The app is on the App Store — read `docs/NEXT_UPDATE.md` before coding
 >
 > Version 1.0 is submitted (bundle `com.pawmodoro.zhangcheng`, store name

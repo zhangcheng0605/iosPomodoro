@@ -1,8 +1,22 @@
 # Resume here
 
-**Stopped 7 Aug 2026 at the session token limit, at a clean point: everything
-built is committed, pushed, and installed on the owner's iPhone.**
-Branch: `claude/phase-0-dream-backfill-j9sbmo`.
+**8 Aug 2026 — the two branches are merged and the merged app has been
+walked.** Branch: `claude/pet-interactions-retention-7caoj8`. The merge was
+11 conflicts over ~2,000 lines and is committed as "Merge the two branches:
+one app again".
+
+Walking it found **seven bugs, all now fixed, reproduced first and seen fixed
+on screen** — a fatal crash on "Share the papers", 36 species that could roll
+a pale coat with no sprite (an invisible animal on the rarest event in the
+app), the celebration card sitting on top of the high five, every postcard
+cropping to a band of sky, the drift clock wrapping out of the dial, the
+homestead burying its own caption, and a renamed buddy signing postcards with
+its factory name. `docs/NEXT_UPDATE.md` has the table, the severities and the
+one item still open (the Harbor/Cloudspire postcard ground — a design call,
+with the measurement already done).
+
+Two checker rules were added and **deliberately broken first to prove they
+catch anything**. Device Release is 37.7 MB against the 45 MB ceiling.
 
 ## Where things stand
 

@@ -32,6 +32,45 @@ device before it ships.
 
 ---
 
+## Fixed on the Mac, 8 Aug 2026 — after the two branches were merged
+
+Six bugs found by walking the merged app, all reproduced first and all seen
+fixed on screen. Every one of them is in the repo and none has shipped.
+
+| Fix | Severity | Where |
+|---|---|---|
+| **Sharing the buddy's papers crashed the app.** `PapersCard` read `@Environment(TimerEngine.self)`, and the share sheet hands it to `ImageRenderer`, which lays content out in a *fresh* environment where the engine was never installed | **Fatal** | `Views/BuddyBookView.swift` |
+| **Thirty-six species could roll a pale coat they had no sprite for.** `generate_pale_coats.py` ran once at 41 species and never again; the roster reached 81. The 1-in-300 sighting drew an *empty rectangle* and was written into the journal as if seen | **Invisible content, rarest event in the app** | `tools/generate_pale_coats.py`, 72 new imagesets |
+| **The celebration card sat on top of the high five.** Centred full-screen, it covered the buddy, and its container `onTapGesture` + `allowsHitTesting` swallowed every tap — so a five could never be landed on any session that earned a card (every cycle, sighting and bond) | Feature unreachable | `Views/CelebrationView.swift` |
+| **Every postcard was a band of sky.** `scaledToFill` cropped the vertical middle of a 396×858 scene into a 320×168 card, and the middle of every scene in this app is sky. Eight places, eight indistinguishable blue rectangles | **Every postcard, always** | `Views/PostcardView.swift` |
+| **The drift countdown wrapped out of the dial.** Past one hour the string grows to seven glyphs in a 188pt column with no `lineLimit` | Layout | `Views/TimerRingView.swift` |
+| **The homestead buried its own caption, then showed a blank slab.** The "next tree" line was an overlay in the corner where the well and bench stand; and a clean install drew a 180pt white rectangle that read as a loading failure | Layout | `Views/HomesteadView.swift` |
+| **A renamed buddy signed every postcard with its factory name** — the one caption in the app that leaves the phone | Convention breach | `Views/PostcardView.swift`, `PostcardExport.swift`, `AlbumView.swift` |
+
+Two new fences went in with them, both **deliberately broken first and watched
+to fail**, per the rule that a green run on unbroken code proves nothing:
+
+- `check_species.py` now requires the pale pair for every species that can roll
+  one, and refuses one on a phenomenon. Nothing else could have seen this: the
+  sprite name is built by interpolation, so `check_swift.py` cannot resolve it.
+- `check_swift.py`'s Release-only `#if DEBUG` rule (added earlier in the merge).
+
+Device Release measured after the new art: **37.7 MB against the 45 MB ceiling.**
+
+### Still open on the postcards
+
+**Harbor Isle and Cloudspire draw the buddy standing on open water and open
+air.** The crop now anchors on `Stray.groundLine`, which is correct for the six
+places the stray visits — and Harbor and Cloudspire are precisely the two that
+`Place.strayVisits` excludes, for this exact reason. Measured on the day
+scenes: Harbor's island and jetty sit *right of centre* (source x 210–385 of
+396), so the horizontal centre is sea at every height and **no vertical line
+fixes it**. This wants the same answer `strayVisits` gave — either omit the
+standing buddy on those two cards or move it out of the picture — and that is a
+design decision, not a number to tune.
+
+---
+
 ## Known and NOT yet fixed
 
 1. ~~**`Views/AlbumView.swift:35` — postcards rasterize on the main thread.**~~

@@ -58,6 +58,39 @@ final class TimerEngine {
     /// variant, decided at break start like any other roll.
     private(set) var pounceEscape = false
 
+    /// A gentle thumb on the sighting scales. One seam, several clients:
+    /// the fortune slip presses it for a day, a returned traveler for one
+    /// session, a blooming flower for as long as it blooms. Never displayed,
+    /// never stacked into certainty — the ordinary queue always runs after.
+    struct SightingBias: Equatable {
+        /// Who is pressing — one bias per source, replaced on re-press.
+        let source: String
+        let species: Species
+        /// Where it applies, or nil for anywhere.
+        let place: Place?
+        /// Multiplier on the species' own chance, capped well below sure.
+        let weight: Double
+        /// Whether firing spends it (a traveler's tip) or it stands (a
+        /// fortune's whole day).
+        let oneShot: Bool
+    }
+
+    private(set) var biases: [SightingBias] = []
+
+    func setBias(_ bias: SightingBias) {
+        biases.removeAll { $0.source == bias.source }
+        biases.append(bias)
+    }
+
+    func clearBias(source: String) {
+        biases.removeAll { $0.source == source }
+    }
+
+    /// The day's slips, drawn and archived.
+    let fortunes: FortuneTeller
+    /// The freshly drawn slip, for the caption to read out once.
+    private(set) var drawnSlip: Fortune?
+
     /// Whether Soot is doing her rounds this phase.
     ///
     /// Her one quirk, and the only one that shows while somebody else is the
@@ -104,7 +137,8 @@ final class TimerEngine {
         doorstep: Doorstep = Doorstep(),
         drawer: KeepsakeDrawer = KeepsakeDrawer(),
         repertoire: Repertoire = Repertoire(),
-        memories: Anniversaries = Anniversaries()
+        memories: Anniversaries = Anniversaries(),
+        fortunes: FortuneTeller = FortuneTeller()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -120,6 +154,7 @@ final class TimerEngine {
         self.drawer = drawer
         self.repertoire = repertoire
         self.memories = memories
+        self.fortunes = fortunes
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -183,6 +218,13 @@ final class TimerEngine {
         repertoire.consolidate()
         // And the buddy checks its calendar of the two of you.
         memories.lookBack(log: log, journal: journal, stray: stray)
+        // A slip drawn earlier today keeps pressing after a relaunch.
+        if let slip = fortunes.today {
+            applyFortuneBias(slip)
+        }
+        if let row = LaunchOptions.forcedFortune {
+            drawFortuneIfDue(row: row)
+        }
         if let days = LaunchOptions.rememberDaysAgo {
             memories.forceForDebug(daysAgo: days, journal: journal)
         }
@@ -200,6 +242,31 @@ final class TimerEngine {
     /// drawing a clean circle through the simulator pane's input latency is
     /// exactly the class of gesture the walk table calls unverifiable.
     @ObservationIgnored var forcedTrickPreview: (trick: Trick, tier: Int)?
+
+    /// Draw the day's slip if this is the first focus start of the day, and
+    /// press its luck into the bias seam. Idempotent past the first call.
+    private func drawFortuneIfDue(row: Int? = nil) {
+        guard phase == .focus || row != nil else { return }
+        guard let slip = fortunes.drawIfDue(
+            log: log, journal: journal, place: settings.place,
+            buddy: settings.buddy, moonIsFull: MoonPhase.isFull(),
+            season: Season.current(), row: row
+        ) else { return }
+        applyFortuneBias(slip)
+        drawnSlip = slip
+    }
+
+    /// The standing fortune bias — re-applied on launch too, so a slip
+    /// drawn this morning still presses after an afternoon relaunch.
+    private func applyFortuneBias(_ slip: Fortune) {
+        guard let raw = slip.biasSpecies, let species = Species(rawValue: raw)
+        else { return }
+        setBias(SightingBias(
+            source: "fortune", species: species,
+            place: slip.biasPlace.flatMap(Place.init(rawValue:)),
+            weight: 4, oneShot: false
+        ))
+    }
 
     /// Last night's sill visitor, waiting for the morning's first look.
     private(set) var nightVisit: NightCaller.Visit?
@@ -281,6 +348,9 @@ final class TimerEngine {
         // whatever was already scheduled rather than buying another ticket.
         if runState == .idle {
             rainSeconds = 0
+            // The slip is drawn as the day's first session *starts* — before
+            // the rolls, so its luck applies to this very session.
+            drawFortuneIfDue()
             rollSighting()
             rollDream()
             rollHeard()
@@ -534,6 +604,18 @@ final class TimerEngine {
            let welcome = eligible.filter({ $0.rarity == .common }).randomElement() {
             sighting = Sighting(species: welcome)
             return
+        }
+
+        // Whatever the day's small thumbs are pressing for gets first
+        // refusal at boosted odds; the ordinary queue runs unchanged after.
+        for bias in biases where bias.place == nil || bias.place == settings.place {
+            guard eligible.contains(bias.species) else { continue }
+            let odds = min(0.85, bias.species.rarity.chance * bias.weight)
+            if Double.random(in: 0..<1) < odds {
+                sighting = Sighting(species: bias.species)
+                if bias.oneShot { clearBias(source: bias.source) }
+                return
+            }
         }
 
         // A mythic's conditions are its rarity — if one is eligible at all,

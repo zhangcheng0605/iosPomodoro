@@ -44,12 +44,14 @@ enum StorageKeys {
     static let firstSession = "pawmodoro.firstSession"
     /// Species known only by their night visits to the sill.
     static let nightKnown = "pawmodoro.nightKnown"
+    /// The fortune slips drawn so far, newest last.
+    static let fortunes = "pawmodoro.fortunes"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
-        nightKnown,
+        nightKnown, fortunes,
     ]
 }
 
@@ -343,6 +345,13 @@ enum LaunchOptions {
         guard arguments.contains("-PawmodoroNightCaller") else { return nil }
         return value(after: "-PawmodoroNightCaller") ?? "tanuki"
     }()
+
+    /// Draw the day's fortune at launch, pinned to template row n —
+    /// `-PawmodoroFortune 1`. The honest draw is the day's first start.
+    static let forcedFortune: Int? = {
+        guard arguments.contains("-PawmodoroFortune") else { return nil }
+        return value(after: "-PawmodoroFortune").flatMap(Int.init) ?? 0
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -377,6 +386,7 @@ enum LaunchOptions {
     static let rememberDaysAgo: Int? = nil
     static let pounceEscapes = false
     static let nightCaller: String? = nil
+    static let forcedFortune: Int? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

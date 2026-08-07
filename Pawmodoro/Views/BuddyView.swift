@@ -370,6 +370,13 @@ struct BuddyView: View {
         .onChange(of: engine.remaining) { _, remaining in
             advancePounce(remaining: remaining)
         }
+        .onChange(of: engine.drawnSlip) { _, slip in
+            // The slip reads itself out as the session settles in. The
+            // remark outranks the focus caption for a few breaths, then the
+            // paper corner on the phase chip carries it for the day.
+            guard let slip else { return }
+            say("the slip says: \(slip.grade). And that \(slip.line)", for: 8)
+        }
         .task {
             greetTheMorning()
             // `-PawmodoroTrick spin.2`: play the pinned trick soon after

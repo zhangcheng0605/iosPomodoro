@@ -569,6 +569,26 @@ def fx_flag():
     return g
 
 
+SLIP_PALETTE = {
+    T: (0, 0, 0, 0), OUTLINE: (150, 122, 92, 255),
+    BODY: (252, 246, 232, 255), SHADE: (226, 214, 192, 255),
+    ACCENT: (198, 88, 72, 255),
+}
+
+
+def fx_slip():
+    """The fortune slip: a strip of shrine paper with its red stamp."""
+    g = gs.new_grid(10, 16)
+    d = ImageDraw.Draw(g)
+    d.rectangle([2, 1, 8, 14], fill=BODY)
+    d.rectangle([2, 1, 8, 3], fill=ACCENT)                 # the header band
+    d.point((5, 6), fill=ACCENT)                           # the stamp
+    d.ellipse([4, 5, 6, 7], fill=ACCENT)
+    for y in (9, 11):                                      # the unread lines
+        d.line([(3, y), (7, y)], fill=SHADE)
+    return gs.outline_silhouette(g)
+
+
 # --- The three bespoke paw-up frames -------------------------------------------
 #
 # High-five frames for the two free buddies (and Soot, who is the cat's

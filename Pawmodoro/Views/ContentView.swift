@@ -394,6 +394,21 @@ struct ContentView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
             .background(Capsule().fill(Theme.accent(for: engine.phase)))
+            // The day's slip, tucked into the chip's corner once drawn —
+            // purely decorative, gone at midnight with the fortune itself.
+            .overlay(alignment: .topTrailing) {
+                if engine.fortunes.today != nil {
+                    Image("fx_slip")
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 13, height: 20)
+                        .rotationEffect(.degrees(12))
+                        .offset(x: 10, y: -8)
+                        .transition(.opacity)
+                        .accessibilityHidden(true)
+                }
+            }
             .animation(.easeInOut, value: engine.phase)
     }
 

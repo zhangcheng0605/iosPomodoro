@@ -24,6 +24,7 @@ struct StatsView: View {
                     JournalView()
                     DreamDiaryView()
                     KeepsakeDrawerView()
+                    FortuneShelf()
                 }
                 .padding()
             }

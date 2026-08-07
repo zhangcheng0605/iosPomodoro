@@ -7,6 +7,7 @@ struct SettingsView: View {
 
     @State private var showPaywall = false
     @State private var showTipJar = false
+    @State private var showBuddyBook = false
 
     var body: some View {
         @Bindable var engine = engine
@@ -29,6 +30,16 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                         .submitLabel(.done)
+                    }
+                    Button {
+                        showBuddyBook = true
+                    } label: {
+                        HStack {
+                            Text("The buddy book")
+                            Spacer()
+                            Image(systemName: "book.closed.fill")
+                                .foregroundStyle(Theme.blossom)
+                        }
                     }
                 } header: {
                     Text("Your buddy")
@@ -117,6 +128,9 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showBuddyBook) {
+                BuddyBookSheet(buddy: engine.settings.buddy)
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()

@@ -62,8 +62,10 @@ struct PhotoCard: View {
 }
 
 /// The photo shelf: developed shots, and today's still in the bath.
+/// Tapping a photo opens it large, with the share pass.
 struct PhotoShelfView: View {
     @Environment(TimerEngine.self) private var engine
+    @State private var openPhoto: PhotoRecord?
 
     private let columns = [GridItem(.adaptive(minimum: 130), spacing: 14)]
 
@@ -96,7 +98,12 @@ struct PhotoShelfView: View {
                 }
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(Array(developed)) { record in
-                        PhotoCard(record: record)
+                        Button {
+                            openPhoto = record
+                        } label: {
+                            PhotoCard(record: record)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -104,5 +111,10 @@ struct PhotoShelfView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
+        .sheet(item: $openPhoto) { record in
+            ShareableCardSheet(title: "A photograph") {
+                PhotoCard(record: record)
+            }
+        }
     }
 }

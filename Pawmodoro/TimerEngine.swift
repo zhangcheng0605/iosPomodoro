@@ -73,6 +73,8 @@ final class TimerEngine {
     let stray: Stray
     let dreams: DreamDiary
     let pantry: Pantry
+    let fives: FiveCounter
+    let tuckIn: TuckIn
 
     @ObservationIgnored private var endDate: Date?
     @ObservationIgnored private var ticker: Timer?
@@ -88,7 +90,9 @@ final class TimerEngine {
         album: Album = Album(),
         stray: Stray = Stray(),
         dreams: DreamDiary = DreamDiary(),
-        pantry: Pantry = Pantry()
+        pantry: Pantry = Pantry(),
+        fives: FiveCounter = FiveCounter(),
+        tuckIn: TuckIn = TuckIn()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -98,6 +102,8 @@ final class TimerEngine {
         self.stray = stray
         self.dreams = dreams
         self.pantry = pantry
+        self.fives = fives
+        self.tuckIn = tuckIn
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -123,6 +129,12 @@ final class TimerEngine {
         }
         if LaunchOptions.fillTastes {
             pantry.fillForDebug()
+        }
+        if let count = LaunchOptions.fiveCount {
+            fives.seedForDebug(count)
+        }
+        if LaunchOptions.tuckedYesterday {
+            tuckIn.seedYesterdayForDebug()
         }
     }
 
@@ -539,6 +551,12 @@ final class TimerEngine {
 
         if let forced = LaunchOptions.forcedDream {
             dream = Dream.from(id: forced) ?? pool().first { $0.id.hasPrefix(forced) }
+            return
+        }
+        // The blanket's whole promise: the day after a tucked night, the
+        // dream isn't left to its odds — it simply happens.
+        if tuckIn.blessing() {
+            dream = pool().randomElement()
             return
         }
         guard Double.random(in: 0..<1) < 0.25 else { return }

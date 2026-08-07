@@ -158,6 +158,16 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
+    /// Held up for the high five at the bell. Only the cat's and dog's
+    /// drawings have one so far (Soot is the cat's, in her palette); the rest
+    /// offer the moment through the happy bounce until their frame is drawn.
+    var pawUpFrame: String? {
+        switch self {
+        case .cat, .dog, .stray: frame("pawup")
+        default: nil
+        }
+    }
+
     /// Awake through focus after dark, dozing through daytime breaks — the one
     /// buddy that inverts the app's fiction, and only at night.
     var isNocturnal: Bool { self == .owl }

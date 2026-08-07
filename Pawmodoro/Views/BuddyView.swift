@@ -5,6 +5,7 @@ import SwiftUI
 struct BuddyView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var animator = BuddyAnimator()
     @State private var hearts: [Heart] = []
     @State private var heartSeed = 0
@@ -13,6 +14,9 @@ struct BuddyView: View {
     /// A caption that outranks the computed one for a few seconds — the
     /// buddy's answer to a snack, a snub, a full belly.
     @State private var remark: String?
+    /// While this contains now, the paw is up and a tap on the buddy is a
+    /// high five rather than a pet.
+    @State private var fiveWindow: ClosedRange<Date>?
 
     private let spriteSize: CGFloat = 104
 
@@ -44,6 +48,13 @@ struct BuddyView: View {
         let night = dayPart == .night
         let nocturnal = buddy.isNocturnal
 
+        // Tucked in outranks everything, including a break: a buddy under
+        // the blanket sleeps through your rest as well as your work. It
+        // releases a nocturnal buddy at night — Luna's bedtime is daybreak,
+        // and the blanket never touches her watch.
+        if isTuckedAsleep {
+            return .napping
+        }
         if focusRunning {
             // A nocturnal buddy is awake through a night session; everyone
             // else — and Luna in daylight — naps through focus as usual.
@@ -106,6 +117,21 @@ struct BuddyView: View {
                         .contentShape(Rectangle())
                         .gesture(petGesture)
 
+                    // The blanket, over the sleeping buddy. All twelve
+                    // asleep poses fill the lower half of the same grid, so
+                    // one shared overlay drapes everyone.
+                    if isTuckedAsleep {
+                        Image(Season.current() == .winter
+                              ? "fx_blanket_over_winter" : "fx_blanket_over")
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: spriteSize * 0.98)
+                            .offset(y: spriteSize * 0.16)
+                            .transition(.opacity)
+                            .allowsHitTesting(false)
+                    }
+
                     if isNapping {
                         zzz
                             .offset(x: spriteSize * 0.36, y: -spriteSize * 0.30)
@@ -140,6 +166,14 @@ struct BuddyView: View {
                     .transition(.opacity)
                     .accessibilityHidden(true)
                 }
+
+                // The blanket, folded and waiting, once the sun is down.
+                if showsTuckChip {
+                    TuckChip(starry: Season.current() == .winter) {
+                        tuckNow()
+                    }
+                    .transition(.opacity)
+                }
             }
             .animation(.easeInOut, value: isNapping)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.5), value: strayIsAlongside)
@@ -169,6 +203,12 @@ struct BuddyView: View {
                     snackLanded(snackVerdict())
                 }
             }
+            if showsTuckChip {
+                Button("Tuck \(name) in") { tuckNow() }
+            }
+            if let fiveWindow, fiveWindow.contains(Date()) {
+                Button("High five \(name)") { landFive() }
+            }
         }
         .onAppear { animator.setBase(restingPose) }
         .onChange(of: restingPose) { _, pose in animator.setBase(pose) }
@@ -177,9 +217,19 @@ struct BuddyView: View {
             // eyes, stretches, and is pleased with you. Driven by the
             // completion event rather than the phase change, because skipping
             // a session also moves focus -> break and must earn nothing.
-            guard let completion, completion.finished == .focus, !reduceMotion
-            else { return }
-            animator.play(.waking, for: buddy)
+            guard let completion, completion.finished == .focus else { return }
+            if !reduceMotion {
+                animator.play(.waking, for: buddy)
+            }
+            openFiveWindow()
+        }
+        .task { revealMorningIfDue() }
+        .onChange(of: scenePhase) { _, phase in
+            // The blanket's thank-you can only arrive on the first look of
+            // the morning, and an app left in memory overnight re-enters
+            // here rather than through launch.
+            guard phase == .active else { return }
+            revealMorningIfDue()
         }
     }
 
@@ -211,17 +261,98 @@ struct BuddyView: View {
         }
     }
 
-    /// The frame to draw, with one thing layered over the animator: an awake
-    /// buddy watches your finger.
+    /// The frame to draw, with two things layered over the animator: a
+    /// raised paw when a five is on offer, and an awake buddy watching your
+    /// finger.
     ///
-    /// Deliberately outranked by everything else. A one-shot — a bounce, a
-    /// stir, a wake-up — is a thing the buddy is *doing*, and a glance is only
-    /// where it happens to be looking.
+    /// The glance is deliberately outranked by everything else. A one-shot —
+    /// a bounce, a stir, a wake-up — is a thing the buddy is *doing*, and a
+    /// glance is only where it happens to be looking.
     private func frameName(at date: Date) -> String {
+        if !animator.isPlayingTransient(at: date), pawRaised(at: date) {
+            // The raised bounce frame stands in for buddies whose paw-up
+            // hasn't been drawn yet — up on the toes, expectant.
+            return buddy.pawUpFrame ?? buddy.frame("happy_1")
+        }
         if let x = touch.x, !isNapping, !animator.isPlayingTransient(at: date) {
             return buddy.frame(x < 0.5 ? "look_l" : "look_r")
         }
         return animator.frameName(for: buddy, at: date)
+    }
+
+    // MARK: The high five
+
+    /// Whether the paw is up at `date` — the post-bell window, or the earned
+    /// pre-empt just before the chime.
+    private func pawRaised(at date: Date) -> Bool {
+        if let fiveWindow, fiveWindow.contains(date) { return true }
+        return preemptRaised
+    }
+
+    /// After enough landed fives the paw rises a beat *before* the chime:
+    /// the buddy has learned you'll be there. Earned once, kept forever.
+    private var preemptRaised: Bool {
+        engine.fives.preempts
+            && engine.isRunning && !engine.phase.isBreak
+            && engine.remaining > 0 && engine.remaining <= 1.6
+    }
+
+    /// Three seconds of offered paw, opening once the wake-up stretch has
+    /// played. A missed window closes silently — nothing records it.
+    private func openFiveWindow() {
+        let wake = reduceMotion
+            ? 0 : (BuddyFrames.duration(for: buddy, pose: .waking) ?? 0)
+        let start = Date().addingTimeInterval(wake)
+        let window = start...start.addingTimeInterval(3.0)
+        fiveWindow = window
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64((wake + 3.0) * 1_000_000_000))
+            if fiveWindow == window { fiveWindow = nil }
+        }
+    }
+
+    private func landFive() {
+        guard fiveWindow != nil else { return }
+        fiveWindow = nil
+        engine.fives.land()
+        lastPet = Date()   // the same touch shouldn't immediately pet too
+        animator.play(.happy, for: buddy)
+        HapticsDirector.shared.stamp()
+        SoundPlayer.shared.playPurr()
+        burstHearts(2)
+        say(engine.fives.lifetime == 1
+            ? "a high five! \(name) will remember this"
+            : "high five — \(name) was ready", for: 3.5)
+    }
+
+    // MARK: Tucking in
+
+    /// Under the blanket right now. Releases a nocturnal buddy at night —
+    /// the blanket never touches Luna's watch.
+    private var isTuckedAsleep: Bool {
+        engine.tuckIn.isTuckedNow()
+            && !(buddy.isNocturnal && dayPart == .night)
+    }
+
+    /// The blanket is offered while idle, in the buddy's own bedtime window,
+    /// once per day.
+    private var showsTuckChip: Bool {
+        engine.runState == .idle
+            && !engine.tuckIn.isTuckedNow()
+            && TuckIn.windowIsOpen(for: buddy, at: dayPart)
+    }
+
+    private func tuckNow() {
+        withAnimation(.easeInOut(duration: 0.5)) {
+            engine.tuckIn.tuck()
+        }
+        HapticsDirector.shared.purr(duration: 0.9)
+    }
+
+    /// The blanket's thank-you, once, on the first look of the morning.
+    private func revealMorningIfDue() {
+        guard engine.tuckIn.claimMorningReveal() else { return }
+        say("the blanket did its work — \(name) is full of dreams today", for: 6)
     }
 
     /// Follows whichever pose is on screen, so a slow breathing loop doesn't
@@ -244,9 +375,11 @@ struct BuddyView: View {
     // MARK: The sill
 
     /// What's on the sill, when it's reachable. During a running focus phase
-    /// the sill is simply out of reach, behind the same rule as the toys.
+    /// the sill is simply out of reach, behind the same rule as the toys —
+    /// and nobody offers snacks to a buddy already under the blanket.
     private var sillSnack: Snack? {
         guard !(engine.isRunning && !engine.phase.isBreak) else { return nil }
+        guard !isTuckedAsleep else { return nil }
         return engine.pantry.sill
     }
 
@@ -316,6 +449,11 @@ struct BuddyView: View {
 
     private func pet(throttle: TimeInterval = 0.25) {
         let now = Date()
+        // While the paw is up, a touch is a high five — the pet can wait.
+        if let fiveWindow, fiveWindow.contains(now) {
+            landFive()
+            return
+        }
         guard now.timeIntervalSince(lastPet) > throttle else { return }
         lastPet = now
 
@@ -365,6 +503,12 @@ struct BuddyView: View {
         if let remark {
             return remark
         }
+        if let fiveWindow, fiveWindow.contains(Date()) {
+            return "\(name)'s paw is up — don't leave it hanging"
+        }
+        if preemptRaised {
+            return "\(name)'s paw is already up. It knew"
+        }
         if animator.isPlayingTransient(at: Date()), isNapping {
             return "shhh — \(name) is dreaming"
         }
@@ -388,6 +532,11 @@ struct BuddyView: View {
         }
         switch engine.runState {
         case .idle:
+            // The tucked line is the ritual's receipt, and it holds the
+            // caption for the rest of the evening.
+            if isTuckedAsleep, let clock = engine.tuckIn.tuckClock {
+                return "tucked in at \(clock). \(name) has no notes"
+            }
             // The sill outranks the expedition remark: a snack is something
             // to *do*, and it teaches the drag without a tutorial.
             if let snack = sillSnack {
@@ -404,9 +553,12 @@ struct BuddyView: View {
                 ? "\(name) is home — \(engine.settings.place.name)"
                 : "\(name) is waiting for you"
         case .running:
-            return engine.phase.isBreak
-                ? "\(name) is up and about — enjoy your break"
-                : "Don't wake \(name) — stay focused!"
+            if engine.phase.isBreak {
+                return isTuckedAsleep
+                    ? "\(name) sleeps through your break — well earned"
+                    : "\(name) is up and about — enjoy your break"
+            }
+            return "Don't wake \(name) — stay focused!"
         case .paused:
             return "\(name) wonders where you went…"
         }

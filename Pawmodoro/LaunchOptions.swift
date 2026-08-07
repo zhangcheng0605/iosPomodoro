@@ -26,10 +26,14 @@ enum StorageKeys {
     static let strayJoined = "pawmodoro.strayJoined"
     /// The sill, the day's appetite, and which buddy has tried which snack.
     static let pantry = "pawmodoro.pantry"
+    /// Lifetime high fives landed at the bell. An int, never displayed.
+    static let fives = "pawmodoro.fives"
+    /// The night the blanket went on, and whether its morning has been said.
+    static let tuckIn = "pawmodoro.tuckIn"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
-        strayFirstSeen, strayJoined, dreams, heard, pantry,
+        strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
     ]
 }
 
@@ -261,6 +265,18 @@ enum LaunchOptions {
     /// Mark every snack as tried by every buddy, for looking at a full
     /// Tastes card.
     static let fillTastes = isSet("-PawmodoroFillTastes")
+
+    /// Seed the lifetime high-five count, e.g. `-PawmodoroFives 5` to see the
+    /// pre-empted paw without landing five real ones.
+    static let fiveCount: Int? = {
+        guard arguments.contains("-PawmodoroFives") else { return nil }
+        let count = value(after: "-PawmodoroFives").flatMap(Int.init) ?? 0
+        return count > 0 ? count : nil
+    }()
+
+    /// Pretend the blanket went on last night: today carries the blessing
+    /// and the morning line, without waiting out a real night.
+    static let tuckedYesterday = isSet("-PawmodoroTucked")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -285,6 +301,8 @@ enum LaunchOptions {
     static let forcedStrayStage: Int? = nil
     static let forcedSnack: String? = nil
     static let fillTastes = false
+    static let fiveCount: Int? = nil
+    static let tuckedYesterday = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

@@ -31,7 +31,9 @@ build order is now **written end to end on Linux, never compiled**: phases V–Z
 engine) plus the small-magic wave (pounce, slow blink, summit nap). Every
 phase carries an **As built** section; the whole wave needs its first Mac
 build and walk — expect a handful of type-checker errors, per the usual
-Linux-blind odds. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
+Linux-blind odds. A fourth plan, `docs/CLOCKWORK_PLAN.md` (journeys, the
+fortune slip, the dream garden, timetabled places, one-shot photos), is
+drafted and not yet built. The earlier two plans are **both built out**. `docs/DELIGHT_PLAN.md` covers feel: phases A–C built and
 seen running, D (Live Activity) written but needing a one-time Xcode target
 step, E1 (bond) built, E2 (accessories) still open. `docs/CONTENT_PLAN.md`
 covers content and its build order is finished except alternate app icons. Each phase

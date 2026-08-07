@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var showPaywall = false
     @State private var showStudio = false
     @State private var showStrayNaming = false
+    @State private var showBench = false
     /// True while the three breaths are running. The engine knows nothing
     /// about this — `start()` is simply called later.
     @State private var settling = false
@@ -153,6 +154,20 @@ struct ContentView: View {
                     }
                     .accessibilityLabel("Settings")
                 }
+                // The bench is furniture: it only exists while nothing is
+                // running, and it never asks. Off-hours only, like sitting
+                // down anywhere.
+                if engine.runState == .idle {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showBench = true
+                        } label: {
+                            Image(systemName: "scroll")
+                                .foregroundStyle(Theme.bark)
+                        }
+                        .accessibilityLabel("The haiku bench")
+                    }
+                }
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
@@ -168,6 +183,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showStrayNaming) {
                 StrayNamingSheet()
+            }
+            .sheet(isPresented: $showBench) {
+                HaikuBenchView()
             }
             // She comes back next time you start. Being spooked costs the rest
             // of the phase and nothing else — there is no state anywhere that
@@ -212,6 +230,7 @@ struct ContentView: View {
                 // reached between sessions — needs asking directly.
                 if strayWantsIn { showStrayNaming = true }
                 if bridge.wantsFocus { consumeIntent() }
+                if LaunchOptions.openBench { showBench = true }
                 if LaunchOptions.postcard, engine.album.cards.isEmpty {
                     engine.album.add(Postcard(
                         id: UUID(), date: Date(),

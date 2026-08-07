@@ -662,6 +662,11 @@ struct BuddyView: View {
         // do — material no generic pet has, because no generic pet kept
         // your drawer.
         if seed % 5 == 0 {
+            // Rarest of all: a middle line from a haiku you finished weeks
+            // ago, quoted back. Each poem gets this once, ever.
+            if seed % 3 == 0, let line = engine.anthology.quoteBack() {
+                return "\(name) says, mostly to itself: “\(line)”"
+            }
             if seed % 2 == 0, let last = engine.drawer.items.last,
                let keepsake = Keepsake(rawValue: last.keepsake) {
                 return "\(name) sniffs the spot where the "

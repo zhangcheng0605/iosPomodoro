@@ -60,13 +60,15 @@ enum StorageKeys {
     static let paleCoats = "pawmodoro.paleCoats"
     /// The season letters, and the year kept: the almanac's own records.
     static let chronicle = "pawmodoro.chronicle"
+    /// The finished haiku, and which have been quoted back.
+    static let anthology = "pawmodoro.anthology"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
-        paleCoats, chronicle,
+        paleCoats, chronicle, anthology,
     ]
 }
 
@@ -432,6 +434,13 @@ enum LaunchOptions {
     /// Present the anniversary sequence at launch — the honest wait
     /// is a year.
     static let forcedYearCard = isSet("-PawmodoroYearCard")
+
+    /// Open the haiku bench at launch.
+    static let openBench = isSet("-PawmodoroBench")
+
+    /// Seed three finished poems, dated weeks back, so the anthology has
+    /// pages and the quote-back is within reach.
+    static let seedAnthology = isSet("-PawmodoroAnthology")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -480,6 +489,8 @@ enum LaunchOptions {
     static let forcedVignette: Int? = nil
     static let forcedSeasonLetter: String? = nil
     static let forcedYearCard = false
+    static let openBench = false
+    static let seedAnthology = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

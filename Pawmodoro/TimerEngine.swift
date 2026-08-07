@@ -104,6 +104,8 @@ final class TimerEngine {
     let setlist: SetlistBox
     /// The season letters, and the year kept: the almanac's own records.
     let chronicle: Chronicle
+    /// The haiku, kept with their date and place.
+    let anthology: Anthology
 
     /// Whether Soot is doing her rounds this phase.
     ///
@@ -158,7 +160,8 @@ final class TimerEngine {
         timetable: Timetable = Timetable(),
         photos: PhotoAlbum = PhotoAlbum(),
         setlist: SetlistBox = SetlistBox(),
-        chronicle: Chronicle = Chronicle()
+        chronicle: Chronicle = Chronicle(),
+        anthology: Anthology = Anthology()
     ) {
         let resolved = settings ?? PomodoroSettings.load()
         self.settings = resolved
@@ -181,6 +184,7 @@ final class TimerEngine {
         self.photos = photos
         self.setlist = setlist
         self.chronicle = chronicle
+        self.anthology = anthology
         self.remaining = resolved.duration(for: .focus)
         ThemeManager.shared.theme = resolved.theme
         HapticsDirector.shared.isEnabled = resolved.hapticsEnabled
@@ -290,6 +294,9 @@ final class TimerEngine {
         }
         if LaunchOptions.forcedYearCard {
             chronicle.forceYearForDebug()
+        }
+        if LaunchOptions.seedAnthology {
+            anthology.seedForDebug()
         }
         if let days = LaunchOptions.rememberDaysAgo {
             memories.forceForDebug(daysAgo: days, journal: journal)

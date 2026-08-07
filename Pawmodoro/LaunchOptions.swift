@@ -38,11 +38,15 @@ enum StorageKeys {
     static let repertoire = "pawmodoro.repertoire"
     /// Which anniversaries the buddy has already brought up.
     static let anniversaries = "pawmodoro.anniversaries"
+    /// Every session ever, monotonic — the log itself trims at a thousand.
+    static let lifetimeSessions = "pawmodoro.lifetimeSessions"
+    /// The day the very first session finished. Survives the trim too.
+    static let firstSession = "pawmodoro.firstSession"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
-        doorstep, drawer, repertoire, anniversaries,
+        doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
     ]
 }
 
@@ -390,6 +394,14 @@ enum LaunchOptions {
         if unlockPlus {
             defaults.set(true, forKey: StorageKeys.hasPlus)
         }
+        // Any flag that replaces the session records also clears the
+        // lifetime counter and first-session anchor, so `SessionLog` reseeds
+        // both from the records being written — otherwise an earlier run's
+        // larger seed would keep the bond pinned high.
+        if seedStats || seedGap || bondSessions != nil {
+            defaults.removeObject(forKey: StorageKeys.lifetimeSessions)
+            defaults.removeObject(forKey: StorageKeys.firstSession)
+        }
         if seedStats {
             seedSampleSessions(into: defaults)
         }
@@ -466,7 +478,9 @@ enum LaunchOptions {
             guard let evening = calendar.date(
                 byAdding: .hour, value: 22 - index * 24, to: tonight
             ) else { continue }
-            records.append(SessionRecord(endedAt: evening, minutes: 25))
+            records.append(SessionRecord(
+                endedAt: evening, minutes: 25, place: "meadow", buddy: "cat"
+            ))
         }
 
         let ordered = records.sorted { $0.endedAt < $1.endedAt }
@@ -483,6 +497,9 @@ enum LaunchOptions {
         // there on purpose: it gives the streak counters something to find.
         let sessionsPerDay = [3, 5, 2, 4, 2, 6, 3, 1, 0, 4, 5, 2, 3, 4]
 
+        // The free places, rotated by day, so the widened fields have
+        // something for star stories and letters to narrate in a demo.
+        let places = ["meadow", "woods", "harbor"]
         var records: [SessionRecord] = []
         for (daysAgo, count) in sessionsPerDay.enumerated() where count > 0 {
             guard let day = calendar.date(byAdding: .day, value: -daysAgo, to: today) else { continue }
@@ -490,7 +507,10 @@ enum LaunchOptions {
                 // Spread the day's sessions out from 9am, 40 minutes apart.
                 let minutesIntoDay = 9 * 60 + index * 40
                 let endedAt = calendar.date(byAdding: .minute, value: minutesIntoDay, to: day) ?? day
-                records.append(SessionRecord(endedAt: endedAt, minutes: 25))
+                records.append(SessionRecord(
+                    endedAt: endedAt, minutes: 25,
+                    place: places[daysAgo % places.count], buddy: "cat"
+                ))
             }
         }
 

@@ -124,9 +124,10 @@ final class Anniversaries {
             let rarity = species.rarity == .common ? 0 : 100
             candidates.append((Memory(subject: .species(species), daysAgo: days), 100 + rarity + days))
         }
-        // The very first session, from the log's own first line.
-        if let first = log.records.first,
-           let days = anniversary(from: first.endedAt, to: date) {
+        // The very first session — the stored anchor, not `records.first`,
+        // which shifts once the log starts trimming.
+        if let first = log.firstSessionDate,
+           let days = anniversary(from: first, to: date) {
             candidates.append((Memory(subject: .firstSession, daysAgo: days), 200 + days))
         }
 

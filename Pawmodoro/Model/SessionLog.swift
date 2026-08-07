@@ -2,10 +2,18 @@ import Foundation
 import Observation
 
 /// One completed focus session.
+///
+/// `place` and `buddy` arrived late (the Clockwork wave): optionals with
+/// synthesized lenient decoding, so every record written before them loads
+/// untouched and simply doesn't remember where it happened — which the
+/// features that read them (letters, star stories, fortunes) all say out
+/// loud rather than guess.
 struct SessionRecord: Codable, Equatable, Identifiable {
     var id: UUID = UUID()
     var endedAt: Date
     var minutes: Int
+    var place: String? = nil
+    var buddy: String? = nil
 }
 
 /// History of completed focus sessions, persisted on device. Nothing leaves the
@@ -13,6 +21,16 @@ struct SessionRecord: Codable, Equatable, Identifiable {
 @Observable
 final class SessionLog {
     private(set) var records: [SessionRecord] = []
+    /// Every session ever, monotonic, surviving the trim below.
+    ///
+    /// `records.count` silently stopped being a lifetime number the day the
+    /// log learned to trim — after the thousandth session it would have
+    /// quietly frozen the bond and shifted "your first session ever" as old
+    /// records fell off. This counter and `firstSessionDate` are the fix:
+    /// stored once, seeded from the records that exist, never recomputed.
+    private(set) var lifetimeSessions: Int
+    /// The day this whole thing started. The anniversary engine's anchor.
+    private(set) var firstSessionDate: Date?
 
     @ObservationIgnored private let defaults: UserDefaults
     private static let storageKey = StorageKeys.sessions
@@ -20,21 +38,49 @@ final class SessionLog {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        lifetimeSessions = defaults.integer(forKey: StorageKeys.lifetimeSessions)
+        firstSessionDate = defaults.object(forKey: StorageKeys.firstSession) as? Date
         load()
+        // Seeding for logs that predate the counter — and for the debug
+        // seeders, which write records straight into defaults.
+        if records.count > lifetimeSessions {
+            lifetimeSessions = records.count
+            defaults.set(lifetimeSessions, forKey: StorageKeys.lifetimeSessions)
+        }
+        if firstSessionDate == nil, let first = records.first {
+            firstSessionDate = first.endedAt
+            defaults.set(first.endedAt, forKey: StorageKeys.firstSession)
+        }
     }
 
     // MARK: Writing
 
-    func add(minutes: Int, endedAt: Date = Date()) {
-        records.append(SessionRecord(endedAt: endedAt, minutes: minutes))
+    func add(
+        minutes: Int, place: Place? = nil, buddy: Buddy? = nil,
+        endedAt: Date = Date()
+    ) {
+        records.append(SessionRecord(
+            endedAt: endedAt, minutes: minutes,
+            place: place?.rawValue, buddy: buddy?.rawValue
+        ))
         if records.count > Self.maxRecords {
             records.removeFirst(records.count - Self.maxRecords)
+        }
+        lifetimeSessions += 1
+        defaults.set(lifetimeSessions, forKey: StorageKeys.lifetimeSessions)
+        if firstSessionDate == nil {
+            firstSessionDate = endedAt
+            defaults.set(endedAt, forKey: StorageKeys.firstSession)
         }
         save()
     }
 
     func clearHistory() {
         records = []
+        lifetimeSessions = 0
+        firstSessionDate = nil
+        defaults.removeObject(forKey: StorageKeys.lifetimeSessions)
+        defaults.removeObject(forKey: StorageKeys.firstSession)
         save()
     }
 
@@ -54,7 +100,16 @@ final class SessionLog {
 
     // MARK: Stats
 
-    var totalSessions: Int { records.count }
+    /// The lifetime number — the one the bond, the journey and every
+    /// threshold reads. Survives the trim; `records` is for charts and
+    /// streaks, which only ever look weeks back.
+    var totalSessions: Int { max(lifetimeSessions, records.count) }
+
+    /// The record for a given calendar night, if one survives in the log —
+    /// star stories compose themselves from this.
+    func record(endedOn day: Date, calendar: Calendar = .current) -> SessionRecord? {
+        records.last { calendar.isDate($0.endedAt, inSameDayAs: day) }
+    }
 
     var todaySessions: Int {
         let calendar = Calendar.current

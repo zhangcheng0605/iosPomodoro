@@ -13,7 +13,6 @@ struct DreamBubble: View {
     let phase: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var appeared = Date()
     @State private var risen = false
 
     private let size: CGFloat = 62
@@ -41,8 +40,50 @@ struct DreamBubble: View {
         .accessibilityLabel("Dreaming of \(dream.subject)")
     }
 
-    @ViewBuilder
     private var bubble: some View {
+        ThoughtBubbleShell(size: size)
+    }
+
+    @ViewBuilder
+    private var sketch: some View {
+        if dream.isSilhouette {
+            // Vignettes are drawn in full colour for the sky; in a dream they
+            // are a sketch like everything else here.
+            Image(dream.asset)
+                .renderingMode(.template)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(Theme.bark.opacity(0.75))
+        } else {
+            Image(dream.asset)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+        }
+    }
+
+    /// Never pops, at either end.
+    private var fade: Double {
+        guard !reduceMotion else { return 1 }
+        let edge = 0.18
+        if phase < edge { return max(0, phase / edge) }
+        if phase > 1 - edge { return max(0, (1 - phase) / edge) }
+        return 1
+    }
+}
+
+/// The two-tone thought bubble the dream and the memory both ride in: one
+/// template asset drawn twice — a bark rim under a cream fill — with the
+/// trailing dots shifting a pixel every beat. Extracted here because two
+/// views were carrying identical copies of it.
+struct ThoughtBubbleShell: View {
+    let size: CGFloat
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = Date()
+
+    var body: some View {
         if reduceMotion {
             shell(frame: 0)
         } else {
@@ -73,34 +114,6 @@ struct DreamBubble: View {
             .interpolation(.none)
             .resizable()
             .scaledToFit()
-    }
-
-    @ViewBuilder
-    private var sketch: some View {
-        if dream.isSilhouette {
-            // Vignettes are drawn in full colour for the sky; in a dream they
-            // are a sketch like everything else here.
-            Image(dream.asset)
-                .renderingMode(.template)
-                .interpolation(.none)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(Theme.bark.opacity(0.75))
-        } else {
-            Image(dream.asset)
-                .interpolation(.none)
-                .resizable()
-                .scaledToFit()
-        }
-    }
-
-    /// Never pops, at either end.
-    private var fade: Double {
-        guard !reduceMotion else { return 1 }
-        let edge = 0.18
-        if phase < edge { return max(0, phase / edge) }
-        if phase > 1 - edge { return max(0, (1 - phase) / edge) }
-        return 1
     }
 }
 

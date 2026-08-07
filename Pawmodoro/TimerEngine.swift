@@ -775,7 +775,8 @@ final class TimerEngine {
             // by the one session that actually finished it.
             let nightsBefore = log.nightSessions
             let sessionsBefore = log.totalSessions
-            log.add(minutes: settings.focusMinutes)
+            log.add(minutes: settings.focusMinutes,
+                    place: settings.place, buddy: settings.buddy)
             bond = Bond.justReached(before: sessionsBefore, after: log.totalSessions)
             figure = ConstellationAtlas.justCompleted(
                 before: nightsBefore, after: log.nightSessions

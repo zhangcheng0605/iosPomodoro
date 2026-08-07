@@ -113,9 +113,10 @@ struct KeepsakeDrawerView: View {
     /// "Sea glass — the sea made it soft. Harbor Isle, with Mochi, Aug 7."
     private func provenance(for record: KeepsakeRecord) -> String {
         guard let keepsake = Keepsake(rawValue: record.keepsake) else { return "" }
+        // A finder that isn't a buddy is a night visitor who left it.
         let finder = Buddy(rawValue: record.finder).map {
             engine.settings.displayName(for: $0)
-        } ?? "somebody"
+        } ?? "a visitor"
         let place = Place(rawValue: record.place)?.name ?? "somewhere out there"
         let day = record.date.formatted(.dateTime.month(.abbreviated).day())
         return "\(keepsake.name) — \(keepsake.note). \(place), with \(finder), \(day)."

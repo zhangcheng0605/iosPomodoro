@@ -42,11 +42,14 @@ enum StorageKeys {
     static let lifetimeSessions = "pawmodoro.lifetimeSessions"
     /// The day the very first session finished. Survives the trim too.
     static let firstSession = "pawmodoro.firstSession"
+    /// Species known only by their night visits to the sill.
+    static let nightKnown = "pawmodoro.nightKnown"
 
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
+        nightKnown,
     ]
 }
 
@@ -333,6 +336,13 @@ enum LaunchOptions {
     /// Every break's closing pounce misses — the one-in-seven escape,
     /// on demand.
     static let pounceEscapes = isSet("-PawmodoroPounce")
+
+    /// Force last night's sill visitor, e.g. `-PawmodoroNightCaller tanuki`.
+    /// The honest trigger is a snack left out overnight.
+    static let nightCaller: String? = {
+        guard arguments.contains("-PawmodoroNightCaller") else { return nil }
+        return value(after: "-PawmodoroNightCaller") ?? "tanuki"
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -366,6 +376,7 @@ enum LaunchOptions {
     static let forcedTrick: String? = nil
     static let rememberDaysAgo: Int? = nil
     static let pounceEscapes = false
+    static let nightCaller: String? = nil
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

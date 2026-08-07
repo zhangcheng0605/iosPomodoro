@@ -251,10 +251,23 @@ final class Pantry {
         save()
     }
 
+    /// What the last sweep took, held once for the night caller to claim —
+    /// transient on purpose: the claim happens in the same launch, and an
+    /// unclaimed sweep is just a snack the wind had.
+    @ObservationIgnored private(set) var sweptOvernight: (snack: Snack, from: Date)?
+
+    func claimSweptOvernight() -> (snack: Snack, from: Date)? {
+        defer { sweptOvernight = nil }
+        return sweptOvernight
+    }
+
     /// A snack left out overnight has been found by something small and
     /// grateful by morning. Called on launch and on foregrounding.
     func sweep(on date: Date = Date()) {
         guard let sillDate, !calendar.isDate(sillDate, inSameDayAs: date) else { return }
+        if let snack = sill {
+            sweptOvernight = (snack, sillDate)
+        }
         sill = nil
         self.sillDate = nil
         save()

@@ -371,8 +371,7 @@ struct BuddyView: View {
             advancePounce(remaining: remaining)
         }
         .task {
-            playHello()
-            revealMorningIfDue()
+            greetTheMorning()
             // `-PawmodoroTrick spin.2`: play the pinned trick soon after
             // launch, because the pane can't draw a clean circle.
             if let preview = engine.forcedTrickPreview {
@@ -382,17 +381,33 @@ struct BuddyView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            // The blanket's thank-you and the doorstep can only arrive on
-            // the first look of the day, and an app left in memory overnight
-            // re-enters here rather than through launch. The short wait lets
-            // the engine's own foreground pass decide the new day first.
+            // The morning's small events can only arrive on the first look
+            // of the day, and an app left in memory overnight re-enters here
+            // rather than through launch. The short wait lets the engine's
+            // own foreground pass decide the new day first.
             guard phase == .active else { return }
             Task {
                 try? await Task.sleep(nanoseconds: 350_000_000)
-                playHello()
-                revealMorningIfDue()
+                greetTheMorning()
             }
         }
+    }
+
+    /// One small event per morning, in a strict order: evidence of the
+    /// night outranks a live hello (and leaves the hello claimed for the
+    /// day's next foregrounding), and the blanket's thank-you outranks the
+    /// caption either way.
+    private func greetTheMorning() {
+        if let visit = engine.claimNightVisit() {
+            var line = NightCaller.evidence(for: visit.species, snack: visit.snack)
+            if visit.memento != nil {
+                line += ". It left something — it's in the drawer"
+            }
+            say(line, for: 7)
+        } else {
+            playHello()
+        }
+        revealMorningIfDue()
     }
 
     // MARK: Sprite

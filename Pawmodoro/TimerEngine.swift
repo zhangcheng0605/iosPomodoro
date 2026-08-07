@@ -152,6 +152,13 @@ final class TimerEngine {
         if LaunchOptions.tuckedYesterday {
             tuckIn.seedYesterdayForDebug()
         }
+        // The night caller reads what the pantry's own init sweep took.
+        resolveNightVisit()
+        if let raw = LaunchOptions.nightCaller {
+            let species = Species(rawValue: raw) ?? .tanuki
+            journal.addNightKnown(species)
+            nightVisit = NightCaller.Visit(species: species, snack: .sardine, memento: nil)
+        }
         // The doorstep decides once per calendar day, at the first open.
         // After the forced place and buddy above, so a forced morning is
         // the morning it would have been there. The forced flags below then
@@ -193,6 +200,32 @@ final class TimerEngine {
     /// drawing a clean circle through the simulator pane's input latency is
     /// exactly the class of gesture the walk table calls unverifiable.
     @ObservationIgnored var forcedTrickPreview: (trick: Trick, tier: Int)?
+
+    /// Last night's sill visitor, waiting for the morning's first look.
+    private(set) var nightVisit: NightCaller.Visit?
+
+    func claimNightVisit() -> NightCaller.Visit? {
+        defer { nightVisit = nil }
+        return nightVisit
+    }
+
+    /// If the sweep just took an overnight snack, resolve who came for it.
+    /// The evidence is banked immediately — the caption is presentation,
+    /// the visit is fact.
+    private func resolveNightVisit() {
+        guard nightVisit == nil,
+              let swept = pantry.claimSweptOvernight(),
+              let visit = NightCaller.visit(
+                snack: swept.snack, sweptFrom: swept.from,
+                moonIsFull: MoonPhase.isFull()
+              )
+        else { return }
+        journal.addNightKnown(visit.species)
+        if let memento = visit.memento {
+            drawer.add(memento, place: settings.place, finder: settings.buddy)
+        }
+        nightVisit = visit
+    }
 
     /// A drawn cue landed on the scene. The bond gates the vocabulary — a
     /// slot not yet open simply doesn't answer, which is indistinguishable
@@ -342,6 +375,7 @@ final class TimerEngine {
         // Overnight housekeeping first: a snack left out is gone by morning,
         // and an app re-entered on a new day gets its doorstep moment.
         pantry.sweep()
+        resolveNightVisit()
         doorstep.arrive(
             place: settings.place, buddy: settings.buddy, season: Season.current()
         )

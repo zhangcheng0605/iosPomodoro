@@ -52,7 +52,58 @@ struct JournalView: View {
             }
 
             heardPage
+
+            if journal.nightKnownCount > 0 {
+                nightPage
+            }
         }
+    }
+
+    /// Known by night.
+    ///
+    /// Species met only as evidence — prints in the dew where the sill snack
+    /// was. Renders nothing until the first visit, and never a denominator:
+    /// an unmet visitor must not exist as a hole to fill.
+    private var nightPage: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Known by night")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.bark.opacity(0.8))
+
+            ForEach(journal.nightKnownEntries) { entry in
+                HStack(spacing: 10) {
+                    Image(systemName: "moon.stars.fill")
+                        .font(.footnote)
+                        .frame(width: 20)
+                        .foregroundStyle(Theme.bark.opacity(0.6))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(entry.species.name)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.bark.opacity(0.9))
+                        Text("Never seen — the prints say enough. Since "
+                             + entry.since.formatted(.dateTime.month(.abbreviated).day())
+                             + ".")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.bark.opacity(0.55))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.surface.opacity(0.9))
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    "Known by night: \(entry.species.name). Never seen; "
+                        + "met by evidence on the sill."
+                )
+            }
+        }
+        .padding(.top, 6)
     }
 
     /// Heard, not seen.

@@ -23,6 +23,11 @@ final class Journal {
     /// sound has no place-and-hour to remember beyond its own, and widening
     /// `SightingRecord` would make every existing entry carry a nil.
     private(set) var heard: [String: Date] = [:]
+    /// Species known only by their night visits to the sill — evidence, not
+    /// sight. A tier below "seen", filled exclusively by leaving a snack out
+    /// overnight, which is what makes it a gift of absence. Same own-key
+    /// pattern as `heard`, for the same decoding reason.
+    private(set) var nightKnown: [String: Date] = [:]
 
     @ObservationIgnored private let defaults: UserDefaults
     private static let storageKey = StorageKeys.journal
@@ -47,6 +52,35 @@ final class Journal {
         guard heard[sound.rawValue] == nil else { return }
         heard[sound.rawValue] = date
         saveHeard()
+    }
+
+    // MARK: Known by night
+
+    func hasNightKnown(_ species: Species) -> Bool {
+        nightKnown[species.rawValue] != nil
+    }
+
+    var nightKnownCount: Int { nightKnown.count }
+
+    /// One night acquaintance, for the journal page.
+    struct NightEntry: Identifiable {
+        let species: Species
+        let since: Date
+        var id: String { species.rawValue }
+    }
+
+    /// Oldest evidence first.
+    var nightKnownEntries: [NightEntry] {
+        nightKnown.compactMap { key, date in
+            Species(rawValue: key).map { NightEntry(species: $0, since: date) }
+        }
+        .sorted { $0.since < $1.since }
+    }
+
+    func addNightKnown(_ species: Species, on date: Date = Date()) {
+        guard nightKnown[species.rawValue] == nil else { return }
+        nightKnown[species.rawValue] = date
+        saveNightKnown()
     }
 
     // MARK: Reading
@@ -125,8 +159,10 @@ final class Journal {
     func clear() {
         records = [:]
         heard = [:]
+        nightKnown = [:]
         save()
         saveHeard()
+        saveNightKnown()
     }
 
     /// Debug only — fills the journal so the seen state can be looked at
@@ -160,6 +196,10 @@ final class Journal {
            let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
             heard = decoded
         }
+        if let data = defaults.data(forKey: StorageKeys.nightKnown),
+           let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
+            nightKnown = decoded
+        }
     }
 
     private func save() {
@@ -170,5 +210,10 @@ final class Journal {
     private func saveHeard() {
         guard let data = try? JSONEncoder().encode(heard) else { return }
         defaults.set(data, forKey: Self.heardKey)
+    }
+
+    private func saveNightKnown() {
+        guard let data = try? JSONEncoder().encode(nightKnown) else { return }
+        defaults.set(data, forKey: StorageKeys.nightKnown)
     }
 }

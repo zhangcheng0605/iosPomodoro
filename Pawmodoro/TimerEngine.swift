@@ -54,6 +54,10 @@ final class TimerEngine {
     /// that way. Cleared whenever the phase stops for any reason.
     private(set) var sighting: Sighting?
 
+    /// Whether the last second of this break slips the pounce — the rare
+    /// variant, decided at break start like any other roll.
+    private(set) var pounceEscape = false
+
     /// Whether Soot is doing her rounds this phase.
     ///
     /// Her one quirk, and the only one that shows while somebody else is the
@@ -249,6 +253,11 @@ final class TimerEngine {
             rollHeard()
             rollEncounter()
             rollStrayCameo()
+            // The break's closing pounce: one second in seven gets away.
+            // Rolled here like everything else, so the chase is pure
+            // f(remaining) afterwards.
+            pounceEscape = phase.isBreak
+                && (LaunchOptions.pounceEscapes || Int.random(in: 0..<7) == 0)
         }
 
         let end = Date().addingTimeInterval(remaining)

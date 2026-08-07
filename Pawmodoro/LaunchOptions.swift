@@ -325,6 +325,10 @@ enum LaunchOptions {
         let days = value(after: "-PawmodoroRemember").flatMap(Int.init) ?? 0
         return days > 0 ? days : nil
     }()
+
+    /// Every break's closing pounce misses — the one-in-seven escape,
+    /// on demand.
+    static let pounceEscapes = isSet("-PawmodoroPounce")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -357,6 +361,7 @@ enum LaunchOptions {
     static let fillDrawer = false
     static let forcedTrick: String? = nil
     static let rememberDaysAgo: Int? = nil
+    static let pounceEscapes = false
     static let nightSessions: Int? = nil
     static let forcedDream: String? = nil
     static let forcedHeard: Heard? = nil

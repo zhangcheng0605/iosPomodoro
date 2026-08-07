@@ -32,6 +32,22 @@ struct BuddyView: View {
     /// way rotation would) and a travel offset for the leap.
     @State private var trickScaleX: CGFloat = 1
     @State private var trickOffset: CGSize = .zero
+    /// The break's closing hunt: crouch from T-10, wiggle from T-3, pounce
+    /// at zero. Pure function of the countdown; nothing persists.
+    @State private var pounceStage: PounceStage = .none
+    /// The batted second, mid-tumble.
+    @State private var digitVisible = false
+    @State private var digitOffset = CGSize(width: 0, height: -64)
+    @State private var digitSpin: Double = 0
+    @State private var digitFade: Double = 1
+    /// Held eye contact, being answered.
+    @State private var slowBlinking = false
+    /// The pet gesture's hold-tracking, for telling a slow blink from a
+    /// stroke: where the touch began, and whether it has wandered.
+    @State private var petHoldBegan: Date?
+    @State private var petHoldMoved = false
+
+    private enum PounceStage { case none, crouch, wiggle, pounce }
 
     private let spriteSize: CGFloat = 104
 
@@ -219,6 +235,21 @@ struct BuddyView: View {
                             .transition(.opacity)
                     }
 
+                    // The last second, batted off the clock — or getting
+                    // away, one break in seven.
+                    if digitVisible {
+                        Text("0")
+                            .font(.system(size: 20, weight: .bold, design: .rounded)
+                                .monospacedDigit())
+                            .foregroundStyle(Theme.bark)
+                            .padding(6)
+                            .background(Circle().fill(Theme.cream.opacity(0.9)))
+                            .rotationEffect(.degrees(digitSpin))
+                            .offset(digitOffset)
+                            .opacity(digitFade)
+                            .allowsHitTesting(false)
+                    }
+
                     // The `isNapping` gate is the whole of the "only while
                     // asleep" rule, and it is why Luna dreams through her
                     // daytime naps rather than her night watch — no special
@@ -336,6 +367,9 @@ struct BuddyView: View {
             guard let attempt else { return }
             performTrick(attempt)
         }
+        .onChange(of: engine.remaining) { _, remaining in
+            advancePounce(remaining: remaining)
+        }
         .task {
             playHello()
             revealMorningIfDue()
@@ -402,6 +436,11 @@ struct BuddyView: View {
         if helloAsleep {
             return buddy.frame("asleep")
         }
+        // The slow blink holds the half-lidded frame — the existing blink
+        // art, just given time to mean something.
+        if slowBlinking {
+            return buddy.frame("awake_blink")
+        }
         if !animator.isPlayingTransient(at: date), pawRaised(at: date) {
             // The raised bounce frame stands in for buddies whose paw-up
             // hasn't been drawn yet — up on the toes, expectant.
@@ -461,6 +500,14 @@ struct BuddyView: View {
             // whole show for the second.
             break
         }
+        // Past bond level three, the buddy says it first: one unprompted
+        // slow blink, only at the day's first meeting, never replayable.
+        if engine.bond >= .close {
+            Task {
+                try? await Task.sleep(nanoseconds: 7_500_000_000)
+                performSlowBlink(initiated: true)
+            }
+        }
     }
 
     /// Pick the find up: it moves to the drawer, with its provenance.
@@ -494,6 +541,97 @@ struct BuddyView: View {
         }
         HapticsDirector.shared.nudge()
         addHeart()
+    }
+
+    // MARK: The last-second pounce
+
+    /// The countdown digits become prey in a break's final ten seconds:
+    /// flatten, wiggle, pounce on the zero as it lands. Driven entirely off
+    /// `engine.remaining`, which the ticker already publishes — the same
+    /// no-new-timers rule as everything else. It must never delay the
+    /// incoming focus face, and it can't: it only ever touches the buddy.
+    private func advancePounce(remaining: TimeInterval) {
+        guard !reduceMotion else { return }
+        guard engine.isRunning, engine.phase.isBreak else {
+            if pounceStage != .none, pounceStage != .pounce { resetPounce() }
+            return
+        }
+        if remaining > 10 {
+            if pounceStage != .none { resetPounce() }
+            return
+        }
+        switch pounceStage {
+        case .none where remaining > 3:
+            pounceStage = .crouch
+            withAnimation(.easeInOut(duration: 0.4)) {
+                trickOffset = CGSize(width: 0, height: 3)
+            }
+        case .none, .crouch:
+            if remaining <= 3, remaining > 0.5 {
+                pounceStage = .wiggle
+                Task { await wiggleHaunches() }
+            } else if remaining <= 0.5 {
+                pounceStage = .pounce
+                Task { await performPounce(escapes: engine.pounceEscape) }
+            }
+        case .wiggle:
+            if remaining <= 0.5 {
+                pounceStage = .pounce
+                Task { await performPounce(escapes: engine.pounceEscape) }
+            }
+        case .pounce:
+            break
+        }
+    }
+
+    private func resetPounce() {
+        pounceStage = .none
+        withAnimation(.easeOut(duration: 0.3)) { trickOffset = .zero }
+    }
+
+    private func wiggleHaunches() async {
+        for index in 0..<6 {
+            guard pounceStage == .wiggle else { return }
+            withAnimation(.linear(duration: 0.12)) {
+                trickOffset = CGSize(width: index.isMultiple(of: 2) ? -2 : 2, height: 3)
+            }
+            try? await Task.sleep(nanoseconds: 130_000_000)
+        }
+    }
+
+    private func performPounce(escapes: Bool) async {
+        // The zero drops off the clock…
+        digitOffset = CGSize(width: 6, height: -64)
+        digitSpin = 0
+        digitFade = 1
+        digitVisible = true
+        withAnimation(.easeOut(duration: 0.24)) {
+            trickOffset = CGSize(width: 0, height: -30)
+        }
+        try? await Task.sleep(nanoseconds: 240_000_000)
+        if escapes {
+            // …and gets away, straight up. One break in seven.
+            withAnimation(.easeIn(duration: 0.6)) {
+                digitOffset = CGSize(width: 22, height: -180)
+                digitSpin = 200
+                digitFade = 0
+            }
+            withAnimation(.easeIn(duration: 0.22)) { trickOffset = .zero }
+            say("the last second got away. \(name) is still thinking about it", for: 4)
+        } else {
+            // …and is batted clean off the screen.
+            withAnimation(.easeIn(duration: 0.5)) {
+                digitOffset = CGSize(width: 96, height: 40)
+                digitSpin = 300
+                digitFade = 0
+            }
+            withAnimation(.easeIn(duration: 0.22)) { trickOffset = .zero }
+            animator.play(.happy, for: buddy)
+            HapticsDirector.shared.stamp()
+        }
+        try? await Task.sleep(nanoseconds: 650_000_000)
+        digitVisible = false
+        pounceStage = .none
     }
 
     // MARK: Tricks
@@ -744,8 +882,50 @@ struct BuddyView: View {
     private var petGesture: some Gesture {
         // A zero-distance drag catches both a tap and a stroke; strokes keep
         // firing on a throttle so scratching the buddy stays rewarding.
+        // A touch that begins and then holds truly still is something else:
+        // eye contact. Hold it most of a second and the buddy answers with
+        // the slow blink — the animal signal for "I trust you, and I can't
+        // be bothered to prove it harder than this."
         DragGesture(minimumDistance: 0)
-            .onChanged { _ in pet(throttle: 0.4) }
+            .onChanged { value in
+                if petHoldBegan == nil {
+                    petHoldBegan = Date()
+                    petHoldMoved = false
+                    Task {
+                        try? await Task.sleep(nanoseconds: 900_000_000)
+                        guard let began = petHoldBegan,
+                              Date().timeIntervalSince(began) >= 0.85,
+                              !petHoldMoved
+                        else { return }
+                        performSlowBlink()
+                    }
+                }
+                let travel = hypot(
+                    value.location.x - value.startLocation.x,
+                    value.location.y - value.startLocation.y
+                )
+                if travel > 14 { petHoldMoved = true }
+                pet(throttle: 0.4)
+            }
+            .onEnded { _ in
+                petHoldBegan = nil
+                petHoldMoved = false
+            }
+    }
+
+    /// The blink, returned — or, past bond level three, offered first on
+    /// the day's first open.
+    private func performSlowBlink(initiated: Bool = false) {
+        guard !isNapping, !slowBlinking else { return }
+        slowBlinking = true
+        HapticsDirector.shared.purr(duration: 0.8)
+        say(initiated
+            ? "\(name) blinked first. Make of that what you will"
+            : "\(name) returns the slow blink. That settles that", for: 4)
+        Task {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            slowBlinking = false
+        }
     }
 
     private func pet(throttle: TimeInterval = 0.25) {

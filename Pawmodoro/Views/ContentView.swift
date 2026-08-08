@@ -69,8 +69,6 @@ struct ContentView: View {
 
                 sky
 
-                skyTouch
-
                 weather
 
                 seasonal
@@ -138,6 +136,9 @@ struct ContentView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
+
+                // Above the countdown, and it has to be. See `skyTouch`.
+                skyTouch
 
                 if shutter {
                     Theme.cream
@@ -700,9 +701,32 @@ struct ContentView: View {
     /// the moon alone, so everything between them still falls through to the
     /// toys underneath.
     ///
-    /// Above `sky` so the answers draw over the moon they are about, and below
-    /// `weather` so a storm still crosses in front of the whole thing. Deaf
-    /// during a focus phase, like the toys — see `NightSkyTouchView`.
+    /// **Last in this stack, above the countdown.** It was originally below,
+    /// on the reasoning that the sky is behind the dial and its answers should
+    /// stay there. Measured on a phone, that reasoning cost the feature: the
+    /// sky band is 0.125–0.33 of the height and the 260pt dial covers y
+    /// 140–400, so the dial sits on 20 of the 47 stars and the phase chip on
+    /// two more. Sixteen of the forty-eight links had *both* ends under
+    /// them — The Lantern's seven, The Long Watch's seven, two of The
+    /// Whale's — which is three figures nobody could ever trace, because the
+    /// dial took the touch first. (`skyBottom` reads "stops short of the countdown ring,
+    /// which begins around 0.335"; the ring begins at 0.16, and the stars are
+    /// not the thing to move — the atlas is built on where they are.)
+    ///
+    /// Being on top costs almost nothing, because `NightSkyTouchView`'s hit
+    /// region is `SkyReach` — the star and moon discs and nothing else. Every
+    /// point of the dial that is not within a couple of dozen points of a star
+    /// still falls straight through to it, and by day, or mid-focus, there are
+    /// no targets at all and the layer is a hole. What it does buy is that the
+    /// line following your finger is drawn *over* the dial rather than under
+    /// it: a stroke you cannot see is not direct manipulation, and half of
+    /// these strokes cross the face.
+    ///
+    /// The two things it now draws in front of that it used to draw behind:
+    /// `weather` (a flash lands over the rain rather than under it — the
+    /// answer belongs to the finger, and the rain is scenery) and the dial
+    /// itself. Deaf during a focus phase, like the toys — see
+    /// `NightSkyTouchView`.
     @ViewBuilder
     private var skyTouch: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -721,6 +745,11 @@ struct ContentView: View {
                 .skyStirred(skyLean)
             }
         }
+        // Declared last so it is drawn and hit-tested last; read *first*, so
+        // moving it up the stack didn't quietly move the sky to the bottom of
+        // VoiceOver's list. It is the top of the screen and it should be said
+        // where it looks.
+        .accessibilitySortPriority(1)
     }
 
     private var phaseChip: some View {

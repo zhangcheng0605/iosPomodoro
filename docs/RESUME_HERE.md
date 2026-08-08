@@ -1,107 +1,136 @@
 # Resume here
 
-**8 Aug 2026 — the two branches are merged and the merged app has been
-walked.** Branch: `claude/pet-interactions-retention-7caoj8`. The merge was
-11 conflicts over ~2,000 lines and is committed as "Merge the two branches:
-one app again".
-
-Walking it found **seven bugs, all now fixed, reproduced first and seen fixed
-on screen** — a fatal crash on "Share the papers", 36 species that could roll
-a pale coat with no sprite (an invisible animal on the rarest event in the
-app), the celebration card sitting on top of the high five, every postcard
-cropping to a band of sky, the drift clock wrapping out of the dial, the
-homestead burying its own caption, and a renamed buddy signing postcards with
-its factory name. `docs/NEXT_UPDATE.md` has the table, the severities and the
-one item still open (the Harbor/Cloudspire postcard ground — a design call,
-with the measurement already done).
-
-Two checker rules were added and **deliberately broken first to prove they
-catch anything**. Device Release is 37.7 MB. (The 45 MB ceiling was retired in Aug 2026 — see `CLAUDE.md`. Measure and justify rather than trip over a number nobody could explain.)
-
-## Where things stand
-
-**The whole Deep Time plan (V, W, X, Y) is built** plus the owner's first
-playtest batch. Today's Mac session: 9 compile errors fixed across the blind
-commits, four real bugs found by looking (inverted tide, wood-on-black,
-earless lynx, Debug-only symbol in Release), then Phase W built end to end —
-found-gating, ambience→AAC on a new single-node AmbienceLoop player, four
-circadian grades per loop, rain-family variants, the Bell of Hours with its
-24-hour clock ring, and Music III (catalogue 65, three found mixtapes incl.
-Soot's Tape). Then nine playtest orders: paw row removed, ambience row made
-scrollable (was a plain HStack — ends unreachable), bright phase-correct
-yellow moon + brighter stars at night, inverted-photo fix (CGContext.draw in
-a y-down renderer), take-a-photo + camera glyph on the main screen, tip jar
-surfaced with owner-brief copy, 4 free accessories + 2 free clock faces
-(bloom, lantern), drag-the-food feeding with the buddy watching/perking/
-eating, and the rain family retuned ~25% gentler.
-
-Verification discipline held throughout: 22 checkers green, Debug AND
-Release clean at every commit, features driven on screen (agents' screenshots
-preserved in the session scratchpad), Release 41 MB vs the 45 ceiling.
-
-## What remains, exactly
-
-1. **W2 remnant (small, buildable anywhere):** the field-recording cards —
-   almanac line "You have heard the forest at dawn" + a sepia card when all
-   four grades of a loop have been heard. Needs per-grade listening recorded
-   (a Chronicle kind or subject scheme) + an almanac row. Everything else in
-   W is done.
-2. **Phase Z (blocked on the owner, 5 min in Xcode):** File → New → Target →
-   Widget Extension, name `PawmodoroWidgets`, tick "Include Live Activity".
-   Then the Phase D/Z code (already written) activates. Do NOT hand-write
-   the target into project.pbxproj.
-3. **The listening pass (owner's ears, ~1 hour):** 120 ambience grades, 16
-   bells, 65 tracks — never heard by anyone. Priorities: the retuned rain
-   family; Rain + "Windowpane Study" together (the whole Rainy Day Tapes
-   claim is that they duet); one bell at night volume.
-4. **Older-plan opens:** E2's full accessory wave and the "Now playing" radio
-   chip were both taken on 8 Aug — see the commits. **Alternate app icons**
-   are still open; the investigation is done, so this is a short job now:
-
-   - There is exactly one `AppIcon.appiconset`, and `project.pbxproj` sets
-     `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` twice (lines 250 and 281,
-     Debug and Release).
-   - Adding alternates needs two more build settings on both configurations:
-     `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` (space-separated) and
-     `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`. That is an
-     additive settings change, not a target change — unlike the Widget
-     Extension it does **not** need Xcode's GUI, and it reverts by deleting
-     the two lines.
-   - `tools/generate_assets.py:672 make_icon()` already draws the icon and
-     writes it to `ICONSET`; alternates want that parameterised by palette
-     rather than a second function, so the seasonal icons come out of the
-     same drawing the shipped one does.
-   - Runtime is `UIApplication.shared.setAlternateIconName(_:)`, which must
-     go behind `Platform.swift`'s fence like every other UIKit call, and
-     wants a picker in Settings beside the theme row.
-   - iOS shows a system alert every time the icon changes and there is no
-     supported way to suppress it. Decide whether that is acceptable before
-     building the picker — it may argue for tying the icon to the theme
-     rather than offering a separate control.
-5. **On-device checks that needed a real phone:** camera shutter→keep round
-   trip, the new-moon night, Reduce Motion eat-fade, haptics.
-
-## How this session worked (worth repeating)
-
-Sequential fresh-context builder agents against the house rules, each gated
-on all 22 checkers + both build configurations + driving its change on
-screen, with no commit rights; the main session verified independently and
-committed. Writers must stay sequential in one tree (they share ContentView,
-TimerEngine, the generators) — use worktrees if you want parallel writers.
+**Paused 9 Aug 2026, ~03:10 SGT, cleanly.** Branch
+`claude/pet-interactions-retention-7caoj8`, everything committed and pushed,
+working tree clean, all 24 checkers green, Debug and Release both build.
+Nothing is lost.
 
 ## The one line to paste next session
 
-> read docs/RESUME_HERE.md; build the W2 field-recording cards, then walk
-> docs/NEXT_UPDATE.md and prep the App Store update
+> Read docs/RESUME_HERE.md. Finish the two paused features — the buddy
+> acrobatics and the Dynamic Type fix — then walk docs/NEXT_UPDATE.md.
+
+---
+
+## Two features are half-built and NEITHER has been seen on screen
+
+They are committed because the tree is coherent, not because they work.
+`5d1b017` is the pause commit and its message has the detail.
+
+### 1. Buddy acrobatics — sprites done, wiring done, never watched
+
+The owner asked for buddies to do real tricks when tapped instead of just
+smiling. 29 sprites are generated, `Antics.swift` exists, `Antic:7` is in the
+enum, `BuddyView` carries the state, everything compiles.
+
+**Nobody — no human and no agent — has watched a single buddy move.**
+
+First job: finish the debug flags that play a move on demand. Without them,
+checking this means tapping a buddy six times to reach its signature, for
+twelve buddies. Then drive all twelve and *look at the frames in order* — a
+tumble that smears at 8fps is a failure even when every frame is right alone.
+
+Watch specifically: the owl (flaps, does not somersault), the hedgehog (rolls
+into a ball, reusing its sleeping frame), the penguin's bellyslide, and the
+capybara — whose signature is that it **refuses to move**, which must read as
+a deliberate joke rather than a bug. Also put a hat and collar on a buddy
+mid-tumble: anchors are measured per frame, and a new frame without one sends
+the hat somewhere.
+
+### 2. Dynamic Type — partial, and this is the one that should block a release
+
+At the largest **ordinary** text size — no accessibility setting, on a 6.3"
+phone — the transport row is clipped by the screen edge and **the start button
+is partly unhittable**. At accessibility sizes it is entirely off screen and
+nothing scrolls. A Pomodoro timer whose start button cannot be pressed is a
+serious bug for anyone who bumped their text size, which is a lot of people.
+
+Two more from the same root cause (a plain centred `VStack` with no
+`ScrollView`, overflowing at both ends): the phase chip renders *under* the
+toolbar reading "…cus", and ambience glyphs outgrow their backing badly enough
+to measure **1.00:1** against scenery and hide the selected-state pill.
+
+**The constraint on resume: the default layout must come out pixel-identical.**
+Build the pre-fix source separately and diff it. Do not assert it.
+
+---
+
+## Waiting on the owner — only he can do these
+
+1. **The five regressed ambience loops.** `snowhush` and the three `raintent`
+   variants measured *toward* noise after re-voicing; `storm_v2` marginally.
+   Numbers cannot settle it — snowhush was near a pure tone before, which may
+   have sounded like an artificial drone, so 0.27 flatness may be better
+   despite the worse figure. **Listen, then say keep or revert.** One commit
+   back either way.
+2. **Alternate icons: does switching work twice on a real phone?** On the
+   Simulator only the *first* change per install succeeded; later taps never
+   reached `setAlternateIconName` at all. Unknown whether that is a wedged
+   Simulator or a real bug. One minute to settle.
+3. **The Mac App Store** still needs: the sandbox entitlement wired to the
+   macOS build, screenshots, and StoreKit tested under sandbox. See
+   `docs/MAC_APP_STORE.md`.
+
+---
+
+## What landed on 8-9 Aug (all committed and pushed)
+
+- **The sky answers a finger.** Trace constellations star by star; the moon
+  answers by phase. All 48 links across all 7 figures verified working. The
+  atlas is still earned by nights — a link is only drawable once one of its
+  stars is lit, so no sequence of taps shortcuts it.
+- **The sky leans when you tap a chip.** Real parallax, verified by tracking
+  24 stars and solving back to the source constants. A sun was drawn because
+  there was none. **Clouds cannot move** — they are painted into the scene
+  PNGs; that would be a generator change.
+- **Crickets and cicadas re-voiced.** 80 % of the old files was inaudible
+  sub-150 Hz rumble that set the level for everything else. Flatness 0.375 →
+  0.026. Eight other loops re-voiced alongside.
+- **Phase Z shipped** — home-screen widget and Live Activity, after the owner
+  added the Widget Extension target.
+- **The Mac is a real platform** — native macOS, universal binary. It was
+  "Designed for iPad" before, which is why every `#if os(macOS)` block in the
+  repo was dead code.
+- **The Mac audio was never broken.** Measured signal reaching the mixer. The
+  Sound Studio was drawing a *sounding* speaker beside a track that had never
+  been asked to play, because both channels follow the timer by design.
+- Five app icons chosen by CIELAB measurement; a promo code (`zac888`) that
+  **cannot reach the App Store** — compiled out of Release entirely, proven by
+  grepping both bundles.
+- **Two checkers that were lying** — `check_postcard.py` was checking the
+  model instead of the card, and `check_swift.py` walked one target of two.
+  Both fixed and broken deliberately to prove they catch anything.
+- **The 45 MB ceiling was retired**, with the reasoning recorded in
+  `CLAUDE.md`. It was never researched — a round number picked while planning
+  the audio phase. What survives is the discipline: measure the device Release
+  `.app`, say the number, and give growth a reason.
+
+**Device Release: 42.83 MB**, of which 26.9 MB is the 169 `.m4a` files.
+
+---
+
+## How this session worked, and what to repeat
+
+Every builder agent had an **adversarial verifier** behind it, defaulting to
+REFUTED. That doubled the wall-clock and was worth it: it caught three
+constellations that could never be traced, a sparkle layer burning seven times
+the app's entire idle CPU, and a checker that passed while the bug it existed
+to catch was present. All three would have shipped.
+
+Each agent gets its **own simulator**, created and deleted by itself — sharing
+one causes agents to install builds over each other mid-verification.
+
+**Never drive the Mac app with the mouse.** The owner cannot use his computer
+while that happens. Use `AXPress`, or better, add a launch flag so there is
+nothing to click.
 
 ## Standing traps
 
-- iCloud Desktop breaks codesign: always -derivedDataPath outside the repo.
-- Never click into Xcode's Bundle Identifier field (it once became
-  com.pawmodoro.zhangchenso-).
-- Generators churn encodings: byte-compare and revert what didn't really
-  change before committing.
-- The Simulator lies about audio formats and cannot hear: AVAudioEngine
-  changes need the device, and "verified" never means "listened to".
-- Transient UI (captions ~3.5s) cannot be screenshot-verified: use
-  `simctl launch --console-pty` and print, or read durable state.
+- iCloud Desktop breaks codesign: always `-derivedDataPath` outside the repo.
+- Generators churn encodings: byte-compare outside the three MP4 timestamp
+  atoms (offsets 50-56, 166-172, 266-272) before believing a file changed.
+- The Simulator lies about audio formats and cannot hear.
+- Transient UI outruns a screenshot: burst-capture, or read durable state from
+  the container plist — and note that plist lags `cfprefsd` by tens of
+  seconds, so read it with `defaults export` while the app is running.
+- `git add -A` sweeps up other agents' in-flight files. Use targeted paths.

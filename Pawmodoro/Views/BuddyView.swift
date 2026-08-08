@@ -363,6 +363,21 @@ struct BuddyView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
+                // Every caption that shipped before happened to fit on one
+                // line, so nothing here ever had to say it could wrap — and
+                // `multilineTextAlignment` alone does not grant it. Inside a
+                // laid-out stack the text stayed one line and truncated.
+                //
+                // The night visitor is what found it: its whole feature is a
+                // sentence of evidence about who came to the sill, 70-95
+                // characters long, and all nine of them lost their tail
+                // mid-word — "the tanuki has a sardine now,…". The homecoming
+                // line is longer still. VoiceOver was always fine, because
+                // `accessibilityLabel` below is handed the whole string; this
+                // was only ever true of the drawing.
+                .fixedSize(horizontal: false, vertical: true)
+                // Kept off the screen edges, since it may now be two lines.
+                .frame(maxWidth: 300)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 // Its own backing, for the same reason the timer face has one:

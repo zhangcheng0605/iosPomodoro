@@ -25,7 +25,9 @@ import AppKit
 ///   — see `docs/HEARTH_PLAN.md`.
 /// - **Live Activities.** iOS only, by construction.
 /// - **The audio session.** There is no `AVAudioSession` on macOS; sound just
-///   plays. `activateAmbientAudioSession()` is where that stops mattering.
+///   plays. `activateAmbientAudioSession()` is where that stops mattering —
+///   and its note carries the measurement proving the no-op is not why a Mac
+///   was once reported silent.
 ///
 /// ### What survives untouched, and why that is not luck
 ///
@@ -91,6 +93,33 @@ enum Platform {
     /// capability App Review scrutinises. macOS has no `AVAudioSession` at all
     /// — sound simply plays — so this is the fourth deliberate no-op, and the
     /// two audio channels call it rather than each carrying their own `#if`.
+    ///
+    /// ### The no-op does not cause silence, and here are the numbers
+    ///
+    /// "The Mac has no sound" was reported once and this method was the first
+    /// suspect, being the one place the audio path forks. It is not the cause,
+    /// and the measurement is written down so nobody has to suspect it twice.
+    /// A tap on `mainMixerNode` inside the running Mac app, both channels
+    /// going, sandboxed build and unsandboxed alike:
+    ///
+    /// - default output was AirPods Pro, **2 ch, 48 kHz**, while every loop and
+    ///   track in this app is **1 ch, 22.05 kHz** — the exact mismatch that
+    ///   killed the iPhone in build 1;
+    /// - `engine.start()` returned without throwing, `isRunning == true`;
+    /// - the sub-mixer converted 1 ch/22.05 kHz to 2 ch/48 kHz across the
+    ///   `format: nil` hop, exactly as intended, and non-silent samples reached
+    ///   the main mixer: ambience peaked around 0.05–0.07, music 0.03–0.27,
+    ///   sustained over seconds.
+    ///
+    /// So the graph is right on macOS for the same reason it is right on iOS:
+    /// the **player→mixer** connection carries the buffer's own format and the
+    /// **mixer→main** connection carries `nil`, which is what makes the mixer
+    /// do the conversion. Do not "fix" either hop for the Mac.
+    ///
+    /// What the reporter actually hit was a track chosen while the timer was
+    /// resting — both channels follow the timer by design — with a Sound Studio
+    /// that drew a sounding speaker beside it. That is fixed in
+    /// `SoundStudioView`, not here.
     static func activateAmbientAudioSession() {
         #if canImport(UIKit)
         let session = AVAudioSession.sharedInstance()

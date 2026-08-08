@@ -33,13 +33,21 @@ struct FlourishView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        // Once a minute, for the hour — the same cadence the sky, the scenery
-        // and the seasons are all re-read at, and about two thousand times
-        // more often than the light actually changes colour.
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let part = LaunchOptions.forcedDayPart
-                ?? DayPart.current(at: context.date)
-            if let flourish = current, !reduceMotion {
+        // Nothing at all when there is nothing to draw — not a canvas, and
+        // not the clock that would drive one. "A canvas is only mounted while
+        // it has something to draw" is the law, and the two states that reach
+        // here with nothing are the common ones: an overcast or misty sky,
+        // and Reduce Motion, which turns every look off. Both must cost what
+        // the app costs with this layer deleted, and they measure that way.
+        if let flourish = current, !reduceMotion,
+           !ProcessInfo.processInfo.arguments.contains("-FxOff") {
+            // Once a minute, for the hour — the same cadence the sky, the
+            // scenery and the seasons are all re-read at, and about two
+            // thousand times more often than the light actually changes
+            // colour.
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let part = LaunchOptions.forcedDayPart
+                    ?? DayPart.current(at: context.date)
                 FlourishCanvas(
                     flourish: flourish,
                     tint: tint,
@@ -48,8 +56,8 @@ struct FlourishView: View {
                 )
                 .id(flourish.look)
             }
+            .allowsHitTesting(false)
         }
-        .allowsHitTesting(false)
     }
 
     private var current: Flourish? {
@@ -88,18 +96,56 @@ struct FlourishCanvas: View {
 
     @State private var started = Date()
 
+    // TEMPORARY probe knobs — removed before this lands.
+    static func arg(_ name: String, _ fallback: Double) -> Double {
+        let a = ProcessInfo.processInfo.arguments
+        guard let i = a.firstIndex(of: name), i + 1 < a.count,
+              let v = Double(a[i + 1]) else { return fallback }
+        return v
+    }
+    static let fxRim = arg("-FxRim", 1)          // 0 = no dark rim disc
+    static let fxRimR = arg("-FxRimR", 1.35)     // rim radius multiplier
+    static let fxDropHalo = arg("-FxDropHalo", 1) // 0 = drop has no soft head
+    static let fxCount = arg("-FxCount", 1)      // multiplies every count
+    static let fxFPS = arg("-FxFPS", 0)          // >0 overrides the cadence
+    static let fxHalo = arg("-FxHalo", 1.15)     // glint halo, as a multiple of arm
+    static let fxPeriodic = arg("-FxPeriodic", 1) // 1 = .periodic clock instead of .animation
+    static let fxBand = arg("-FxBand", 0)        // >0 = clip the canvas to this fraction of height
+
+    @ViewBuilder
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-            Canvas { canvas, size in
-                draw(
-                    &canvas, size: size,
-                    t: context.date.timeIntervalSince(started)
-                )
+        // Each look is redrawn at the rate its own motion needs, and no
+        // faster — see `Flourish.Look.frameRate`, which carries both the
+        // numbers and the measurement that set them.
+        let fps = FlourishCanvas.fxFPS > 0 ? FlourishCanvas.fxFPS : flourish.look.frameRate
+        Group {
+            if FlourishCanvas.fxPeriodic > 0 {
+                TimelineView(.periodic(from: .now, by: 1.0 / fps)) { context in
+                    canvasBody(at: context.date)
+                }
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / fps)) { context in
+                    canvasBody(at: context.date)
+                }
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func canvasBody(at date: Date) -> some View {
+        let c = Canvas { canvas, size in
+            draw(&canvas, size: size, t: date.timeIntervalSince(started))
+        }
+        if FlourishCanvas.fxBand > 0 {
+            GeometryReader { geo in
+                c.frame(height: geo.size.height * FlourishCanvas.fxBand)
+            }
+        } else {
+            c
+        }
     }
 
     private func draw(
@@ -130,7 +176,7 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, size: CGSize,
         t: TimeInterval, strength: Double
     ) {
-        let count = 5 + Int(strength * 6)
+        let count = Int(FlourishCanvas.fxCount * Double(5 + Int(strength * 6)))
 
         for index in 0..<count {
             let speck = Speck(index: index, salt: 1)
@@ -142,7 +188,16 @@ struct FlourishCanvas: View {
             // nearer drops (higher `depth`) landing lower, is right everywhere
             // and claims nothing about any particular place.
             let ground = size.height * (0.70 + speck.depth * 0.22)
-            let period = 1.5 + speck.depth * 1.1
+            // Slower than it was (1.5–2.6s), and the reason is the frame rate
+            // rather than taste. At 1.5s a drop covers five hundred points a
+            // second; twelve frames of that is a forty-point jump between
+            // positions for a streak nine to twenty-two points long, which is
+            // a dotted line rather than a falling drop. At 2.6–4.0s it moves
+            // twenty to thirty-seven points a frame — the same ground per
+            // frame `WeatherView`'s own rain has always covered at this rate,
+            // underneath it, since the day it shipped. The ring, which is what
+            // this effect is actually for, is unchanged.
+            let period = 2.6 + speck.depth * 1.4
             let life = ((t + speck.phase * period)
                 .truncatingRemainder(dividingBy: period)) / period
             let x = speck.sx * size.width
@@ -176,8 +231,10 @@ struct FlourishCanvas: View {
         let length = 9 + depth * 13
         let halo = 4.0 + depth * 4
 
-        softPoint(&canvas, at: CGPoint(x: x, y: y), radius: halo,
-                  colour: light, alpha: alpha * 0.8)
+        if FlourishCanvas.fxDropHalo > 0 {
+            softPoint(&canvas, at: CGPoint(x: x, y: y), radius: halo,
+                      colour: light, alpha: alpha * 0.8)
+        }
 
         var path = Path()
         path.move(to: CGPoint(x: x, y: y))
@@ -283,7 +340,7 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, size: CGSize,
         t: TimeInterval, strength: Double
     ) {
-        let count = 8 + Int(strength * 6)
+        let count = Int(FlourishCanvas.fxCount * Double(8 + Int(strength * 6)))
         for index in 0..<count {
             let speck = Speck(index: index, salt: 7)
             let speed = 0.10 + speck.depth * 0.13
@@ -329,7 +386,7 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, size: CGSize,
         t: TimeInterval, strength: Double
     ) {
-        let count = 10 + Int(strength * 8)
+        let count = Int(FlourishCanvas.fxCount * Double(10 + Int(strength * 8)))
         for index in 0..<count {
             let speck = Speck(index: index, salt: 23)
             let period = 2.6 + speck.depth * 3.0
@@ -374,7 +431,7 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, size: CGSize,
         t: TimeInterval, strength: Double
     ) {
-        let count = 9 + Int(strength * 6)
+        let count = Int(FlourishCanvas.fxCount * Double(9 + Int(strength * 6)))
         for index in 0..<count {
             let speck = Speck(index: index, salt: 3)
             let speed = 0.014 + speck.depth * 0.020
@@ -414,7 +471,7 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, size: CGSize,
         t: TimeInterval, strength: Double
     ) {
-        let count = 5 + Int(strength * 8)
+        let count = Int(FlourishCanvas.fxCount * Double(5 + Int(strength * 8)))
         for index in 0..<count {
             let speck = Speck(index: index, salt: 17)
             let period = 4.5 + speck.depth * 4.5
@@ -441,7 +498,15 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, x: Double, y: Double,
         arm: Double, alpha: Double
     ) {
-        let halo = arm * 1.8
+        // The halo used to be `arm * 1.8`, which — once `softPoint` has spread
+        // its dark rim over 1.35 of that again — painted two soft-shaded discs
+        // seventy-eight points across for a star sixteen points wide. It was
+        // the largest shape in this file by a wide margin, drawn four or five
+        // times a frame, and it was most of the sparkle's bill. At 1.15 the
+        // glow hugs the glint instead of blooming past it, which is what a
+        // point of light in clear air actually does; the star, which is the
+        // part anyone actually sees, is untouched.
+        let halo = arm * FlourishCanvas.fxHalo
         softPoint(&canvas, at: CGPoint(x: x, y: y), radius: halo,
                   colour: light, alpha: alpha * 0.8)
 
@@ -489,14 +554,17 @@ struct FlourishCanvas: View {
         _ canvas: inout GraphicsContext, at centre: CGPoint,
         radius: Double, colour: Color, alpha: Double
     ) {
-        canvas.fill(
-            Path(ellipseIn: CGRect(
-                x: centre.x - radius * 1.35, y: centre.y - radius * 1.35,
-                width: radius * 2.7, height: radius * 2.7
-            )),
-            with: falloff(Theme.bark, at: centre,
-                          alpha: min(0.26, alpha * 0.85), radius: radius * 1.35)
-        )
+        if FlourishCanvas.fxRim > 0 {
+            let rr = radius * FlourishCanvas.fxRimR
+            canvas.fill(
+                Path(ellipseIn: CGRect(
+                    x: centre.x - rr, y: centre.y - rr,
+                    width: rr * 2, height: rr * 2
+                )),
+                with: falloff(Theme.bark, at: centre,
+                              alpha: min(0.26, alpha * 0.85), radius: rr)
+            )
+        }
         canvas.fill(
             Path(ellipseIn: CGRect(
                 x: centre.x - radius, y: centre.y - radius,

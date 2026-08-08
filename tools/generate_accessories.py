@@ -405,6 +405,22 @@ def frames_for(species, awake, asleep, stretch, quirks):
         out[f"buddy_{species}_{suffix}"] = awake()
         faces[f"buddy_{species}_{suffix}"] = out[f"buddy_{species}_awake"]
     gs.set_eye_shift(0)
+
+    # The two acrobatic frames, and the reason this file is in the build split
+    # at all: they are the poses a buddy spends a tumble in, so a hat measured
+    # anywhere else floats off the head halfway through the move. Mirrors
+    # `build_frames`, bands and all — the hedgehog's are not the others'.
+    #
+    # `air` is drawn on the happy face and gets the same treatment `happy_1`
+    # does: its head is measured on the open-eyed drawing put through the
+    # *same* transform, so the hat it wears in the air is the hat it wore on
+    # the ground. Measuring it on the happy eyes alone moves the search floor
+    # and resizes the head, which is the blink bug wearing a different hat.
+    haunch, legs, depth = gs.ACROBATIC_BANDS.get(
+        species, (gs.HAUNCH, gs.LEGS, gs.CROUCH_DEPTH))
+    out[f"buddy_{species}_crouch"] = gs.crouch_from(awake(), haunch, depth)
+    out[f"buddy_{species}_air"] = gs.air_from(awake("happy"), legs)
+    faces[f"buddy_{species}_air"] = gs.air_from(awake(), legs)
     if stretch is not None:
         out[f"buddy_{species}_stretch"] = stretch()
     for suffix, draw in (quirks or {}).items():

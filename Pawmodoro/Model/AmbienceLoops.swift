@@ -12,15 +12,15 @@ extension Ambience {
     var loopFrames: Int? {
         switch self {
         case .off: nil
-        case .cafe: 308700
-        case .cicadas: 264600
+        case .cafe: 396900
+        case .cicadas: 352800
         case .creek: 529200
-        case .crickets: 308700
+        case .crickets: 441000
         case .drizzle: 264600
         case .emberslate: 396900
         case .fireplace: 264600
-        case .forest: 308700
-        case .library: 441000
+        case .forest: 485100
+        case .library: 573300
         case .nighttrain: 396900
         case .ocean: 617400
         case .purr: 176400
@@ -28,7 +28,7 @@ extension Ambience {
         case .raintent: 308700
         case .snowhush: 529200
         case .storm: 441000
-        case .temple: 529200
+        case .temple: 661500
         case .wind: 529200
         }
     }

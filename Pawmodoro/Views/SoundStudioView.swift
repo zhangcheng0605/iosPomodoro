@@ -20,6 +20,7 @@ struct SoundStudioView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    restingNote
                     ambienceSection
                     mixerSection
                     ForEach(MusicCatalog.shelf.filter(isShown)) { collection in
@@ -41,6 +42,32 @@ struct SoundStudioView: View {
     }
 
     // MARK: Sections
+
+    /// Why the room is quiet.
+    ///
+    /// Both channels follow the timer — `TimerEngine.refreshAmbience()` and
+    /// `refreshMusic()` each return early unless `runState == .running` — so
+    /// choosing a sound or a track while the timer is resting is *designed* to
+    /// play nothing. That rule was nowhere on this screen, and the screen
+    /// actively contradicted it: the chosen row lit its speaker as though the
+    /// track were sounding. Somebody who picks a track, hears silence and has
+    /// just installed the app on a second machine concludes, reasonably, that
+    /// the second machine is broken. The Mac was the first place that happened
+    /// because it is where a new install is most likely to be tried before a
+    /// first session. Nothing about it is platform-specific.
+    ///
+    /// Shown only while the timer is resting: while it runs the answer is
+    /// audible, and a notice that restates what you can already hear is just
+    /// something else to read.
+    @ViewBuilder
+    private var restingNote: some View {
+        if engine.runState != .running {
+            Text("The sound and the track start with the session, and rest when it rests.")
+                .font(.footnote)
+                .foregroundStyle(Theme.bark.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     private var ambienceSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -155,25 +182,36 @@ struct SoundStudioView: View {
         }
     }
 
+    /// One track on a shelf.
+    ///
+    /// **Chosen and sounding are two different things**, and this row used to
+    /// draw only one of them: the selected track showed a speaker with waves
+    /// coming out of it whether or not a single sample was flowing. With the
+    /// timer resting that is the app stating, in the one place a person looks
+    /// to check, that a track is playing when the engine has not been asked to
+    /// play anything. A waveless speaker says *chosen*; the waves are reserved
+    /// for sound actually leaving the app.
     private func row(for track: MusicTrack, unlocked: Bool) -> some View {
-        let playing = engine.settings.music == track.id
+        let chosen = engine.settings.music == track.id
+        let sounding = chosen && engine.runState == .running
 
         return Button {
             guard unlocked else {
                 if track.gate.requiresPlus { showPaywall = true } else { HapticsDirector.shared.nudge() }
                 return
             }
-            // Tapping the playing track stops it: silence has to be reachable.
-            engine.settings.music = playing ? nil : track.id
+            // Tapping the chosen track clears it: silence has to be reachable.
+            engine.settings.music = chosen ? nil : track.id
             HapticsDirector.shared.detent()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: playing ? "speaker.wave.2.fill" : "music.note")
+                Image(systemName: sounding ? "speaker.wave.2.fill"
+                                           : (chosen ? "speaker.fill" : "music.note"))
                     .font(.footnote)
-                    .foregroundStyle(playing ? Theme.blossom : Theme.bark.opacity(unlocked ? 0.5 : 0.3))
+                    .foregroundStyle(chosen ? Theme.blossom : Theme.bark.opacity(unlocked ? 0.5 : 0.3))
                     .frame(width: 18)
                 Text(track.title)
-                    .font(.subheadline.weight(playing ? .semibold : .regular))
+                    .font(.subheadline.weight(chosen ? .semibold : .regular))
                     .foregroundStyle(Theme.bark.opacity(unlocked ? 0.9 : 0.45))
                 Spacer()
                 Text("\(track.bpm)")
@@ -187,9 +225,18 @@ struct SoundStudioView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             unlocked
-                ? "\(track.title), \(track.bpm) beats per minute\(playing ? ", playing" : "")"
+                ? "\(track.title), \(track.bpm) beats per minute\(chosenSuffix(chosen: chosen, sounding: sounding))"
                 : "\(track.title), locked"
         )
+    }
+
+    /// VoiceOver hears the same distinction the icon draws — and the resting
+    /// case says what will happen, because a blind user cannot check by ear
+    /// whether the silence is a fault.
+    private func chosenSuffix(chosen: Bool, sounding: Bool) -> String {
+        if sounding { return ", playing" }
+        if chosen { return ", chosen, starts with the session" }
+        return ""
     }
 
     private func lockLine(for collection: MusicCollection) -> String {

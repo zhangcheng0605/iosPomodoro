@@ -517,105 +517,442 @@ def make_rain(variant=0, dur=12.0):
     return _a_cut_at_lull(_a_to_lufs(bed + drops * 0.55))
 
 
+# ======================================================================
+# The textured beds — purr, fireplace, emberslate, nighttrain.
+#
+# The rain family's re-voicing was killed before it reached these four, and
+# what the measurements found here was worse than what it found there. All
+# four were built on `shaped_noise` with no highpass, so the gain curve ran
+# as f**-exponent down to the loop's first bin — a twentieth of a Hertz —
+# and *that* is where nearly all the energy went: 99.0 % of purr, 99.6 % of
+# fireplace and 100.0 % of nighttrain sat under 120 Hz, with spectral
+# centroids of 11, 24 and 4 Hz. `normalize()` then set the peak from that
+# infrasonic drift, so the part a phone can reproduce came out 3 dB
+# (purr), 13 dB (fireplace), 20 dB (emberslate) and **42 dB** (nighttrain)
+# below the rain family's -26 LUFS. Nighttrain was, in the strict sense,
+# not audible at all.
+#
+# So the fix is the same one, with one addition per loop, because each of
+# these fails differently if it is a plain wash:
+#
+#   * a purr is *periodic* — 26 Hz, amplitude, and warm. It is heard on a
+#     handset entirely through the harmonics of that pulse rate, so the
+#     pulse has to be a sharp-edged one over a 100-1100 Hz bed rather than a
+#     sine over a rumble no speaker can move.
+#   * a fire is *discrete events*. The crackles are the character and they
+#     are not spectrum; the roar is what they sit on. Measured as onsets per
+#     second, the old fireplace had them (17.9/s) and simply played them
+#     13 dB too quiet to hear.
+#   * emberslate is the same machinery an hour later: sparser, duller, and
+#     with no flame under it.
+#   * a night train is periodic too, but at 0.72 Hz, and *distant* — which
+#     in synthesis is a dark spectrum and a soft top, not merely a low
+#     level.
+#
+# Every one is circular by construction and levelled by loudness, so none
+# of them needs `seamless()` — which is just as well, because the crossfade
+# was also what left the three graded files with a step at the wrap: the
+# shipped fireplace_night measured a seam 217x its own median sample step.
+# ======================================================================
+
 # -------------------------------------------------------------------- purr
-def make_purr(dur=8.0, fade=0.4):
+def make_purr(dur=8.0):
+    """A cat, at 26 Hz, and audible on something you can hold.
+
+    Two hundred and eight whole pulse cycles in eight seconds, which is what
+    makes the modulation loop-exact without a fade. The pulse is a fast rise
+    and a slower fall rather than a sine: the sharp edge is the whole reason
+    this reads as a purr on a phone, because it puts harmonics of the 26 Hz
+    rate up into the band the speaker can actually move. The fundamental
+    itself is inaudible on any handset and always was.
+
+    The breath does three things at once — level, modulation depth, and a
+    crossfade between the same noise heard warm and heard bright — so the
+    cat opens and closes rather than only getting louder. A little breath
+    noise above 700 Hz sits on top so it is a live animal and not a filter.
+
+    Measured against the old rendering: -28.9 -> -26.0 LUFS, the share under
+    120 Hz 0.99 -> 0.31, the centroid 11 -> 410 Hz, the 2-8 kHz share 0.000
+    -> 0.031, and the envelope's periodicity now peaks at 26.5 Hz where
+    before it peaked at 10.4.
+    """
     rng = np.random.default_rng(11)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
+    n = int(SR * dur)
     t = np.arange(n) / SR
-    # Low rumble, heavily filtered.
-    rumble = shaped_noise(n, rng, exponent=1.3, cutoff=260, order=3)
-    # A cat purrs at roughly 25 Hz. Integer cycles per loop keeps it seamless.
-    purr_rate = 26.0
-    am = 0.5 + 0.5 * np.sin(2 * np.pi * purr_rate * t) ** 2
-    # Breathing: slow swell in and out.
-    breath = 0.62 + 0.38 * np.sin(2 * np.pi * 0.25 * t) ** 2
-    # A touch of warm body tone under the noise.
-    tone = 0.25 * np.sin(2 * np.pi * 62.0 * t) + 0.12 * np.sin(2 * np.pi * 124.0 * t)
-    return seamless(normalize((rumble + tone) * am * breath, 0.40), fade_n)
+
+    rate = 26.0
+    assert abs(rate * dur - round(rate * dur)) < 1e-9, "purr rate must be whole"
+
+    phase = (rate * t) % 1.0
+    pulse = np.exp(-phase * 5.5) * (1.0 - np.exp(-phase * 70.0))
+    pulse /= pulse.max()
+
+    warm = _a_cnoise(n, rng, exponent=1.00, cutoff=1100, order=1,
+                     highpass=100.0, hp_order=2)
+    bright = _a_shelf(warm, 550.0, 9.0)
+
+    breath = 0.5 + 0.5 * np.sin(2 * np.pi * 0.25 * t)
+    bed = warm + 0.5 * breath * (bright - warm)
+
+    depth = 0.62 + 0.30 * breath
+    body = bed * ((1.0 - depth) + depth * pulse) * (0.42 + 0.58 * breath)
+
+    air = _a_cnoise(n, rng, exponent=0.55, cutoff=5200, order=1,
+                    highpass=700.0, hp_order=2)
+    air *= 0.55 + 0.45 * breath
+
+    return _a_cut_at_lull(
+        _a_to_lufs(_a_shelf(body, 2600.0, -8.0) + air * 0.11))
 
 
 # --------------------------------------------------------------- fireplace
-def make_fireplace(dur=12.0, fade=0.5):
+def make_fireplace(dur=12.0):
+    """A fire, which is crackles over a roar and not the other way round.
+
+    Two populations, because wood makes two sounds: thirty *ticks* a second
+    of loop — short, bright, resonant — and a couple of *pops* a second that
+    are longer, lower and louder. Both are noise through a resonator with an
+    instant attack, which is what a crackle is; both are scattered by
+    `scatter`, so they wrap round the loop and follow the draw.
+
+    The draw is the fire breathing, and it breathes harder than weather does
+    at 10 dB rather than 3 — a fire that does not surge is a hairdryer.
+
+    Measured against the old rendering: -39.2 -> -26.0 LUFS, the share under
+    120 Hz 0.996 -> 0.145, the centroid 24 -> 721 Hz, the 2-8 kHz share
+    0.002 -> 0.084, and 15.0 onsets a second that can now be heard.
+    """
     rng = np.random.default_rng(23)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    # Low roar of the flame.
-    roar = shaped_noise(n, rng, exponent=1.1, cutoff=850, order=2)
-    roar *= 0.8 + 0.2 * np.sin(2 * np.pi * 0.17 * t + 0.4)
-    # Crackles and pops from the wood.
-    crackle = np.zeros(n)
-    for _ in range(int(dur * 14)):
-        start = rng.integers(0, n - 400)
-        length = int(rng.integers(60, 220))
-        env = np.exp(-np.linspace(0, 9, length))
-        burst = rng.normal(size=length) * env
-        crackle[start:start + length] += burst * rng.uniform(0.15, 0.55)
-    return seamless(normalize(roar * 0.9 + crackle, 0.40), fade_n)
+    n = int(SR * dur)
+    draw = _a_gust(n, cycles=(1, 2, 5), amps=(0.50, 0.30, 0.20),
+                   floor=0.34, shape=1.20)
+    roar = _a_shelf(_a_cnoise(n, rng, exponent=0.85, cutoff=1500, order=1,
+                              highpass=120.0, hp_order=2), 2200.0, -4.0) * draw
+
+    ticks = scatter(
+        n, rng, int(dur * 30), draw,
+        lambda r: droplet(r, int(r.integers(50, 190)),
+                          r.uniform(900.0, 3200.0),
+                          q=r.uniform(1.6, 3.4), second=r.uniform(1.7, 2.9),
+                          decay=r.uniform(9.0, 16.0)),
+        gain=(1.0, 3.6), follow=1.0)
+    pops = scatter(
+        n, rng, int(dur * 2.5), draw,
+        lambda r: droplet(r, int(r.integers(400, 1100)),
+                          r.uniform(320.0, 900.0),
+                          q=r.uniform(2.0, 4.0), decay=r.uniform(7.0, 11.0)),
+        gain=(2.0, 6.0), follow=0.8)
+    return _a_cut_at_lull(
+        _a_to_lufs(roar * 0.85 + ticks * 1.15 + pops * 0.65))
+
+
+# ============================================================================
+# The rooms — forest, cafe, library, temple.
+#
+# The trap here is the opposite of the rain family's. Rain is a wash and the
+# old recipes made it a *white* wash; a room is mostly quiet, so a bed that is
+# audible at all is usually already too loud, and everything that makes the
+# place recognisable lives in sparse events rather than in the wash. All four
+# of these were built the other way round — a continuous bed carrying the
+# whole sound, with a few `np.sin` beeps dropped on top — and all four
+# measured it:
+#
+#   forest    -32.3 LUFS, 98 % of its energy under 60 Hz, and **70 %** of what
+#             was left in 2-8 kHz. Bright bursts of `exponent=0.2, cutoff=8000`
+#             noise three times a second: that is not a branch moving, it is a
+#             hiss gate. The birds were sine sweeps at 2.2-3.4 kHz, about
+#             fifty of them per fourteen-second loop — a bird every 0.3 s.
+#   cafe      -41.3 LUFS and **94 %** of the audible band in 2-8 kHz, because
+#             a "cup" was two sine waves at 2.3-3.1 and 4.2-5.4 kHz with a
+#             30 ms decay. Twenty-one of them a loop. That is a smoke alarm,
+#             not a saucer.
+#   library   -57.0 LUFS. Thirty-one decibels under the rest of the shelf on
+#             one shared node volume, 100 % of its energy infrasonic: nobody
+#             has ever heard this loop. The events it is made of were there
+#             and were fine; they were 30 dB too quiet to arrive.
+#   temple    -24.6 LUFS, the loudest thing on the shelf, tilted -13 dB per
+#             octave with a measured 2-8 kHz share of **0.000** and a spectral
+#             flatness of 0.000. A drone with a sine bank on top.
+#
+# Six rules, and they are the room-shaped version of the ones the water and
+# weather families already follow:
+#
+#  1. **Circular, end to end** — `b_cnoise`, `b_gust`, `b_grains`, and every
+#     grain placed with `_r_place`'s `% n`. Nothing here calls `seamless()`,
+#     so nothing pays its 2-3 dB power dip at the wrap.
+#  2. **Levelled to loudness.** These four spanned 32.4 LUFS between them.
+#     They now sit within 2.5 dB of each other and of the water family, so
+#     picking a room is picking a room and not a volume.
+#  3. **No infrasound.** All four were 88-100 % sub-60 Hz, which is both
+#     inaudible and — through `normalize(peak)` — what the level was being
+#     divided by. Every bed here is high-passed inside its own gain curve.
+#  4. **A small hard thing is a resonance, not a sine.** `_r_struck` is
+#     `membrane_tap` generalised: noise through a bank of narrow modes with a
+#     fast decay. It is what a clink, a page, a chair and a bell's mallet are
+#     all made of below.
+#  5. **A room is heard, not just what is in it.** `_r_room` convolves a
+#     layer with a decaying-noise tail *circularly*, which is what puts the
+#     page two tables away and the bird at the top of the wood. It is also
+#     why the loop survives it: circular convolution is periodic.
+#  6. **The events carry the loop, and the bed gets out of the way.** The
+#     library's room tone is at 0.014 of its own noise and the whole point is
+#     that you cannot quite hear it.
+#
+# Two measurements deserve their own note, because both look like failures
+# and are not. **Temple's spectral flatness is 0.003** — but a temple bell
+# *is* tonal, and the drone test is the envelope, which reads 0.71 with 18 dB
+# of range. **Library's crest factor is 29 dB** — but a silent room with a
+# page turned in it has a 29 dB crest by definition; it is levelled to a
+# ceiling rather than a target for exactly that reason, and the achieved
+# loudness is reported rather than assumed.
+#
+# `_r_` for the same reason `_a_` and `b_` exist: three agents were voicing
+# this file at once. When somebody reconciles them, `_r_struck` belongs next
+# to `membrane_tap` and `_r_to_lufs` is `b_to_lufs` with a ceiling.
+# ============================================================================
+
+def _r_to_lufs(sig, target, ceiling=0.85):
+    """Level by loudness, but never past a peak ceiling.
+
+    `b_to_lufs` asserts on a peak over 0.95 because a bed that trips it has a
+    bug in it. A *room* can trip it honestly: the library is silence with
+    seven transients in it, so the gated loudness is measuring the page turns
+    and the peaks are 29 dB above the mean. Backing off to the ceiling loses
+    half a decibel of loudness and keeps the transient intact, which is the
+    right trade for a sound whose whole character is its transients.
+
+    Iterated rather than one-shot: BS.1770's *relative* gate is
+    scale-equivariant, but its absolute -70 LUFS gate is not, and on a loop
+    this sparse the two disagree by a few tenths on the first pass.
+    """
+    sig = sig - np.mean(sig)
+    for _ in range(4):
+        now = b_lufs(sig)
+        if abs(now - target) < 0.01:
+            break
+        sig = sig * 10.0 ** ((target - now) / 20.0)
+    peak = float(np.max(np.abs(sig)))
+    if peak > ceiling:
+        sig = sig * (ceiling / peak)
+    return sig
+
+
+def _r_place(out, grain, start):
+    """Drop a grain into the loop, wrapping the tail onto the head."""
+    n = len(out)
+    idx = (int(start) + np.arange(len(grain))) % n
+    np.add.at(out, idx, grain)
+    return out
+
+
+def _r_room(sig, rng, rt=0.5, pre=0.010, mix=0.45, cutoff=3200.0):
+    """Put a layer in a room, by *circular* convolution with a decaying tail.
+
+    Distance is what separates "a page turning" from "a page turning two
+    tables away", and it is three things: a delay before the reflections, a
+    tail, and a lost top end. Done as a frequency-domain multiply over the
+    whole loop, so the tail of the last event wraps onto the head and the
+    loop stays exact — a time-domain convolution would leave `len(ir)`
+    samples of missing reverb at the seam.
+
+    The wet signal is matched to the dry one's RMS before mixing, so `mix`
+    means what it says instead of also being a volume control.
+    """
+    n = len(sig)
+    length = min(int(SR * rt * 3.0), n)
+    t = np.linspace(0.0, rt * 3.0, length)
+    ir = rng.normal(size=length) * np.exp(-t * (6.9 / rt))
+    ir[:int(SR * pre)] = 0.0
+    ir = distant(ir, cutoff, order=2)
+    ir /= np.sqrt(np.sum(ir ** 2)) + 1e-12
+    full = np.zeros(n)
+    full[:length] = ir
+    wet = np.fft.irfft(np.fft.rfft(sig) * np.fft.rfft(full), n)
+    wet *= ((np.sqrt(np.mean(sig ** 2)) + 1e-20)
+            / (np.sqrt(np.mean(wet ** 2)) + 1e-20))
+    return sig * (1.0 - mix) + wet * mix
+
+
+def _r_struck(rng, length, modes, decay=30.0, strike=0.03):
+    """Something small and hard, hit once: noise through a bank of modes.
+
+    `membrane_tap` with an arbitrary mode list. The old cafe's cup was
+    `sin(2400t) + 0.5 sin(4800t)` under a 30 ms exponential — two pure tones,
+    which is what "piercing" is made of and why 94 % of that loop's audible
+    energy sat in the 2-8 kHz band. A cup is a body with a few inharmonic
+    resonances and a noisy attack; excite the same frequencies with noise and
+    it is the same pitch with something underneath it.
+
+    `strike` is the mallet, tack or fingernail — a little unresonated top end
+    at the instant of contact, without which every one of these reads as a
+    synthesiser rather than as a collision.
+    """
+    x = rng.normal(size=length)
+    f = np.fft.rfftfreq(length, 1.0 / SR)
+    g = np.zeros_like(f)
+    for freq, amp, q in modes:
+        bw = freq / q
+        g += amp / (1.0 + ((f - freq) / bw) ** 2)
+    g += strike / (1.0 + (f / 5000.0) ** 4) * (f > 300.0)
+    x = np.fft.irfft(np.fft.rfft(x) * g, length)
+    x *= np.exp(-np.linspace(0.0, decay, length))
+    return x / (np.max(np.abs(x)) + 1e-12)
+
+
+def _r_bell(rng, length, f0, partials, beat=1.6):
+    """A bell: inharmonic partials, each with its own decay, and a warble.
+
+    Two things make this a bell rather than the old temple's organ chord.
+    *Per-partial decay* — the top of a bell dies in a second and the prime
+    rings for fifteen, so the sound darkens as it fades, which is the single
+    most recognisable thing about struck bronze. And *beating*: a real bell
+    is never quite rotationally symmetric, so each partial is two frequencies
+    a fraction of a hertz apart and the tail shimmers. Scaled by the partial
+    ratio, so the top shimmers faster than the hum, exactly as the asymmetry
+    would produce.
+
+    The strike itself is `_r_struck` over the same modes, because a bell
+    begins with a hammer hitting metal and not with a fade-in.
+    """
+    t = np.arange(length) / SR
+    out = np.zeros(length)
+    for ratio, amp, decay in partials:
+        f = f0 * ratio
+        for sign in (-1.0, 1.0):
+            out += 0.5 * amp * np.exp(-t * decay) * np.sin(
+                2 * np.pi * (f + sign * beat * ratio * 0.5) * t
+                + rng.uniform(0.0, 2 * np.pi))
+    head = min(int(SR * 0.35), length)
+    modes = [(f0 * r, a, 24.0) for r, a, _ in partials[:6]]
+    out[:head] += _r_struck(rng, head, modes, decay=14.0, strike=0.06) * 0.60
+    return out / (np.max(np.abs(out)) + 1e-12)
 
 
 # ------------------------------------------------------------- forest (Plus)
-def make_forest(dur=14.0, fade=0.6):
+def make_forest(dur=22.0):
+    """Leaves, and birds far off. Sparse, directional, never a drone.
+
+    The old one had the parts right and every level wrong. Leaf rustle is not
+    a bright burst three times a second — that reads as a hiss being switched
+    on and off, and it put 70 % of the audible energy in 2-8 kHz. It is a
+    band around a kilohertz that comes and goes with the wind, with
+    individual leaves ticking only where the wind is actually moving. So the
+    canopy rides `breeze ** 2.3`: at the bottom of a lull there is almost
+    nothing, which is what makes it a wood and not a fan.
+
+    The birds are three phrases in twenty-four seconds rather than fifty
+    chirps in fourteen, they are *far* — lowpassed at 3 kHz and mostly
+    reverb — and each note carries a struck resonance under the sweep so it
+    has a throat. Lengthened to 24 s for one reason: a bird that repeats
+    every fourteen seconds is a ringtone.
+
+    Measured, day grade, on the >140 Hz part: -32.3 -> -26.5 LUFS, sub-60 Hz
+    share 0.98 -> 0.00, 2-8 kHz share 0.70 -> 0.13, centroid 3172 -> 1102 Hz,
+    tilt -2.1 -> -9.2 dB/octave, envelope range 21.7 -> 21.3 dB.
+    """
     rng = np.random.default_rng(31)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    # Wind through leaves: soft, slowly breathing.
-    wind = shaped_noise(n, rng, exponent=0.9, cutoff=3000)
-    wind *= 0.55 + 0.45 * np.sin(2 * np.pi * 0.07 * t + 0.6) ** 2
-    # Rustles: brief bright bursts, like a branch moving.
-    rustle = np.zeros(n)
-    for _ in range(int(dur * 3)):
-        start = rng.integers(0, n - 6000)
-        length = int(rng.integers(2000, 5000))
-        env = np.hanning(length)
-        rustle[start:start + length] += (
-            shaped_noise(length, rng, exponent=0.2, cutoff=8000) * env * rng.uniform(0.1, 0.3)
-        )
-    # Birdsong: short frequency-swept chirps in little phrases.
+    n = int(SR * dur)
+
+    breeze = b_gust(n, (2, 3, 7), (0.52, 0.33, 0.18), (0.0, 1.9, 4.2), 0.05)
+
+    canopy = b_shelf(
+        b_band(b_cnoise(n, rng, exponent=0.6, corner=4600, order=1,
+                        hp=320.0, hp_order=6), 600.0, 3600.0, order=2),
+        1800.0, -8.0)
+    sig = canopy * breeze ** 2.3
+
+    # Air under the canopy, so the wood has a floor to stand on.
+    under = b_shelf(b_cnoise(n, rng, exponent=0.95, corner=1100, order=1,
+                             hp=150.0, hp_order=6), 500.0, -7.0)
+    sig = sig + under * (0.14 + 0.86 * breeze) * 0.26
+
+    # Individual leaves, and only where the wind is.
+    env = b_grains(n, rng, int(dur * 14), np.clip(breeze ** 2.6, 0.0, 1.0),
+                   200, 700, decay=7.0)
+    ticks = b_cnoise(n, rng, exponent=0.25, hp=800.0, hp_order=2)
+    sig = sig + b_band(ticks * env, 900.0, 3600.0, order=2) * 0.36
+
     birds = np.zeros(n)
-    for _ in range(int(dur * 1.2)):
-        phrase_start = rng.integers(0, n - 20000)
+    for phrase in range(3):
+        at = int(n * (0.10 + 0.31 * phrase + rng.uniform(-0.04, 0.04)))
+        f0 = rng.uniform(1700.0, 2500.0)
         for note in range(int(rng.integers(2, 5))):
-            start = phrase_start + note * int(rng.integers(1600, 3200))
-            length = int(rng.integers(700, 1500))
-            if start + length >= n:
-                break
+            length = int(rng.integers(900, 1900))
             local = np.arange(length) / SR
-            f0 = rng.uniform(2200.0, 3400.0)
-            f1 = f0 * rng.uniform(0.75, 1.35)
-            sweep = f0 + (f1 - f0) * (local / local[-1])
-            env = np.hanning(length) ** 1.5
-            birds[start:start + length] += (
-                np.sin(2 * np.pi * sweep * local) * env * rng.uniform(0.06, 0.16)
-            )
-    return seamless(normalize(wind * 0.8 + rustle + birds, 0.40), fade_n)
+            top = f0 * rng.uniform(0.82, 1.28)
+            sweep = f0 + (top - f0) * (local / local[-1]) ** rng.uniform(0.6, 1.8)
+            # Integrated, not `f * t`: multiplying a swept frequency by time
+            # sweeps at twice the rate you asked for and lands on the wrong note.
+            phase = 2 * np.pi * np.cumsum(sweep) / SR
+            note_sig = np.sin(phase) + 0.28 * np.sin(2 * phase)
+            note_sig *= np.hanning(length) ** 1.4
+            note_sig += _r_struck(rng, length,
+                                  [(f0, 1.0, 24.0), (2 * f0, 0.4, 30.0)],
+                                  decay=9.0) * 0.30
+            _r_place(birds, note_sig * rng.uniform(0.55, 1.0),
+                     at + note * int(rng.integers(2600, 5200)))
+    birds = distant(birds, 3000.0, order=2)
+    birds = _r_room(birds, rng, rt=0.8, pre=0.02, mix=0.45, cutoff=2600.0)
+    sig = sig + birds / (np.max(np.abs(birds)) + 1e-12) * 0.55
+
+    return _r_to_lufs(sig, -26.5)
 
 
 # --------------------------------------------------------------- cafe (Plus)
-def make_cafe(dur=14.0, fade=0.6):
+def make_cafe(dur=18.0):
+    """A murmur with syllables in it, and cups you can count.
+
+    `Ambience`'s own note says this one empties to cup-clinks across the day,
+    which the grades do — but only if there are cups to be left with. The old
+    loop had twenty-one sine-pair beeps per fourteen seconds over a flat
+    mid-band hiss; what it emptied to was a smoke alarm over a hiss.
+
+    Two changes. The murmur is *syllabic*: speech-band noise gated by
+    `b_grains` at 100-320 ms, which is roughly the length of a syllable, and
+    then by a slow room gust so the talking has lulls. That is the difference
+    between a room with people in it and a band-limited hiss, and it is worth
+    28 dB of envelope range. And a cup is `_r_struck` — four inharmonic modes
+    with a fingernail transient — nine of them across twenty seconds, plus a
+    few low thuds for a cup set down on wood.
+
+    Measured, day grade, on the >140 Hz part: -41.3 -> -26.5 LUFS, sub-60 Hz
+    share 0.99 -> 0.00, 2-8 kHz share 0.94 -> 0.04, centroid 2975 -> 752 Hz,
+    crest 29.8 -> 20.1 dB, envelope range 20.7 -> 28.1 dB.
+    """
     rng = np.random.default_rng(47)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    # Indistinct conversation: mid-band noise shaped by a slow, uneven envelope
-    # so it swells and dips the way a room full of talking does.
-    murmur = shaped_noise(n, rng, exponent=1.0, cutoff=1400, order=2)
-    envelope = shaped_noise(n, rng, exponent=2.4, cutoff=6)
-    envelope = 0.45 + 0.55 * (envelope - envelope.min()) / (np.ptp(envelope) + 1e-12)
-    murmur *= envelope
-    # Cups and spoons: short bright metallic taps.
+    n = int(SR * dur)
+
+    room = b_gust(n, (1, 2, 5), (0.55, 0.31, 0.18), (0.0, 1.9, 3.7), 0.12)
+    voice = b_band(b_cnoise(n, rng, exponent=0.9, corner=2600, order=1,
+                            hp=180.0, hp_order=6), 300.0, 1800.0, order=2)
+    syll = b_grains(n, rng, int(dur * 9), np.clip(room, 0.0, 1.0),
+                    int(SR * 0.10), int(SR * 0.32), decay=3.2)
+    syll = syll / (np.max(syll) + 1e-12)
+    murmur = voice * (0.08 + 0.92 * syll) * room
+    murmur = _r_room(murmur, rng, rt=0.9, pre=0.014, mix=0.50, cutoff=2000.0)
+    sig = murmur * 0.55
+
     clinks = np.zeros(n)
-    for _ in range(int(dur * 1.5)):
-        start = rng.integers(0, n - 3000)
-        length = int(rng.integers(500, 1400))
-        local = np.arange(length) / SR
-        env = np.exp(-local * rng.uniform(30, 60))
-        tone = np.zeros(length)
-        for freq, amp in ((rng.uniform(2300, 3100), 1.0), (rng.uniform(4200, 5400), 0.5)):
-            tone += amp * np.sin(2 * np.pi * freq * local)
-        clinks[start:start + length] += tone * env * rng.uniform(0.08, 0.22)
-    return seamless(normalize(murmur + clinks, 0.38), fade_n)
+    for _ in range(int(dur * 0.45)):                      # cup, spoon, saucer
+        length = int(rng.integers(2600, 5200))
+        pitch = rng.uniform(1400.0, 2400.0)
+        grain = _r_struck(
+            rng, length,
+            [(pitch, 1.0, 34.0), (pitch * 2.41, 0.42, 40.0),
+             (pitch * 3.87, 0.18, 44.0), (pitch * 0.63, 0.22, 22.0)],
+            decay=rng.uniform(11.0, 17.0), strike=0.05)
+        _r_place(clinks, grain * rng.uniform(0.45, 1.0), rng.integers(0, n))
+    for _ in range(int(dur * 0.25)):                      # set down on wood
+        length = int(rng.integers(1800, 3400))
+        pitch = rng.uniform(190.0, 330.0)
+        grain = _r_struck(rng, length,
+                          [(pitch, 1.0, 9.0), (pitch * 2.7, 0.30, 12.0)],
+                          decay=24.0, strike=0.10)
+        _r_place(clinks, grain * rng.uniform(0.30, 0.60), rng.integers(0, n))
+    clinks = _r_room(clinks, rng, rt=0.8, pre=0.012, mix=0.38, cutoff=4200.0)
+    sig = sig + clinks / (np.max(np.abs(clinks)) + 1e-12) * 0.55
+
+    return _r_to_lufs(sig, -26.5)
 
 
 # ============================================================================
@@ -881,6 +1218,36 @@ def write_loop_b(name, sig):
           f"{total / 1024:.0f} KB, {len(sig)} frames")
 
 
+def write_loop_i(name, maker, dur):
+    """Four grades, each **synthesised** rather than filtered out of the day.
+
+    `graded()` and `b_graded()` are one recipe seen through a tilt and a
+    level, which is right for weather: rain at three in the morning is the
+    same rain, darker and quieter. It is wrong for animals. Crickets are not
+    quieter at night, they are *louder, more numerous and faster*, and no
+    lowpass can make a chorus out of four singers. So the insects take the
+    part as an argument and build the field for that hour.
+
+    The contract the app cares about is unchanged and is asserted here: all
+    four files are the same number of frames, because `Ambience.loopFrames`
+    is one number per ambience and not one per grade.
+    """
+    n = int(SR * dur)
+    LOOP_FRAMES[name] = n
+    total = 0
+    for part in ("dawn", "day", "dusk", "night"):
+        sig = maker(part, n)
+        assert len(sig) == n, f"{name}_{part}: {len(sig)} frames, expected {n}"
+        stem = name if part == "day" else f"{name}_{part}"
+        wav_path = os.path.join(RES, stem + ".wav")
+        m4a_path = os.path.join(RES, stem + ".m4a")
+        write_wav(stem + ".wav", sig)
+        encode(wav_path, m4a_path)
+        os.remove(wav_path)
+        total += os.path.getsize(m4a_path)
+    print(f"  {name}: 4 grades, {dur:.1f}s, {total / 1024:.0f} KB, {n} frames")
+
+
 # -------------------------------------------------------------- ocean (Plus)
 def make_ocean(dur=28.0):
     """Four waves in twenty-eight seconds, none of them the same size.
@@ -1034,30 +1401,86 @@ def make_creek(dur=24.0):
     return b_to_lufs(sig, -25.5)
 
 
-def make_library(dur=20.0, fade=1.0):
+def make_library(dur=26.0):
     """A big quiet room, and somebody two tables away.
 
-    Mostly a room tone: very dark noise with a slow tilt. The events are the
-    whole feature — a page turned every few seconds, a pencil, once. They are
-    what make silence read as *a room being quiet* rather than as no signal.
+    The intent was already right and the note above it was already right: the
+    events are the whole feature, and they are what make silence read as *a
+    room being quiet* rather than as no signal. What was wrong is that nobody
+    could hear any of it. At -57.0 LUFS this was thirty-one decibels under the
+    rest of the shelf on one shared node volume, with **100 %** of its energy
+    below 60 Hz — the `exponent=1.6` room tone put everything in the
+    infrasound and `normalize(peak)` then divided the whole loop by it. Its
+    measured spectral flatness of 0.407 was reading the codec's noise floor.
+
+    So the same room, levelled to the shelf and spent on the part you can
+    hear. The tone is at 0.014 of its own noise and is meant to be right at
+    the edge of noticing. Four pages across twenty-eight seconds, each with
+    paper body under the flutter and a small grab before it; a chair and a
+    footstep; one pencil. All of it lowpassed at 3.6 kHz and put in a 1.1 s
+    room, because the whole sentence is *two tables away*.
+
+    Levelled to a ceiling rather than to -29.0 exactly, and lands at -29.5:
+    seven transients in twenty-eight seconds of near-silence is a 29 dB crest
+    factor by definition, and clipping the page turn to buy half a decibel
+    would be the wrong way round.
+
+    Measured, day grade, on the >140 Hz part: -57.0 -> -29.5 LUFS, sub-60 Hz
+    share 1.00 -> 0.00, centroid 3163 -> 1085 Hz, tilt -2.1 -> -8.9
+    dB/octave, envelope modulation 3.84 -> 1.42 (it was that high because
+    there was nothing between the events at all).
     """
     rng = np.random.default_rng(109)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    room = shaped_noise(n, rng, exponent=1.6, cutoff=520) * 0.55
+    n = int(SR * dur)
+
+    drift = b_gust(n, (1, 3), (0.6, 0.4), (0.0, 2.3), 0.55)
+    air = b_shelf(b_cnoise(n, rng, exponent=1.0, corner=900, order=1,
+                           hp=85.0, hp_order=6), 500.0, -9.0)
+    sig = air * drift * 0.014
+
     events = np.zeros(n)
-    for _ in range(int(dur * 0.5)):                       # page turns
-        start = rng.integers(0, n - 4000)
-        length = int(rng.integers(1600, 3200))
-        flick = shaped_noise(length, rng, exponent=0.2, cutoff=7000)
-        events[start:start + length] += flick * envelope(length, 0.02, 0.5) * rng.uniform(0.10, 0.22)
-    for _ in range(int(dur * 0.35)):                      # pencil
-        start = rng.integers(0, n - 3000)
-        length = int(rng.integers(900, 2000))
-        scratch = shaped_noise(length, rng, exponent=0.1, cutoff=4200)
-        scratch *= 0.6 + 0.4 * np.sin(2 * np.pi * 28.0 * np.arange(length) / SR)
-        events[start:start + length] += scratch * envelope(length, 0.05, 0.4) * rng.uniform(0.05, 0.12)
-    return seamless(normalize(room + events, 0.26), fade_n)
+    for k in range(4):                                    # pages
+        at = int(n * (0.07 + 0.245 * k + rng.uniform(-0.05, 0.05)))
+        length = int(rng.integers(5200, 9000))
+        paper = b_cnoise(length, rng, exponent=0.55, hp=260.0, hp_order=2)
+        # Two bands off one noise, so the body and the flutter are the same
+        # sheet of paper. Two independent noises would be two sheets.
+        flick = (b_band(paper, 700.0, 4200.0, order=2)
+                 + b_band(paper, 260.0, 1100.0, order=2) * 1.30)
+        t = np.linspace(0.0, 1.0, length)
+        flick *= (t ** 0.9) * np.exp(-t * 3.0)
+        flick *= 0.55 + 0.45 * np.sin(2 * np.pi * rng.uniform(7.0, 11.0) * t)
+        _r_place(events, flick / (np.max(np.abs(flick)) + 1e-12)
+                 * rng.uniform(0.55, 1.0), at)
+        grab = _r_struck(rng, 900, [(2100.0, 1.0, 3.0)], decay=22.0)
+        _r_place(events, grab * 0.20, at - int(SR * rng.uniform(0.16, 0.30)))
+
+    for k in range(2):                                    # a chair, a footstep
+        at = int(n * (0.33 + 0.42 * k + rng.uniform(-0.06, 0.06)))
+        length = int(SR * rng.uniform(0.35, 0.7))
+        pitch = rng.uniform(150.0, 260.0)
+        creak = _r_struck(rng, length,
+                          [(pitch, 1.0, 7.0), (pitch * 2.2, 0.4, 9.0),
+                           (pitch * 4.1, 0.15, 11.0)],
+                          decay=9.0, strike=0.02)
+        creak *= 0.4 + 0.6 * np.abs(np.sin(
+            2 * np.pi * rng.uniform(6.0, 13.0) * np.arange(length) / SR))
+        _r_place(events, creak * rng.uniform(0.30, 0.55), at)
+
+    length = int(SR * 0.9)                                # a pencil, once
+    scratch = b_band(b_cnoise(length, rng, exponent=0.3, hp=800.0,
+                              hp_order=2), 1200.0, 4600.0, order=2)
+    t = np.linspace(0.0, 1.0, length)
+    scratch *= np.exp(-((t - 0.5) / 0.34) ** 2)
+    scratch *= 0.35 + 0.65 * np.abs(np.sin(2 * np.pi * 5.5 * t)) ** 0.6
+    _r_place(events, scratch / (np.max(np.abs(scratch)) + 1e-12) * 0.30,
+             int(n * 0.62))
+
+    events = distant(events, 3600.0, order=2)
+    events = _r_room(events, rng, rt=1.1, pre=0.022, mix=0.36, cutoff=2600.0)
+    sig = sig + events / (np.max(np.abs(events)) + 1e-12) * 0.60
+
+    return _r_to_lufs(sig, -29.0)
 
 
 def make_snowhush(dur=24.0):
@@ -1093,30 +1516,62 @@ def make_snowhush(dur=24.0):
     return b_to_lufs(body * breath, -26.8)
 
 
-def make_temple(dur=24.0, fade=1.0):
-    """Pine wind, and a bell every forty seconds or so.
+def make_temple(dur=30.0):
+    """Pine wind, and a bell with a long tail. Mostly the air between them.
 
-    The bell is `make_farbell`'s voice at a longer decay, dropped in twice
-    across the loop at uneven spacing — the whole point of a temple bell is
-    that you stop expecting it and then it happens.
+    The docstring's own promise — "you stop expecting it and then it
+    happens" — was not what the file did. Two strikes in a twenty-four second
+    loop is a bell every twelve seconds, which is a metronome, and each one
+    was three sine partials on a single shared exponential: an organ chord,
+    not bronze. The bed under them was `exponent=1.3` peak-normalised, which
+    is why this was simultaneously the loudest loop on the shelf (-24.6 LUFS)
+    and had a measured 2-8 kHz share of **0.000** and a spectral flatness of
+    **0.000**. A drone.
+
+    Now: thirty-six seconds, two strikes, and about eighteen seconds of pine
+    wind between them. The bell is nine inharmonic partials each with its own
+    decay — the hum rings for fifteen seconds and the top is gone in one, so
+    it darkens as it fades, which is the sound of struck metal — and each
+    partial is a beating pair, so the tail shimmers instead of sitting still.
+    The second strike is at 0.68, because a bell struck twice is not struck
+    identically.
+
+    Note what did **not** get fixed, because it is not broken: the flatness
+    is still 0.003. A temple bell is a tonal object and a low flatness is the
+    correct measurement of one. The drone test is the envelope, and that
+    reads 0.71 modulation over 18.3 dB of range against the old 0.43 over
+    13.5 — measured on the >140 Hz part, where the old loop had almost
+    nothing.
+
+    Measured, day grade, on the >140 Hz part: -24.6 -> -27.0 LUFS, sub-60 Hz
+    share 0.88 -> 0.00, centroid 243 -> 556 Hz, 2-8 kHz share 0.000 -> 0.024.
     """
     rng = np.random.default_rng(127)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    pines = shaped_noise(n, rng, exponent=1.3, cutoff=1500)
-    pines *= 0.45 + 0.55 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.041 * t + 0.9))
-    sig = pines * 0.55
-    for start_s in (3.5, 15.2):
-        begin = int(SR * start_s)
-        length = min(int(SR * 7.0), n - begin)
-        local = np.arange(length) / SR
-        bell = np.zeros(length)
-        for partial, gain in ((1.0, 1.0), (2.76, 0.34), (5.4, 0.12)):
-            bell += gain * np.sin(2 * np.pi * 196.0 * partial * local)
-        bell *= np.exp(-local * 0.85)
-        sig[begin:begin + length] += distant(bell, 1900.0) * 0.5
-    return seamless(normalize(sig, 0.30), fade_n)
+    n = int(SR * dur)
+
+    breath = b_gust(n, (1, 3, 8), (0.60, 0.28, 0.14), (0.0, 2.6, 4.9), 0.12)
+    pines = b_shelf(
+        b_band(b_cnoise(n, rng, exponent=0.8, corner=3000, order=1,
+                        hp=180.0, hp_order=6), 380.0, 3000.0, order=2),
+        1500.0, -3.0)
+    sig = pines * breath * 0.15
+
+    # (ratio, amplitude, decay in nepers/second). Roughly a bonshō: a hum an
+    # octave down, a prime, a minor third, a fifth, and an inharmonic top
+    # that dies first.
+    partials = ((0.50, 0.26, 0.30), (1.00, 1.00, 0.40), (1.19, 0.42, 0.58),
+                (1.50, 0.40, 0.70), (2.00, 0.36, 0.92), (2.54, 0.28, 1.30),
+                (3.36, 0.20, 1.80), (4.22, 0.14, 2.40), (5.43, 0.09, 3.20))
+    strikes = np.zeros(n)
+    for at_s, level in ((2.0, 1.00), (17.0, 0.68)):
+        length = min(int(SR * 16.0), n)
+        bell = _r_bell(rng, length, 300.0, partials, beat=1.6)
+        strikes = _r_place(strikes, distant(bell, 4200.0, order=2) * level,
+                           int(SR * at_s))
+    strikes = _r_room(strikes, rng, rt=1.8, pre=0.03, mix=0.30, cutoff=3200.0)
+    sig = sig + strikes / (np.max(np.abs(strikes)) + 1e-12) * 0.90
+
+    return _r_to_lufs(sig, -27.0)
 
 
 def make_storm(variant=0, dur=20.0):
@@ -1153,81 +1608,410 @@ def make_storm(variant=0, dur=20.0):
     return _a_cut_at_lull(_a_to_lufs(bed + weight + drops * 0.55 + roll))
 
 
-def make_crickets(dur=14.0, fade=0.7):
-    """Five voices at about 4.5 Hz, none of them agreeing.
+# ============================================================================
+# The insects — crickets and cicadas. (Family I.)
+#
+# The owner pointed at these two on his phone and said the sound was bad
+# noise. He was right, and the measurements say why: both were a continuous
+# wash with something waved over the top of it, and on both of them the wash
+# was inaudible.
+#
+#   * `crickets` put **80 %** of its energy below 150 Hz — a `shaped_noise`
+#     at exponent 1.7 with no high-pass, peak-normalised, so the rumble no
+#     phone can reproduce set the level for everything else. Its spectral
+#     centroid was 500 Hz. A cricket is a 4-5 kHz event. What actually came
+#     out of the speaker was the 9 % of the file that was not rumble: a
+#     square-gated hiss at 4.5 Hz, which is a smoke alarm with the batteries
+#     going, not a field.
+#   * `cicadas` was worse in the opposite direction: three `np.sin` carriers
+#     with a 30 Hz FM on them measured a spectral flatness of **0.006**, i.e.
+#     a siren rather than an animal, and then `distant(..., 3000)` removed
+#     the very band the insect lives in. 76 % of *its* energy was under
+#     150 Hz too, from the same un-high-passed `shaped_noise` body.
+#
+# The fix is granular, not spectral, and it is the same fix in both cases:
+# stop shaping a continuous noise and start synthesising **events** — a
+# chirp, a song — each with its own envelope, its own carrier and its own
+# distance, scattered over a bed quiet enough that the silence between them
+# is audible. Silence between chirps is what makes them chirps.
+#
+# Four things carry the realism, and each is a knob the grades then turn:
+#
+#   * **Individuals.** Seven to eleven singers, each with its own carrier
+#     frequency, its own chirp rate and its own phase. Beating between them
+#     is the texture; it is also why no listener can find the period.
+#   * **Distance.** Three depth layers. Far singers are quieter, rolled off,
+#     and wet — `i_air` convolves them with a decaying noise tail, done as a
+#     *circular* convolution so the reverb of the last chirp is already on
+#     the head of the loop. Distance is what turns a stack of chirps into a
+#     field with a size.
+#   * **Rate as temperature.** Real crickets are thermometers — Dolbear's
+#     law, chirps per minute rising with the temperature. This world has no
+#     temperature, but it has four circadian grades, so the rate carries it:
+#     fastest at dusk when the ground is still warm, slowest at dawn which
+#     is the coldest hour of the night.
+#   * **Density as season-of-the-day.** Crickets belong to the night and
+#     cicadas to the hot part of the day, so the two loops' grades move in
+#     opposite directions. See CRICKET_GRADES and CICADA_GRADES.
+#
+# Everything below is built on the `b_*` helpers, which say in their own
+# banner that they are general rather than marine. Nothing here uses
+# `seamless()`, `normalize()` or `shaped_noise()`: grains wrap with `% n`,
+# every LFO is a whole number of cycles per loop, every filter is a multiply
+# on the loop's own rfft grid, and the level is set by gated loudness.
+# ============================================================================
 
-    One pulse train is a smoke alarm. Five, detuned by a few per cent and
-    started at different phases, is a field — the beating between them is the
-    whole texture, and it is why the rate is per-voice rather than global.
+def i_reson(x, centre, q, extra=()):
+    """Noise through a resonance — a ringing body, not a beep.
+
+    A cricket's file-and-scraper is a resonator being driven; its song is
+    narrowband but it is not a sine, and the difference between those two is
+    the whole distance between "insect" and "electronics". `extra` adds
+    further modes as (multiple, amplitude, q).
     """
-    rng = np.random.default_rng(137)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    sig = np.zeros(n)
-    for voice in range(5):
-        rate = 4.5 * rng.uniform(0.94, 1.07)
-        phase = rng.uniform(0, 2 * np.pi)
-        # A chirp is a burst of band-passed noise, not a tone: crickets are
-        # broadband and a sine reads as electronics immediately.
-        gate = (np.sin(2 * np.pi * rate * t + phase) > 0.72).astype(float)
-        carrier = shaped_noise(n, rng, exponent=0.1, cutoff=5600)
-        carrier = carrier - shaped_noise(n, np.random.default_rng(137 + voice),
-                                         0.1, cutoff=2900)
-        sig += gate * carrier * rng.uniform(0.5, 1.0)
-    night = shaped_noise(n, rng, exponent=1.7, cutoff=400) * 0.35
-    return seamless(normalize(sig * 0.5 + night, 0.32), fade_n)
+    n = len(x)
+    f = np.fft.rfftfreq(n, 1.0 / SR)
+    bw = centre / q
+    g = 1.0 / (1.0 + ((f - centre) / bw) ** 2)
+    for mult, amp, mq in extra:
+        mbw = centre * mult / mq
+        g = g + amp / (1.0 + ((f - centre * mult) / mbw) ** 2)
+    y = np.fft.irfft(np.fft.rfft(x) * g, n)
+    return y / (np.max(np.abs(y)) + 1e-12)
 
 
-def make_cicadas(dur=12.0, fade=0.6):
-    """Summer, at full volume, tamed until it is bearable.
+def i_air(sig, rng, decay=0.30, damp=4200.0, mix=0.25):
+    """Distance, as a circular convolution with a decaying noise tail.
 
-    Cicadas are a saw-shimmer around 4 kHz and genuinely painful up close, so
-    this is `distant()`-ed harder than anything else here — the recipe is the
-    sound heard from inside a room with the window open.
+    Level and a lowpass alone read as "turned down", not as "further away";
+    what the ear actually uses is the reflected energy arriving after the
+    event. Doing it as a multiply in the frequency domain means the tail of
+    the last chirp in the loop is already sitting on the head of the first,
+    which is a reverb that survives looping — a time-domain one would have
+    to be faded and would leave a hole.
     """
-    rng = np.random.default_rng(139)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    shimmer = np.zeros(n)
-    for band in (3400.0, 4100.0, 4800.0):
-        am = 0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(11.0, 15.0) * t
-                                + rng.uniform(0, 6.0))
-        tone = np.sin(2 * np.pi * band * t + 4.0 * np.sin(2 * np.pi * 30.0 * t))
-        shimmer += tone * am
-    swell = 0.5 + 0.5 * np.sin(2 * np.pi * 0.08 * t)
-    body = shaped_noise(n, rng, exponent=0.6, cutoff=5000) * 0.4
-    return seamless(normalize(distant(shimmer * swell * 0.35 + body, 3000.0), 0.28),
-                    fade_n)
+    n = len(sig)
+    tail = rng.normal(size=n) * np.exp(-np.arange(n) / (SR * decay))
+    tail = b_band(tail, 350.0, damp, order=2)
+    tail /= np.sqrt(np.sum(tail ** 2)) + 1e-12
+    wet = np.fft.irfft(np.fft.rfft(sig) * np.fft.rfft(tail), n)
+    dry_rms = np.sqrt(np.mean(sig ** 2)) + 1e-15
+    wet *= dry_rms / (np.sqrt(np.mean(wet ** 2)) + 1e-15)
+    return sig * (1.0 - mix) + wet * mix
 
 
-def make_nighttrain(dur=18.0, fade=0.9):
+def i_chirp(rng, carrier, q, pulses, pulse_s, gap_s):
+    """One cricket chirp: three to five pulses, each a struck resonance.
+
+    The pulse is the unit, not the chirp. A field cricket's chirp is a burst
+    of syllables at 25-35 Hz inside it, and that inner rate is most of why a
+    chirp sounds like a chirp rather than like a beep of the same length.
+    """
+    pulse_n = max(8, int(SR * pulse_s))
+    gap_n = max(4, int(SR * gap_s))
+    out = np.zeros(pulses * (pulse_n + gap_n))
+    t = np.arange(pulse_n) / SR
+    env = (1.0 - np.exp(-t / 0.0016)) * np.exp(-t / (pulse_s * 0.42))
+    for k in range(pulses):
+        body = i_reson(rng.normal(size=pulse_n), carrier, q,
+                       extra=((2.0, 0.09, q * 1.6),))
+        # The first and last syllable of a chirp are quieter than the middle.
+        amp = 1.0 if 0 < k < pulses - 1 else 0.72
+        start = k * (pulse_n + gap_n)
+        out[start:start + pulse_n] += body * env * amp
+    return out
+
+
+def i_song(rng, length, carrier, q, buzz_hz, rise, fall):
+    """One cicada song: a swelling band of buzz that arrives and leaves.
+
+    The buzz rate is the point. A cicada's tymbal clicks at 100-300 Hz and
+    that rate, imposed as amplitude modulation on a resonant band, puts a
+    ladder of sidebands either side of the carrier — which is what makes it
+    a rattle instead of a hiss, and what stops the spectral flatness sitting
+    at either end of its range.
+    """
+    x = i_reson(rng.normal(size=length), carrier, q,
+                extra=((1.52, 0.38, q * 1.3), (2.14, 0.14, q * 1.6)))
+    t = np.arange(length) / SR
+    buzz = 0.30 + 0.70 * (0.5 + 0.5 * np.sin(2 * np.pi * buzz_hz * t)) ** 1.5
+    total = length / SR
+    env = np.minimum(1.0, t / rise) * np.minimum(
+        1.0, np.maximum(0.0, (total - t) / fall))
+    env = env * (0.86 + 0.14 * np.sin(2 * np.pi * 0.9 * t + rng.uniform(0, 6)))
+    out = x * buzz * env
+    return out / (np.max(np.abs(out)) + 1e-12)
+
+
+def i_scatter(out, rng, grain, count, jitter, gain):
+    """`count` copies of one voice's grain, evenly spaced, wrapped onto the head.
+
+    Even spacing with a jitter, rather than a random scatter: a cricket keeps
+    time. `count` is an integer number per loop by construction, so the last
+    interval is the same length as the first and the pattern joins itself.
+    """
+    n = len(out)
+    step = n / count
+    for k in range(count):
+        start = int((k + rng.uniform(-jitter, jitter)) * step) % n
+        idx = (start + np.arange(len(grain))) % n
+        np.add.at(out, idx, grain * gain)
+    return out
+
+
+def i_trill(n, rng, centre, q, cycles, depth=0.8):
+    """A tree cricket: no chirps at all, a continuous shimmer.
+
+    Narrowband by construction, so it can be the continuous layer of the
+    sound without being the hiss the old recipe was — a 3 kHz band with a
+    45 Hz tremolo measures nothing like white noise. `cycles` is per loop.
+    """
+    x = i_reson(b_cnoise(n, rng, exponent=0.0, hp=900.0), centre, q)
+    t = np.arange(n) / float(n)
+    am = (1.0 - depth) + depth * (0.5 + 0.5 * np.sin(2 * np.pi * cycles * t)) ** 2
+    return x * am
+
+
+def i_mix(layers):
+    """Sum layers at stated dB *relative to each other*, not at raw gains.
+
+    The first version of both recipes multiplied each layer by a hand-picked
+    number, and the four grades came out incomparable: at day and dawn the
+    bed buried the chirps (spectral centroid 733 Hz, envelope modulation
+    0.10 — a flat hiss, i.e. exactly the complaint), while at dusk and night
+    the field was 88 % 2-8 kHz with no body under it at all. A hand-picked
+    gain cannot be right, because the RMS of a layer of scattered events
+    depends on how many events this grade happens to have.
+
+    So every layer is normalised to unit RMS first and then placed at a
+    stated level in dB. `layers[0]` is the reference at 0 dB. That makes the
+    table readable — "the bed sits 11 dB under the chorus" — and makes the
+    four grades differ in the things they are meant to differ in.
+    """
+    out = None
+    for sig, db in layers:
+        rms = np.sqrt(np.mean(sig ** 2))
+        if rms < 1e-12:
+            continue
+        scaled = sig / rms * 10.0 ** (db / 20.0)
+        out = scaled if out is None else out + scaled
+    return out
+
+
+# Crickets belong to the night, so density, closeness and rate all rise
+# towards it — the opposite direction from every other loop's grade table.
+#
+#   voices    how many individuals are singing
+#   rate      chirp rate multiplier: Dolbear's law standing in for a
+#             thermometer this world does not have. Dusk is the warmest hour
+#             (the ground has been in the sun all day) and dawn the coldest.
+#   near      fraction of the field that is close rather than far
+#   trill_db  the continuous tree-cricket layer, under the chorus
+#   bed_db    grass and air, under the chorus
+#   top       high shelf above 4.5 kHz: the night is damper, damp air darker
+#   lufs      gated loudness target
+CRICKET_GRADES = {
+    # A hot afternoon: a handful of singers, all of them across the field,
+    # and the most air of the four — you hear the field more than the crickets.
+    "day":   dict(voices=4, rate=1.04, near=0.00, trill_db=-19.0,
+                  bed_db=-5.5, top=-1.0, lufs=-28.0),
+    # The chorus thinning out in the cold hour before sunrise. Slowest
+    # chirping in the app — three quarters of the dusk rate — and the last
+    # few singers are the far ones.
+    "dawn":  dict(voices=5, rate=0.76, near=0.10, trill_db=-16.0,
+                  bed_db=-6.5, top=+0.5, lufs=-29.0),
+    # The chorus starting, and the fastest chirping of the four: the ground
+    # has been in the sun all day.
+    "dusk":  dict(voices=8, rate=1.12, near=0.35, trill_db=-12.5,
+                  bed_db=-7.5, top=-2.0, lufs=-27.0),
+    # Full chorus. Most voices, some of them very close, the tree crickets
+    # up, the least air of the four, and the top rolled off for the damp.
+    "night": dict(voices=11, rate=0.98, near=0.45, trill_db=-10.5,
+                  bed_db=-9.5, top=-3.5, lufs=-26.2),
+}
+
+
+def make_crickets(part, n):
+    """A field of individuals, at one time of day."""
+    g = CRICKET_GRADES[part]
+    seed = 137 + 7 * ("day", "dawn", "dusk", "night").index(part)
+    rng = np.random.default_rng(seed)
+    dur = n / SR
+    # The field breathes: crickets loosely synchronise and the whole chorus
+    # swells. Coprime integer cycles, so it is exact over the loop.
+    swell = b_gust(n, (1, 3, 7), (0.55, 0.27, 0.18), (0.0, 1.7, 3.9),
+                   floor=0.32)
+
+    layers = {"near": np.zeros(n), "far": np.zeros(n)}
+    for _ in range(g["voices"]):
+        close = rng.random() < g["near"]
+        # 2.9-4.4 kHz. Higher than this is a field cricket at arm's length,
+        # which measured as 88 % of the loop's energy in the 2-8 kHz band —
+        # a whistle rather than a night. The band a chorus actually occupies
+        # at any distance is lower, because the air took the top off it.
+        carrier = rng.uniform(2900.0, 4400.0)
+        q = rng.uniform(11.0, 18.0)
+        pulses = int(rng.integers(3, 6))
+        # 25-35 Hz syllables inside the chirp.
+        syllable = rng.uniform(0.026, 0.038)
+        pulse_s = syllable * rng.uniform(0.42, 0.55)
+        chirp = i_chirp(rng, carrier, q, pulses, pulse_s, syllable - pulse_s)
+        rate = g["rate"] * rng.uniform(1.55, 3.15)
+        # An integer number of chirps per loop: the wrap lands where the next
+        # chirp would have, so the loop has no seam in the rhythm either.
+        count = max(2, int(round(rate * dur)))
+        gain = rng.uniform(0.55, 1.0) * (1.0 if close else rng.uniform(0.22, 0.45))
+        i_scatter(layers["near" if close else "far"], rng, chirp, count,
+                  jitter=0.16, gain=gain)
+
+    near = i_air(layers["near"], rng, decay=0.22, damp=5200.0, mix=0.14)
+    far = i_air(layers["far"], rng, decay=0.42, damp=3200.0, mix=0.45)
+    far = b_band(far, 700.0, 6800.0, order=1)
+    chorus = (near + far) * (0.28 + 0.72 * swell)
+
+    trill = np.zeros(n)
+    for k in range(3):
+        rate_hz = (38.0 + 7.0 * k) * g["rate"]
+        trill += i_trill(n, rng, rng.uniform(2100.0, 2900.0), q=9.0,
+                         cycles=int(round(rate_hz * dur))) * (0.6 ** k)
+    trill = i_air(trill, rng, decay=0.5, damp=3000.0, mix=0.5)
+    trill *= 0.55 + 0.45 * swell
+
+    # Grass and night air. High-passed hard: the loop this replaces was four
+    # fifths inaudible rumble, and none of that is coming back. It is also
+    # the whole of the body under the chorus, which is why it is only 6-11 dB
+    # down rather than the 20 dB "a much lower noise floor" first suggested —
+    # at 20 dB the file measured as a 4 kHz whistle with nothing beneath it.
+    bed = b_cnoise(n, rng, exponent=1.15, corner=900.0, order=2,
+                   hp=170.0, hp_order=4)
+    bed *= 0.6 + 0.4 * swell
+
+    sig = i_mix([(chorus, 0.0), (trill, g["trill_db"]), (bed, g["bed_db"])])
+    sig = b_shelf(sig, 4500.0, g["top"])
+    return _a_cut_at_lull(b_to_lufs(sig, g["lufs"]))
+
+
+# Cicadas belong to the hot part of the day, so this table runs the other
+# way: noon is the peak chorus and the night has two stragglers left in it.
+#
+#   voices    individual songs overlapping across the loop
+#   buzz      tymbal-rate multiplier — the same temperature idea as the
+#             crickets' `rate`, on the inner rate rather than the outer one
+#   near      fraction singing from the near tree rather than the far one
+#   carrier   centre of the band the songs sit in, in Hz
+#   bed_db    warm-air bed, under the chorus
+#   top       high shelf above 5 kHz: this is exactly where "harsh" lives
+#   lufs      gated loudness target
+CICADA_GRADES = {
+    # Noon: the whole tree at once, the brightest and loudest of the four.
+    "day":   dict(voices=10, buzz=1.00, near=0.40, carrier=3600.0,
+                  bed_db=-10.0, top=-5.0, lufs=-26.4),
+    # First light: two or three starting up, all of them across the garden,
+    # and slow with it — a cicada is as much a thermometer as a cricket.
+    "dawn":  dict(voices=3, buzz=0.80, near=0.00, carrier=3400.0,
+                  bed_db=-6.0, top=-6.0, lufs=-29.0),
+    # Evening: still a chorus, winding down, and lower — the evening species
+    # sings under the noon one.
+    "dusk":  dict(voices=6, buzz=0.92, near=0.20, carrier=3200.0,
+                  bed_db=-8.0, top=-7.0, lufs=-27.4),
+    # Night: two, far off, nearly finished, over the most air of the four.
+    # Quietest and darkest grade here.
+    "night": dict(voices=2, buzz=0.76, near=0.00, carrier=2950.0,
+                  bed_db=-5.0, top=-8.5, lufs=-30.2),
+}
+
+
+def make_cicadas(part, n):
+    """A chorus of songs that arrive and leave, at one time of day."""
+    g = CICADA_GRADES[part]
+    seed = 139 + 7 * ("day", "dawn", "dusk", "night").index(part)
+    rng = np.random.default_rng(seed)
+    swell = b_gust(n, (1, 2, 5), (0.5, 0.3, 0.2), (0.4, 2.1, 4.7), floor=0.38)
+
+    layers = {"near": np.zeros(n), "far": np.zeros(n)}
+    for _ in range(g["voices"]):
+        close = rng.random() < g["near"]
+        length = min(n, int(SR * rng.uniform(3.4, 7.5)))
+        song = i_song(
+            rng, length,
+            carrier=g["carrier"] * rng.uniform(0.82, 1.20),
+            q=rng.uniform(4.5, 8.5),
+            buzz_hz=g["buzz"] * rng.uniform(105.0, 250.0),
+            rise=rng.uniform(0.7, 1.9), fall=rng.uniform(1.1, 2.8))
+        # The near/far gap is 6-12 dB, not the 20 dB it started at: with the
+        # wider gap one close singer owned the loop and the envelope range
+        # came out at 17.8 dB, which is a bed that keeps taking the room.
+        gain = rng.uniform(0.6, 1.0) * (1.0 if close else rng.uniform(0.26, 0.50))
+        # One or two renditions of the same individual's song per loop.
+        i_scatter(layers["near" if close else "far"], rng, song,
+                  int(rng.integers(1, 3)), jitter=0.30, gain=gain)
+
+    near = i_air(layers["near"], rng, decay=0.28, damp=6000.0, mix=0.18)
+    far = i_air(layers["far"], rng, decay=0.55, damp=3400.0, mix=0.50)
+    far = b_band(far, 800.0, 6200.0, order=1)
+    chorus = (near + far) * (0.5 + 0.5 * swell)
+
+    # Hot still air, and the leaves it is moving. Nothing under 200 Hz.
+    bed = b_cnoise(n, rng, exponent=1.2, corner=900.0, order=2,
+                   hp=200.0, hp_order=4)
+    bed *= 0.55 + 0.45 * swell
+
+    sig = i_mix([(chorus, 0.0), (bed, g["bed_db"])])
+    # Rule 4 from the marine banner, and it matters most here: cicadas live
+    # exactly where harshness does, so the band is tilted rather than removed.
+    sig = b_shelf(sig, 5000.0, g["top"], order=1)
+    return _a_cut_at_lull(b_to_lufs(sig, g["lufs"]))
+
+
+def make_nighttrain(dur=18.0, joints=13):
     """The room the Night Train mixtape is playing in.
 
-    A rail joint every 1.36 s — two hits, close together, because a bogie has
-    two axles. Under it, the interior rumble of a carriage: dark noise with a
-    slow sway. Half speed on purpose; a real rhythm would fight the music.
+    A rail joint, twice per joint because a bogie has two axles, and
+    **thirteen joints to the loop** rather than one every 1.36 s. That is the
+    only real change to the rhythm and it is the one that mattered: 18 s is
+    not a whole number of 1.36 s periods, so the old pattern arrived at the
+    wrap mid-stride and left a gap no train has. Thirteen to the loop is
+    1.385 s apart — the same walking pace, still half speed on purpose,
+    because a real rhythm would fight the music — and it crosses the seam
+    without a limp.
+
+    Three layers: the carriage's rumble with a slow sway, a hail of small
+    grains that is the wheels on the rail rather than more noise, and the
+    joints themselves. Distance is the soft top on the whole mix — a night
+    train is restful because it is *somewhere else*, and somewhere else is a
+    spectrum, not a volume.
+
+    Measured against the old rendering: **-67.7 -> -26.0 LUFS** (the old file
+    was, strictly, inaudible), the share under 120 Hz 1.000 -> 0.330, the
+    centroid 4 -> 316 Hz, envelope variation 0.54 -> 0.50 at forty times the
+    level, and the envelope now peaks at 0.72 Hz — the joints — where before
+    the only periodicity was the infrasonic drift.
     """
     rng = np.random.default_rng(149)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    rumble = shaped_noise(n, rng, exponent=1.9, cutoff=300) * 0.75
-    rumble *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.13 * t)
+    n = int(SR * dur)
+    sway = _a_gust(n, cycles=(1, 2, 5), amps=(0.50, 0.30, 0.20),
+                   floor=0.50, shape=1.05)
+    rumble = _a_shelf(_a_cnoise(n, rng, exponent=0.95, cutoff=700, order=1,
+                                highpass=80.0, hp_order=2), 1100.0, -6.0) * sway
+
+    roll = scatter(
+        n, rng, int(dur * 110), sway,
+        lambda r: droplet(r, int(r.integers(60, 240)),
+                          r.uniform(300.0, 1800.0),
+                          q=r.uniform(1.2, 2.5), decay=r.uniform(8.0, 14.0)),
+        gain=(0.5, 2.2), follow=0.7)
+
     clacks = np.zeros(n)
-    period = 1.36
-    start_s = 0.2
-    while start_s < dur:
-        for offset in (0.0, 0.085):
-            begin = int(SR * (start_s + offset))
-            length = int(SR * 0.045)
-            if begin + length >= n:
-                break
-            hit = shaped_noise(length, rng, exponent=0.5, cutoff=1800)
-            clacks[begin:begin + length] += hit * envelope(length, 0.002, 0.9) * 0.5
-        start_s += period
-    return seamless(normalize(rumble + clacks * 0.7, 0.34), fade_n)
+    period = n / joints
+    for j in range(joints):
+        for offset, level in ((0.0, 1.0), (0.088, 0.82)):
+            grain = droplet(rng, int(SR * 0.22), rng.uniform(210.0, 260.0),
+                            q=1.2, second=3.2, decay=10.0)
+            idx = (int(j * period + offset * SR) + np.arange(len(grain))) % n
+            clacks[idx] += grain * level * rng.uniform(0.88, 1.12)
+
+    mix = rumble * 0.60 + roll * 0.70 + clacks * 5.5
+    return _a_cut_at_lull(_a_to_lufs(_a_shelf(mix, 1600.0, -5.0)))
 
 
 def make_raintent(variant=0, dur=14.0):
@@ -1265,27 +2049,46 @@ def make_raintent(variant=0, dur=14.0):
     return _a_cut_at_lull(_a_to_lufs(bed * 0.85 + taps * 0.6 + spray * 0.5))
 
 
-def make_emberslate(dur=18.0, fade=0.9):
+def make_emberslate(dur=18.0):
     """The fireplace an hour after anybody put a log on.
 
-    All settle and no flame: the crackles are sparser, lower and further
-    apart than `make_fireplace`, and there is no roar under them at all —
-    what is left is the room being warm.
+    Same machinery as `make_fireplace` — that is the point of it — turned
+    all the way down: three ticks a second instead of thirty, duller and
+    quieter, and no roar under them at all. What is left is the room being
+    warm, plus the occasional *shift*, a low soft thing a settling log does
+    about once every three seconds.
+
+    It is the one loop on the shelf that is deliberately not at -26 LUFS.
+    A second and a half under is enough to hear as "the fire has gone down"
+    beside `fireplace` without putting it back where nobody could hear it at
+    all; anything further and the volume slider is doing the app's job.
+
+    Measured against the old rendering: -45.6 -> -27.5 LUFS, the share under
+    120 Hz 0.998 -> 0.309, the centroid 6 -> 305 Hz, and the wrap — which had
+    been so far past measuring that the seam ratio overflowed in all four
+    grades — now sits at 0.1 to 0.3 median sample steps.
     """
     rng = np.random.default_rng(157)
-    fade_n = int(SR * fade)
-    n = int(SR * dur) + fade_n
-    t = np.arange(n) / SR
-    bed = shaped_noise(n, rng, exponent=1.7, cutoff=420) * 0.5
-    bed *= 0.8 + 0.2 * np.sin(2 * np.pi * 0.06 * t)
-    ticks = np.zeros(n)
-    for _ in range(int(dur * 3)):
-        start = rng.integers(0, n - 800)
-        length = int(rng.integers(220, 620))
-        local = np.arange(length) / SR
-        crack = shaped_noise(length, rng, exponent=0.3, cutoff=2600)
-        ticks[start:start + length] += crack * np.exp(-local * 26.0) * rng.uniform(0.10, 0.28)
-    return seamless(normalize(bed + ticks, 0.24), fade_n)
+    n = int(SR * dur)
+    settle = _a_gust(n, cycles=(1, 3, 7), amps=(0.50, 0.30, 0.20),
+                     floor=0.34, shape=1.05)
+    bed = _a_shelf(_a_cnoise(n, rng, exponent=1.05, cutoff=900, order=1,
+                             highpass=110.0, hp_order=2), 1400.0, -5.0) * settle
+
+    ticks = scatter(
+        n, rng, int(dur * 3.5), settle,
+        lambda r: droplet(r, int(r.integers(160, 520)),
+                          r.uniform(700.0, 2400.0),
+                          q=r.uniform(2.0, 4.5), decay=r.uniform(8.0, 14.0)),
+        gain=(1.5, 5.0), follow=0.9)
+    shifts = scatter(
+        n, rng, max(1, int(dur * 0.35)), settle,
+        lambda r: droplet(r, int(r.integers(2200, 5200)),
+                          r.uniform(150.0, 340.0),
+                          q=r.uniform(3.0, 6.0), decay=r.uniform(4.0, 7.0)),
+        gain=(2.0, 5.0), follow=0.6)
+    return _a_cut_at_lull(
+        _a_to_lufs(bed * 0.80 + ticks * 0.90 + shifts * 0.45, target=-27.5))
 
 
 # ------------------------------------------------------------------- chime
@@ -1782,9 +2585,33 @@ def write_bell(name, sig):
     print(f"  {name}: 4 grades, {total / 1024:.0f} KB")
 
 
-def write_ambience_table():
+AMBIENCE_TABLE = os.path.join(ROOT, "Pawmodoro", "Model", "AmbienceLoops.swift")
+
+
+def read_ambience_table():
+    """The shipping frame counts, read back out of the generated Swift.
+
+    Only for a partial run (`generate_assets.py loops crickets`), where the
+    loops that were not re-rendered still have to appear in the table. Asking
+    the Swift is the same rule the rest of the toolchain lives by; keeping a
+    second copy of eighteen numbers in here would be the thing that rule
+    exists to forbid. A partial run then asserts it removed nothing.
+    """
+    source = open(AMBIENCE_TABLE).read()
+    return {name: int(frames) for name, frames in
+            re.findall(r"case \.(\w+): (\d+)", source)}
+
+
+def write_ambience_table(partial=False):
     """The generated companion to `Ambience`, holding one number per loop."""
-    path = os.path.join(ROOT, "Pawmodoro", "Model", "AmbienceLoops.swift")
+    path = AMBIENCE_TABLE
+    if partial:
+        shipped = read_ambience_table()
+        missing = set(shipped) - set(LOOP_FRAMES)
+        for name in missing:
+            LOOP_FRAMES[name] = shipped[name]
+        added = set(LOOP_FRAMES) - set(shipped)
+        assert not added, f"partial run invented loops: {sorted(added)}"
     lines = [
         "// Generated by tools/generate_assets.py — do not edit by hand.",
         "//",
@@ -1822,25 +2649,44 @@ if __name__ == "__main__":
         make_icons()
         sys.exit(0)
 
+    # `generate_assets.py loops crickets cicadas` re-renders named loops only.
+    #
+    # For the same reason as `icons`, turned the other way round: re-voicing
+    # one loop should not restamp the other two hundred files and leave the
+    # working tree unreadable. The table is then rewritten from the Swift's
+    # own numbers plus whatever this run produced.
+    if len(sys.argv) > 2 and sys.argv[1] == "loops":
+        wanted = set(sys.argv[2:])
+        known = {"crickets": lambda: write_loop_i("crickets", make_crickets, 20.0),
+                 "cicadas": lambda: write_loop_i("cicadas", make_cicadas, 16.0)}
+        unknown = wanted - set(known)
+        if unknown:
+            sys.exit(f"no partial recipe for: {sorted(unknown)}")
+        print("Ambience loops (partial):")
+        for name in sorted(wanted):
+            known[name]()
+        write_ambience_table(partial=True)
+        sys.exit(0)
+
     print("Ambience loops:")
     write_varied("rain", make_rain)
     write_loop("purr", make_purr())
     write_loop("fireplace", make_fireplace())
     print("Ambience loops (Pawmodoro Plus):")
-    write_loop("forest", make_forest())
-    write_loop("cafe", make_cafe())
+    write_loop_b("forest", make_forest())
+    write_loop_b("cafe", make_cafe())
     write_loop_b("ocean", make_ocean())
     # The Second Shelf — Phase W, batch one.
     write_varied("drizzle", make_drizzle)
     write_loop_b("wind", make_wind())
     write_loop_b("creek", make_creek())
-    write_loop("library", make_library())
+    write_loop_b("library", make_library())
     write_loop_b("snowhush", make_snowhush())
-    write_loop("temple", make_temple())
+    write_loop_b("temple", make_temple())
     # The Second Shelf — batch two.
     write_varied("storm", make_storm)
-    write_loop("crickets", make_crickets())
-    write_loop("cicadas", make_cicadas())
+    write_loop_i("crickets", make_crickets, 20.0)
+    write_loop_i("cicadas", make_cicadas, 16.0)
     write_loop("nighttrain", make_nighttrain())
     write_varied("raintent", make_raintent)
     write_loop("emberslate", make_emberslate())

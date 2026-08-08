@@ -39,6 +39,14 @@ enum BuddyAnchors {
     static func anchors(for asset: String) -> Anchors? { table[asset] }
 
     static let table: [String: Anchors] = [
+        "buddy_bunny_air": Anchors(
+            head: CGPoint(x: 20.5, y: 6),
+            headWidth: 24,
+            neck: CGPoint(x: 20.5, y: 26),
+            neckWidth: 22,
+            face: CGPoint(x: 20.5, y: 20.0),
+            faceWidth: 14,
+            bottom: 35),
         "buddy_bunny_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 15),
             headWidth: 22,
@@ -69,6 +77,22 @@ enum BuddyAnchors {
             neck: CGPoint(x: 21.5, y: 28),
             neckWidth: 25,
             face: CGPoint(x: 20.0, y: 20.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_bunny_binky": Anchors(
+            head: CGPoint(x: 20.0, y: 11),
+            headWidth: 31,
+            neck: CGPoint(x: 20.0, y: 29),
+            neckWidth: 31,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 13,
+            bottom: 37),
+        "buddy_bunny_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 10),
+            headWidth: 25,
+            neck: CGPoint(x: 20.0, y: 30),
+            neckWidth: 23,
+            face: CGPoint(x: 20.0, y: 24.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_bunny_happy_0": Anchors(
@@ -111,6 +135,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 37),
+        "buddy_capybara_air": Anchors(
+            head: CGPoint(x: 20.0, y: 7),
+            headWidth: 25,
+            neck: CGPoint(x: 20.0, y: 26),
+            neckWidth: 25,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 17,
+            bottom: 35),
         "buddy_capybara_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 15),
             headWidth: 24,
@@ -141,6 +173,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 20.0, y: 28),
             neckWidth: 27,
             face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 17,
+            bottom: 38),
+        "buddy_capybara_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 11),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 29),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 19.0),
             faceWidth: 17,
             bottom: 38),
         "buddy_capybara_happy_0": Anchors(
@@ -183,6 +223,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 20.0, y: 17.0),
             faceWidth: 15,
             bottom: 39),
+        "buddy_capybara_unbothered": Anchors(
+            head: CGPoint(x: 20.0, y: 7),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 28),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 16.0),
+            faceWidth: 17,
+            bottom: 38),
         "buddy_capybara_wake": Anchors(
             head: CGPoint(x: 15.5, y: 15),
             headWidth: 24,
@@ -191,6 +239,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 37),
+        "buddy_cat_air": Anchors(
+            head: CGPoint(x: 20.0, y: 6),
+            headWidth: 25,
+            neck: CGPoint(x: 20.5, y: 26),
+            neckWidth: 22,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 35),
         "buddy_cat_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 14),
             headWidth: 22,
@@ -221,6 +277,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 23.0, y: 28),
             neckWidth: 27,
             face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_cat_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 10),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 29),
+            neckWidth: 21,
+            face: CGPoint(x: 20.0, y: 19.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_cat_happy_0": Anchors(
@@ -279,6 +343,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 39),
+        "buddy_dog_air": Anchors(
+            head: CGPoint(x: 20.0, y: 8),
+            headWidth: 33,
+            neck: CGPoint(x: 20.0, y: 26),
+            neckWidth: 23,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 35),
         "buddy_dog_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 17),
             headWidth: 32,
@@ -309,6 +381,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 23.0, y: 28),
             neckWidth: 31,
             face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_dog_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 12),
+            headWidth: 35,
+            neck: CGPoint(x: 20.0, y: 30),
+            neckWidth: 23,
+            face: CGPoint(x: 20.0, y: 19.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_dog_happy_0": Anchors(
@@ -367,6 +447,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 39),
+        "buddy_fox_air": Anchors(
+            head: CGPoint(x: 20.0, y: 7),
+            headWidth: 25,
+            neck: CGPoint(x: 24.5, y: 26),
+            neckWidth: 25,
+            face: CGPoint(x: 20.0, y: 16.0),
+            faceWidth: 15,
+            bottom: 35),
         "buddy_fox_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 14),
             headWidth: 22,
@@ -397,6 +485,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 23.5, y: 28),
             neckWidth: 27,
             face: CGPoint(x: 20.0, y: 16.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_fox_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 11),
+            headWidth: 27,
+            neck: CGPoint(x: 24.5, y: 29),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 20.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_fox_happy_0": Anchors(
@@ -431,6 +527,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 20.0, y: 16.0),
             faceWidth: 15,
             bottom: 38),
+        "buddy_fox_pounce": Anchors(
+            head: CGPoint(x: 12.5, y: 19),
+            headWidth: 20,
+            neck: CGPoint(x: 17.5, y: 33),
+            neckWidth: 20,
+            face: CGPoint(x: 12.5, y: 25.0),
+            faceWidth: 12,
+            bottom: 39),
         "buddy_fox_wake": Anchors(
             head: CGPoint(x: 15.5, y: 14),
             headWidth: 22,
@@ -439,6 +543,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 39),
+        "buddy_hamster_air": Anchors(
+            head: CGPoint(x: 20.0, y: 13),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 28),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 21.0),
+            faceWidth: 17,
+            bottom: 35),
         "buddy_hamster_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 12),
             headWidth: 22,
@@ -469,6 +581,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 20.0, y: 30),
             neckWidth: 27,
             face: CGPoint(x: 20.0, y: 21.0),
+            faceWidth: 17,
+            bottom: 38),
+        "buddy_hamster_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 15),
+            headWidth: 29,
+            neck: CGPoint(x: 20.0, y: 31),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 23.0),
             faceWidth: 17,
             bottom: 38),
         "buddy_hamster_happy_0": Anchors(
@@ -503,6 +623,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 20.0, y: 21.0),
             faceWidth: 17,
             bottom: 38),
+        "buddy_hamster_stuff": Anchors(
+            head: CGPoint(x: 20.0, y: 12),
+            headWidth: 31,
+            neck: CGPoint(x: 20.0, y: 30),
+            neckWidth: 31,
+            face: CGPoint(x: 20.0, y: 21.0),
+            faceWidth: 19,
+            bottom: 38),
         "buddy_hamster_wake": Anchors(
             head: CGPoint(x: 15.5, y: 12),
             headWidth: 22,
@@ -511,6 +639,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 38),
+        "buddy_hedgehog_air": Anchors(
+            head: CGPoint(x: 20.0, y: 12),
+            headWidth: 31,
+            neck: CGPoint(x: 20.0, y: 35),
+            neckWidth: 23,
+            face: CGPoint(x: 20.0, y: 28.0),
+            faceWidth: 13,
+            bottom: 37),
         "buddy_hedgehog_asleep": Anchors(
             head: CGPoint(x: 19.0, y: 12),
             headWidth: 31,
@@ -537,6 +673,14 @@ enum BuddyAnchors {
             bottom: 39),
         "buddy_hedgehog_awake_blink": Anchors(
             head: CGPoint(x: 20.0, y: 12),
+            headWidth: 33,
+            neck: CGPoint(x: 20.0, y: 35),
+            neckWidth: 23,
+            face: CGPoint(x: 20.0, y: 28.0),
+            faceWidth: 13,
+            bottom: 39),
+        "buddy_hedgehog_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 16),
             headWidth: 33,
             neck: CGPoint(x: 20.0, y: 35),
             neckWidth: 23,
@@ -583,6 +727,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 19.0, y: 27.5),
             faceWidth: 11,
             bottom: 39),
+        "buddy_otter_air": Anchors(
+            head: CGPoint(x: 20.5, y: 6),
+            headWidth: 24,
+            neck: CGPoint(x: 20.5, y: 26),
+            neckWidth: 20,
+            face: CGPoint(x: 20.5, y: 13.0),
+            faceWidth: 14,
+            bottom: 36),
         "buddy_otter_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 14),
             headWidth: 24,
@@ -613,6 +765,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 20.0, y: 28),
             neckWidth: 23,
             face: CGPoint(x: 20.0, y: 13.0),
+            faceWidth: 15,
+            bottom: 39),
+        "buddy_otter_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 10),
+            headWidth: 25,
+            neck: CGPoint(x: 20.0, y: 30),
+            neckWidth: 21,
+            face: CGPoint(x: 20.0, y: 17.0),
             faceWidth: 15,
             bottom: 39),
         "buddy_otter_float": Anchors(
@@ -663,6 +823,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 39),
+        "buddy_owl_air": Anchors(
+            head: CGPoint(x: 20.0, y: 8),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 28),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 17.0),
+            faceWidth: 19,
+            bottom: 37),
         "buddy_owl_asleep": Anchors(
             head: CGPoint(x: 16.5, y: 13),
             headWidth: 26,
@@ -695,6 +863,22 @@ enum BuddyAnchors {
             face: CGPoint(x: 20.0, y: 17.0),
             faceWidth: 19,
             bottom: 39),
+        "buddy_owl_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 12),
+            headWidth: 29,
+            neck: CGPoint(x: 20.0, y: 30),
+            neckWidth: 29,
+            face: CGPoint(x: 20.0, y: 21.0),
+            faceWidth: 19,
+            bottom: 39),
+        "buddy_owl_flap": Anchors(
+            head: CGPoint(x: 20.0, y: 10),
+            headWidth: 27,
+            neck: CGPoint(x: 19.5, y: 28),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 18.0),
+            faceWidth: 19,
+            bottom: 37),
         "buddy_owl_happy_0": Anchors(
             head: CGPoint(x: 20.0, y: 8),
             headWidth: 29,
@@ -743,6 +927,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 20.0, y: 17.0),
             faceWidth: 21,
             bottom: 39),
+        "buddy_penguin_air": Anchors(
+            head: CGPoint(x: 20.0, y: 9),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 28),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 13,
+            bottom: 37),
         "buddy_penguin_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 16),
             headWidth: 24,
@@ -773,6 +965,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 20.0, y: 30),
             neckWidth: 31,
             face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 13,
+            bottom: 39),
+        "buddy_penguin_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 13),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 31),
+            neckWidth: 27,
+            face: CGPoint(x: 20.0, y: 19.0),
             faceWidth: 13,
             bottom: 39),
         "buddy_penguin_happy_0": Anchors(
@@ -831,6 +1031,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 15.5, y: 22.0),
             faceWidth: 12,
             bottom: 38),
+        "buddy_redpanda_air": Anchors(
+            head: CGPoint(x: 20.0, y: 7),
+            headWidth: 29,
+            neck: CGPoint(x: 24.0, y: 26),
+            neckWidth: 29,
+            face: CGPoint(x: 20.0, y: 17.0),
+            faceWidth: 15,
+            bottom: 35),
         "buddy_redpanda_armsup": Anchors(
             head: CGPoint(x: 20.0, y: 9),
             headWidth: 37,
@@ -869,6 +1077,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 23.0, y: 28),
             neckWidth: 31,
             face: CGPoint(x: 20.0, y: 17.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_redpanda_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 11),
+            headWidth: 31,
+            neck: CGPoint(x: 24.5, y: 29),
+            neckWidth: 30,
+            face: CGPoint(x: 20.0, y: 21.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_redpanda_curl": Anchors(
@@ -919,6 +1135,14 @@ enum BuddyAnchors {
             face: CGPoint(x: 16.0, y: 23.0),
             faceWidth: 13,
             bottom: 39),
+        "buddy_stray_air": Anchors(
+            head: CGPoint(x: 20.0, y: 6),
+            headWidth: 25,
+            neck: CGPoint(x: 20.5, y: 26),
+            neckWidth: 22,
+            face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 35),
         "buddy_stray_asleep": Anchors(
             head: CGPoint(x: 15.5, y: 14),
             headWidth: 22,
@@ -949,6 +1173,14 @@ enum BuddyAnchors {
             neck: CGPoint(x: 23.0, y: 28),
             neckWidth: 27,
             face: CGPoint(x: 20.0, y: 15.0),
+            faceWidth: 15,
+            bottom: 38),
+        "buddy_stray_crouch": Anchors(
+            head: CGPoint(x: 20.0, y: 10),
+            headWidth: 27,
+            neck: CGPoint(x: 20.0, y: 29),
+            neckWidth: 21,
+            face: CGPoint(x: 20.0, y: 19.0),
             faceWidth: 15,
             bottom: 38),
         "buddy_stray_happy_0": Anchors(

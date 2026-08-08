@@ -115,6 +115,15 @@ struct NightSkyTouchView: View {
             // the top third of the screen falls through to the toy layer
             // below, so the firefly still comes when called under a sky you
             // have nothing left to join.
+            //
+            // This is what lets the layer sit *above* the countdown, which it
+            // has to: the dial and the phase chip cover 22 of the 47 stars,
+            // and a full-rect hit region up there would have eaten the whole
+            // dial in exchange. Note the
+            // consequence, which is deliberate — a drag that begins within a
+            // star's radius sets no duration, because it belongs to the sky.
+            // The dial is grabbable everywhere else on a 260pt face, and a
+            // star that yields to the dial is a star nobody can ever join.
             .contentShape(SkyReach(targets: enabled ? targets(in: size) : []))
             .gesture(enabled ? gesture(in: size) : nil)
             .onDisappear { TouchTracker.shared.x = nil }
@@ -283,15 +292,45 @@ struct NightSkyTouchView: View {
             .onEnded { value in
                 TouchTracker.shared.x = nil
                 let travel = hypot(value.translation.width, value.translation.height)
-                if travel <= Self.tapSlop {
-                    tap(at: value.location, in: size)
-                } else if let from = held,
-                          let to = nearestPartner(of: from, to: value.location, in: size) {
+                if let from = held,
+                   let to = nearestPartner(of: from, to: value.location, in: size),
+                   travel > Self.tapSlop
+                       || crossedHalfway(from: from, to: to, end: value.location, in: size) {
                     join(from: from, to: to, in: size)
+                } else if travel <= Self.tapSlop {
+                    tap(at: value.location, in: size)
                 }
                 held = nil
                 fingertip = nil
             }
+    }
+
+    /// Whether a stroke finished on the far side of the gap it was tracing.
+    ///
+    /// The tap threshold is twelve points and two links in the atlas are
+    /// shorter than that — The Lantern's finial sits **11.8 points** above its
+    /// hook on a 402-point screen, and the cat's ear is 13.6 from her brow.
+    /// An accurate trace of the shortest of them travelled less far than a
+    /// tap is allowed to and was thrown away as one: measured on a phone, the
+    /// stroke that lands exactly on the next star wrote nothing, and only an
+    /// overshoot did. That is the same "you cannot trace this" as a star under
+    /// the dial, arriving by arithmetic instead of by z-order.
+    ///
+    /// Ending nearer the partner than the star you started from is what a
+    /// short link has instead of distance. It cannot rescue a *tap*: on any
+    /// link longer than twice the slop the halfway mark is further than the
+    /// slop, so this can only ever fire where the two stars are closer
+    /// together than a fingertip is wide — and there, moving deliberately at
+    /// the neighbour is the only thing it can mean.
+    private func crossedHalfway(
+        from: Int, to: Int, end: CGPoint, in size: CGSize
+    ) -> Bool {
+        guard let index = building else { return false }
+        let figure = ConstellationAtlas.all[index]
+        let start = SkyGeometry.star(figure, from, in: size)
+        let partner = SkyGeometry.star(figure, to, in: size)
+        return hypot(end.x - partner.x, end.y - partner.y)
+            < hypot(end.x - start.x, end.y - start.y)
     }
 
     private func tap(at point: CGPoint, in size: CGSize) {
@@ -392,11 +431,14 @@ struct NightSkyTouchView: View {
     ///
     /// One slot, in the top-right corner, rather than under whatever it is
     /// about. Under-the-thing was tried and it is not available on this
-    /// screen: **this layer sits behind the countdown**, so a caption that
-    /// strays over the ring or the phase chip is not merely crowded, it is
-    /// invisible. Measured, the free sky is the strip right of the chip and
-    /// above the ring's top — which is also where the moon is, and where most
-    /// of what the sky has to say comes from.
+    /// screen: the sky band and the countdown overlap for most of their
+    /// height, so a caption that strays over the ring or the phase chip lands
+    /// on top of the one row of type anybody reads. Measured, the free sky is
+    /// the strip right of the chip and above the ring's top — which is also
+    /// where the moon is, and where most of what the sky has to say comes
+    /// from. (The layer used to sit *behind* the countdown, which made the
+    /// same caption invisible rather than merely crowded. The slot is the
+    /// right one either way.)
     private func show(_ text: String, in size: CGSize, life: TimeInterval) {
         let born = Date()
         caption = Caption(text: text, born: born, life: life)

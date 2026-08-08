@@ -32,6 +32,22 @@ struct BuddyView: View {
     /// way rotation would) and a travel offset for the leap.
     @State private var trickScaleX: CGFloat = 1
     @State private var trickOffset: CGSize = .zero
+    /// The acrobatics: a second, independent set of the same three channels
+    /// the tricks use, plus a rotation. Kept separate from `trickOffset` on
+    /// purpose — the break's closing pounce drives that one off the countdown,
+    /// and a tap landing in the last ten seconds of a break must not be able
+    /// to fight it for the same property. The two compose instead.
+    @State private var anticOffset: CGSize = .zero
+    @State private var anticScaleX: CGFloat = 1
+    @State private var anticSpin: Double = 0
+    /// The drawn frame the move is holding, or nil for "ask the animator".
+    @State private var anticFrame: AnticFrame?
+    /// True for exactly as long as a move is on screen: raises the timeline
+    /// to 8fps and drops it straight back afterwards.
+    @State private var anticRunning = false
+    /// The escalation. A value, in view state, written down nowhere.
+    @State private var anticBag = AnticBag()
+    @State private var anticTask: Task<Void, Never>?
     /// The break's closing hunt: crouch from T-10, wiggle from T-3, pounce
     /// at zero. Pure function of the countdown; nothing persists.
     @State private var pounceStage: PounceStage = .none
@@ -163,8 +179,17 @@ struct BuddyView: View {
 
                 ZStack {
                     sprite
-                        .scaleEffect(x: trickScaleX, y: 1)
+                        // Rotation first, so a tumble turns about the sprite's
+                        // own centre before any travel moves it. The clip in
+                        // `BuddySprite` runs in its own coordinate space, so
+                        // it happens before this and nothing shears — and the
+                        // whole stack, hat and collar included, turns as one
+                        // piece. That is why an upside-down buddy needs no
+                        // anchor: no frame changed.
+                        .rotationEffect(.degrees(anticSpin))
+                        .scaleEffect(x: trickScaleX * anticScaleX, y: 1)
                         .offset(trickOffset)
+                        .offset(anticOffset)
                         .offset(helloOffset)
                         .contentShape(Rectangle())
                         .gesture(petGesture)
@@ -387,7 +412,7 @@ struct BuddyView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: isNapping ? "Check on \(name)" : "Pet \(name)") {
+        .accessibilityAction(named: isResting ? "Check on \(name)" : "Pet \(name)") {
             pet()
         }
         // Everything the sighted hand can reach, offered by name. One block
@@ -422,7 +447,7 @@ struct BuddyView: View {
             // gets its own action. The favourite is not marked in any of these
             // labels: finding it is the feature, and a list that gave it away
             // would take the feature from exactly the people this is for.
-            if !isNapping {
+            if !isResting {
                 ForEach(TouchSpot.allCases) { spot in
                     Button("Touch \(spot.name)") { touchNamed(spot) }
                 }
@@ -497,6 +522,15 @@ struct BuddyView: View {
                 engine.forcedTrickPreview = nil
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 engine.repertoire.showOff(preview.trick, tier: preview.tier)
+            }
+            // `-PawmodoroAntics` walks the whole vocabulary; `-PawmodoroAntic
+            // tumble` plays one and then pins every tap to it.
+            if LaunchOptions.anticParade {
+                await paradeAntics()
+            } else if let id = LaunchOptions.forcedAntic,
+                      let antic = Antic(rawValue: id) {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                playAntic(.move(antic))
             }
         }
         .task(id: engine.runState == .idle) {
@@ -582,6 +616,14 @@ struct BuddyView: View {
         // wake-up that follows is the vignette's whole plot.
         if helloAsleep {
             return buddy.frame("asleep")
+        }
+        // A move outranks the glance and the raised paw for the same reason a
+        // one-shot does: it is a thing the buddy is *doing*. The `??` is what
+        // keeps this agent unblocked by the art — a signature whose sprite
+        // hasn't been drawn yet falls through to the animator rather than
+        // blanking, and the transform still carries the move.
+        if let anticFrame, let asset = anticFrame.asset(for: buddy) {
+            return asset
         }
         // The slow blink holds the half-lidded frame — the existing blink
         // art, just given time to mean something.
@@ -944,6 +986,129 @@ struct BuddyView: View {
         }
     }
 
+    // MARK: Acrobatics
+
+    /// Whether a tap gets a performance at all.
+    ///
+    /// `isNapping` alone was the wrong gate, and it was wrong on the shipped
+    /// build: `restingPose` returns `.watching` for a nocturnal buddy during a
+    /// night focus phase, so `isNapping` is false and Luna got the full bounce,
+    /// a purr and a heart in the middle of a focus session. With acrobatics
+    /// behind it she would have performed. The phase is the fence, not the pose.
+    private var isResting: Bool {
+        isNapping || (engine.isRunning && !engine.phase.isBreak)
+    }
+
+    /// What this tap is answered with: the pinned move under the debug flag,
+    /// otherwise the bag's next draw.
+    private func nextAntic() -> AnticChoice {
+        if let id = LaunchOptions.forcedAntic, let antic = Antic(rawValue: id) {
+            return .move(antic)
+        }
+        let mastered = Trick.allCases.filter {
+            engine.repertoire.hasMastered(buddy, $0)
+        }
+        // The established deterministic-roll idiom, over something that
+        // changes every tap. Only the one-in-twenty-five routine reads it.
+        let seed = Doorstep.stableHash(
+            "antic.\(buddy.rawValue).\(Int(Date().timeIntervalSinceReferenceDate * 1000))"
+        )
+        return anticBag.draw(seed: seed, mastered: mastered)
+    }
+
+    /// Perform one drawn answer.
+    private func playAntic(_ choice: AnticChoice) {
+        switch choice {
+        case .trick(let trick):
+            // A trick taught all the way to mastery joins the everyday
+            // vocabulary. `showOff` does no practice bookkeeping — a tap must
+            // never look like a carefully drawn circle — and the existing
+            // `onChange(of: repertoire.attempt)` runs it and writes its caption.
+            engine.repertoire.showOff(trick, tier: Repertoire.masteredTier)
+        case .move(let antic):
+            // The favourite touch spot outranks the move's line: finding it is
+            // a discovery that happens once, and a somersault says so every
+            // third tap. Everything else the move describes itself, which is
+            // what Reduce Motion and VoiceOver both live on.
+            if let line = antic.remark(for: buddy), !engine.foundFavourite {
+                say(line, for: 3.5)
+            }
+            runMove(antic)
+        }
+    }
+
+    private func runMove(_ antic: Antic) {
+        if let pose = antic.pose {
+            animator.play(pose, for: buddy)
+        }
+        anticTask?.cancel()
+
+        guard !reduceMotion else {
+            // The *end* of the move rather than nothing: the frame it would
+            // have finished on, held still, with its sentence above. Motion
+            // removed, information kept — which is already better than the
+            // shipped build, where Reduce Motion dropped the bounce silently.
+            anticFrame = antic.stillFrame(for: buddy)
+            anticTask = Task {
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                guard !Task.isCancelled else { return }
+                anticFrame = nil
+            }
+            return
+        }
+
+        let beats = antic.beats(for: buddy)
+        guard !beats.isEmpty else { return }
+        anticTask = Task { await run(beats: beats) }
+    }
+
+    /// The whole acrobatics engine: one loop over a table. Every move in the
+    /// app comes through here, which is why there is no `if buddy == …`
+    /// anywhere in this file — a signature is a different list, not a
+    /// different code path.
+    private func run(beats: [AnticBeat]) async {
+        anticRunning = true
+        defer {
+            // Belt and braces for a cancelled move. Every table already ends
+            // at rest; this makes sure an interrupted one does too, so a
+            // rotation can never be left held — pixel art at thirty degrees
+            // reads as a broken app, not as a buddy.
+            anticRunning = false
+            anticFrame = nil
+            anticSpin = 0
+            anticScaleX = 1
+            anticOffset = .zero
+        }
+        for beat in beats {
+            guard !Task.isCancelled else { return }
+            anticFrame = beat.frame
+            let land = {
+                anticOffset = CGSize(width: beat.dx, height: beat.dy)
+                anticScaleX = beat.scaleX
+                anticSpin = beat.spin
+            }
+            if let curve = beat.curve.animation(over: beat.hold) {
+                withAnimation(curve, land)
+            } else {
+                land()
+            }
+            try? await Task.sleep(nanoseconds: UInt64(beat.hold * 1_000_000_000))
+        }
+    }
+
+    /// `-PawmodoroAntics`: every move for this buddy, back to back. Tapping
+    /// for them is not a way to check twelve buddies — the bag deliberately
+    /// won't let you choose.
+    private func paradeAntics() async {
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        for antic in Antic.allCases {
+            guard !Task.isCancelled else { return }
+            playAntic(.move(antic))
+            let gap = max(1.0, antic.duration(for: buddy)) + 1.5
+            try? await Task.sleep(nanoseconds: UInt64(gap * 1_000_000_000))
+        }
+    }
+
     // MARK: The high five
 
     /// Whether the paw is up at `date` — the post-bell window, or the earned
@@ -1071,8 +1236,12 @@ struct BuddyView: View {
 
     /// Follows whichever pose is on screen, so a slow breathing loop doesn't
     /// keep ticking at the rate a finished bounce needed.
+    ///
+    /// A move takes the burst rate for exactly its own length and gives it
+    /// straight back — `anticRunning` is cleared in the runner's `defer`, so
+    /// even a cancelled move cannot leave the timeline running hot.
     private var tickInterval: TimeInterval {
-        animator.resolved(at: Date()).pose.frameInterval
+        anticRunning ? 1.0 / 8.0 : animator.resolved(at: Date()).pose.frameInterval
     }
 
     private var zzz: some View {
@@ -1241,11 +1410,14 @@ struct BuddyView: View {
         guard now.timeIntervalSince(lastPet) > throttle else { return }
         lastPet = now
 
-        if isNapping {
+        if isResting {
             // Mid-focus: the buddy stirs but never wakes. No penalty, no guilt,
             // and no touch vocabulary either — a sleeping animal does not have
             // opinions about where you put your hand, and the fiction that
-            // focus is sacred outranks the new feature.
+            // focus is sacred outranks the new feature. A buddy who is awake
+            // through focus because it is nocturnal gets the same answer: an
+            // acknowledged glance, and back to the watch. Nothing performs
+            // during a focus phase, ever.
             animator.play(.stirring, for: buddy)
             HapticsDirector.shared.nudge()
             return
@@ -1256,7 +1428,7 @@ struct BuddyView: View {
         }
         engine.touched(spot)
 
-        animator.play(.happy, for: buddy)
+        playAntic(nextAntic())
         // The favourite gets the softer, longer haptic — the one difference
         // between finding it and not that is felt rather than read.
         if engine.foundFavourite {
@@ -1283,9 +1455,17 @@ struct BuddyView: View {
     /// Named `touchNamed` because `touch` is already the finger tracker this
     /// view holds — the two would compile side by side and read as a bug.
     private func touchNamed(_ spot: TouchSpot) {
+        guard !isResting else {
+            animator.play(.stirring, for: buddy)
+            HapticsDirector.shared.nudge()
+            return
+        }
         lastPet = .distantPast
         engine.touched(spot)
-        animator.play(.happy, for: buddy)
+        // The same bag as the finger's path. Escalation reached only by
+        // aiming at a sprite would be a feature sighted hands have and
+        // nobody else does — and the caption is what carries it either way.
+        playAntic(nextAntic())
         HapticsDirector.shared.purr()
         SoundPlayer.shared.playPurr()
         addHeart()
@@ -1439,6 +1619,27 @@ struct BuddyView: View {
             return "Don't wake \(name) — stay focused!"
         case .paused:
             return "\(name) wonders where you went…"
+        }
+    }
+}
+
+/// The model's curve names, resolved into SwiftUI.
+///
+/// The only translation between `Antics.swift` and the view layer. It lives
+/// here rather than there so the move tables stay importable, summable and
+/// printable without SwiftUI — a beat list is data about a performance, not a
+/// performance.
+private extension AnticCurve {
+    /// nil means no animation at all: land there. Used once, to put the
+    /// tumble's rotation on exactly zero degrees.
+    func animation(over duration: TimeInterval) -> Animation? {
+        switch self {
+        case .linear: .linear(duration: duration)
+        case .easeIn: .easeIn(duration: duration)
+        case .easeOut: .easeOut(duration: duration)
+        case .easeInOut: .easeInOut(duration: duration)
+        case .spring: .spring(duration: duration, bounce: 0.35)
+        case .snap: nil
         }
     }
 }

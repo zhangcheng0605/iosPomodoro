@@ -177,6 +177,100 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         self == .owl ? frame("watch") : nil
     }
 
+    // MARK: Acrobatics
+    //
+    // Read by `AnticFrame.asset(for:)`. The two shared frames are spelled out
+    // buddy by buddy rather than returned in one line, and that is deliberate.
+    // `check_swift.py` parses the quirk idiom — a case list, a colon, a call
+    // to `frame` — out of this file and fails when the imageset is missing.
+    // Returned in one line with no case in front of it, twelve missing sprites
+    // would be invisible: `BuddySprite` falls back to the resting pose, so the
+    // buddy would simply stop crouching and nothing anywhere would say so.
+    // The line break goes inside the case list, never before the call.
+
+    /// The wind-up every move opens on, and the pounce frame `COMPANION_PLAN`
+    /// asked for.
+    var crouchFrame: String {
+        switch self {
+        case .cat, .dog, .penguin, .bunny, .hamster, .fox, .capybara,
+             .redpanda, .owl, .otter, .hedgehog, .stray: frame("crouch")
+        }
+    }
+
+    /// Legs tucked, ears and tail streaming — held through anything airborne,
+    /// which upgrades the existing leap trick for free.
+    var airFrame: String {
+        switch self {
+        case .cat, .dog, .penguin, .bunny, .hamster, .fox, .capybara,
+             .redpanda, .owl, .otter, .hedgehog, .stray: frame("air")
+        }
+    }
+
+    /// The frame the buddy's own signature move holds. Nine of the twelve
+    /// reuse art that was already drawn and never used.
+    var anticFrame: String {
+        switch self {
+        case .cat, .stray: frame("pawup")
+        case .dog: frame("stretch")
+        case .penguin: frame("slide")
+        case .redpanda: frame("armsup")
+        case .otter: frame("float")
+        // Already the ball, complete, for zero new frames.
+        case .hedgehog: frame("asleep")
+        case .bunny: frame("binky")
+        case .hamster: frame("stuff")
+        case .fox: frame("pounce")
+        case .capybara: frame("unbothered")
+        case .owl: frame("flap")
+        }
+    }
+
+    /// The second half of a two-part signature. Only the hedgehog has one —
+    /// the ball cracking open again for a face.
+    var anticTailFrame: String? {
+        switch self {
+        case .hedgehog: frame("wake")
+        default: nil
+        }
+    }
+
+    /// Which body of motion the signature uses. Twelve animals, nine shapes:
+    /// what makes a signature theirs is the frame and the sentence, not a
+    /// bespoke tumble nobody could tell from another one.
+    var anticShape: AnticShape {
+        switch self {
+        case .cat: .held                    // a paw, raised, held
+        case .stray: .heldSlow              // the same, slower — still deciding
+        case .dog: .bowThenSpin             // play-bow, then after the tail
+        case .penguin: .slide               // out on the belly and back
+        case .redpanda, .otter, .hamster: .heldWiggle
+        case .hedgehog: .ballHop            // curl, bounce, uncurl
+        case .bunny, .fox: .airborne
+        case .capybara: .still              // declines
+        case .owl: .flap                    // an owl does not somersault
+        }
+    }
+
+    /// What the caption says while the signature plays. Never contains a name:
+    /// every buddy can be renamed, and `BuddyView` composes this after
+    /// `settings.displayName(for:)`.
+    var anticRemark: String {
+        switch self {
+        case .cat: "waves a paw. Just the one"
+        case .stray: "lifts a paw, slowly. Still deciding about you"
+        case .dog: "play-bows, then goes after the tail"
+        case .penguin: "belly-slides out and back"
+        case .redpanda: "throws both arms up and wobbles"
+        case .otter: "flops onto its back, pebble and all"
+        case .hedgehog: "curls into a ball, bounces once, and unrolls"
+        case .bunny: "binkies — briefly, entirely airborne"
+        case .hamster: "stuffs both cheeks with nothing at all"
+        case .fox: "pounces on something only it can hear"
+        case .capybara: "declines to move. One ear flicks"
+        case .owl: "spreads both wings and lifts off the perch"
+        }
+    }
+
     // MARK: Home turf
 
     /// Where this buddy would rather be. Purely cosmetic — being at home never

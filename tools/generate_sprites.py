@@ -394,6 +394,142 @@ def shift(grid, dy):
     return Image.fromarray(out, mode="L")
 
 
+def reseal(grid):
+    """Re-outline only where a cut has exposed bare fur.
+
+    `outline_silhouette` cannot be run twice: its own ring is solid, so a
+    second pass outlines the outline and every buddy comes back two pixels
+    thick. This paints a transparent pixel only when it touches something that
+    is *not* already outline — which is exactly the seam a row cut leaves
+    behind, and nowhere else. Interior strokes drawn in `OUTLINE` (whiskers,
+    a mouth) are ignored on purpose: they are meant to end in mid-air.
+    """
+    arr = np.array(grid)
+    fur = np.pad((arr != T) & (arr != OUTLINE), 1)
+    neighbours = np.zeros_like(fur)
+    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        neighbours |= np.roll(np.roll(fur, dy, axis=0), dx, axis=1)
+    edge = neighbours[1:-1, 1:-1] & (arr == T)
+    arr[edge] = OUTLINE
+    return Image.fromarray(arr, mode="L")
+
+
+def _figure(arr):
+    """The rows the animal actually occupies: (top, bottom)."""
+    rows = [index for index, row in enumerate(arr) if (row != T).any()]
+    return rows[0], rows[-1]
+
+
+def _narrow_flanks(arr, inset=5):
+    """Take a column out of each flank, so the figure draws in by two.
+
+    The column is removed from the *flank* rather than from the middle, and
+    that is the whole of the idea: a column deleted at the centre line runs
+    through the nose and the mouth, which are one and two pixels wide, and
+    three buddies lose their mouth entirely. Five pixels in from the outside
+    the animal is solid fur on every row that matters, so the same two columns
+    come out and nothing anybody drew on purpose is touched.
+    """
+    columns = [j for j in range(arr.shape[1]) if (arr[:, j] != T).any()]
+    left, right = columns[0] + inset, columns[-1] - inset
+    if right - left < 6:
+        return arr
+    out = arr.copy()
+    out[:, 1:left + 1] = arr[:, 0:left]
+    out[:, 0] = T
+    out[:, right:-1] = arr[:, right + 1:]
+    out[:, -1] = T
+    return out
+
+
+def _band(grid, fraction):
+    """A row a given fraction of the way down the *figure*, not the canvas.
+
+    Twelve buddies are drawn at twelve different sizes on the same forty-pixel
+    grid — the hamster is twenty-nine rows tall and the bunny thirty-nine — so
+    a constant row number means a different part of the animal on each of them.
+    """
+    top, bottom = _figure(np.array(grid))
+    return min(bottom, top + int(round((bottom - top) * fraction)))
+
+
+# How far down the figure each transform bites. Read off the sprites rather
+# than chosen: `HAUNCH` lands in the widest part of a sitting buddy's rump,
+# just above where the legs start, and `LEGS` lands at the top of the leg band.
+#
+# The hedgehog is the one exception and gets his own pair, for the same reason
+# the collar rule has to make one for him: he is a ball with his face at the
+# *bottom*, so the fraction that finds eleven rumps finds his nose — 0.83 took
+# rows 32-36 out of him, which is his entire snout, and he crouched with no
+# nose at all. What compresses on a hedgehog is the dome, so his bite is up at
+# 0.45, above the face and through the spines. It is the better drawing as
+# well as the correct one: a hedgehog gathering himself flattens.
+HAUNCH = 0.83
+LEGS = 0.78
+HEDGEHOG_HAUNCH = 0.45
+HEDGEHOG_LEGS = 0.90
+
+# How many rows the crouch takes out. Four is what the eleven upright buddies
+# can carry: a crouch is the only transform that moves the *head* toward the
+# ground, and `check_accessories` rule 3d wants the collar line to stay at
+# least two rows below the lowest eye pixel — which shrinks as the figure
+# does, because the collar is a fraction of crown-to-floor and the chin is
+# not. At five the dog and the hamster both lose it.
+CROUCH_DEPTH = 4
+
+# Any species whose bands or depth are not the defaults. Each is here for a
+# reason that is written down; the table has no entry that was tuned by eye.
+#
+# The hamster is the shallowest crouch in the cast because he is the only
+# buddy who **draws his nose in the eye colour** — `_eye_band`'s docstring
+# already knows about it — so rule 3d measures his collar against his *nose*,
+# eight rows lower than anybody else's eyes. He is also the shortest buddy at
+# twenty-nine rows, so two rows is the same proportion of him that four is of
+# the cat, and the squash reads at the same strength.
+ACROBATIC_BANDS = {
+    "hedgehog": (HEDGEHOG_HAUNCH, HEDGEHOG_LEGS, CROUCH_DEPTH),
+    "hamster": (HAUNCH, LEGS, 2),
+}
+
+
+def crouch_from(grid, fraction=HAUNCH, rows=CROUCH_DEPTH):
+    """The wind-up: the animal gathers itself and drops toward the ground.
+
+    Squash, in the animation sense, and done the way `squash` already does a
+    breath — rows are deleted out of the haunches, so the feet stay planted
+    and the head comes down with the shoulders. Nothing is widened to match:
+    four of the twelve are drawn with a tail already touching the last column
+    of the canvas, and a squash that clipped their tails off would cost more
+    than the extra pixel of splay is worth at this size.
+    """
+    return reseal(squash(grid, _band(grid, fraction), rows))
+
+
+def air_from(grid, fraction=LEGS, rows=3):
+    """Airborne: the legs fold up under the body and the feet leave the floor.
+
+    The block from the top of the legs downward is pulled up bodily, which
+    both tucks the feet and leaves the bottom rows of the canvas empty — so
+    the silhouette alone says the animal is off the ground, before the view
+    has offset it anywhere. The step this leaves where a wide rump meets a
+    narrow tucked leg is the pose, not an artifact; `reseal` closes the
+    outline over it.
+
+    Then the flanks come in by a column each, which is the half that makes it
+    read. Tucking alone gives a *shorter* animal, and a shorter animal is what
+    `crouch_from` already means — the two frames came out the same height and
+    the pair read as one small hop. Stretch is the other half of squash: this
+    one is tall and drawn-in, that one is low and gathered, and side by side
+    nobody has to be told which is which.
+    """
+    arr = np.array(grid)
+    row = _band(grid, fraction)
+    out = np.full_like(arr, T)
+    out[:row] = arr[:row]
+    out[row:S - rows] = arr[row + rows:]
+    return reseal(Image.fromarray(_narrow_flanks(out), mode="L"))
+
+
 def cat_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
@@ -552,6 +688,55 @@ def bunny_asleep(eyes_mode="closed"):
     return outline_silhouette(g)
 
 
+def bunny_binky():
+    """The binky: a rabbit's whole-body expression of delight. All four feet
+    off the ground at once, hind legs kicked out, ears flung back.
+
+    Drawn upright, with the eyes forward, on purpose. A real binky is a twist
+    in the air and the honest drawing of one is half upside-down — but an
+    inverted frame puts its eyes at the bottom, and `generate_accessories`
+    measures the crown from the eyes, so the measurer would call her rump the
+    head and tie every collar across her face. That is how the hedgehog once
+    shipped with a bow on his snout. Everything upside-down in this app is a
+    `rotationEffect` on the view, which carries the hat round with it; a sprite
+    stays the right way up.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([28, 19, 35, 26], fill=SHADE)          # tail, flashing
+    # Ears flung out and back. Quadrilaterals rather than the sitting pose's
+    # ellipses: an ellipse leaned over by eye comes out a blob with an
+    # antenna, and the taper has to be made by bringing the tip's two corners
+    # together *sideways* — which is the lesson the hare's ears already cost.
+    d.polygon([(16, 18), (7, 2), (3, 5), (11, 20)], fill=BODY)
+    d.polygon([(24, 18), (33, 2), (37, 5), (29, 20)], fill=BODY)
+    d.polygon([(15, 17), (8, 5), (6, 7), (12, 18)], fill=PINK)
+    d.polygon([(25, 17), (32, 5), (34, 7), (28, 18)], fill=PINK)
+    # Body, clear of the floor.
+    d.ellipse([11, 19, 29, 33], fill=BODY)
+    d.ellipse([14, 23, 26, 33], fill=CREAM)
+    # Hind legs kicked out to the sides, front paws drawn up under the chin —
+    # all four in `SHADE`. This buddy is drawn soft white on soft white, and
+    # the first pass came out a featureless blob from the chin down: the two
+    # kicked legs, the chest and the body are four different shapes within six
+    # points of each other. A limb only reads if it is a different value from
+    # the thing it is in front of.
+    d.ellipse([4, 27, 14, 34], fill=SHADE)
+    d.ellipse([26, 27, 36, 34], fill=SHADE)
+    d.ellipse([3, 30, 9, 36], fill=BODY)
+    d.ellipse([31, 30, 37, 36], fill=BODY)
+    d.ellipse([14, 24, 19, 29], fill=SHADE)
+    d.ellipse([21, 24, 26, 29], fill=SHADE)
+    # Head and face.
+    d.ellipse([11, 9, 29, 25], fill=BODY)
+    d.ellipse([13, 16, 27, 24], fill=CREAM)
+    eyes(d, 16, 24, 15, "happy")
+    d.polygon([(19, 19), (21, 19), (20, 21)], fill=NOSE)
+    d.line([(20, 21), (18, 22)], fill=OUTLINE)
+    d.line([(20, 21), (22, 22)], fill=OUTLINE)
+    return outline_silhouette(g)
+
+
 def hamster_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
@@ -581,6 +766,35 @@ def hamster_asleep(eyes_mode="closed"):
     d.ellipse([8, 23, 22, 32], fill=CREAM)       # cheek
     eyes(d, 12, 19, 22, eyes_mode)
     d.ellipse([11, 26, 13, 28], fill=EYE)        # nose at the edge of the cheek
+    return outline_silhouette(g)
+
+
+def hamster_stuff():
+    """Both cheeks packed to bursting, both paws pressed against them. A
+    hamster is mostly cheek already; the pose is that fact taken one step on.
+
+    The pouches are drawn *before* the muzzle and outside the line of the
+    body, so the silhouette is what carries it. A cheek that stays inside the
+    head reads as a slightly fatter hamster and nothing else.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([9, 10, 17, 18], fill=SHADE)           # ears, drawn first
+    d.ellipse([23, 10, 31, 18], fill=SHADE)
+    d.ellipse([6, 13, 34, 37], fill=BODY)
+    d.ellipse([3, 20, 19, 35], fill=CREAM)           # the pouches
+    d.ellipse([21, 20, 37, 35], fill=CREAM)
+    d.ellipse([13, 18, 27, 31], fill=CREAM)
+    eyes(d, 13, 27, 21, "happy")
+    d.ellipse([19, 24, 21, 26], fill=EYE)
+    d.line([(20, 27), (18, 28)], fill=OUTLINE)
+    d.line([(20, 27), (22, 28)], fill=OUTLINE)
+    # Both paws up against the pouches, in the fur colour so they read against
+    # the cream they are pressed into.
+    d.ellipse([4, 26, 11, 33], fill=BODY)
+    d.ellipse([29, 26, 36, 33], fill=BODY)
+    for x in (6, 9, 31, 34):                         # toes, or they read as
+        d.line([(x, 30), (x, 32)], fill=SHADE)       # two more cheeks
     return outline_silhouette(g)
 
 
@@ -631,6 +845,45 @@ def fox_asleep(eyes_mode="closed"):
     d.ellipse([9, 23, 21, 31], fill=CREAM)
     eyes(d, 12, 19, 22, eyes_mode)
     d.ellipse([14, 26, 16, 28], fill=ACCENT)
+    return outline_silhouette(g)
+
+
+def fox_pounce():
+    """The mousing pounce: rear up, front paws together, nose down.
+
+    The same composition as the play-bow — rump right, head low left — which
+    is the arrangement `measure` had to learn to read, and the one it now
+    reads correctly. Eyes open rather than happy: a fox listening for
+    something under the snow is not smiling, and that is the whole joke of a
+    pounce landing on an empty patch of grass.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Brush straight up off the raised rump, white at the tip.
+    for i, (x, y) in enumerate([(30, 26), (33, 21), (35, 16)]):
+        r = 3 if i < 1 else 4
+        d.ellipse([x - r, y - r, x + r, y + r], fill=CREAM if i == 2 else BODY)
+    d.ellipse([21, 17, 37, 33], fill=BODY)                  # hindquarters
+    d.polygon([(23, 20), (35, 25), (32, 34), (13, 32)], fill=BODY)
+    d.ellipse([21, 30, 26, 36], fill=ACCENT)                # hind sock
+    d.ellipse([9, 25, 25, 37], fill=BODY)                   # shoulders, low
+    # Front paws together and reaching, which is the half that separates a
+    # pounce from a stretch: a bow puts them apart.
+    d.ellipse([2, 31, 18, 38], fill=CREAM)
+    d.ellipse([1, 33, 7, 38], fill=ACCENT)
+    # Ears, pointed and forward, with the dark tips the fox is drawn with.
+    d.polygon([(5, 27), (2, 13), (12, 21)], fill=BODY)
+    d.polygon([(20, 26), (21, 12), (12, 21)], fill=BODY)
+    d.polygon([(2, 13), (6, 16), (3, 18)], fill=ACCENT)
+    d.polygon([(21, 12), (18, 16), (21, 18)], fill=ACCENT)
+    d.polygon([(6, 24), (5, 19), (10, 23)], fill=PINK)
+    d.polygon([(18, 24), (18, 19), (14, 23)], fill=PINK)
+    d.ellipse([4, 20, 21, 34], fill=BODY)                   # head, low left
+    d.ellipse([5, 26, 18, 33], fill=CREAM)                  # muzzle
+    eyes(d, 9, 16, 25, "open")
+    d.ellipse([10, 29, 12, 31], fill=ACCENT)
+    d.line([(11, 31), (9, 33)], fill=OUTLINE)
+    d.line([(11, 31), (13, 33)], fill=OUTLINE)
     return outline_silhouette(g)
 
 
@@ -1475,6 +1728,22 @@ def fx_heart():
 # The shape note: a capybara is a brick with a blunt muzzle. Keeping the head
 # nearly rectangular is what stops it reading as a very large hamster.
 
+def _blunt_nose(d, left, top, right, bottom):
+    """The capybara's nose: a rectangle with its four corners knocked off.
+
+    This was `rounded_rectangle(..., radius=2)` and has to stop being one.
+    Pillow 11.3 draws that shape with its **centre column empty** — the nose
+    came out split down the middle by a one-pixel gap, on this drawing and the
+    five frames derived from it, and nothing in the toolchain looks at a
+    rendered PNG closely enough to say so. It only surfaced because
+    regenerating the sprites for a new pose diffed six files nobody had
+    touched. Two plain rectangles draw the same seven-by-five blunt shape the
+    committed art has, and draw it the same way in every version.
+    """
+    d.rectangle([left, top + 1, right, bottom - 1], fill=NOSE)
+    d.rectangle([left + 1, top, right - 1, bottom], fill=NOSE)
+
+
 def capybara_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
@@ -1489,7 +1758,7 @@ def capybara_awake(eyes_mode="open"):
     # Blunt muzzle across the whole lower face.
     d.rounded_rectangle([11, 18, 29, 28], radius=5, fill=CREAM)
     eyes(d, 14, 26, 15, eyes_mode)
-    d.rounded_rectangle([17, 21, 23, 25], radius=2, fill=NOSE)
+    _blunt_nose(d, 17, 21, 23, 25)
     d.line([(20, 25), (20, 27)], fill=OUTLINE)
     return outline_silhouette(g)
 
@@ -1529,6 +1798,40 @@ def capybara_soak():
     d.rounded_rectangle([4, 31, 36, 38], radius=3, fill=ACCENT)
     for x in (13, 20, 27):
         d.line([(x, 32), (x, 37)], fill=SHADE)
+    return outline_silhouette(g)
+
+
+def capybara_unbothered():
+    """The joke, and the only one of the twelve who declines to perform.
+
+    Everybody else somersaults. Tofu half-closes his eyes and flicks one ear,
+    and that is the entire acrobatic. It is a real pose rather than a missing
+    one — the eyes are drawn lidded and the ear is drawn leaning — because a
+    buddy who simply did not animate would read as a bug.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # The flick itself, as two short strokes off the ear. A blurred ear is a
+    # smudge at this size; two marks beside a leaning ear is a moving ear.
+    d.line([(32, 5), (35, 3)], fill=GLINT)
+    d.line([(32, 8), (36, 7)], fill=GLINT)
+    d.ellipse([10, 6, 16, 12], fill=SHADE)
+    d.polygon([(24, 12), (26, 4), (31, 8), (29, 13)], fill=SHADE)
+    d.ellipse([6, 21, 34, 37], fill=BODY)
+    d.ellipse([12, 27, 28, 37], fill=CREAM)
+    d.rounded_rectangle([8, 8, 32, 27], radius=6, fill=BODY)
+    d.rounded_rectangle([11, 18, 29, 28], radius=5, fill=CREAM)
+    # Half-lidded: the pupil is drawn whole, then the lid comes down over its
+    # top half in the fur colour with a lash line under it. Two spans in `EYE`
+    # with a gap between them is exactly what `_eye_band` looks for, so he
+    # keeps his face anchor and can still be wearing spectacles while he
+    # declines to move.
+    for cx in (14, 26):
+        d.ellipse([cx - 2, 13, cx + 2, 17], fill=EYE)
+        d.rectangle([cx - 3, 12, cx + 3, 13], fill=BODY)
+        d.line([(cx - 3, 14), (cx + 3, 14)], fill=OUTLINE)
+    _blunt_nose(d, 17, 21, 23, 25)
+    d.line([(20, 25), (20, 27)], fill=OUTLINE)
     return outline_silhouette(g)
 
 
@@ -1767,22 +2070,65 @@ def owl_watch():
     return outline_silhouette(g)
 
 
+def owl_flap():
+    """Wings out, feet off the perch, tufts laid flat. An owl does not
+    somersault; it flies, and that is the only honest move for this one.
+
+    The wings are kept below the eye line, and that is a measuring constraint
+    rather than a composition choice. `generate_accessories.measure` reads the
+    head as the widest run *through the eyes*: a wing joined to the body above
+    them makes the head as wide as the wingspan, which is how the floating
+    otter and the sliding penguin were once measured at thirty-seven pixels
+    and wore hats the width of the whole animal.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # Tufts flat — up is her watching pose, and this is not that.
+    d.polygon([(9, 14), (13, 9), (17, 14)], fill=BODY)
+    d.polygon([(31, 14), (27, 9), (23, 14)], fill=BODY)
+    # Wings on the upstroke: the tip rides higher than the shoulder, the quills
+    # run *along* the wing, and the trailing edge is notched into three
+    # primaries. The first pass had them horizontal with vertical stripes and
+    # came out as an owl standing behind a picket fence — a wing that is level
+    # is a plank, and a stripe across the grain is a fence post.
+    d.polygon([(13, 26), (1, 22), (1, 28), (13, 33)], fill=SHADE)
+    d.polygon([(27, 26), (38, 22), (38, 28), (27, 33)], fill=SHADE)
+    for (x0, y0, x1, y1) in ((11, 28, 3, 24), (11, 31, 4, 27),
+                             (29, 28, 36, 24), (29, 31, 35, 27)):
+        d.line([(x0, y0), (x1, y1)], fill=OUTLINE)
+    for x in (5, 9, 31, 35):                         # notched primaries
+        d.polygon([(x, 33), (x + 2, 33), (x + 1, 30)], fill=T)
+    d.ellipse([8, 10, 32, 36], fill=BODY)
+    d.ellipse([14, 24, 26, 36], fill=CREAM)
+    for x, y in ((16, 27), (23, 29), (19, 32), (14, 31)):
+        d.point((x, y), fill=SHADE)
+    owl_eyes(d, 14, 26, 18, "open")
+    d.polygon([(19, 22), (21, 22), (20, 26)], fill=ACCENT)
+    # Talons drawn up under her: nothing is holding a perch.
+    d.ellipse([15, 31, 19, 35], fill=ACCENT)
+    d.ellipse([21, 31, 25, 35], fill=ACCENT)
+    return outline_silhouette(g)
+
+
 # Each entry: species, palette, awake, asleep, stretch (or None), and any
 # extra hand-drawn quirk poses keyed by the suffix they're emitted under.
 BUDDIES = [
     ("cat", CAT_PALETTE, cat_awake, cat_asleep, cat_stretch, {}),
     ("dog", DOG_PALETTE, dog_awake, dog_asleep, dog_stretch, {}),
-    ("bunny", BUNNY_PALETTE, bunny_awake, bunny_asleep, None, {}),
-    ("hamster", HAMSTER_PALETTE, hamster_awake, hamster_asleep, None, {}),
-    ("fox", FOX_PALETTE, fox_awake, fox_asleep, None, {}),
+    ("bunny", BUNNY_PALETTE, bunny_awake, bunny_asleep, None,
+     {"binky": bunny_binky}),
+    ("hamster", HAMSTER_PALETTE, hamster_awake, hamster_asleep, None,
+     {"stuff": hamster_stuff}),
+    ("fox", FOX_PALETTE, fox_awake, fox_asleep, None,
+     {"pounce": fox_pounce}),
     ("capybara", CAPYBARA_PALETTE, capybara_awake, capybara_asleep, None,
-     {"soak": capybara_soak}),
+     {"soak": capybara_soak, "unbothered": capybara_unbothered}),
     ("redpanda", REDPANDA_PALETTE, redpanda_awake, redpanda_asleep, None,
      {"armsup": redpanda_armsup, "curl": redpanda_curl}),
     ("penguin", PENGUIN_PALETTE, penguin_awake, penguin_asleep, None,
      {"waddle": penguin_waddle, "slide": penguin_slide}),
     ("owl", OWL_PALETTE, owl_awake, owl_asleep, None,
-     {"watch": owl_watch}),
+     {"watch": owl_watch, "flap": owl_flap}),
     ("otter", OTTER_PALETTE, otter_awake, otter_asleep, None,
      {"float": otter_float}),
     # Bramble gets no extra pose on purpose: his asleep frame *is* the quirk.
@@ -1821,9 +2167,18 @@ def build_frames(species, palette, awake, asleep, stretch, quirks=None):
         set_eye_shift(dx)
         to_png(awake(), palette, f"buddy_{species}_{suffix}")
     set_eye_shift(0)
+    # The two acrobatic frames every buddy gets, both derived from the waking
+    # pose so a redrawn face reaches them: gathered on the ground, and off it.
+    haunch, legs, depth = ACROBATIC_BANDS.get(species, (HAUNCH, LEGS,
+                                                       CROUCH_DEPTH))
+    to_png(crouch_from(awake(), haunch, depth), palette,
+           f"buddy_{species}_crouch")
+    to_png(air_from(awake("happy"), legs), palette, f"buddy_{species}_air")
     if stretch is not None:
         to_png(stretch(), palette, f"buddy_{species}_stretch")
-    # Signature poses: the soak, the raised arms, the waddle, the watch.
+    # Signature poses: the soak, the raised arms, the waddle, the watch, and
+    # the five acrobatic ones — the binky, the stuffed cheeks, the pounce, the
+    # flap, and Tofu declining to do any of it.
     for suffix, draw in (quirks or {}).items():
         to_png(draw(), palette, f"buddy_{species}_{suffix}")
 

@@ -736,6 +736,22 @@ enum LaunchOptions {
     /// Tonight is a falling-star night, whatever the calendar says.
     static let forceShower = isSet("-PawmodoroShower")
 
+    /// Play one acrobatic ~2s after launch *and* pin every tap to it, e.g.
+    /// `-PawmodoroAntic tumble`. ids are `Antic`'s raw values: `bounce`,
+    /// `hop`, `wiggle`, `spin`, `tumble`, `signature`, `routine`.
+    ///
+    /// Exact-match, so `-PawmodoroAntics` below never lands here.
+    static let forcedAntic: String? = {
+        guard arguments.contains("-PawmodoroAntic") else { return nil }
+        return value(after: "-PawmodoroAntic")
+    }()
+
+    /// Play every move for the current buddy back to back, ~1.5s apart. The
+    /// one thing that makes a twelve-buddy visual pass tractable in the pane:
+    /// otherwise it is twelve buddies times seven moves of tapping, and the
+    /// escalation bag means you cannot even choose which one you get.
+    static let anticParade = isSet("-PawmodoroAntics")
+
     /// Fire an idle vignette a few seconds after launch, e.g.
     /// `-PawmodoroVignette 3` to pin the table row.
     static let forcedVignette: Int? = {
@@ -849,6 +865,8 @@ enum LaunchOptions {
     static let forcedSet: String? = nil
     static let paleCoat = false
     static let forceShower = false
+    static let forcedAntic: String? = nil
+    static let anticParade = false
     static let forcedVignette: Int? = nil
     static let forcedSeasonLetter: String? = nil
     static let forcedYearCard = false

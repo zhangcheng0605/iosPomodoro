@@ -51,6 +51,42 @@ struct Flourish: Equatable {
         case motes
         /// Four-point glints that arrive and leave. The rare one.
         case sparkle
+
+        /// How many times a second this look has to be redrawn to read.
+        ///
+        /// This app's vocabulary, from `CLAUDE.md`: **loops run at 2–4fps,
+        /// bursts at 8fps, particles at 30fps** — and thirty is the budget for
+        /// *matter in flight*, rain falling and snow driving, not for light
+        /// changing its mind. Every look here was drawn at thirty to begin
+        /// with, and the bill was measured: a full-screen canvas at 30fps
+        /// costs about two points of CPU before it draws anything at all, and
+        /// the sparkle on top of it cost ten more — roughly seven times the
+        /// whole idle app, on the clear and golden skies that had previously
+        /// been the cheapest states this app has. An idle app costs nothing;
+        /// that is a law here, and thirty broke it.
+        ///
+        /// So each look is now paid for at the rate its own motion needs:
+        ///
+        /// * `motes` is a **loop**. A bokeh disc crosses the screen in
+        ///   thirty to seventy seconds; four frames a second is more than the
+        ///   drift can spend.
+        /// * `sparkle`, `shimmer`, `snowfall` and `embers` are **bursts**.
+        ///   Their fastest moving part is an envelope that arrives and leaves
+        ///   over a second or more — the ember's flicker, at about 1Hz, is
+        ///   the quickest thing in any of them, and eight frames samples it
+        ///   nearly eight times a cycle.
+        /// * `rainfall` is the only one with anything genuinely in flight,
+        ///   and it gets twelve — the same rate `WeatherView` has always
+        ///   drawn real rain at, and `WeatherView` is on screen underneath it
+        ///   whenever this look is. Two layers of rain at two different rates
+        ///   would be the visible bug; matching it is free.
+        var frameRate: Double {
+            switch self {
+            case .motes, .sparkle: 4
+            case .shimmer, .snowfall, .embers: 8
+            case .rainfall: 12
+            }
+        }
     }
 
     let look: Look

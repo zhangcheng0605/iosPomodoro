@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Pawmodoro — macOS entitlements (Mac App Store).
+
+  This file is for the macOS build ONLY. It is wired up as
+      CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Pawmodoro/Mac/Pawmodoro.entitlements
+  and the iOS build takes Pawmodoro/iOS/Pawmodoro.entitlements instead, so
+  neither platform inherits the other's claims. App Sandbox is a macOS
+  concept; handing this to an iOS build is at best noise.
+
+  The list below is deliberately one key long. Every entitlement is a sentence
+  App Review reads and a claim the privacy policy has to survive, and this app
+  genuinely does nothing that needs a second one:
+
+    - No network. The app makes zero network calls (docs/PRIVACY.md), so
+      com.apple.security.network.client and .network.server are both absent.
+      See MAC_APP_STORE.md § "The one entitlement question I could not settle"
+      before adding network.client for StoreKit — test first, do not add it
+      speculatively.
+    - No file access. The Scrapbook imports through SwiftUI's PhotosPicker,
+      which runs out of process and hands back Data; nothing here opens a file
+      by path. So no com.apple.security.files.user-selected.read-only and no
+      com.apple.security.personal-information.photos-library. If a Mac-only
+      NSOpenPanel import is ever added, user-selected.read-only is the key it
+      needs — and only that one, read-only.
+    - No camera. Pawmodoro/Views/CameraPicker.swift is fenced behind
+      canImport(UIKit) and does not exist in the Mac build, so
+      com.apple.security.device.camera stays out even though the shared
+      Info.plist still carries NSCameraUsageDescription.
+    - No microphone, no location, no address book, no calendar, no printing,
+      no Bluetooth, no USB.
+    - No App Groups — on macOS only. TimerEngine writes two values to a
+      "group.com.pawmodoro" suite for the home-screen widget, and the iOS
+      build DOES carry that entitlement (Pawmodoro/iOS/Pawmodoro.entitlements
+      and PawmodoroWidgets/PawmodoroWidgets.entitlements). The widget
+      extension is iOS-only, though (project.pbxproj carries platformFilter =
+      ios on both its dependency and its embed phase), so on macOS that write
+      has no reader. Without the entitlement it lands in the app's own
+      container, which is harmless and is what the code comment there already
+      says. Note too that a macOS app-group identifier must be prefixed with
+      the team ID (6YFQ69HSD6.group.com.pawmodoro), so the iOS string would
+      not even be valid here. Leave it out until something on the Mac reads it.
+
+  What needs no entitlement, and is worth writing down so nobody adds one
+  "just in case":
+    - UserDefaults, and the app's own Documents directory (Snapshot.swift),
+      are inside the sandbox container already.
+    - AVAudioEngine playback of bundled files.
+    - UNUserNotificationCenter local notifications.
+    - StoreKit purchases and restore — the store UI and the transaction work
+      happen in Apple's own process. (Unverified on this app; see the doc.)
+    - ShareLink / NSSharingService — the share sheet is out of process.
+
+  Do NOT add com.apple.security.get-task-allow here. Xcode injects it for
+  debugging and strips it when archiving; a copy in this file would ship in the
+  archive and the upload is rejected.
+-->
+<plist version="1.0">
+<dict>
+	<!-- Mandatory for the Mac App Store. Nothing else in this file. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+</dict>
+</plist>

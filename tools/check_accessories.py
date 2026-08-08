@@ -29,6 +29,13 @@ So this asks, for every combination the app can actually draw:
    the wrong end of the animal passes all of them — the hat sits convincingly
    on the rump, which is solid fur and contrasts fine. Six frames shipped that
    way. The crown and the eyes share a centre line or they are not one head.
+7. **Does a neck piece leave the face alone?** The same blind spot one anchor
+   further down. A collar measured onto the muzzle passes every rule above —
+   it is on the animal, it is on the canvas, and a red bandana reads perfectly
+   well against a cream snout — so the whole hedgehog set shipped with all
+   five neck pieces drawn across his face and his nose hidden underneath. A
+   collar hangs *downward* from the collar line, so that line has to be below
+   the eyes or the piece is a blindfold.
 
 The placement arithmetic is deliberately a port of `Accessory.placement(on:)`
 rather than a second idea about where things go — if the two disagree, this
@@ -70,6 +77,21 @@ MINIMUM_OVERLAP = 0.35
 # was written against scored 7.0 to 17.5. Nothing lands in between, which is
 # what makes 2.0 a threshold rather than a fudge.
 MAXIMUM_HEAD_FACE_DRIFT = 2.0
+
+# How far below the lowest eye pixel the collar line must sit, in grid rows.
+#
+# Zero would be the literal rule — a piece that starts on an eye covers it —
+# and zero is too weak by exactly the amount that matters. The hedgehog's two
+# happy frames drew their bandana across the muzzle with the collar one row
+# under a `^^` eye, passing a strictly-below test while hiding the whole face
+# beneath it. So this asks for daylight rather than a tie.
+#
+# Two, because nothing in the roster is near it from either side: every frame
+# in the shipping table clears by 3 to 14 rows, and the nine hedgehog frames
+# this rule was written against cleared by -1 to 1. Nothing lands on 2, which
+# is what makes it a threshold rather than a fudge — the same standard
+# MAXIMUM_HEAD_FACE_DRIFT above is held to.
+MINIMUM_COLLAR_CLEARANCE = 2.0
 
 
 def parse_anchors():
@@ -193,9 +215,11 @@ def eye_blobs(asset, species):
     the generator's method would agree with the generator's mistakes; two
     methods that disagree are the point.
 
-    Returns the centre column between the two blobs, or None when this frame
-    does not show a clean pair — a closed eye, a rolled-up hedgehog, or a nose
-    painted in the same index.
+    Returns `(centre column, first row, last row)` across the two blobs, or
+    None when this frame does not show a clean pair — a closed eye, a rolled-up
+    hedgehog, or a nose painted in the same index. The rows are what rule 7
+    needs: a collar has to hang below the *bottom* of the eyes, and the centre
+    of a face anchor says nothing about where its lowest pixel is.
     """
     colour = eye_colour(species)
     image = logical(asset)
@@ -234,7 +258,33 @@ def eye_blobs(asset, species):
     )
     if abs(ax - bx) < 2 or abs(ay - by) > 2:
         return None
-    return round((ax + bx) / 2, 1)
+
+    # How deep the eyes are, which is a different question from where they are
+    # and cannot be answered by the two blobs above.
+    #
+    # A happy eye is the five pixels of a `^`, and those touch only at their
+    # corners: orthogonally it is five blobs of one pixel each, so "the two
+    # largest" are whichever two the sort put first and the pair measures one
+    # row tall. Flood-filling diagonally instead fixes the `^` and breaks
+    # something worse — a pair of *closed* eyes is drawn five columns apart and
+    # seven wide, so diagonal fill merges them into one blob and twenty frames
+    # stop finding a pair at all.
+    #
+    # So the pair says where to look, and the depth is then grown from there
+    # through rows that actually continue the shape. Contiguously, not "every
+    # eye-coloured pixel between the two blobs" — that reaches past the eyes
+    # into anything else drawn in the same index further down the face and
+    # reported the sleeping hamster's eyes as six rows deeper than they are.
+    left = min(cell[1] for blob in blobs[:2] for cell in blob)
+    right = max(cell[1] for blob in blobs[:2] for cell in blob)
+    filled = hit[:, left:right + 1].any(axis=1)
+    first = min(cell[0] for blob in blobs[:2] for cell in blob)
+    last = max(cell[0] for blob in blobs[:2] for cell in blob)
+    while first > 0 and filled[first - 1]:
+        first -= 1
+    while last + 1 < len(filled) and filled[last + 1]:
+        last += 1
+    return round((ax + bx) / 2, 1), int(first), int(last)
 
 
 def eye_box(first, second):
@@ -321,6 +371,7 @@ def main():
     worst = (99.0, None)
     tightest = (2.0, None)
     drifted = (0.0, None)
+    clearance = (None, None)
     independent, selfsame = 0, 0
 
     wardrobe = {name: logical(f"wear_{name}") for name in names}
@@ -445,7 +496,7 @@ def main():
                           "one that differs from it only in the eyes,")
                 independent += 1
             elif blobs is not None:
-                centre = blobs
+                centre = blobs[0]
                 source = ("the eyes, found as the two largest blobs of eye "
                           "colour on the shipped sprite,")
                 independent += 1
@@ -463,6 +514,48 @@ def main():
                     f"pixels apart, so the head anchor and the face anchor are "
                     f"not on the same head, and every hat is worn by whichever "
                     f"part of the animal the head anchor found instead")
+
+        # --- 3d. And the collar line is below the face ----------------------
+        #
+        # A neck piece hangs *downward* from the collar line by its top edge,
+        # so everything from that line to the bottom of the piece is drawn over
+        # whatever is there. Every other rule in this file is satisfied by a
+        # collar measured onto a muzzle — it is on the animal, it is on the
+        # canvas, and a red bandana reads beautifully against a cream snout —
+        # which is exactly how the hedgehog shipped wearing all five neck
+        # pieces across his face, nose hidden, the bow tied to his snout.
+        #
+        # Checked against the lowest eye pixel rather than the face anchor's
+        # own row wherever a second opinion exists, for the `check_touch.py`
+        # reason: an anchor that has landed on the muzzle will cheerfully agree
+        # that the collar is below itself. `eye_box` diffs this frame against
+        # the one that differs from it only in the eyes; `eye_blobs` reads the
+        # eye-coloured pixels straight off the shipped sprite. The anchor is
+        # the last resort, and a frame where nothing can find a pair of eyes —
+        # the hedgehog curled into a ball — has no face to cover and so no rule
+        # to break.
+        own = eye_blobs(asset, species_of.get(asset, ""))
+        if found:
+            floor, source = found[3], ("the eyes, found by diffing this frame "
+                                       "against the one that differs from it "
+                                       "only in the eyes,")
+        elif own is not None:
+            floor, source = own[2], ("the eyes, found as blobs of eye colour "
+                                     "on the shipped sprite,")
+        elif anchored is not None:
+            floor, source = anchored[1], "the face anchor"
+        else:
+            floor, source = None, None
+        if floor is not None:
+            collar = anchors[asset]["neck"][1]
+            if clearance[0] is None or collar - floor < clearance[0]:
+                clearance = (collar - floor, asset)
+            if collar - floor < MINIMUM_COLLAR_CLEARANCE:
+                failures.append(
+                    f"{asset}: the collar line is on row {collar:.0f} and "
+                    f"{source} reaches row {floor:.0f} — a neck piece hangs "
+                    f"downward from the collar line, so all five of them are "
+                    f"drawn across this face rather than under it")
 
         for name in names:
             art = wardrobe.get(name)
@@ -579,6 +672,9 @@ def main():
           f"difference, {faces_bare} frames correctly bare-faced")
     if tightest[1]:
         print(f"least overlap: {tightest[0] * 100:.0f}% at {tightest[1]}")
+    if clearance[1]:
+        print(f"tightest collar: {clearance[0]:.0f} row(s) below the last eye "
+              f"pixel at {clearance[1]}")
     print(f"crown furthest from its own face: {drifted[0]:.1f}px"
           f"{f' at {drifted[1]}' if drifted[1] else ''}"
           f" — {independent} measured independently of the anchor table, "

@@ -1,20 +1,19 @@
-// iOS only, in the strongest sense: the whole file compiles out.
+// The gesture, on the one platform that has the sensor for it.
 //
 // There is no accelerometer in a Mac, so there is nothing to detect and no
 // sensible fallback — a snow globe you shake by pressing a key is not a snow
-// globe. macOS gets a menu item instead; see `PawmodoroApp`.
+// globe. macOS gets a menu item instead; see `PawmodoroApp`. Both call
+// `SceneShake.shared.shake()`: one feature, two ways in.
+//
+// The *name* survives on macOS as an empty view, so the scene that plants one
+// in its background does not have to know which platform it is on. That is
+// the same rule as `FeedbackStyle` — the vocabulary is shared, only the
+// mechanism compiles out.
 #if canImport(UIKit)
 import SwiftUI
 import UIKit
 
-extension Notification.Name {
-    /// Posted when the phone is shaken. One notification rather than a binding
-    /// because several layers may want to react and none of them owns the
-    /// gesture.
-    static let pawmodoroShake = Notification.Name("pawmodoro.shake")
-}
-
-/// Catches a shake and turns it into a notification.
+/// Catches a shake and hands it to `SceneShake`.
 ///
 /// A first-responder view controller rather than the usual trick of overriding
 /// `motionEnded` in an extension on `UIWindow`: Swift does not properly allow
@@ -45,9 +44,21 @@ struct ShakeDetector: UIViewControllerRepresentable {
 
         override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
             guard motion == .motionShake else { return }
-            NotificationCenter.default.post(name: .pawmodoroShake, object: nil)
+            // The one signal, shared with the Mac's menu item. This used to
+            // post its own notification, which made the menu item a button
+            // wired to nothing — `SceneShake` existed and only one of the two
+            // ways in reached it.
+            SceneShake.shared.shake()
         }
     }
+}
+
+#else
+import SwiftUI
+
+/// Nothing to detect, and nothing drawn. See the note at the top of the file.
+struct ShakeDetector: View {
+    var body: some View { EmptyView() }
 }
 
 #endif

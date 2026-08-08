@@ -121,7 +121,7 @@ struct SceneToyView: View {
             // The snow globe. Works in any place and at any hour, including
             // during focus — a shake is not a fiddle, it is something you do
             // once and then go back to work.
-            .onReceive(NotificationCenter.default.publisher(for: .pawmodoroShake)) { _ in
+            .onChange(of: SceneShake.shared.count) {
                 // Reduce Motion turns the whole toy layer off rather than
                 // slowing it: every effect here *is* motion, so there is no
                 // still version of it worth drawing.

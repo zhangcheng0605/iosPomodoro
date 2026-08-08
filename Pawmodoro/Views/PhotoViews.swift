@@ -61,6 +61,32 @@ struct PhotoCard: View {
     }
 }
 
+/// The shelf on its own, for the main screen's developing chip to open.
+///
+/// The shelf's home is Stats, fourteen cards down a long scroll — fine for
+/// somebody browsing, useless as the destination a one-shot points at. This
+/// is the same view, one tap from the thing that made the photograph.
+struct PhotoShelfSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                PhotoShelfView()
+                    .padding()
+            }
+            .background(Theme.cream.ignoresSafeArea())
+            .navigationTitle("Photographs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 /// The photo shelf: developed shots, and today's still in the bath.
 /// Tapping a photo opens it large, with the share pass.
 struct PhotoShelfView: View {
@@ -97,6 +123,14 @@ struct PhotoShelfView: View {
                         .foregroundStyle(Theme.bark.opacity(0.65))
                 }
                 LazyVGrid(columns: columns, spacing: 14) {
+                    // The one in the bath holds its place in the grid. It
+                    // shows nothing — the overnight gate is the whole point —
+                    // but a sentence with no card under it reads as a shelf
+                    // that lost the picture, which is exactly the doubt this
+                    // shelf exists to settle.
+                    if developing != nil {
+                        developingCard
+                    }
                     ForEach(Array(developed)) { record in
                         Button {
                             openPhoto = record
@@ -116,5 +150,34 @@ struct PhotoShelfView: View {
                 PhotoCard(record: record)
             }
         }
+    }
+
+    /// Today's shot, keeping its place on the shelf without showing itself.
+    private var developingCard: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Theme.bark.opacity(0.12))
+                    .frame(width: 120, height: 96)
+                Image(systemName: "hourglass")
+                    .font(.title3)
+                    .foregroundStyle(Theme.bark.opacity(0.35))
+            }
+            .background(Theme.cream)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Theme.cream, lineWidth: 4)
+            )
+
+            Text("Taken today. In the bath until morning.")
+                .font(.system(size: 9))
+                .foregroundStyle(Theme.bark.opacity(0.65))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 126)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today's photograph, developing until morning")
     }
 }

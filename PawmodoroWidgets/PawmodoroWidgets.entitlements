@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PawmodoroWidgets — extension entitlements.
+
+  The widget extension is iOS-only (SUPPORTED_PLATFORMS = "iphoneos
+  iphonesimulator", and project.pbxproj carries platformFilter = ios on both
+  its target dependency and its Embed Foundation Extensions build file), so
+  this file is wired up unconditionally:
+      CODE_SIGN_ENTITLEMENTS = PawmodoroWidgets/PawmodoroWidgets.entitlements
+
+  One key, and it must stay in step with Pawmodoro/iOS/Pawmodoro.entitlements:
+
+    - com.apple.security.application-groups = group.com.pawmodoro
+      An App Group is a shared container, and a container is only shared if
+      BOTH sides claim it. The app writes "widget.buddy"/"widget.place" into
+      UserDefaults(suiteName: "group.com.pawmodoro") from
+      TimerEngine.settingsDidChange(); PawmodoroHomeWidget.swift reads
+      "widget.buddy" back. Drop this key from either file and the widget falls
+      back to "cat" for everyone.
+
+  Nothing else. The extension makes no network calls, touches no files, and
+  reads no user data beyond those two mirrored strings.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.pawmodoro</string>
+	</array>
+</dict>
+</plist>

@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bridge = IntentBridge.shared
     @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
@@ -26,6 +27,13 @@ struct ContentView: View {
     /// The camera's brief blink. Under Reduce Motion the click alone
     /// carries it — the flash never mounts.
     @State private var shutter = false
+    /// True for a few seconds after today's shot is taken: the line that
+    /// says what just happened and where the picture went.
+    @State private var keptLine = false
+    /// The photo shelf, reached from the developing chip. Deliberately its
+    /// own sheet: the shelf also lives in Stats, but fourteen cards down a
+    /// scroll is not somewhere a one-shot can point.
+    @State private var showPhotos = false
 
     var body: some View {
         NavigationStack {
@@ -236,6 +244,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showScrapbook) {
                 ScrapbookView()
+            }
+            .sheet(isPresented: $showPhotos) {
+                PhotoShelfSheet()
             }
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
@@ -703,42 +714,135 @@ struct ContentView: View {
                     proxy.scrollTo(engine.settings.ambience, anchor: .center)
                 }
             }
-            // Today's one photograph of the *world*, while it's still
-            // unspent. Out of reach during focus like everything else that
-            // isn't the timer.
-            //
-            // Deliberately not a camera glyph. The merge brought in a second
-            // camera — the Scrapbook's, in the toolbar — and two identical
-            // icons on one screen for two unrelated things (a picture the
-            // world gives you, and a picture you take of your desk) is a
-            // screen nobody can read. This one is a framed picture, because
-            // that is what it produces.
-            if engine.photos.shotAvailable(),
-               !(engine.isRunning && !engine.phase.isBreak) {
+            photoControl
+        }
+    }
+
+    /// Today's one photograph of the *world*: the shutter while the shot is
+    /// unspent, and afterwards the shot itself, still in the bath. Out of
+    /// reach during focus like everything else that isn't the timer.
+    ///
+    /// Deliberately not a camera glyph. The merge brought in a second
+    /// camera — the Scrapbook's, in the toolbar — and two identical icons on
+    /// one screen for two unrelated things (a picture the world gives you,
+    /// and a picture you take of your desk) is a screen nobody can read.
+    /// This one is a framed picture, because that is what it produces.
+    ///
+    /// **The control does not vanish when it is used, it changes state.** It
+    /// used to disappear on the tap, which is the worst thing a *one-shot*
+    /// can do: the flash is a fifth of a second, the haptic is nothing on a
+    /// table, the photograph legitimately renders nothing until tomorrow,
+    /// and there is no second tap to work out what happened with. So the
+    /// button becomes a spent chip that stands for the rest of the day, says
+    /// the shot is developing, and opens the shelf it went to — and for a
+    /// few seconds after the tap the chip *widens* into a sentence saying so
+    /// in words. Same idiom as the buddy's caption, and deliberately the
+    /// same two values (footnote `bark` at 0.75 on a `cream` capsule at
+    /// 0.78), because that is the pair `check_contrast.py` already measures
+    /// over scenery. Attached to the thing that caused it rather than routed
+    /// through `BuddyView`, so it can never lose the caption's precedence
+    /// race against a greeting or a remark and go unsaid.
+    ///
+    /// It widens rather than stacking a second row: this row sits between
+    /// the ambience list and the transport, with a `Spacer(minLength: 12)`
+    /// above it, so an extra 34pt of height pushes the play button off the
+    /// bottom of a tall phone for the seven seconds the line is up.
+    @ViewBuilder
+    private var photoControl: some View {
+        // Read before the branch, on purpose. `developing()` touches the
+        // album's observed `photos`, while `shotAvailable()` reads only the
+        // `@ObservationIgnored` day stamp — so without this line a body that
+        // took the shutter branch would register no dependency on the album
+        // at all, and would be relying on a `@State` flag to redraw itself.
+        let developing = engine.photos.developing()
+        let offHours = !(engine.isRunning && !engine.phase.isBreak)
+        if offHours {
+            if engine.photos.shotAvailable() {
                 Button {
-                    if engine.snapPhoto() {
+                    guard engine.snapPhoto() else { return }
+                    withAnimation(.easeOut(duration: 0.25)) { keptLine = true }
+                    // The flash is motion, and the plan promised Reduce
+                    // Motion keeps the click and drops it. The line carries
+                    // the news either way.
+                    if !reduceMotion {
                         withAnimation(.easeOut(duration: 0.2)) { shutter = true }
                         Task {
                             try? await Task.sleep(nanoseconds: 250_000_000)
                             withAnimation(.easeIn(duration: 0.3)) { shutter = false }
                         }
                     }
+                    Task {
+                        try? await Task.sleep(nanoseconds: 7_000_000_000)
+                        withAnimation(.easeInOut(duration: 0.4)) { keptLine = false }
+                    }
                 } label: {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.footnote.weight(.semibold))
-                        .frame(width: 38, height: 32)
-                        .background(
-                            RoundedRectangle(cornerRadius: 11)
-                                .fill(Theme.surface.opacity(0.6))
-                        )
-                        .foregroundStyle(Theme.bark.opacity(0.7))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    photoChip(icon: "photo.on.rectangle", spent: false)
                 }
                 .buttonStyle(.squishy(pressedScale: 0.86))
                 .accessibilityLabel("Keep today's picture of this place")
+            } else {
+                // The shot is spent. Usually it is still in the bath; if it
+                // has already developed (a day rolled over with the screen
+                // open, or `-PawmodoroDevelop`) the chip stays put and still
+                // points at the shelf, because a control that vanishes is
+                // the bug this whole branch exists to undo.
+                Button {
+                    showPhotos = true
+                } label: {
+                    if keptLine {
+                        keptCapsule
+                    } else {
+                        // Not the shutter's own glyph: an identical icon
+                        // that now opens a shelf instead of taking a
+                        // picture is the same confusion in a smaller form.
+                        photoChip(
+                            icon: developing == nil
+                                ? "photo.on.rectangle.angled" : "hourglass",
+                            spent: true
+                        )
+                    }
+                }
+                .buttonStyle(.squishy(pressedScale: 0.92))
+                .accessibilityLabel(
+                    developing == nil
+                        ? "Today's picture is on the shelf. Open the photo shelf"
+                        : "Today's picture is developing. Open the photo shelf"
+                )
             }
         }
+    }
+
+    /// The chip in its wide state: what just happened, and where it went.
+    private var keptCapsule: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "hourglass")
+                .font(.footnote.weight(.semibold))
+            Text("Kept. It'll be developed on the shelf by morning.")
+                .font(.footnote)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .foregroundStyle(Theme.bark.opacity(0.75))
+        .padding(.horizontal, 14)
+        .frame(height: 32)
+        // Its own backing, for the same reason the buddy's caption has one:
+        // there is scenery behind this.
+        .background(Capsule().fill(Theme.cream.opacity(0.78)))
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+
+    private func photoChip(icon: String, spent: Bool) -> some View {
+        Image(systemName: icon)
+            .font(.footnote.weight(.semibold))
+            .frame(width: 38, height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: 11)
+                    .fill(Theme.surface.opacity(0.6))
+            )
+            .foregroundStyle(Theme.bark.opacity(spent ? 0.5 : 0.7))
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
     }
 
     private func ambienceButton(for option: Ambience) -> some View {

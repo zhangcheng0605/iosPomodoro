@@ -64,6 +64,28 @@ WARDROBE = {
 
 # --- The measuring ---------------------------------------------------------
 
+# How far below the eyes a chin is, as a fraction of the head's own width.
+#
+# The head is the ruler because a face is drawn in proportion to the head it is
+# on, and the eye band is *not*: the owl's eyes are two thirds of her face and
+# the hedgehog's are a sixth of his, so anything measured in eye-widths puts
+# them the same distance apart and they are not.
+#
+# Measured against the roster rather than chosen, and the number matters in one
+# direction only — it is a floor, so it can only ever push a collar down. At
+# 0.22 exactly one buddy moves: the hedgehog, whose nine frames go from a
+# collar mid-muzzle to one under the chin, with his nose clear on every one of
+# them. Every other buddy is already below its own chin by more than this and
+# keeps the collar it has, which is the property that matters — a floor that
+# quietly re-placed eleven correct buddies to fix the twelfth would be a
+# regression wearing a fix's clothes. Raising it to 0.24 starts moving the
+# sleeping owl; 0.26 moves the red panda's raised arms too, and takes the
+# hedgehog low enough that the bell collar loses its bell off the bottom of
+# the canvas. Checked on a contact sheet of all twelve buddies in all five
+# neck pieces, which is the only thing the number means.
+CHIN_DROP = 0.22
+
+
 def _runs(row, of=None):
     """Contiguous spans in one row, as (start, end) pairs.
 
@@ -264,6 +286,33 @@ def measure(grid, face_grid=None, eyes_grid=None):
     # the canvas — and these heads are all about the same fraction of the
     # figure however wide they are drawn.
     neck_row = min(bottom, crown + int(round((bottom - crown) * 0.68)))
+
+    # ...but never across the face, and that is a second measurement rather
+    # than a better fraction.
+    #
+    # The line above is a statement about *proportion* — a head on top, a body
+    # under it, the collar about two thirds of the way down — and it is right
+    # for eleven buddies because they are all drawn standing or sitting up. The
+    # hedgehog is a curled ball whose face pokes out at the **bottom**: his
+    # cream muzzle runs rows 28-38 of a figure that ends at 39, so two thirds
+    # of crown-to-bottom lands mid-muzzle. A neck piece hangs *downward* from
+    # this line, so all five of them were drawn straight across his face with
+    # his nose hidden underneath, and the bow read as a ribbon tied to his
+    # snout. No rule in `check_accessories.py` could see it: the collar was on
+    # the animal, on the canvas, and a red bandana reads beautifully against a
+    # cream snout. It has rule 7 now.
+    #
+    # So the line is pushed below the chin, and the chin is found from the eyes
+    # — the one landmark on a buddy that announces itself, per `_eye_band`.
+    # `head_band` rather than this frame's own eyes, because that is where the
+    # *head* keeps its face: a sleeping buddy has its eyes shut and the curled
+    # hedgehog has none drawn at all, and without the waking drawing to read
+    # they would take a collar the frame either side of them does not, which
+    # is a bandana that jumps as the buddy wakes.
+    if head_band:
+        first, last, _ = head_band
+        chin = (first + last) / 2 + widest * CHIN_DROP
+        neck_row = min(bottom, max(neck_row, int(round(chin))))
     run = _run_at(arr[neck_row], head_cx)
     neck_cx = (run[0] + run[1]) / 2 if run else head_cx
     # Capped at the head's width, and this is the correction that made the

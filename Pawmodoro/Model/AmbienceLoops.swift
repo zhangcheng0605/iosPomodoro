@@ -14,7 +14,7 @@ extension Ambience {
         case .off: nil
         case .cafe: 308700
         case .cicadas: 264600
-        case .creek: 308700
+        case .creek: 529200
         case .crickets: 308700
         case .drizzle: 264600
         case .emberslate: 396900
@@ -22,14 +22,14 @@ extension Ambience {
         case .forest: 308700
         case .library: 441000
         case .nighttrain: 396900
-        case .ocean: 396900
+        case .ocean: 617400
         case .purr: 176400
         case .rain: 264600
         case .raintent: 308700
-        case .snowhush: 352800
+        case .snowhush: 529200
         case .storm: 441000
         case .temple: 529200
-        case .wind: 352800
+        case .wind: 529200
         }
     }
 }

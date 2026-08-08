@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Pawmodoro — iOS entitlements.
+
+  This file is for the iOS build ONLY. It is wired up as
+      CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]        = Pawmodoro/iOS/Pawmodoro.entitlements
+      CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] = Pawmodoro/iOS/Pawmodoro.entitlements
+  with the unconditional value left empty, so the macOS build takes
+  Pawmodoro/Mac/Pawmodoro.entitlements (App Sandbox, and nothing else) and
+  neither platform inherits the other's claims.
+
+  One key, and it is load-bearing:
+
+    - com.apple.security.application-groups = group.com.pawmodoro
+      TimerEngine.settingsDidChange() mirrors "widget.buddy" and
+      "widget.place" into UserDefaults(suiteName: "group.com.pawmodoro"), and
+      PawmodoroWidgets/PawmodoroHomeWidget.swift reads "widget.buddy" back out
+      of the same suite. Without this entitlement on BOTH sides, that write
+      silently lands in the app's own private container, the widget reads
+      nothing, and its `?? "cat"` fallback holds — so everybody's home screen
+      draws the cat no matter which buddy they chose. The matching file is
+      PawmodoroWidgets/PawmodoroWidgets.entitlements; the two must always
+      name the same group.
+
+  Deliberately absent, so nobody adds them back "just in case":
+
+    - No App Sandbox. That is a macOS concept and lives in the Mac file.
+    - No network client/server. The app makes zero network calls
+      (docs/PRIVACY.md), and on iOS neither entitlement exists anyway.
+    - No HealthKit, no CloudKit/iCloud containers, no keychain sharing, no
+      associated domains, no push. Nothing in this app talks to any of them.
+    - No com.apple.developer.usernotifications.* — plain local notifications
+      through UNUserNotificationCenter need no entitlement, and the
+      time-sensitive one is a claim this app's notifications do not make.
+
+  Do NOT add com.apple.security.get-task-allow here. Xcode injects it for
+  debugging and strips it when archiving; a copy in this file would ship in
+  the archive and the upload is rejected.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.pawmodoro</string>
+	</array>
+</dict>
+</plist>

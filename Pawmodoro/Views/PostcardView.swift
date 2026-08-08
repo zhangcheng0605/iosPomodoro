@@ -60,20 +60,18 @@ struct PostcardView: View {
     /// times of day to sit in front of any of them. Drawn, it is a silhouette,
     /// which is what a tower is at that distance anyway.
     private var bellTowerPicture: some View {
-        ZStack(alignment: .bottom) {
-            sceneImage(
-                card.resolvedPlace.assetName(for: card.resolvedDayPart),
-                feet: 8 * scale
-            )
+        let name = card.resolvedPlace.assetName(for: card.resolvedDayPart)
+        let feet: CGFloat = 8 * scale
+        let stand = standing(name, feet: feet)
+        let tower = towerStanding(name, feet: feet)
+        return ZStack(alignment: .bottom) {
+            sceneImage(name, feet: feet)
 
-            // High enough that the buddy stands *under* the arch rather than
-            // in front of it — the card is called "beneath a bell tower" and
-            // at the first offset the cat was wearing one.
             BellTower(scale: scale)
-                .offset(y: -46 * scale)
+                .offset(x: tower.width, y: tower.height)
 
             BuddySprite(buddy: card.resolvedBuddy, sleeping: false, size: 44 * scale)
-                .offset(y: -8 * scale)
+                .offset(x: stand.width, y: stand.height)
 
             VStack {
                 HStack {
@@ -128,14 +126,14 @@ struct PostcardView: View {
     }
 
     private var placePicture: some View {
-        ZStack(alignment: .bottom) {
-            sceneImage(
-                card.resolvedPlace.assetName(for: card.resolvedDayPart),
-                feet: 10 * scale
-            )
+        let name = card.resolvedPlace.assetName(for: card.resolvedDayPart)
+        let feet: CGFloat = 10 * scale
+        let stand = standing(name, feet: feet)
+        return ZStack(alignment: .bottom) {
+            sceneImage(name, feet: feet)
 
             BuddySprite(buddy: card.resolvedBuddy, sleeping: false, size: 56 * scale)
-                .offset(y: -10 * scale)
+                .offset(x: stand.width, y: stand.height)
 
             // The stamp, top-right, like a real one.
             VStack {
@@ -175,14 +173,8 @@ struct PostcardView: View {
     /// differs per card because the bell tower stands the buddy slightly
     /// higher. Everything else about the crop is the same for all of them.
     private func sceneImage(_ name: String, feet: CGFloat) -> some View {
-        // The whole painting, drawn at the card's width.
         let full = width * Self.sceneAspect(name)
-        // Where the visible window starts. Clamped, so art that is ever
-        // exported closer to square cannot slide the window off either end.
-        let top = min(
-            max(0, CGFloat(Stray.groundLine) * full - pictureHeight + feet),
-            max(0, full - pictureHeight)
-        )
+        let top = cropTop(name, feet: feet)
         return Image(name)
             .interpolation(.none)      // keep the pixel edges crisp
             .resizable()
@@ -191,6 +183,77 @@ struct PostcardView: View {
             .offset(y: -top)
             .frame(width: width, height: pictureHeight, alignment: .top)
             .clipped()
+    }
+
+    /// Where the visible window starts, down the full-height painting.
+    ///
+    /// Clamped, so art that is ever exported closer to square cannot slide the
+    /// window off either end. The window is anchored on `Stray.groundLine` for
+    /// every place, including the two whose buddy stands somewhere else: the
+    /// crop is what makes the *place* recognisable, and moving it to follow a
+    /// jetty would trade a floating cat for a card that no longer shows the
+    /// harbour.
+    private func cropTop(_ name: String, feet: CGFloat) -> CGFloat {
+        let full = width * Self.sceneAspect(name)
+        return min(
+            max(0, CGFloat(Stray.groundLine) * full - pictureHeight + feet),
+            max(0, full - pictureHeight)
+        )
+    }
+
+    /// Where the buddy stands, as an offset from the bottom centre of the
+    /// picture — which is where a `ZStack(alignment: .bottom)` would put it.
+    ///
+    /// `Place.footing` says which point of the artwork has a surface on it;
+    /// this converts that into the card's own coordinates, through the same
+    /// crop the picture behind it uses. For the six places whose footing is the
+    /// middle at `Stray.groundLine` the answer comes back as `(0, -feet)`,
+    /// which is exactly the offset those cards were drawn with before any of
+    /// this existed — the two that moved are the only two that moved.
+    private func standing(_ name: String, feet: CGFloat) -> CGSize {
+        let footing = card.resolvedPlace.footing
+        let full = width * Self.sceneAspect(name)
+        // The soles, in points down from the top of the visible window.
+        let soles = CGFloat(footing.y) * full - cropTop(name, feet: feet)
+        return CGSize(
+            width: CGFloat(footing.x - 0.5) * width,
+            height: soles - pictureHeight
+        )
+    }
+
+    /// How far the tower's base floats above the buddy's soles.
+    ///
+    /// High enough that the buddy stands *under* the arch rather than in front
+    /// of it — the card is called "beneath a bell tower" and at the first
+    /// offset the cat was wearing one. The tower does not reach the ground on
+    /// purpose: it is a distant thing and its foot is behind the horizon.
+    private static let towerLift: CGFloat = 38
+
+    /// Where the tower stands, as an offset from the bottom centre — the same
+    /// coordinates `standing` returns, and derived from it.
+    ///
+    /// It follows the buddy across the card rather than staying centred. The
+    /// tower is a silhouette this view invents rather than art anybody painted,
+    /// so it can be built wherever there is ground, and a tower planted in the
+    /// Harbor's open water with the cat over on the jetty would have been two
+    /// bugs instead of one.
+    ///
+    /// The clamp is the part that is not decorative. Cloudspire's footing is
+    /// the grassy cap, which is most of the way *up* the card, and a tower hung
+    /// `towerLift` above those soles puts its roof twenty-seven points above
+    /// the picture — where the card's corner radius eats it. A roofless tower
+    /// is not a tower. So the base rises to meet the buddy instead, which costs
+    /// nothing: the arch lands on the buddy's head either way, which is the
+    /// whole point of the offset. Only Cloudspire is ever clamped; every other
+    /// card comes out at exactly `-towerLift` from the soles, as before.
+    private func towerStanding(_ name: String, feet: CGFloat) -> CGSize {
+        let stand = standing(name, feet: feet)
+        // The lowest the offset may go before the roof leaves the picture.
+        let ceiling = BellTower.height * scale - pictureHeight
+        return CGSize(
+            width: stand.width,
+            height: max(stand.height - Self.towerLift * scale, ceiling)
+        )
     }
 
     /// How tall the scene art is for its width — measured, not written down.
@@ -291,6 +354,18 @@ struct PostcardView: View {
 private struct BellTower: View {
     let scale: CGFloat
 
+    /// The silhouette's own measurements, at scale 1, named once.
+    ///
+    /// `PostcardView` has to know how tall this is to keep it inside the
+    /// picture, and `tools/check_postcard.py` has to read the same numbers to
+    /// prove that it does. A second copy of "82" in either of them would be a
+    /// checker restating what it checks, which this repo has been burned by
+    /// three times.
+    static let roofHeight: CGFloat = 14
+    static let shaftHeight: CGFloat = 68
+    static let width: CGFloat = 50
+    static var height: CGFloat { roofHeight + shaftHeight }
+
     private var bodyWidth: CGFloat { 40 * scale }
     private var dialSize: CGFloat { 24 * scale }
 
@@ -298,10 +373,10 @@ private struct BellTower: View {
         VStack(spacing: 0) {
             Roof()
                 .fill(Theme.bark.opacity(0.9))
-                .frame(width: bodyWidth + 10 * scale, height: 14 * scale)
+                .frame(width: Self.width * scale, height: Self.roofHeight * scale)
             // Not named `body(height:)` — a method sharing a base name with
             // `View.body` is an invalid redeclaration, not an overload.
-            shaft(height: 68 * scale)
+            shaft(height: Self.shaftHeight * scale)
         }
     }
 

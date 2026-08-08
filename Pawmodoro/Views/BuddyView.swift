@@ -232,19 +232,18 @@ struct BuddyView: View {
                             .allowsHitTesting(false)
                     }
 
-                    // The blanket, over the sleeping buddy. All twelve
-                    // asleep poses fill the lower half of the same grid, so
-                    // one shared overlay drapes everyone.
+                    // The blanket, over the sleeping buddy — and the way back
+                    // out from under it. All twelve asleep poses fill the
+                    // lower half of the same grid, so one shared overlay
+                    // drapes everyone.
                     if isTuckedAsleep {
-                        Image(Season.current() == .winter
-                              ? "fx_blanket_over_winter" : "fx_blanket_over")
-                            .interpolation(.none)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: spriteSize * 0.98)
-                            .offset(y: spriteSize * 0.16)
-                            .transition(.opacity)
-                            .allowsHitTesting(false)
+                        BlanketOverlay(
+                            starry: Season.current() == .winter,
+                            spriteSize: spriteSize,
+                            onTouched: { pet() },
+                            onLifted: { liftBlanket() }
+                        )
+                        .transition(.opacity)
                     }
 
                     if isNapping {
@@ -404,6 +403,11 @@ struct BuddyView: View {
             }
             if showsTuckChip {
                 Button("Tuck \(name) in") { tuckNow() }
+            }
+            // The drag has an opposite; so must the spoken list. A blanket
+            // that can only be put on is a trap either way you reach it.
+            if isTuckedAsleep {
+                Button("Take \(name)'s blanket off") { liftBlanket() }
             }
             if let fiveWindow, fiveWindow.contains(Date()) {
                 Button("High five \(name)") { landFive() }
@@ -1015,6 +1019,24 @@ struct BuddyView: View {
             engine.tuckIn.tuck()
         }
         HapticsDirector.shared.purr(duration: 0.9)
+    }
+
+    /// The blanket comes off by hand, before its own morning.
+    ///
+    /// Nothing is handed back. The night's guaranteed dream was earned the
+    /// moment the blanket went on, and `TuckIn.lift(on:)` leaves it alone —
+    /// so this is a way out of the ritual, never a way to undo having done
+    /// it. The folded chip returns on its own, because `showsTuckChip` only
+    /// ever asked whether the buddy is under a blanket right now.
+    private func liftBlanket() {
+        withAnimation(.easeInOut(duration: 0.4)) {
+            // The `_ =` is load-bearing: `lift()` is `@discardableResult`, so
+            // without it the closure infers `() -> Bool` and the compiler
+            // warns that `withAnimation`'s result is unused.
+            _ = engine.tuckIn.lift()
+        }
+        HapticsDirector.shared.detent()
+        say("blanket off — \(name) is up again", for: 4)
     }
 
     /// The blanket's thank-you, once, on the first look of the morning.

@@ -124,6 +124,69 @@ final class Journal {
         return (records[species.rawValue]?.count ?? 0) >= Self.regularAt
     }
 
+    /// How much likelier a regular is to turn up where it lives.
+    ///
+    /// The other half of what a regular means, and the half that was written
+    /// down in the plan and never built: the marked sprite says you know each
+    /// other, and this is the part that acts like it.
+    ///
+    /// The number is in the same currency the fortune slip and the garden
+    /// press with — a multiplier on `Species.Rarity.chance` — and it is
+    /// deliberately the smallest thumb in the app by a long way: a slip
+    /// presses at 4, a blooming callflower at 5, a returned traveler at 6, a
+    /// regular at 1.2. Every other thumb is temporary — a day, a session, a
+    /// flowering — and this one is forever, which is the whole argument for
+    /// it being the quietest.
+    ///
+    /// Measured on device, 200k rolls of the real queue per arm, one common
+    /// species made a regular: at the Meadow it goes from 23.5% of sessions
+    /// to 28.1%, at the Harbor from 15.8% to 19.2%. That is a session in
+    /// twenty turning from an empty meadow into the butterfly — the whole of
+    /// the feeling, and none of the arithmetic anybody could notice.
+    static let regularBoost = 1.2
+
+    /// The weight to multiply a species' own chance by in the session about
+    /// to start — one for everybody except your regular, standing in the
+    /// place it lives.
+    ///
+    /// Deliberately *not* pressed through `TimerEngine.SightingBias`, even
+    /// though the arithmetic is identical, because that seam hands its
+    /// species first refusal ahead of the whole queue. Measured at this very
+    /// same weight, that path takes the Harbor gull from 15.8% of sessions
+    /// to 49.5% and takes a third off every other creature on the water; the
+    /// Meadow butterfly reaches 54%. Once two or three species in a place
+    /// had become regulars, nothing else would get a look in — which is the
+    /// opposite of what a journal is for.
+    ///
+    /// Multiplied in place instead, the queue's order is untouched, so the
+    /// 3–5 points a regular gains come mostly out of the sessions where
+    /// nothing turned up at all: at the Harbor, +3.4 for the gull against
+    /// −1.1 from the empty sessions and no more than −0.6 from any other
+    /// animal. A regular is likelier; nobody is crowded out.
+    ///
+    /// Monotonic like everything else here — `count` only ever rises and
+    /// `regularAt` is a threshold, so a weight that has gone to 1.2 can
+    /// never come back down. There is no way to stop being someone's
+    /// regular.
+    func regularWeight(for species: Species, at place: Place) -> Double {
+        guard species.homePlace == place, isRegular(species) else { return 1 }
+        return Self.regularBoost
+    }
+
+    /// What `rollSighting`'s ordinary queue should actually roll against.
+    ///
+    /// The one seam the engine calls, so the whole of "a regular is likelier
+    /// where it lives" lives here rather than half here and half in a
+    /// multiplication at the call site. Capped like the bias path is, at the
+    /// same 0.85: nothing in this app is ever a certainty, and a cap that
+    /// only exists on one of two paths is a cap somebody will walk around
+    /// later. At today's numbers the cap is unreachable — a mythic is the
+    /// dearest at 0.5, and 0.5 × 1.2 is 0.6 — which is exactly when to write
+    /// it down, while it costs nothing.
+    func sightingChance(for species: Species, at place: Place) -> Double {
+        min(0.85, species.rarity.chance * regularWeight(for: species, at: place))
+    }
+
     var seenCount: Int { records.count }
 
     var total: Int { Species.allCases.count }
@@ -145,7 +208,7 @@ final class Journal {
     static var pages: [Page] {
         var result: [Page] = Place.journey.compactMap { place in
             let here = Species.allCases
-                .filter { !$0.isPhenomenon && $0.places.first == place }
+                .filter { !$0.isPhenomenon && $0.homePlace == place }
                 .sorted { $0.rarity.chance > $1.rarity.chance }
             guard !here.isEmpty else { return nil }
             return Page(id: place.rawValue, title: place.name, species: here)
@@ -222,7 +285,7 @@ final class Journal {
                 firstSeen: now,
                 lastSeen: now,
                 count: max(1, count),
-                place: (species.places.first ?? .meadow).rawValue,
+                place: species.homePlace.rawValue,
                 dayPart: (species.dayParts.first ?? .day).rawValue
             )
         }

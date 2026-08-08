@@ -467,6 +467,19 @@ enum Species: String, Codable, CaseIterable, Identifiable {
     var name: String { spec.name }
     var note: String { spec.note }
     var places: [Place] { spec.places }
+    /// Where this one lives, as opposed to where it can turn up.
+    ///
+    /// The first place on its row — and `Journal.pages` now asks *this*
+    /// rather than keeping its own `places.first`, so the place a regular is
+    /// likelier in is by construction the same place its journal entry has
+    /// always been filed under. Two expressions of one rule is how they
+    /// drift; there is only one.
+    ///
+    /// Not "where you first saw it": a butterfly met once on a trip to
+    /// Blossom would then have its home somewhere nobody sits. Every row has
+    /// at least one place, so the fallback is a formality the compiler wants
+    /// and nothing reaches.
+    var homePlace: Place { spec.places.first ?? .meadow }
     var dayParts: [DayPart] { spec.dayParts }
     var rarity: Rarity { spec.rarity }
     var motion: Motion { spec.motion }

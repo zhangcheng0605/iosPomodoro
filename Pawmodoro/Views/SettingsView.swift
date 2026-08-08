@@ -172,7 +172,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
+            #if DEBUG
             .sheet(isPresented: $showRedeem) { RedeemCodeView() }
+            #endif
         }
     }
 
@@ -263,12 +265,28 @@ struct SettingsView: View {
                 .font(.footnote)
             }
 
-            // Under the buy and restore rows rather than beside them: this is
-            // a corner of the app for the few people who have a code, not an
-            // invitation to go and look for one.
+            // DEBUG ONLY, and it must stay that way. App Review guideline
+            // 3.1.1 names this exact mechanism — "apps may not use their own
+            // mechanisms to unlock content or functionality, such as license
+            // keys…" — and Apple's rejection letter for it leads with promo
+            // codes. Hiding the field instead would trade a 3.1.1 problem for
+            // a 2.3.1 "hidden, dormant, or undocumented features" one, whose
+            // remedy reaches removal from the developer program.
+            //
+            // So it is compiled out of Release entirely rather than merely
+            // tucked away: the owner needs it to reach his own paid content
+            // on his own phone (StoreKit vends nothing to an app installed
+            // outside Xcode, so there is no other way to test what he built),
+            // and it must be impossible to ship by accident.
+            //
+            // The sanctioned replacement, when a real code is wanted, is
+            // StoreKit Offer Codes — extended to non-consumables at iOS 16.3,
+            // and this app targets 17. See docs/PROMO_CODES.md.
+            #if DEBUG
             Button("Redeem a code", systemImage: "ticket") {
                 showRedeem = true
             }
+            #endif
 
             Button("Leave a tip", systemImage: "heart.fill") {
                 showTipJar = true

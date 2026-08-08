@@ -30,7 +30,9 @@ struct PaywallView: View {
                 }
             }
             .task { await store.loadProducts() }
+            #if DEBUG
             .sheet(isPresented: $showRedeem) { RedeemCodeView() }
+            #endif
         }
     }
 
@@ -173,9 +175,14 @@ struct PaywallView: View {
                 // handed a code, so it is offered here — quietly, in the
                 // smallest type on the sheet, below the two things most
                 // people came for.
+                // DEBUG only — see the note in SettingsView. Guideline
+                // 3.1.1 forbids a self-issued unlock, and a paywall is the
+                // worst possible place for a reviewer to find one.
+                #if DEBUG
                 Button("I have a code") { showRedeem = true }
                     .font(.caption)
                     .foregroundStyle(Theme.bark.opacity(0.6))
+                #endif
 
                 if let error = store.lastError {
                     Text(error)

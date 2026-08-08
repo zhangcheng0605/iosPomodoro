@@ -97,25 +97,31 @@ enum AppIcons {
 
     /// Put `choice` on the Home screen.
     ///
-    /// `done` reports whether it actually happened, and runs after iOS has had
-    /// its say, so the caller can re-read `current` and be right either way.
+    /// `done` reports whether the icon is now the one that was asked for, and
+    /// runs after iOS has had its say.
     ///
-    /// **iOS can refuse, and it does.** Driving this on the Simulator turned up
-    /// `NSPOSIXErrorDomain 35` — "Resource temporarily unavailable", raised by
-    /// `-[LSIconAlertManager iconChangeAlertTokenForIdentity:error:]`. The
-    /// change is gated on LaunchServices vending a token for the alert it is
-    /// about to show; when it will not, the icon simply does not change.
-    /// Swallowing that leaves a row somebody can tap forever with nothing
-    /// happening and no reason given, which is the worst outcome available
-    /// here — so the picker says so instead.
+    /// **iOS can refuse, and the error it hands back is not the answer.**
+    /// Driving this on the Simulator produced two different failures from the
+    /// *alert* machinery rather than from the icon change:
+    /// `NSPOSIXErrorDomain 35` out of
+    /// `-[LSIconAlertManager iconChangeAlertTokenForIdentity:error:]`, where
+    /// the icon genuinely did not change; and `NSPOSIXErrorDomain 5`,
+    /// "couldn't load upcall bundle principal class", out of
+    /// `CoreServicesUIUpcallEmbedded` — where the icon *did* change and only
+    /// the announcement failed.
+    ///
+    /// So the error is a bad oracle in both directions, and the completion
+    /// asks the system what the icon actually is instead. That is the same
+    /// rule `current` follows and the reason nothing here is stored: there is
+    /// one source of truth and it is not this app.
     static func set(_ choice: AppIconChoice, done: @escaping (Bool) -> Void) {
         #if os(iOS)
         guard choice != current else { return done(true) }
         UIApplication.shared.setAlternateIconName(choice.systemName) { error in
             #if DEBUG
-            if let error { print("icon: \(choice.rawValue) refused — \(error)") }
+            if let error { print("icon: \(choice.rawValue) — \(error)") }
             #endif
-            done(error == nil)
+            done(current == choice)
         }
         #else
         done(false)

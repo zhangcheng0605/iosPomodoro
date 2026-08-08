@@ -201,6 +201,18 @@ def check_previews(failures):
     against a downsample of the icon it claims to preview, so swapping two of
     them fails here.
     """
+    # Nothing left behind, either. A preview for an icon that no longer
+    # exists still ships in the catalogue and nothing else looks — found the
+    # honest way, by leaving one there.
+    strays = sorted(d for d in os.listdir(ASSETS)
+                    if d.startswith("iconpreview_") and d.endswith(".imageset")
+                    and d[len("iconpreview_"):-len(".imageset")]
+                    not in {n for n, _, _ in assets.ICON_VARIANTS})
+    for stray in strays:
+        failures.append(
+            f"{stray} previews an icon that is not in the set — it still "
+            f"ships in the catalogue and nothing else would notice")
+
     for name, _, _ in assets.ICON_VARIANTS:
         folder = os.path.join(ASSETS, f"iconpreview_{name}.imageset")
         if not os.path.isdir(folder):

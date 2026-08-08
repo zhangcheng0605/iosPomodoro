@@ -1,6 +1,6 @@
 """Generate the wardrobe, and measure where it goes.
 
-Two jobs in one tool, because they must never disagree: it draws the ten
+Two jobs in one tool, because they must never disagree: it draws the fifteen
 accessories, and it measures every buddy frame to find out where each one
 attaches — emitting `Pawmodoro/Model/BuddyAnchors.swift`, which is generated
 and must not be hand-edited.
@@ -64,13 +64,20 @@ WARDROBE = {
 
 # --- The measuring ---------------------------------------------------------
 
-def _runs(row):
-    """Contiguous filled spans in one row, as (start, end) pairs."""
+def _runs(row, of=None):
+    """Contiguous spans in one row, as (start, end) pairs.
+
+    Filled pixels by default; one specific palette index when `of` is given,
+    which is how the eyes are found — they are the only thing on a buddy drawn
+    in `EYE`, apart from a couple of noses, and a nose is one blob rather than
+    a pair.
+    """
     out, start = [], None
     for x, value in enumerate(row):
-        if value != T and start is None:
+        hit = (value != T) if of is None else (value == of)
+        if hit and start is None:
             start = x
-        elif value == T and start is not None:
+        elif not hit and start is not None:
             out.append((start, x - 1))
             start = None
     if start is not None:
@@ -85,12 +92,63 @@ def _run_at(row, column):
     return None
 
 
-def measure(grid):
-    """Where a hat and a collar go on one rendered frame.
+def _eye_band(arr, top, floor):
+    """Where the eyes are, read off the pixels that draw them.
+
+    `HEARTH_PLAN`'s as-built said spectacles were impossible because the face
+    "is a third anchor nobody can measure". That was wrong, and pleasantly so:
+    every buddy routes its eyes through `generate_sprites.eyes()`, which paints
+    them in one palette index — `EYE` — that nothing else on the head uses in
+    a *pair*. So the eyes announce themselves.
+
+    A pair, specifically: two spans in the same row with a real gap between
+    them. Three buddies draw their nose in `EYE` as well, and a nose is one
+    span — which is also why this takes runs rather than a bounding box, since
+    a box round every `EYE` pixel on the dog reaches from his eyes down over
+    his muzzle and would sit the spectacles on his nose.
+
+    The gap has to be at least two columns wide, because a single open eye is
+    itself two spans on the row where its highlight sits: `eyes_open` paints a
+    `GLINT` pixel inside the pupil, splitting that row in half with a
+    one-column gap. Two halves of one eye are not a pair of eyes.
+
+    Nothing about the *head* is used here — no centre line, no width. That was
+    the first version and it was wrong: the sleeping bunny's widest run is her
+    ear, which puts the measured head centre well right of her face, and both
+    of her closed eyes then counted as "left" and she went bare-faced. The eyes
+    know where they are without being told where the head is.
+
+    The topmost band wins. Below the eyes there is only muzzle.
+    """
+    band = None
+    for index in range(top, floor + 1):
+        spans = _runs(arr[index], of=EYE)
+        outer = None
+        if len(spans) >= 2 and spans[-1][0] - spans[0][1] - 1 >= 2:
+            outer = (spans[0][0], spans[-1][1])
+        if outer:
+            if band is None:
+                band = [index, index, outer]
+            else:
+                band[1] = index
+                band[2] = (min(band[2][0], outer[0]), max(band[2][1], outer[1]))
+        elif band is not None:
+            break
+    return band
+
+
+def measure(grid, face_grid=None):
+    """Where a hat, a collar and a pair of spectacles go on one rendered frame.
 
     Runs rather than extents: measuring a row's full min-to-max span reads
     straight across the *gap between two ears*, which put the cat's crown four
     pixels above her actual skull and balanced every hat on thin air.
+
+    `face_grid` is the drawing the *face* is measured on, when that is not the
+    frame itself. The two glance frames are the whole reason it exists: they
+    are the same animal with its pupils moved two pixels sideways, and
+    spectacles measured off them slide about the face every time the buddy
+    looks at something. A pupil that glances is not a head that moved.
     """
     arr = np.array(grid)
     filled = [i for i, row in enumerate(arr) if (row != T).any()]
@@ -99,12 +157,79 @@ def measure(grid):
     top, bottom = filled[0], filled[-1]
     height = bottom - top + 1
 
-    # The head is the widest single run anywhere in the top 40%.
+    # The face is measured *first*, because the head is measured from it.
+    #
+    # It used to be measured last, off a floor derived from the head, which is
+    # the wrong way round: the eyes are the one landmark that announces itself
+    # in a palette index of its own, and the head is the thing that has to be
+    # searched for. Nothing here uses the head, exactly as `_eye_band`'s
+    # docstring insists — the floor is the whole figure.
+    band = _eye_band(np.array(face_grid) if face_grid is not None else arr,
+                     top, bottom)
+    face, face_w = None, 0
+    if band:
+        first, last, (left, right) = band
+        face = (round((left + right) / 2, 1), round((first + last) / 2, 1))
+        face_w = right - left + 1
+
+    # The head is the widest run *through the eyes*, made symmetric about them.
+    #
+    # Both halves of that sentence are load-bearing, and each fixes a different
+    # frame. "The widest single run anywhere in the top 40%" — what this used
+    # to be — assumes the animal is standing up. The three stretch frames are a
+    # play-bow: rump up and to the right, head low on the left. In the top 40%
+    # of *that* there is no head at all, only tail and hindquarters, so every
+    # hat was drawn on the cat's rear.
+    #
+    # Searching through the eyes fixes the position but not the size, because
+    # a row or two below the crown the head touches the raised rump and the two
+    # merge into one run thirty-five pixels wide — the dog's stretch measured a
+    # head of 37 on a 40-pixel canvas, and wore a sun hat the width of the whole
+    # animal. So the run is clipped to the widest span *symmetric about the
+    # face*: a head is symmetric about its own face, and whatever sticks out on
+    # one side only is some other part of the animal. A run already centred on
+    # the face keeps its exact width, so this half costs the upright buddies
+    # nothing.
+    #
+    # The rows searched reach down to the eyes when the eyes are lower than the
+    # top 40%, and no further: below the eyes there is only muzzle and body.
+    # This *does* move the upright buddies, and deliberately — 62 of the 121
+    # rows changed. The old floor stopped near the top of the skull and measured
+    # a head narrower than the head: the bunny came out 19 wide and wore a sun
+    # hat that perched on her like a party cone, where the width at her own eye
+    # line is 25. Every such change was checked against a contact sheet before
+    # it was kept, and the three worst were not the stretch at all — the otter
+    # floating on her back and the sliding penguin were both measured at 37,
+    # the whole animal, and the sleeping bunny's head anchor sat out on the tip
+    # of her ear, which is the same mistake `_eye_band` below already had to
+    # learn for the face.
     widest, head_row, head_cx = 0, top, arr.shape[1] / 2
-    for index in range(top, top + max(1, int(height * 0.40)) + 1):
-        for a, b in _runs(arr[index]):
-            if b - a + 1 > widest:
-                widest, head_row, head_cx = b - a + 1, index, (a + b) / 2
+    floor = top + max(1, int(height * 0.40))
+    if band:
+        floor = max(floor, band[1])
+    floor = min(floor, bottom)
+
+    if face is not None:
+        for index in range(top, floor + 1):
+            run = _run_at(arr[index], face[0])
+            if run is None:
+                continue
+            # Symmetric about the face, and inclusive of the centre column, so
+            # a run already centred there keeps its exact width rather than
+            # losing a pixel to the rounding.
+            span = int(2 * min(face[0] - run[0], run[1] - face[0]) + 1)
+            if span > widest:
+                widest, head_row, head_cx = span, index, face[0]
+
+    # No eyes on this frame — a hedgehog rolled into a ball, the bunny asleep
+    # with her head tucked under — so there is nothing to measure the head
+    # from and the old rule is the best available. It is also still correct for
+    # every pose it was correct for before, which is most of them.
+    if not widest:
+        for index in range(top, floor + 1):
+            for a, b in _runs(arr[index]):
+                if b - a + 1 > widest:
+                    widest, head_row, head_cx = b - a + 1, index, (a + b) / 2
 
     # The crown: the first row from the top whose run through the head's centre
     # line is at least half the head's width. Everything above that is ear.
@@ -131,11 +256,20 @@ def measure(grid):
     # never wider than the head above it.
     neck_w = min((run[1] - run[0] + 1) if run else widest, widest)
 
+    # The face was measured at the top of this function. Nothing is guessed
+    # there: a frame whose eyes are not visible — the hedgehog rolled into a
+    # ball, the bunny asleep with her head tucked under — gets no face anchor
+    # and so wears nothing on it. That is `BuddyFrames`' nil-fallback rule
+    # again, and it is the honest answer: a pair of spectacles on a face you
+    # cannot see would be floating in fur.
+
     return {
         "head": (round(head_cx, 1), crown),
         "headWidth": widest,
         "neck": (round(neck_cx, 1), neck_row),
         "neckWidth": neck_w,
+        "face": face,
+        "faceWidth": face_w,
         # Where the animal ends. Nothing in the wardrobe needs it — a hat and a
         # collar both hang off the head — but `TouchSpot` does: a tummy region
         # sized from the head ran off the bottom of the canvas on half the
@@ -152,6 +286,9 @@ def frames_for(species, awake, asleep, stretch, quirks):
     exported PNG is upscaled and palette-mapped, and measuring that would mean
     undoing both. If the two ever drift apart, `check_accessories.py` notices —
     it asserts an anchor exists for every buddy imageset on disk.
+
+    Returns the frames and, alongside them, the drawing each frame's *face* is
+    measured on where that is not the frame itself. See `measure`.
     """
     out = {
         f"buddy_{species}_awake": awake(),
@@ -163,9 +300,11 @@ def frames_for(species, awake, asleep, stretch, quirks):
     happy = awake("happy")
     out[f"buddy_{species}_happy_0"] = happy
     out[f"buddy_{species}_happy_1"] = gs.shift(happy, -2)
+    faces = {}
     for suffix, dx in (("look_l", -2), ("look_r", 2)):
         gs.set_eye_shift(dx)
         out[f"buddy_{species}_{suffix}"] = awake()
+        faces[f"buddy_{species}_{suffix}"] = out[f"buddy_{species}_awake"]
     gs.set_eye_shift(0)
     if stretch is not None:
         out[f"buddy_{species}_stretch"] = stretch()
@@ -179,7 +318,7 @@ def frames_for(species, awake, asleep, stretch, quirks):
         out[f"buddy_{species}_pawup"] = cp.cat_pawup()
     elif species == "dog":
         out[f"buddy_{species}_pawup"] = cp.dog_pawup()
-    return out
+    return out, faces
 
 
 # --- The wardrobe ----------------------------------------------------------
@@ -289,6 +428,91 @@ def bow():
     return outline_silhouette(g)
 
 
+def beret():
+    """Soft, tilted, and nobody asked why."""
+    g = new_grid(16, 7)
+    d = ImageDraw.Draw(g)
+    d.ellipse([0, 2, 15, 6], fill=ACCENT)                 # the wide soft brim
+    d.ellipse([1, 0, 11, 5], fill=ACCENT)                 # the crown, worn over
+    d.line([(3, 1), (7, 0)], fill=CREAM)                  # where the light sits
+    d.ellipse([4, 0, 6, 1], fill=CREAM)                   # the stalk
+    return outline_silhouette(g)
+
+
+# The face pieces. Two rules of their own:
+#
+# They are centred on the anchor rather than hung from an edge — a face sits in
+# the middle of a face — and the see-through ones skip `outline_silhouette`.
+# That pass paints every transparent pixel *adjacent to* a solid one, which
+# includes the inside of a five-pixel lens: silhouetting a pair of round
+# spectacles fills both lenses solid and blindfolds the animal.
+
+def spectacles():
+    """Round, brass, and see-through — the eyes still show through them.
+
+    Two rings each, dark outside the gold. That is not decoration: a gold hoop
+    on its own measured 1.4:1 against the bunny's fur, and a rim you cannot see
+    against the animal is not a pair of spectacles, it is a smudge. Every other
+    piece gets the same dark edge from `outline_silhouette`; these have to draw
+    it by hand, because that pass would fill the lenses in.
+    """
+    g = new_grid(20, 9)
+    d = ImageDraw.Draw(g)
+    for x in (0, 11):
+        d.ellipse([x, 0, x + 8, 8], outline=OUTLINE)
+        d.ellipse([x + 1, 1, x + 7, 7], outline=GLINT)
+        d.point((x + 3, 2), fill=CREAM)                   # the catch of light
+    d.line([(9, 3), (10, 3)], fill=OUTLINE)
+    d.line([(9, 4), (10, 4)], fill=GLINT)                 # the bridge
+    d.line([(9, 5), (10, 5)], fill=OUTLINE)
+    return g
+
+
+def shades():
+    """Two dark lenses and nothing behind them."""
+    g = new_grid(16, 6)
+    d = ImageDraw.Draw(g)
+    d.rectangle([0, 1, 6, 5], fill=OUTLINE)
+    d.rectangle([9, 1, 15, 5], fill=OUTLINE)
+    d.rectangle([0, 0, 15, 0], fill=GLINT)                # the brow bar
+    d.line([(7, 1), (8, 1)], fill=GLINT)                  # the bridge
+    d.line([(1, 2), (3, 4)], fill=CREAM)                  # the shine
+    d.line([(10, 2), (12, 4)], fill=CREAM)
+    return outline_silhouette(g)
+
+
+def monocle():
+    """One lens, one chain, no explanation.
+
+    Drawn hard against the right edge on purpose. The piece is centred on the
+    face like every other one, so where the ring sits *within the grid* is the
+    only thing deciding which eye it lands on — drawn nearer the middle it came
+    out perched on the bridge of the nose on half the roster.
+    """
+    g = new_grid(18, 10)
+    d = ImageDraw.Draw(g)
+    d.ellipse([9, 0, 17, 8], outline=OUTLINE)
+    d.ellipse([10, 1, 16, 7], outline=GLINT)
+    d.point((12, 2), fill=CREAM)
+    for point in ((9, 8), (8, 9), (7, 9)):                # the chain, falling
+        d.point(point, fill=OUTLINE)
+    d.point((8, 8), fill=GLINT)
+    return g
+
+
+def starglasses():
+    """At a party nobody else has been told about."""
+    g = new_grid(18, 8)
+    d = ImageDraw.Draw(g)
+    for cx in (4, 13):
+        d.polygon([(cx, 0), (cx + 2, 3), (cx + 4, 3), (cx + 2, 5),
+                   (cx + 3, 7), (cx, 6), (cx - 3, 7), (cx - 2, 5),
+                   (cx - 4, 3), (cx - 2, 3)], fill=PINK)
+        d.point((cx, 3), fill=GLINT)
+    d.line([(8, 3), (9, 3)], fill=PINK)                   # the bridge
+    return outline_silhouette(g)
+
+
 ACCESSORIES = {
     # head
     "sunhat": sunhat,
@@ -296,6 +520,12 @@ ACCESSORIES = {
     "knittedcap": knittedcap,
     "crown": crown,
     "leaf": leaf,
+    "beret": beret,
+    # face
+    "spectacles": spectacles,
+    "shades": shades,
+    "monocle": monocle,
+    "starglasses": starglasses,
     # neck
     "bandana": bandana,
     "bellcollar": bellcollar,
@@ -330,6 +560,13 @@ enum BuddyAnchors {
         /// The collar line: where the centre of a neck piece sits.
         let neck: CGPoint
         let neckWidth: CGFloat
+        /// The eyes: where the *centre* of a face piece sits, and how far
+        /// apart the eyes are so it can be scaled to them. Nil on a frame
+        /// whose eyes are not visible — a face down in a stretch, a hedgehog
+        /// rolled up — and that frame wears nothing on its face, which is the
+        /// honest answer rather than a guess.
+        let face: CGPoint?
+        let faceWidth: CGFloat
         /// The last row the animal occupies, for anything that needs to know
         /// where the body stops rather than where the head is.
         let bottom: CGFloat
@@ -348,12 +585,16 @@ def emit_anchors(rows):
     lines = [HEADER % (gs.S, gs.S, gs.S)]
     for name in sorted(rows):
         a = rows[name]
+        face = ("nil" if a["face"] is None
+                else f'CGPoint(x: {a["face"][0]}, y: {a["face"][1]})')
         lines.append(
             f'        "{name}": Anchors(\n'
             f'            head: CGPoint(x: {a["head"][0]}, y: {a["head"][1]}),\n'
             f'            headWidth: {a["headWidth"]},\n'
             f'            neck: CGPoint(x: {a["neck"][0]}, y: {a["neck"][1]}),\n'
             f'            neckWidth: {a["neckWidth"]},\n'
+            f'            face: {face},\n'
+            f'            faceWidth: {a["faceWidth"]},\n'
             f'            bottom: {a["bottom"]}),\n'
         )
     lines.append("    ]\n}\n")
@@ -369,11 +610,14 @@ if __name__ == "__main__":
     print("Anchors:")
     rows = {}
     for species, palette, awake, asleep, stretch, quirks in gs.BUDDIES:
-        frames = frames_for(species, awake, asleep, stretch, quirks)
+        frames, faces = frames_for(species, awake, asleep, stretch, quirks)
+        bare = 0
         for asset, grid in frames.items():
-            found = measure(grid)
+            found = measure(grid, faces.get(asset))
             if found:
                 rows[asset] = found
-        print(f"  {species}: {len(frames)} frames")
+                bare += found["face"] is None
+        print(f"  {species}: {len(frames)} frames"
+              f"{f', {bare} with no visible face' if bare else ''}")
     emit_anchors(rows)
     print(f"  wrote {len(rows)} rows to {os.path.relpath(ANCHORS_FILE, ROOT)}")

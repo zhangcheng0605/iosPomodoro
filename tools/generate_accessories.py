@@ -137,7 +137,7 @@ def _eye_band(arr, top, floor):
     return band
 
 
-def measure(grid, face_grid=None):
+def measure(grid, face_grid=None, eyes_grid=None):
     """Where a hat, a collar and a pair of spectacles go on one rendered frame.
 
     Runs rather than extents: measuring a row's full min-to-max span reads
@@ -149,6 +149,14 @@ def measure(grid, face_grid=None):
     are the same animal with its pupils moved two pixels sideways, and
     spectacles measured off them slide about the face every time the buddy
     looks at something. A pupil that glances is not a head that moved.
+
+    `eyes_grid` is the same idea for the *head*, and it exists because the two
+    cannot always be the same drawing. A sleeping buddy's eyes are shut, and on
+    the hedgehog they are not drawn at all — he must get no face anchor, or he
+    wears spectacles over closed eyes. But his head has not gone anywhere, and
+    without somewhere to read it from he fell back to the old widest-run rule
+    and centred it a pixel off, so a hat slid sideways the instant he woke.
+    Passing the waking drawing here locates the head without granting a face.
     """
     arr = np.array(grid)
     filled = [i for i, row in enumerate(arr) if (row != T).any()]
@@ -171,6 +179,16 @@ def measure(grid, face_grid=None):
         first, last, (left, right) = band
         face = (round((left + right) / 2, 1), round((first + last) / 2, 1))
         face_w = right - left + 1
+
+    # Where the head is, which is not always where the face anchor is allowed to
+    # be. Falls back to this frame's own eyes whenever no reference is given.
+    head_band = band
+    if eyes_grid is not None:
+        head_band = _eye_band(np.array(eyes_grid), top, bottom) or band
+    head_eyes = None
+    if head_band:
+        first, last, (left, right) = head_band
+        head_eyes = round((left + right) / 2, 1)
 
     # The head is the widest run *through the eyes*, made symmetric about them.
     #
@@ -205,26 +223,26 @@ def measure(grid, face_grid=None):
     # learn for the face.
     widest, head_row, head_cx = 0, top, arr.shape[1] / 2
     floor = top + max(1, int(height * 0.40))
-    if band:
-        floor = max(floor, band[1])
+    if head_band:
+        floor = max(floor, head_band[1])
     floor = min(floor, bottom)
 
-    if face is not None:
+    if head_eyes is not None:
         for index in range(top, floor + 1):
-            run = _run_at(arr[index], face[0])
+            run = _run_at(arr[index], head_eyes)
             if run is None:
                 continue
             # Symmetric about the face, and inclusive of the centre column, so
             # a run already centred there keeps its exact width rather than
             # losing a pixel to the rounding.
-            span = int(2 * min(face[0] - run[0], run[1] - face[0]) + 1)
+            span = int(2 * min(head_eyes - run[0], run[1] - head_eyes) + 1)
             if span > widest:
-                widest, head_row, head_cx = span, index, face[0]
+                widest, head_row, head_cx = span, index, head_eyes
 
-    # No eyes on this frame — a hedgehog rolled into a ball, the bunny asleep
-    # with her head tucked under — so there is nothing to measure the head
-    # from and the old rule is the best available. It is also still correct for
-    # every pose it was correct for before, which is most of them.
+    # No eyes on this frame and no drawing of it with them open — so there is
+    # nothing to measure the head from and the old rule is the best available.
+    # It is also still correct for every pose it was correct for before, which
+    # is most of them.
     if not widest:
         for index in range(top, floor + 1):
             for a, b in _runs(arr[index]):
@@ -288,7 +306,8 @@ def frames_for(species, awake, asleep, stretch, quirks):
     it asserts an anchor exists for every buddy imageset on disk.
 
     Returns the frames and, alongside them, the drawing each frame's *face* is
-    measured on where that is not the frame itself. See `measure`.
+    measured on where that is not the frame itself, and the drawing its *head*
+    is measured from where those two differ. See `measure`.
     """
     out = {
         f"buddy_{species}_awake": awake(),
@@ -301,6 +320,37 @@ def frames_for(species, awake, asleep, stretch, quirks):
     out[f"buddy_{species}_happy_0"] = happy
     out[f"buddy_{species}_happy_1"] = gs.shift(happy, -2)
     faces = {}
+
+    # A pupil that closes is not a head that moved, either.
+    #
+    # This started as the two glance frames below, for the face alone. It has
+    # to cover every eyes-only variant now, because the *head* is measured from
+    # the eyes as well, and the rows it searches reach down to them: a blink
+    # draws a shorter eye band than an open eye, which moved the search floor,
+    # which measured a different head on a drawing that is pixel-for-pixel
+    # identical. The owl and the hamster came out 29 awake and 27 blinking, and
+    # `BuddyAnimator.idle` alternates those two — so a hat resized itself every
+    # time the buddy blinked, four seconds apart, for as long as the app was
+    # open. `awake_blink` and the two happy frames are the same drawing as
+    # `awake` with different eyes, so they measure both anchors on it; `happy_1`
+    # is that drawing shifted, and its reference is shifted with it.
+    reference = out[f"buddy_{species}_awake"]
+    faces[f"buddy_{species}_awake_blink"] = reference
+    faces[f"buddy_{species}_happy_0"] = reference
+    faces[f"buddy_{species}_happy_1"] = gs.shift(reference, -2)
+
+    # The sleeping pair, for the head only. These two must *not* get a face
+    # reference: a buddy with his eyes shut wears no spectacles, and that is
+    # `BuddyFrames`' nil-fallback rule. But the head is still there, and the
+    # hedgehog is drawn asleep with no eyes at all, so without this he fell back
+    # to the old rule and measured his head a pixel off the one his waking frame
+    # measured — a hat that jumped sideways the moment he opened his eyes.
+    eyes = {
+        f"buddy_{species}_asleep": out[f"buddy_{species}_wake"],
+        f"buddy_{species}_asleep_breathe":
+            gs.squash(asleep("open"), gs.BREATHE_ROW),
+    }
+
     for suffix, dx in (("look_l", -2), ("look_r", 2)):
         gs.set_eye_shift(dx)
         out[f"buddy_{species}_{suffix}"] = awake()
@@ -318,7 +368,7 @@ def frames_for(species, awake, asleep, stretch, quirks):
         out[f"buddy_{species}_pawup"] = cp.cat_pawup()
     elif species == "dog":
         out[f"buddy_{species}_pawup"] = cp.dog_pawup()
-    return out, faces
+    return out, faces, eyes
 
 
 # --- The wardrobe ----------------------------------------------------------
@@ -610,10 +660,10 @@ if __name__ == "__main__":
     print("Anchors:")
     rows = {}
     for species, palette, awake, asleep, stretch, quirks in gs.BUDDIES:
-        frames, faces = frames_for(species, awake, asleep, stretch, quirks)
+        frames, faces, eyes = frames_for(species, awake, asleep, stretch, quirks)
         bare = 0
         for asset, grid in frames.items():
-            found = measure(grid, faces.get(asset))
+            found = measure(grid, faces.get(asset), eyes.get(asset))
             if found:
                 rows[asset] = found
                 bare += found["face"] is None

@@ -169,6 +169,74 @@ EYE_PAIRS = (("awake", "awake_blink"), ("asleep", "wake"), ("look_l", "look_r"))
 MAXIMUM_EYE_DIFFERENCE = 90
 
 
+def eye_colour(species):
+    """The RGB this species' eyes are painted, out of its own palette."""
+    for name, palette, *_ in gs.BUDDIES:
+        if name == species:
+            return tuple(palette[gs.EYE])[:3]
+    return None
+
+
+def eye_blobs(asset, species):
+    """Where the eyes are on one shipped PNG, found without the anchor table.
+
+    A second opinion for the frames `EYE_PAIRS` cannot reach. Half the roster's
+    poses — every stretch, the otter's float, the penguin's slide and waddle,
+    the quirks — have no eyes-only partner to diff against, and for those the
+    rule below was comparing the face anchor against itself and scoring a
+    guaranteed zero. That is the `check_touch.py` trap exactly, and it hid the
+    original bug: five of the six frames rule 3c was written for are unpaired.
+
+    Deliberately a *different* algorithm from the generator's `_eye_band`, which
+    walks rows looking for two runs. This flood-fills connected components of
+    eye-coloured pixels and takes the two largest in the upper half. A copy of
+    the generator's method would agree with the generator's mistakes; two
+    methods that disagree are the point.
+
+    Returns the centre column between the two blobs, or None when this frame
+    does not show a clean pair — a closed eye, a rolled-up hedgehog, or a nose
+    painted in the same index.
+    """
+    colour = eye_colour(species)
+    image = logical(asset)
+    if image is None or colour is None:
+        return None
+    hit = np.all(image[..., :3] == np.array(colour), axis=-1) & (image[..., 3] > 0)
+    if not hit.any():
+        return None
+
+    seen = np.zeros_like(hit, dtype=bool)
+    blobs = []
+    for sy, sx in zip(*np.nonzero(hit)):
+        if seen[sy, sx]:
+            continue
+        stack, cells = [(sy, sx)], []
+        seen[sy, sx] = True
+        while stack:
+            y, x = stack.pop()
+            cells.append((y, x))
+            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                ny, nx = y + dy, x + dx
+                if (0 <= ny < hit.shape[0] and 0 <= nx < hit.shape[1]
+                        and hit[ny, nx] and not seen[ny, nx]):
+                    seen[ny, nx] = True
+                    stack.append((ny, nx))
+        blobs.append(cells)
+
+    # The two biggest, and they have to be side by side rather than one above
+    # the other — that is what separates a pair of eyes from an eye and a nose.
+    blobs.sort(key=len, reverse=True)
+    if len(blobs) < 2:
+        return None
+    (ay, ax), (by, bx) = (
+        (sum(c[0] for c in b) / len(b), sum(c[1] for c in b) / len(b))
+        for b in blobs[:2]
+    )
+    if abs(ax - bx) < 2 or abs(ay - by) > 2:
+        return None
+    return round((ax + bx) / 2, 1)
+
+
 def eye_box(first, second):
     """Where two eyes-only frames differ: (x0, x1, y0, y1), or None."""
     a, b = logical(first), logical(second)
@@ -253,6 +321,7 @@ def main():
     worst = (99.0, None)
     tightest = (2.0, None)
     drifted = (0.0, None)
+    independent, selfsame = 0, 0
 
     wardrobe = {name: logical(f"wear_{name}") for name in names}
 
@@ -358,10 +427,32 @@ def main():
         # above. The chain is: 3a/3b say the face anchor is really a face, and
         # this says the head is the head that face is on.
         if anchored is not None:
-            centre = (found[0] + found[1]) / 2 if found else anchored[0]
-            source = ("the eyes, found by diffing this frame against the one "
-                      "that differs from it only in the eyes,"
-                      if found else "the face anchor")
+            # A glance is the one frame where the eye pixels genuinely move and
+            # the head deliberately does not — `frames_for` measures both
+            # glances off the resting drawing, on the grounds that a pupil that
+            # glances is not a head that moved. So read the eyes off that same
+            # resting drawing, or this rule reports the owl's 2px glance as a
+            # 2px error. `EYE_PAIRS` already knows these two are a pair; this is
+            # the same fact, used for the head instead of the face.
+            source_asset = asset
+            for glance in ("_look_l", "_look_r"):
+                if asset.endswith(glance):
+                    source_asset = asset[:-len(glance)] + "_awake"
+            blobs = eye_blobs(source_asset, species_of.get(asset, ""))
+            if found:
+                centre = (found[0] + found[1]) / 2
+                source = ("the eyes, found by diffing this frame against the "
+                          "one that differs from it only in the eyes,")
+                independent += 1
+            elif blobs is not None:
+                centre = blobs
+                source = ("the eyes, found as the two largest blobs of eye "
+                          "colour on the shipped sprite,")
+                independent += 1
+            else:
+                centre = anchored[0]
+                source = "the face anchor"
+                selfsame += 1
             drift = abs(anchors[asset]["head"][0] - centre)
             if drift > drifted[0]:
                 drifted = (drift, asset)
@@ -489,7 +580,9 @@ def main():
     if tightest[1]:
         print(f"least overlap: {tightest[0] * 100:.0f}% at {tightest[1]}")
     print(f"crown furthest from its own face: {drifted[0]:.1f}px"
-          f"{f' at {drifted[1]}' if drifted[1] else ''}")
+          f"{f' at {drifted[1]}' if drifted[1] else ''}"
+          f" — {independent} measured independently of the anchor table, "
+          f"{selfsame} against the face anchor itself")
     if worst[1]:
         print(f"faintest: {worst[0]:.2f}:1 at {worst[1]}")
     if failures:

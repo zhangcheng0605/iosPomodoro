@@ -3,8 +3,11 @@
 All audio is procedurally synthesized here, so it is original content with no
 licensing concerns. Swap for professionally recorded loops later if desired.
 """
+import json
 import os
+import re
 import subprocess
+import sys
 import wave
 
 import numpy as np
@@ -17,19 +20,71 @@ SR = 22050
 # one machine that cannot hear it.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(ROOT, "Pawmodoro", "Resources")
-ICONSET = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets", "AppIcon.appiconset")
+ASSETS = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets")
+ICONSET = os.path.join(ASSETS, "AppIcon.appiconset")
+THEME_SWIFT = os.path.join(ROOT, "Pawmodoro", "Model", "AppTheme.swift")
 
-# Theme colors (match Theme.swift)
-CREAM = (252, 245, 227)
-BLUSH = (250, 204, 209)
-BLOSSOM = (237, 140, 168)
-SAGE = (173, 201, 161)
-FOREST = (74, 107, 87)
-BARK = (115, 82, 61)
+# The paw, and the only colour in the icon that is not in a palette: the pads
+# are a warm off-white rather than pure white so they sit on cream without a
+# hard edge.
 OFFWHITE = (255, 251, 246)
 
 os.makedirs(RES, exist_ok=True)
 os.makedirs(ICONSET, exist_ok=True)
+
+
+# ------------------------------------------------------------- theme palettes
+#
+# The icon used to carry its own copy of Sakura's light palette as seven
+# module constants "matching Theme.swift". They did match — every one rounded
+# to the same byte — but that is luck, not a mechanism, and the house rule is
+# blunt about it: if a tool has a list that another file also has, it is
+# already wrong. So the icons ask the Swift instead. `parse_palettes` is the
+# reason there can be five icons rather than one: a variant is a palette name,
+# not a second drawing.
+
+def parse_palettes(path=THEME_SWIFT):
+    """Read `AppTheme.palette` out of the Swift.
+
+    Returns {theme: {"light": {role: (r,g,b)}, "dark": {...}}} with each
+    channel rounded to a byte. Deliberately strict — a palette that has grown
+    a role, or a `case` whose body stops looking like `.dual(...)`, raises
+    here rather than silently exporting the previous icon again.
+    """
+    source = open(path).read()
+    body = source[source.index("var palette: Palette"):]
+    body = body[:body.index("\n    }\n")]
+    palettes = {}
+    for chunk in re.split(r"\n        case \.", body)[1:]:
+        theme = chunk.split(":", 1)[0].strip()
+        light, dark = {}, {}
+        for role, nums in re.findall(
+                r"(\w+):\s*\.dual\(([^)]*)\)", chunk):
+            values = [float(v) for v in nums.split(",")]
+            assert len(values) == 6, f"{theme}.{role}: {values}"
+            light[role] = tuple(int(round(v * 255)) for v in values[:3])
+            dark[role] = tuple(int(round(v * 255)) for v in values[3:])
+        assert len(light) >= 9, f"{theme}: only {len(light)} roles parsed"
+        palettes[theme] = {"light": light, "dark": dark}
+    assert len(palettes) == 8, f"{len(palettes)} themes parsed, expected 8"
+    return palettes
+
+
+PALETTES = parse_palettes()
+
+
+def _luminance(rgb):
+    """WCAG relative luminance, for choosing the paw by measurement."""
+    channels = []
+    for value in rgb:
+        v = value / 255.0
+        channels.append(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+
+def contrast(a, b):
+    lo, hi = sorted((_luminance(a), _luminance(b)))
+    return (hi + 0.05) / (lo + 0.05)
 
 
 # ---------------------------------------------------------------- audio utils
@@ -1247,12 +1302,50 @@ def make_chime(dur=1.8):
 
 
 # -------------------------------------------------------------------- icon
-def make_icon(size=1024, scale=2):
-    """Cozy icon: a tomato-timer circle with a paw print, drawn supersampled."""
+#
+# One drawing, five palettes. The alternates exist because a Home screen is
+# somebody's room and the app already asks which colours they like; what it
+# must never become is sixteen near-identical squares, so the set is chosen by
+# how far apart the hues land at 60 points rather than by how many themes
+# there are. See `ICON_VARIANTS` for who got in and who did not.
+
+def paw_colour(palette):
+    """The pads, chosen by measurement rather than by eye.
+
+    Off-white pads on a mid tomato is the shipped look and every alternate
+    keeps it — unless off-white would read *worse* there than it does on the
+    icon that already ships, which is what happens the moment the tomato goes
+    pale (Midnight after dark: a periwinkle circle under white pads is one
+    flat shape). The bar is Sakura's own measurement, computed here rather
+    than written down, so it cannot drift from the icon it describes. The
+    fallback is `onAccent`, which every palette already guarantees is legible
+    on its own accent fill — the tomato *is* that fill.
+    """
+    bar = contrast(OFFWHITE, PALETTES["sakura"]["light"]["blossom"])
+    if contrast(OFFWHITE, palette["blossom"]) >= bar - 1e-9:
+        return OFFWHITE
+    return palette["onAccent"]
+
+
+def make_icon(size=1024, scale=2, theme="sakura", appearance="light",
+              name="AppIcon", quiet=False):
+    """Cozy icon: a tomato-timer circle with a paw print, drawn supersampled.
+
+    `theme`/`appearance` pick which of `AppTheme.palette`'s colours it is drawn
+    in; `name` is the `.appiconset` it is written to. The default arguments
+    reproduce the shipped icon byte for byte — that is asserted by
+    `check_icons.py`, because "the alternates landed" must never quietly mean
+    "and the one on everybody's Home screen moved too".
+    """
+    palette = PALETTES[theme][appearance]
+    cream, blush = palette["cream"], palette["blush"]
+    blossom, sage, forest = palette["blossom"], palette["sage"], palette["forest"]
+    bark, pads = palette["bark"], paw_colour(palette)
+
     big = size * scale
     # Vertical cream-to-blush gradient background (opaque, as Apple requires).
-    top = np.array(BLUSH, dtype=float)
-    bottom = np.array(CREAM, dtype=float)
+    top = np.array(blush, dtype=float)
+    bottom = np.array(cream, dtype=float)
     ramp = np.linspace(0.0, 1.0, big)[:, None]
     grad = top[None, :] * (1 - ramp) + bottom[None, :] * ramp
     bg = np.repeat(grad[:, None, :], big, axis=1).astype(np.uint8)
@@ -1266,10 +1359,10 @@ def make_icon(size=1024, scale=2):
     d.ellipse(
         [cx - radius, cy - radius + int(big * 0.02),
          cx + radius, cy + radius + int(big * 0.02)],
-        fill=(115, 82, 61, 40),
+        fill=bark + (40,),
     )
     # The tomato body.
-    d.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=BLOSSOM)
+    d.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=blossom)
     # Highlight crescent for a little depth.
     inset = int(radius * 0.14)
     d.ellipse(
@@ -1282,14 +1375,14 @@ def make_icon(size=1024, scale=2):
     d.rounded_rectangle(
         [cx - stem_w, cy - radius - int(big * 0.070),
          cx + stem_w, cy - radius + int(big * 0.010)],
-        radius=stem_w, fill=FOREST,
+        radius=stem_w, fill=forest,
     )
     leaf_w, leaf_h = int(big * 0.105), int(big * 0.052)
     for direction, angle in ((-1, 28), (1, -28)):
         leaf = Image.new("RGBA", (leaf_w * 2, leaf_h * 2), (0, 0, 0, 0))
         ImageDraw.Draw(leaf).ellipse(
             [leaf_w // 2, leaf_h // 2, leaf_w * 2 - leaf_w // 2, leaf_h * 2 - leaf_h // 2],
-            fill=SAGE,
+            fill=sage,
         )
         leaf = leaf.rotate(angle, resample=Image.BICUBIC, expand=False)
         lx = cx + direction * int(big * 0.042) - leaf_w
@@ -1299,20 +1392,119 @@ def make_icon(size=1024, scale=2):
     # Paw print: one pad plus four toes, sized to stay clear of the rim.
     pad_w, pad_h = int(radius * 0.40), int(radius * 0.33)
     pad_cy = cy + int(radius * 0.20)
-    d.ellipse([cx - pad_w, pad_cy - pad_h, cx + pad_w, pad_cy + pad_h], fill=OFFWHITE)
+    d.ellipse([cx - pad_w, pad_cy - pad_h, cx + pad_w, pad_cy + pad_h], fill=pads)
     toes = [(-0.44, -0.30, 0.135), (-0.16, -0.47, 0.150),
             (0.16, -0.47, 0.150), (0.44, -0.30, 0.135)]
     for fx, fy, fr in toes:
         tx = cx + int(radius * fx)
         ty = cy + int(radius * fy)
         rr = int(radius * fr)
-        d.ellipse([tx - rr, ty - int(rr * 1.2), tx + rr, ty + int(rr * 1.2)], fill=OFFWHITE)
+        d.ellipse([tx - rr, ty - int(rr * 1.2), tx + rr, ty + int(rr * 1.2)], fill=pads)
 
     img = img.resize((size, size), Image.LANCZOS)
-    path = os.path.join(ICONSET, "AppIcon.png")
+    if quiet:
+        return img
+    folder = os.path.join(ASSETS, f"{name}.appiconset")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, f"{name}.png")
     img.save(path, "PNG")
-    print(f"  AppIcon.png: {size}x{size}, mode={img.mode}, "
+    with open(os.path.join(folder, "Contents.json"), "w") as f:
+        json.dump({
+            "images": [{"filename": f"{name}.png", "idiom": "universal",
+                        "platform": "ios", "size": "1024x1024"}],
+            "info": {"author": "xcode", "version": 1},
+        }, f, indent=2, separators=(",", " : "))
+        f.write("\n")
+    print(f"  {name}.png: {size}x{size}, mode={img.mode}, "
           f"{os.path.getsize(path) / 1024:.0f} KB")
+    return img
+
+
+# Which icons exist, and why these.
+#
+# Eight themes in two appearances is sixteen icons, and sixteen is the wrong
+# answer. The set was cut by measurement — `check_icons.py --report` renders
+# every candidate at 60 points under the Home-screen mask and compares them in
+# CIELAB — and the measuring corrected the eye twice, which is the reason it
+# was done:
+#
+# - **Sakura and Ink-in-daylight are near twins (ΔE 14.4).** Both are a pale
+#   page with a warm pink-red disc on it. That pairing looked fine as
+#   1024-pixel art and only collapsed at thumb size, which is the entire
+#   failure mode this list exists to avoid. Ink is in the set as its *dark*
+#   appearance instead: charcoal with one red, which is what the theme's own
+#   blurb has always promised.
+# - **Snowdrift is not a paler Sakura (ΔE 32.6),** which is what it was
+#   assumed to be and would have been cut for. Its tomato is blue. It is one
+#   of the four furthest-apart icons here.
+#
+# Cut for being too close to something already in: Cocoa (ΔE 5.0 from Ember),
+# Midnight-after-dark (8.2 from Snowdrift), Lavender (10.4 from Midnight,
+# 17.2 from Snowdrift), Ink-in-daylight (14.4 from Sakura).
+#
+# **Seasons are out entirely**, and not on separation grounds. A seasonal icon
+# wants to turn over by itself, and every icon change on iOS pops a system
+# alert the app cannot suppress — an app that interrupts your Home screen four
+# times a year to announce its own cleverness has taken something and given
+# nothing. Asking instead is no better: you would be picking autumn in July.
+#
+# What is left is five icons at ΔE 22.9 or further apart: pink, green, amber,
+# ice, and one that is actually dark.
+ICON_VARIANTS = [
+    # (iconset name, theme, appearance)
+    ("AppIcon", "sakura", "light"),
+    ("AppIconMatcha", "matcha", "light"),
+    ("AppIconEmber", "ember", "light"),
+    ("AppIconSnowdrift", "snowdrift", "light"),
+    # The one dark icon, and the reason it is an appearance rather than a
+    # ninth palette: a Home screen full of dark widgets with one cream square
+    # in it is the most-wanted alternate icon there is, and no light palette
+    # in this family can supply it. Ink after dark is the best of them —
+    # charcoal and one red — and it is also the furthest from everything else
+    # in the set.
+    ("AppIconInk", "ink", "dark"),
+]
+
+ALTERNATE_ICONS = [name for name, _, _ in ICON_VARIANTS if name != "AppIcon"]
+
+
+def write_icon_preview(name, image, points=44):
+    """A small copy of an icon, as an ordinary imageset the picker can draw.
+
+    The picker needs to show the artwork, and an `.appiconset` cannot be
+    asked for it: the renditions are in `Assets.car` under a name
+    `UIImage(named:)` does not resolve — verified on screen, where every row
+    of the picker drew its fallback rectangle and the five icons were five
+    identical pink squares. (`assetutil` lists the names in the catalogue, so
+    the trap is that the *inspection* looks right.)
+
+    So the preview is a real imageset, generated from the same drawing. It is
+    also the cheaper of the two: an app icon ships one 1024×1024 rendition,
+    and five of those decoded for a 44-point row is about twenty megabytes of
+    bitmap to fill a thumbnail.
+    """
+    folder = os.path.join(ASSETS, f"iconpreview_{name}.imageset")
+    os.makedirs(folder, exist_ok=True)
+    entries = []
+    for scale in (1, 2, 3):
+        side = points * scale
+        filename = f"iconpreview_{name}@{scale}x.png" if scale > 1 \
+            else f"iconpreview_{name}.png"
+        image.resize((side, side), Image.LANCZOS).save(
+            os.path.join(folder, filename), "PNG")
+        entries.append({"filename": filename, "idiom": "universal",
+                        "scale": f"{scale}x"})
+    with open(os.path.join(folder, "Contents.json"), "w") as f:
+        json.dump({"images": entries, "info": {"author": "xcode", "version": 1}},
+                  f, indent=2, separators=(",", " : "))
+        f.write("\n")
+
+
+def make_icons():
+    for name, theme, appearance in ICON_VARIANTS:
+        image = make_icon(theme=theme, appearance=appearance, name=name)
+        write_icon_preview(name, image)
+    print(f"  {len(ICON_VARIANTS)} previews at 44 pt, x3 scales")
 
 
 # --------------------------------------------------------------- things heard
@@ -1618,6 +1810,18 @@ def write_ambience_table():
 
 
 if __name__ == "__main__":
+    # `generate_assets.py icons` skips the audio.
+    #
+    # Not a convenience: the audio half of this file re-renders and re-encodes
+    # about two hundred files and takes minutes, and `afconvert` restamps three
+    # MP4 timestamp atoms every time, so a run made to move one pixel of the
+    # icon leaves eighteen bytes of churn per ambience behind it. The icons are
+    # the only thing here anyone iterates on.
+    if len(sys.argv) > 1 and sys.argv[1] == "icons":
+        print("Icons:")
+        make_icons()
+        sys.exit(0)
+
     print("Ambience loops:")
     write_varied("rain", make_rain)
     write_loop("purr", make_purr())
@@ -1657,5 +1861,5 @@ if __name__ == "__main__":
     write_bell("bell_buoy", make_bell_buoy())
     write_bell("bell_bowl", make_bell_bowl())
     write_bell("bell_clock", make_bell_clock())
-    print("Icon:")
-    make_icon()
+    print("Icons:")
+    make_icons()

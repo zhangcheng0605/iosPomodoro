@@ -612,6 +612,35 @@ def check_constellation_links(failures):
             )
 
 
+def check_entitlement_defaults(failures):
+    """A permission parameter may not carry a default value.
+
+    `refreshMusic(hasPlus: Bool = true)` shipped in 1.0. Every caller inside
+    the engine took the default, so the only entitlement check on radio mode
+    passed by accident, and a lapsed Plus owner kept the auto-DJ forever. The
+    compiler is perfectly happy with it, no screen shows it, and the next
+    caller inherits it silently — which is the whole reason this rule is
+    mechanical rather than a note in a doc.
+
+    The rule: a parameter whose name says it is about entitlement must be
+    *passed*, every time. `= false` is refused as well as `= true`: a default
+    of either kind means somebody is not being asked.
+    """
+    names = ("hasPlus", "isPlus", "entitled", "hasEntitlement", "unlocked",
+             "isUnlocked", "owned", "isOwned", "purchased", "isPurchased")
+    pattern = re.compile(
+        r"\b(" + "|".join(names) + r")\s*:\s*Bool\s*=\s*(true|false)\b")
+    for path in swift_files():
+        for number, line in enumerate(open(path).read().splitlines(), 1):
+            bare = re.sub(r"//.*", "", line)
+            for match in pattern.finditer(bare):
+                failures.append(
+                    f"{rel(path)}:{number}: '{match.group(1)}' defaults to "
+                    f"{match.group(2)} — an entitlement is passed, never "
+                    f"assumed; drop the default and make the caller say it"
+                )
+
+
 def rel(path):
     return os.path.relpath(path, ROOT)
 
@@ -637,6 +666,7 @@ def main():
     check_dream_assets(failures, enums)
     check_switch_exhaustiveness(failures, enums)
     check_constellation_links(failures)
+    check_entitlement_defaults(failures)
 
     files = list(swift_files())
     targets = ", ".join(

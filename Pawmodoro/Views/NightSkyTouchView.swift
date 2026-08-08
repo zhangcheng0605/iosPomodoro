@@ -719,9 +719,9 @@ struct NightSkyTouchView: View {
         for (index, at) in points.enumerated() {
             let r = 2.0 + Double(index % 3) * 0.5
             canvas.fill(
-                Path(ellipseIn: CGRect(x: at.x - r * 2.4, y: at.y - r * 2.4,
-                                       width: r * 4.8, height: r * 4.8)),
-                with: .color(tint.opacity(0.16 * swell))
+                Path(ellipseIn: CGRect(x: at.x - r * 2.8, y: at.y - r * 2.8,
+                                       width: r * 5.6, height: r * 5.6)),
+                with: .color(tint.opacity(0.20 * swell))
             )
             canvas.fill(
                 Path(ellipseIn: CGRect(x: at.x - r, y: at.y - r, width: r * 2, height: r * 2)),
@@ -768,7 +768,7 @@ struct NightSkyTouchView: View {
         )
         canvas.stroke(
             arc(from: max(facing - .pi / 2, head - 0.5), to: head),
-            with: .color(moon.opacity(0.95 * (1 - t * t))), lineWidth: 2.2
+            with: .color(moon.opacity(0.95 * (1 - t * t))), lineWidth: 2.8
         )
     }
 

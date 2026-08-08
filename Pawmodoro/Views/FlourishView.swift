@@ -344,7 +344,7 @@ struct FlourishCanvas: View {
                 + sin(t * 0.6 + speck.phase * 7) * 3
             let drift = (t * (5 + speck.depth * 7) + speck.sx * size.width)
                 .truncatingRemainder(dividingBy: size.width + 60) - 30
-            let length = 5 + speck.depth * 12
+            let length = 8 + speck.depth * 16
 
             var path = Path()
             path.move(to: CGPoint(x: drift, y: y))
@@ -352,9 +352,15 @@ struct FlourishCanvas: View {
                 to: CGPoint(x: drift + length, y: y),
                 control: CGPoint(x: drift + length / 2, y: y - 1.6)
             )
+            // A dash alone reads as a hair on a busy surface — Harbor Isle's
+            // water art is already speckled white. The soft point under it is
+            // what turns it into a highlight sitting *on* something.
+            softPoint(&canvas, at: CGPoint(x: drift + length / 2, y: y),
+                      radius: 5 + speck.depth * 5, colour: light,
+                      alpha: wink * 0.30 * strength)
             litStroke(&canvas, path, colour: light,
-                      alpha: wink * 0.34 * strength,
-                      width: 1.3 + speck.depth * 1.4)
+                      alpha: wink * 0.46 * strength,
+                      width: 2.0 + speck.depth * 2.2)
         }
     }
 

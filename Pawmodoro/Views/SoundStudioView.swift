@@ -55,14 +55,14 @@ struct SoundStudioView: View {
     @ViewBuilder
     private var mixerSection: some View {
         @Bindable var engine = engine
-        let layered = store.hasPlus || LaunchOptions.unlockMusic
+        let hasMixer = store.hasPlus || LaunchOptions.unlockMusic
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Mixer")
                     .font(.headline)
                     .foregroundStyle(Theme.bark)
-                if !layered {
+                if !hasMixer {
                     Image(systemName: "lock.fill")
                         .font(.caption2)
                         .foregroundStyle(Theme.onAccent)
@@ -72,20 +72,24 @@ struct SoundStudioView: View {
                 Spacer()
             }
 
-            Text(layered
-                 ? "Layer a sound and a track, and balance them."
-                 : "Plus plays ambience and music together, with the balance in your hands.")
+            // A sound and a track play together either way. What is behind
+            // the padlock is the balance between them and the radio, and the
+            // locked line has to say only that — promising a free user
+            // something they can already hear is the worst kind of paywall.
+            Text(hasMixer
+                 ? "Balance the sound against the track, or let radio pick."
+                 : "A sound and a track already play together. Plus puts the balance in your hands, and adds radio.")
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.65))
 
-            slider("Ambience", value: $engine.settings.ambienceVolume, enabled: layered)
-            slider("Music", value: $engine.settings.musicVolume, enabled: layered)
+            slider("Ambience", value: $engine.settings.ambienceVolume, enabled: hasMixer)
+            slider("Music", value: $engine.settings.musicVolume, enabled: hasMixer)
 
             Divider().opacity(0.3)
 
             Toggle(isOn: Binding(
-                get: { engine.settings.radioMode && layered },
-                set: { engine.settings.radioMode = layered ? $0 : false }
+                get: { engine.settings.radioMode && hasMixer },
+                set: { engine.settings.radioMode = hasMixer ? $0 : false }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Radio").font(.subheadline.weight(.semibold))
@@ -95,13 +99,13 @@ struct SoundStudioView: View {
                 }
             }
             .tint(Theme.blossom)
-            .disabled(!layered)
-            .opacity(layered ? 1 : 0.4)
+            .disabled(!hasMixer)
+            .opacity(hasMixer ? 1 : 0.4)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 18).fill(Theme.surface.opacity(0.7)))
         .contentShape(Rectangle())
-        .onTapGesture { if !layered { showPaywall = true } }
+        .onTapGesture { if !hasMixer { showPaywall = true } }
     }
 
     private func slider(_ label: String, value: Binding<Double>, enabled: Bool) -> some View {

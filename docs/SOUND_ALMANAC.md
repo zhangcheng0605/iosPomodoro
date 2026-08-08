@@ -194,16 +194,19 @@ Long-press the ambience row (or its new ear icon) → the Studio sheet:
   Locked mixtapes show the cassette greyed with a padlock (Plus) or "Reach
   Harbor Isle to unlock" (arrival) — locked things shown, never hidden.
 - **Now playing** chip with the track name; tap advances within the mixtape.
-- **The mixer** (Plus): ambience × music together with two volume sliders.
-  Free plays one channel at a time — still a real upgrade over today.
+- **The mixer** (Plus): the two volume sliders that balance ambience against
+  music. Ambience × music play together for *everybody* — the "one channel at
+  a time" line below was never enforced on any shipped build and has been
+  retired rather than switched on; the reasoning is the **As built** note
+  under `CONTENT_PLAN` G2.
 - **Radio** (Plus): auto-DJ toggle. Picks from *unlocked* tracks, filtered by
   place affinity and day-part energy (dawn/day → energy 2–3, dusk/night →
   1–2), crossfading at each loop's end. "The app scores your day."
 - Garnish: the buddy's idle ear-twitch syncs to the playing track's bpm
   (catalog carries bpm; the animator already ticks).
 
-Free/Plus recap: free = 25 earnable tracks, one channel, manual picks.
-Plus = 50 tracks, the mixer, radio. Update `PaywallView` copy and
+Free/Plus recap: free = 25 earnable tracks, both channels at the app's own
+balance, manual picks. Plus = 50 tracks, the balance sliders, radio. Update `PaywallView` copy and
 [MONETIZATION.md](MONETIZATION.md) counts in the same commit.
 
 ## 5. Build order for Opus

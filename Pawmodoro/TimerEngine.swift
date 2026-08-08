@@ -546,9 +546,8 @@ final class TimerEngine {
             return track.flatMap { setlist.hasStamped($0.id) ? nil : $0 }
         }
         guard Calendar.current.isDateInWeekend(Date()) else { return nil }
-        let hasPlus = storeHasPlus || LaunchOptions.unlockMusic
         let unlocked = MusicCatalog.tracks.filter {
-            isUnlocked($0.gate, hasPlus: hasPlus)
+            isUnlocked($0.gate, hasPlus: musicEntitled)
         }
         let week = Calendar.current.component(.weekOfYear, from: Date())
             &+ Calendar.current.component(.yearForWeekOfYear, from: Date()) &* 60
@@ -1317,6 +1316,24 @@ final class TimerEngine {
     /// Falls back to the free content if Pawmodoro Plus isn't (or is no longer)
     /// owned — a refund or a family-sharing change can revoke it after the fact,
     /// and the app should never be left playing a sound the user can't pick again.
+    ///
+    /// ## What this deliberately does *not* touch
+    ///
+    /// **Layering.** Ambience and music run together for everybody. The old
+    /// plan (`CONTENT_PLAN` G2) said one channel at a time for free, and the
+    /// app has never once enforced it — every user since launch has been able
+    /// to put rain under a track. Turning that off now would take a thing
+    /// people already sit with out of an app whose first law is that nothing
+    /// decays, to sell a second buffer that costs nothing to hand out. The
+    /// plan was the bug; both docs now say so. Plus still sells the half of
+    /// the catalogue behind `.plus`, the balance sliders and the radio.
+    ///
+    /// **`settings.radioMode`.** A lapsed owner keeps the preference and
+    /// stops hearing the radio, because the gate is at the point of use
+    /// (`refreshMusic`), not in the stored setting. Clearing it would be a
+    /// setting that silently un-set itself, and buying Plus back would not
+    /// restore it — the same argument the place and the track make just
+    /// above, one step further.
     func applyEntitlement(hasPlus: Bool) {
         // `storeHasPlus` is the engine's one record of this and predates the
         // Hearth era — the dream pool and `ownsDen` read it rather than a
@@ -1396,11 +1413,29 @@ final class TimerEngine {
         settings.music.flatMap { MusicCatalog.track(id: $0) }
     }
 
+    /// The music entitlement, resolved in one place.
+    ///
+    /// This expression used to be written out three times — in `refreshMusic`,
+    /// in `radioPick` and in `saturdayRequest` — and the copy in `refreshMusic`
+    /// was a *defaulted parameter*, `hasPlus: Bool = true`. Every internal
+    /// caller took the default, so the only entitlement check on the radio
+    /// passed by accident: `refreshAmbience()` calls `refreshMusic()`, and a
+    /// lapsed Plus owner with `radioMode` still stored true got the auto-DJ
+    /// back on the next `settingsDidChange()`, for good. A default that makes
+    /// a permission check succeed is not a convenience; it is the check being
+    /// off by default and nothing on screen saying so.
+    var musicEntitled: Bool { storeHasPlus || LaunchOptions.unlockMusic }
+
     /// Music follows the timer the same way ambience does: it plays while a
     /// phase is running and rests otherwise, so a forgotten app is silent.
-    func refreshMusic(hasPlus: Bool = true) {
+    ///
+    /// Ambience and music are two channels and both may run at once, for
+    /// everybody — see the note on `applyEntitlement(hasPlus:)`. What Plus
+    /// buys on this path is the *radio*: the balance sliders live in the
+    /// Studio, and half the catalogue is gated in `isUnlocked(_:hasPlus:)`.
+    func refreshMusic() {
         MusicPlayer.shared.volume = Float(settings.musicVolume)
-        let radio = settings.radioMode && (hasPlus || LaunchOptions.unlockMusic)
+        let radio = settings.radioMode && musicEntitled
         MusicPlayer.shared.nextForRadio = radio ? { [weak self] in self?.radioPick() } : nil
 
         guard runState == .running else {
@@ -1416,10 +1451,23 @@ final class TimerEngine {
         }
     }
 
+    /// The same refresh, for the one caller that has just been *told* the
+    /// entitlement: `ContentView`'s `onChange(of: store.hasPlus)`.
+    ///
+    /// It writes the answer down first, then refreshes — so there is exactly
+    /// one thing to read afterwards (`storeHasPlus`) and no argument that can
+    /// disagree with it. Deliberately **no default value**: a caller that does
+    /// not know the entitlement must not be able to assert one by saying
+    /// nothing.
+    func refreshMusic(hasPlus: Bool) {
+        storeHasPlus = hasPlus
+        refreshMusic()
+    }
+
     /// The auto-DJ. Prefers tracks belonging to where you are, and matches
     /// energy to the hour — brighter by day, quieter after dark.
     private func radioPick() -> MusicTrack? {
-        let hasPlus = LaunchOptions.unlockMusic || storeHasPlus
+        let hasPlus = musicEntitled
         let part = LaunchOptions.forcedDayPart ?? DayPart.current()
         let wanted: ClosedRange<Int> = (part == .dawn || part == .day) ? 2...3 : 1...2
 

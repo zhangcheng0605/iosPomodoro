@@ -34,6 +34,13 @@ struct ContentView: View {
     /// own sheet: the shelf also lives in Stats, but fourteen cards down a
     /// scroll is not somewhere a one-shot can point.
     @State private var showPhotos = false
+    /// The signal that the sky should answer a touch, and how far it is
+    /// currently leaning. See `SkyStir`.
+    @State private var skyStir = SkyStir.shared
+    /// 0 when the sky is still, 1 at the furthest point of a stir. Driven by
+    /// two `withAnimation` calls and nothing else — there is no timeline and
+    /// no timer behind this, so a still sky costs exactly one stored `Double`.
+    @State private var skyLean: Double = 0
 
     var body: some View {
         NavigationStack {
@@ -272,6 +279,30 @@ struct ContentView: View {
             }
             .onChange(of: strayWantsIn) { _, wants in
                 if wants { showStrayNaming = true }
+            }
+            // The sky's answer to a touch. Two animations rather than one
+            // spring: out fast, back slow, and never crossing back through
+            // centre — a spring would overshoot, and an overshoot on a focus
+            // timer is a bounce. Nothing is scheduled and nothing is mounted;
+            // when the second animation finishes, the sky is a static layer
+            // again with no clock behind it.
+            //
+            // **The return leg goes in the completion handler, and it has to.**
+            // Written as two back-to-back `withAnimation` calls — the second
+            // carrying `.delay(out)` — the sky does not move at all: both
+            // mutations land in the same runloop tick, SwiftUI renders once
+            // with the final value, and `skyLean` goes 0 → 0. Nothing to
+            // animate, no error, no warning, and a feature that silently does
+            // nothing. Chaining on completion is what makes the outward leg a
+            // state change SwiftUI can actually see.
+            .onChange(of: skyStir.count) { _, _ in
+                withAnimation(.easeOut(duration: SkyStir.out)) {
+                    skyLean = 1
+                } completion: {
+                    withAnimation(.easeInOut(duration: SkyStir.back)) {
+                        skyLean = 0
+                    }
+                }
             }
             // The Action Button, Siri and Shortcuts all arrive here. Acted on
             // in the view rather than in the intent because on a cold launch
@@ -613,19 +644,51 @@ struct ContentView: View {
                         .animation(.easeInOut(duration: 1.2), value: part)
                 }
                 if part.showsStars {
-                    StarfieldView(
-                        tint: Theme.bark,
-                        moon: Theme.sunshine,
-                        nightSessions: engine.log.nightSessions
-                    )
-                    // Three windows a year, the sky sheds. Real dates only.
-                    if ShowerCalendar.isShowerNight(on: context.date) {
-                        MeteorShowerView()
+                    // Leaned as one piece, and pointedly *not* including the
+                    // wash above: the wash fills the screen, so sliding it
+                    // eight points would show the phase gradient in the gap
+                    // along one edge. These are sparse layers over
+                    // transparency and have no edge to expose.
+                    Group {
+                        StarfieldView(
+                            tint: Theme.bark,
+                            moon: Theme.sunshine,
+                            nightSessions: engine.log.nightSessions
+                        )
+                        // Three windows a year, the sky sheds. Real dates only.
+                        if ShowerCalendar.isShowerNight(on: context.date) {
+                            MeteorShowerView()
+                        }
                     }
+                    .skyStirred(skyLean)
+                } else {
+                    // The daytime sun, which no scene paints — see `SunView`
+                    // for why the clouds are not invited. Mounted un-leaned:
+                    // it leans its own disc internally and keeps its
+                    // full-screen glow still, for the same edge reason.
+                    SunView(part: part, tint: Theme.sunshine, stir: skyLean)
                 }
             }
         }
         .allowsHitTesting(false)
+    }
+
+    /// Send a breath of wind through the sky.
+    ///
+    /// Called by the two rows the sky answers to — the mode chips and the
+    /// ambience icons. Refused mid-focus; `SkyStir.allowed` carries the
+    /// argument for that.
+    ///
+    /// Under Reduce Motion this returns having done nothing, which is the
+    /// honest reading of "settle instantly": the sky is already settled. No
+    /// information lives in the movement — the chip's own selected state says
+    /// everything the tap meant — so nothing is lost by holding still.
+    private func stirSky() {
+        guard !reduceMotion else { return }
+        guard SkyStir.allowed(
+            isRunning: engine.isRunning, isBreak: engine.phase.isBreak
+        ) else { return }
+        skyStir.stir()
     }
 
     /// What a finger does to the night sky.
@@ -651,6 +714,11 @@ struct ContentView: View {
                     tint: Theme.bark,
                     moon: Theme.sunshine
                 )
+                // The same lean, the same value, so the hit regions travel
+                // with the stars they belong to. Leaning only the drawing
+                // would make a star tapped mid-stir miss by eight points for
+                // two and a half seconds — see `skyStirred`.
+                .skyStirred(skyLean)
             }
         }
     }
@@ -692,6 +760,7 @@ struct ContentView: View {
                         expedition.apply(to: &engine.settings)
                     }
                     HapticsDirector.shared.detent()
+                    stirSky()
                 } label: {
                     VStack(spacing: 1) {
                         Text(expedition.name)
@@ -885,7 +954,10 @@ struct ContentView: View {
         return Button {
             if unlocked {
                 engine.settings.ambience = option
+                stirSky()
             } else {
+                // No stir behind a padlock. The sky answering a tap that
+                // opened a paywall would read as the sky selling something.
                 showPaywall = true
             }
         } label: {

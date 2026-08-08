@@ -113,6 +113,12 @@ struct SettingsView: View {
                     ThemePicker(onLockedTap: lockedTap)
                 }
 
+                // Below the theme rather than inside it, and free rather than
+                // Plus. The icon is on the Home screen, which is the user's
+                // room and not the app's: a padlock there would put the store
+                // between somebody and their own phone, to sell 60 KB of PNG.
+                AppIconSection()
+
                 Section("The cabinet of clocks") {
                     ClockFacePicker()
                 }

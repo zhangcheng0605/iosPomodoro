@@ -83,8 +83,13 @@ struct PaywallView: View {
                 // sixty-five and three of its mixtapes are not for sale at any
                 // price. Claiming the whole shelf here would be the paywall
                 // taking credit for the things it cannot give you.
+                //
+                // And no longer "layers a sound under a track": layering is
+                // free and always has been in practice. The paywall sells the
+                // *balance* between the two channels, not their coexistence —
+                // see `TimerEngine.applyEntitlement(hasPlus:)`.
                 title: "The Sound Almanac",
-                detail: "Fifty lo-fi tracks the moment you tap, the mixer that layers a sound under a track, and radio — which picks for you, matched to where you are and the hour."
+                detail: "Fifty lo-fi tracks the moment you tap, the mixer that sets the balance between a sound and a track, and radio — which picks for you, matched to where you are and the hour."
             )
             feature(
                 icon: "paintpalette.fill",

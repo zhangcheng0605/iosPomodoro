@@ -189,6 +189,31 @@ timer that pets back.
 - Settings persist in `PomodoroSettings` (`music`, `mixVolumes`), lenient as
   ever; `applyEntitlement` drops the second channel if Plus lapses.
 
+> ### As built — the one-channel limit was never real, and is now retired
+>
+> The two bullets above describe a line the app has **never enforced**, on any
+> build that ever reached a user. `refreshMusic` gated only radio, and it did
+> that through a `hasPlus: Bool = true` default that every internal caller
+> took — so a free user who picked a free ambience and a free track heard both,
+> from version 1.0 onward, and a *lapsed* Plus owner kept the radio too.
+>
+> Found in the Aug 2026 audit, and deliberately **not** fixed by switching the
+> limit on. Layering is not a scarce good: it is a second buffer that costs
+> nothing to hand out, unlike the twenty-five Plus tracks that had to be
+> composed. Enforcing it now would silence one of two things people have sat
+> with since launch, in an app whose first law is that nothing decays and
+> whose economy rules exist precisely to stop it taking from somebody who is
+> not in the room. Grandfathering was considered and rejected: the app cannot
+> know who layered before, a reinstall would lose it, and it leaves two free
+> tiers nobody can explain.
+>
+> **The line moved instead.** Free: both channels, at the app's own balance.
+> Plus: the twenty-five gated tracks, the two volume sliders, and radio.
+> `PaywallView` and the Studio's locked line were reworded to sell the
+> *balance* rather than the coexistence — see
+> `TimerEngine.applyEntitlement(hasPlus:)`, which now writes down what it
+> deliberately does not take back.
+
 **Done when:** loops are seam-free (inspect waveform ends), both channels
 survive backgrounding/foregrounding, the mix respects the ringer switch, and
 the paywall copy is updated (see M).

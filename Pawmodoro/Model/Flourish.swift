@@ -122,7 +122,7 @@ extension Ambience {
         case .fireplace: 0.9
         case .emberslate: 0.7
         case .ocean: 0.9
-        case .creek: 0.6
+        case .creek: 0.8
         case .forest: 0.6
         case .wind: 0.8
         case .off, .purr, .cafe, .library, .temple,

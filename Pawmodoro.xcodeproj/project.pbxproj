@@ -452,8 +452,10 @@
 		DD0000000000000000000004 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconEmber AppIconInk AppIconMatcha AppIconSnowdrift";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Pawmodoro/iOS/Pawmodoro.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Pawmodoro/iOS/Pawmodoro.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Pawmodoro/Mac/Pawmodoro.entitlements;
@@ -487,8 +489,10 @@
 		DD0000000000000000000005 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIconEmber AppIconInk AppIconMatcha AppIconSnowdrift";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Pawmodoro/iOS/Pawmodoro.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Pawmodoro/iOS/Pawmodoro.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Pawmodoro/Mac/Pawmodoro.entitlements;

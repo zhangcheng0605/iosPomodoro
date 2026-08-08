@@ -741,6 +741,14 @@ enum LaunchOptions {
     /// `hop`, `wiggle`, `spin`, `tumble`, `signature`, `routine`.
     ///
     /// Exact-match, so `-PawmodoroAntics` below never lands here.
+    ///
+    /// **Pair it with `-PawmodoroUnlockPlus` for nine of the twelve buddies.**
+    /// `-PawmodoroBuddy bunny` on its own hands you the *cat*: `forcedBuddy` is
+    /// applied in `TimerEngine.init`, and `applyEntitlement(hasPlus: false)`
+    /// then walks the settings putting every Plus-locked choice back to its
+    /// free default. Nothing warns you, the sprite is a perfectly plausible
+    /// animal, and a whole verification pass can be spent watching the wrong
+    /// one — which is exactly what happened to the first pass over this file.
     static let forcedAntic: String? = {
         guard arguments.contains("-PawmodoroAntic") else { return nil }
         return value(after: "-PawmodoroAntic")

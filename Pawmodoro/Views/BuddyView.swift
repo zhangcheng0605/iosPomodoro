@@ -579,10 +579,11 @@ struct BuddyView: View {
     @ViewBuilder
     private var sprite: some View {
         if reduceMotion {
-            // No timeline at all: one still frame of the resting pose.
+            // No timeline at all: one still frame — the move's last pose while
+            // one is being held, the resting pose otherwise.
             BuddySprite(
                 buddy: buddy,
-                assetName: BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0),
+                assetName: stillAsset,
                 size: spriteSize,
                 sleeping: isNapping,
                 outfit: outfit
@@ -602,6 +603,25 @@ struct BuddyView: View {
             // idle rate and drop half its frames.
             .id(tickInterval)
         }
+    }
+
+    /// The one frame Reduce Motion draws.
+    ///
+    /// This exists because the obvious version of the branch above didn't have
+    /// it, and the omission was invisible from the code: `runMove` sets
+    /// `anticFrame` to the move's last pose and returns, the caption says what
+    /// happened, and the sprite — asked only for `restingPose` — never changed
+    /// by a single pixel. Measured on screen, seven moves in a row moved the
+    /// buddy's pixels 0.00. Reduce Motion means *less motion*, not less
+    /// information, so the end of the move has to actually be drawn.
+    ///
+    /// `currentAsset` reads this too. The touch regions are measured per frame,
+    /// and a held signature is exactly when the frame is not the resting one.
+    private var stillAsset: String {
+        if let anticFrame, let asset = anticFrame.asset(for: buddy) {
+            return asset
+        }
+        return BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0)
     }
 
     /// The frame to draw, with two things layered over the animator: a
@@ -1445,9 +1465,7 @@ struct BuddyView: View {
     /// measured against. Anchors are per *frame*, so asking the resting pose
     /// while a bounce is playing would put the chin in the wrong place.
     private var currentAsset: String {
-        reduceMotion
-            ? BuddyFrames.name(for: buddy, pose: restingPose, elapsed: 0)
-            : frameName(at: Date())
+        reduceMotion ? stillAsset : frameName(at: Date())
     }
 
     /// The accessibility path: a named spot rather than a location.

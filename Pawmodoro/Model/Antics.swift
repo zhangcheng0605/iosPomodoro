@@ -11,8 +11,8 @@ import Foundation
 ///    runs exactly one loop and knows nothing about hopping. Adding a move is a
 ///    table entry here; it is never a branch over there.
 /// 2. **A buddy's signature is a `shape` plus a frame, not a special case.**
-///    `Buddy.anticShape` picks one of nine shapes and `Buddy.anticFrame` says
-///    what it holds, so twelve animals share eight bodies of motion and nobody
+///    `Buddy.anticShape` picks one of ten shapes and `Buddy.anticFrame` says
+///    what it holds, so twelve animals share ten bodies of motion and nobody
 ///    writes `if buddy == .penguin` anywhere.
 /// 3. **Nothing here persists.** The escalation lives in `AnticBag`, in memory,
 ///    reset after eight quiet seconds. A stored "acrobatics level" would look
@@ -25,7 +25,7 @@ enum Antic: String, CaseIterable, Identifiable, Equatable {
     case bounce
     /// Two hops on the spot, airborne frame held at the top.
     case hop
-    /// A pleased shimmy — the pounce's haunch wiggle, borrowed.
+    /// A pleased shimmy on the delighted face, decaying to a stop.
     case wiggle
     /// A mirror flip through zero width, twice. Reads as a paper-doll turn
     /// and never breaks the pixel grid the way a held rotation would.
@@ -109,12 +109,34 @@ enum Antic: String, CaseIterable, Identifiable, Equatable {
         AnticBeat(curve: .spring, hold: 0.16),
     ]
 
+    /// Six shimmies, decaying, on the delighted face.
+    ///
+    /// The first draft borrowed the pounce's haunch wiggle literally — `dx`
+    /// alternating by three points — and that was a mistake, because the
+    /// pounce's wiggle is *anticipation*: it plays under a crouched buddy who
+    /// is visibly about to leap, and the leap is what you are watching. Alone,
+    /// answering a tap, three points is nothing. Measured on screen it moved
+    /// the sprite 2.3 points either way — under a millimetre on the glass — so
+    /// a quarter of every escalated tap landed on a move that looked exactly
+    /// like a buddy standing still.
+    ///
+    /// Two things fix it. The amplitude goes to nine points, which is about a
+    /// tenth of the sprite and reads at arm's length; and the face changes,
+    /// because a frame swap carries a move even when the travel is small. That
+    /// is the whole reason `heldWiggle` works with the same three-point
+    /// shimmy — the drawn frame is doing the talking. The decay is what keeps
+    /// it a shimmy rather than a rattle: it arrives, it settles.
     private static let wiggleBeats: [AnticBeat] = (0..<6).map { index in
-        AnticBeat(
-            dx: index.isMultiple(of: 2) ? -3 : 3, dy: 2,
-            curve: .linear, hold: 0.12
+        let decay = 1 - Double(index) / 8
+        return AnticBeat(
+            dx: CGFloat((index.isMultiple(of: 2) ? -9 : 9) * decay),
+            dy: 2,
+            frame: .happy,
+            curve: .linear,
+            hold: 0.11
         )
-    } + [AnticBeat(curve: .easeOut, hold: 0.08)]
+    } + [AnticBeat(frame: .happy, curve: .easeOut, hold: 0.10),
+         AnticBeat(curve: .spring, hold: 0.14)]
 
     private static let spinBeats: [AnticBeat] = [
         AnticBeat(scaleX: -1, curve: .linear, hold: 0.22),
@@ -123,14 +145,24 @@ enum Antic: String, CaseIterable, Identifiable, Equatable {
         AnticBeat(scaleX: 1, curve: .linear, hold: 0.24),
     ]
 
-    /// Eight steps of forty-five degrees at 8fps, with a small travelling arc,
-    /// snapping to exactly zero at the end. The snap matters: a pixel-art
-    /// buddy left at any angle at all looks like a rendering fault, so the
-    /// last beat resets with no animation attached.
+    /// Eight steps of forty-five degrees at 8fps, over a travelling arc that
+    /// comes home, snapping to exactly zero at the end. The snap matters: a
+    /// pixel-art buddy left at any angle at all looks like a rendering fault,
+    /// so the last beat resets with no animation attached.
+    ///
+    /// Both offsets are sine arcs rather than the ramp `dx` used to be, and
+    /// that is the snap's fault rather than a stylistic preference. `.snap`
+    /// jumps every channel at once, and a ramp left the eighth step ten points
+    /// to the right of home — measured as a seven-point pop on the landing
+    /// frame, arriving in the same instant the drawn frame changed back, which
+    /// is precisely when the eye is already looking. Three hundred and sixty
+    /// degrees is the *only* thing that can be snapped for free, because it is
+    /// the same picture as zero. So the arc returns to where it started and
+    /// the last beat now has nothing left to move.
     private static let tumbleBeats: [AnticBeat] = (1...8).map { step in
         let t = Double(step) / 8.0
         return AnticBeat(
-            dx: CGFloat(10 * t),
+            dx: CGFloat(12 * sin(Double.pi * t)),
             dy: CGFloat(-18 * sin(Double.pi * t)),
             spin: Double(step) * 45,
             frame: .air,
@@ -216,7 +248,7 @@ enum AnticFrame: Equatable {
     }
 }
 
-/// The nine bodies of motion a signature can have. Twelve buddies share them:
+/// The ten bodies of motion a signature can have. Twelve buddies share them:
 /// what makes a signature the animal's own is the drawn frame it holds and the
 /// sentence underneath, not a bespoke tumble nobody could name the difference
 /// between.

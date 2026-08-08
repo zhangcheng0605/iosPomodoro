@@ -234,7 +234,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
-    /// Which body of motion the signature uses. Twelve animals, nine shapes:
+    /// Which body of motion the signature uses. Twelve animals, ten shapes:
     /// what makes a signature theirs is the frame and the sentence, not a
     /// bespoke tumble nobody could tell from another one.
     var anticShape: AnticShape {
@@ -245,7 +245,13 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .penguin: .slide               // out on the belly and back
         case .redpanda, .otter, .hamster: .heldWiggle
         case .hedgehog: .ballHop            // curl, bounce, uncurl
-        case .bunny, .fox: .airborne
+        case .bunny: .airborne              // a binky is a twist, in the air
+        // Not `.airborne`, which is what this was and what it looked like: a
+        // fox holding a pounce sprite thirty points straight up and coming
+        // back down on the same spot, which reads as a hop in a costume. A
+        // pounce goes *forward* and lands nose-down on the thing. The shape
+        // was already written and simply had nobody using it.
+        case .fox: .pounceForward
         case .capybara: .still              // declines
         case .owl: .flap                    // an owl does not somersault
         }

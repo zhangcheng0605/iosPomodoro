@@ -4,6 +4,7 @@ struct ContentView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(StoreManager.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var bridge = IntentBridge.shared
     @AppStorage(StorageKeys.hasOnboarded) private var hasOnboarded = false
     @State private var showSettings = false
@@ -41,6 +42,9 @@ struct ContentView: View {
     /// two `withAnimation` calls and nothing else — there is no timeline and
     /// no timer behind this, so a still sky costs exactly one stored `Double`.
     @State private var skyLean: Double = 0
+    /// How tall the column above the ambience row wants to be. See
+    /// `columnMeasure`; it decides whether that region scrolls.
+    @State private var columnHeight: CGFloat = 0
 
     var body: some View {
         NavigationStack {
@@ -101,41 +105,7 @@ struct ContentView: View {
                     )
                 }
 
-                VStack(spacing: 0) {
-                    phaseChip
-                        .padding(.bottom, 20)
-
-                    TimerRingView()
-
-                    // Only while idle: mid-session is the wrong moment to be
-                    // offered a different session.
-                    if engine.runState == .idle {
-                        expeditionRow
-                            .padding(.top, 12)
-                            .transition(.opacity)
-                    }
-
-                    BuddyView()
-                        .padding(.top, 18)
-
-                    // Only when nothing is counting down. A treat offered
-                    // mid-focus would be a reason to touch the screen during
-                    // the one stretch of time this app exists to leave alone.
-                    if engine.runState != .running || engine.phase.isBreak {
-                        TreatTray()
-                            .padding(.top, 8)
-                            .transition(.opacity)
-                    }
-
-                    Spacer(minLength: 12)
-
-                    ambienceRow
-                        .padding(.bottom, 22)
-
-                    controls
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
+                mainColumn
 
                 // Above the countdown, and it has to be. See `skyTouch`.
                 skyTouch
@@ -752,6 +722,271 @@ struct ContentView: View {
         .accessibilitySortPriority(1)
     }
 
+    // MARK: The column
+
+    /// Everything the app puts *on top of* the place you're in, in one column.
+    ///
+    /// **The default screen is the old code, unchanged, and every larger text
+    /// size gets a layout that fits.** That split is deliberate, and it is
+    /// there because of what the measurement found: the ordinary layout is not
+    /// a column that fits, it is a column that *overflows and is centred*. On a
+    /// 402×874pt phone the container this sits in runs 116…840 — the floating
+    /// toolbar takes 57 points off the top on its own, the home indicator 34
+    /// off the bottom — while the column wants 815. Being 83 points too tall,
+    /// it hangs 41 above its safe area (under the toolbar glass, where the
+    /// phase chip lives) and 41 below (over the home indicator, where the play
+    /// button's rim sits). That overhang is the look. Reproducing it in any
+    /// layout that *fits* would take the status bar's height as a constant,
+    /// and there is no portable way to ask for it here — the container only
+    /// reports its inset with the toolbar already added in.
+    ///
+    /// So the honest thing is to keep the original where it works. Below and at
+    /// `.large` this is the same view, in the same place in the same `ZStack`,
+    /// and the screen is identical to the pixel because it *is* the same screen.
+    ///
+    /// Above `.large` it stops working, and it does so at the ordinary sizes,
+    /// not only the accessibility ones: at `.xxxLarge` — the largest plain Text
+    /// Size, no accessibility setting involved — the column is far enough over
+    /// that the bottom third of the play button is off the glass, and at the
+    /// accessibility sizes the whole transport row is, with no gesture that
+    /// brings it back. The start button of a Pomodoro timer was unhittable.
+    @ViewBuilder
+    private var mainColumn: some View {
+        if dynamicTypeSize <= .large {
+            ordinaryColumn
+        } else {
+            adaptiveColumn
+        }
+    }
+
+    /// The screen as it has always been: one stack, one `Spacer`, no scrolling
+    /// and no measuring. Do not "tidy" this into the adaptive one — its whole
+    /// job is to be the layout that shipped.
+    private var ordinaryColumn: some View {
+        VStack(spacing: 0) {
+            timerRows(width: nil)
+
+            Spacer(minLength: 12)
+
+            ambienceRow
+                .padding(.bottom, 22)
+
+            controls
+        }
+        .padding(.horizontal)
+        .padding(.top, topInset)
+    }
+
+    /// The same rows, laid out so that they fit.
+    ///
+    /// **The transport is pinned and the timer face gives way.** Wrapping the
+    /// whole screen in a `ScrollView` is the obvious move and the wrong one: a
+    /// timer you have to go looking for before you can start it is a worse
+    /// timer, and the two rows a person reaches for — which ambience is
+    /// playing, and start — are the two that must never move. So they are
+    /// pinned to the bottom, and the region above them takes whatever is left.
+    ///
+    /// The cut is made where the `Spacer` already was, and that is the trick. A
+    /// `GeometryReader` is greedy along the vertical exactly as the `Spacer`
+    /// was, so the top group sits at its natural height against the top of that
+    /// region with the leftover falling below it — which is what a `Spacer`
+    /// does — and the two pinned rows land where they always did. Measured
+    /// against the shipped build, the ambience row and the transport are
+    /// pixel-identical at every text size.
+    ///
+    /// There is **no scroll view at all** unless the top group genuinely does
+    /// not fit. That is not belt-and-braces: a `ScrollView` on this screen costs
+    /// 34 points of top content inset — it insets for the floating toolbar it
+    /// is allowed to scroll under — which pushes the column down and clips the
+    /// treat tray, and its pan gesture would be competing with the ring, which
+    /// is a drag target of its own. Neither happens when the plain column is
+    /// what is on screen.
+    ///
+    /// Two things that looked like the tool for this and were not, both ruled
+    /// out on screen rather than on paper. `ViewThatFits` chose the
+    /// non-scrolling candidate at *every* text size, including ones where a
+    /// third of the column was off the screen — inside a stack it is offered as
+    /// much height as it likes, so everything "fits". And `.frame(minHeight:)`
+    /// on scrolling content does not stretch it: a scroll view proposes an
+    /// unspecified height, the flexible frame passes that straight through, and
+    /// the child comes back at its ideal size with its `Spacer` collapsed — the
+    /// frame then grows and *centres* it, which moved the whole column down by
+    /// 34 points.
+    private var adaptiveColumn: some View {
+        VStack(spacing: 0) {
+            GeometryReader { proxy in
+                let column = topGroup(width: proxy.size.width)
+                    // A `GeometryReader` places its child at the child's own
+                    // width, leading-aligned. Without this the column would
+                    // shrink to its widest row and slide left.
+                    .frame(width: proxy.size.width)
+                    .background(columnMeasure)
+
+                if columnHeight <= proxy.size.height {
+                    column
+                } else {
+                    ScrollView(.vertical) { column }
+                        .scrollBounceBehavior(.basedOnSize)
+                }
+            }
+            // A scroll view's clip region is not its frame: it is allowed to
+            // draw into the safe area it scrolls under, so scrolled content
+            // painted over the toolbar at the top and, worse, straight across
+            // the ambience chips and the transport at the bottom — the two
+            // rows pinned there precisely so they would always be readable.
+            // Cut the region to its own bounds and that cannot happen.
+            .clipped()
+
+            ambienceRow
+                .padding(.bottom, 22)
+
+            controls
+        }
+        // Nothing left in this stack is greedy the way the `Spacer` was, so
+        // without this it would size to its content and be centred.
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal)
+        .padding(.top, topInset)
+        // The column has always run to the bottom edge of the glass rather than
+        // stopping at the home indicator — the play button's lower rim sits on
+        // it, and that is the screen people know. Measured, without this the
+        // whole transport row moved up by exactly the indicator's height.
+        .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    /// The rows above the old `Spacer`: the part of the screen that gives way.
+    ///
+    /// One list, used by both columns, so the two can never drift apart. The
+    /// width is only for the expeditions — three capsules that stop fitting
+    /// side by side long before the accessibility sizes — and `nil` means "the
+    /// plain row, as shipped".
+    @ViewBuilder
+    private func timerRows(width: CGFloat?) -> some View {
+        phaseChip
+            .padding(.bottom, 20)
+
+        TimerRingView()
+
+        // Only while idle: mid-session is the wrong moment to be
+        // offered a different session.
+        if engine.runState == .idle {
+            expeditions(width: width)
+                .padding(.top, 12)
+                .transition(.opacity)
+        }
+
+        BuddyView()
+            .padding(.top, 18)
+
+        // Only when nothing is counting down. A treat offered
+        // mid-focus would be a reason to touch the screen during
+        // the one stretch of time this app exists to leave alone.
+        if engine.runState != .running || engine.phase.isBreak {
+            TreatTray()
+                .padding(.top, 8)
+                .transition(.opacity)
+        }
+    }
+
+    private func topGroup(width: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            timerRows(width: width)
+        }
+        // What is left of the old `Spacer(minLength: 12)`: the region above
+        // absorbs the slack now, so all that is wanted here is the floor the
+        // Spacer kept between the treats and the ambience row. A padding
+        // rather than a Spacer on purpose — a flexible child would make this
+        // group report whatever height it was handed, and the measurement has
+        // to be the height it actually wants.
+        .padding(.bottom, 12)
+    }
+
+    /// The top group's natural height, as last measured.
+    ///
+    /// Reported by the group itself rather than assumed from the text size: a
+    /// phase chip, a dial, three expedition capsules, a buddy with a caption of
+    /// unknown length and a treat tray is not something anybody can add up in
+    /// their head, and the answer also depends on the phone, the run state and
+    /// whether there is a treat to offer today.
+    private var columnMeasure: some View {
+        GeometryReader { inner in
+            Color.clear
+                .onAppear { columnHeight = inner.size.height }
+                .onChange(of: inner.size.height) { _, height in
+                    columnHeight = height
+                }
+        }
+    }
+
+    /// How far below the safe area the column starts.
+    ///
+    /// The toolbar floats *over* this screen rather than reserving a bar above
+    /// it, and at the ordinary text size the phase chip tucks just under its
+    /// trailing edge — that is how this screen has always looked and the eight
+    /// points below are not up for renegotiation. But the chip is `.headline`,
+    /// so larger text makes it both taller and wider: it climbs into the
+    /// toolbar's own pills and, at the accessibility sizes, into the Dynamic
+    /// Island. Measured, "Focus" read as "…cus" with the camera button drawn on
+    /// top of it. The toolbar's glyph buttons barely grow, so the clearance the
+    /// chip needs is roughly its own growth, and that is what this is.
+    private var topInset: CGFloat {
+        switch dynamicTypeSize {
+        case .xSmall, .small, .medium, .large: 8
+        case .xLarge: 16
+        case .xxLarge: 24
+        case .xxxLarge: 32
+        default: 48
+        }
+    }
+
+    /// How much bigger the glyph chips — ambience, and today's photograph —
+    /// get as the text size does.
+    ///
+    /// These are icon-only buttons: a fixed 38×32 backing inside a 44×44
+    /// target, with the glyph set in `.footnote`. The glyph scaled and the
+    /// backing did not, and nothing clipped it, so at the accessibility sizes
+    /// it grew to about three times the shape it is supposed to sit inside —
+    /// chips overlapping each other, glyphs running off the right edge and
+    /// landing directly on scenery at 1.00:1 against it, and the accent pill
+    /// that says *which* ambience is playing completely hidden behind its own
+    /// icon. There was no visible selected state left at all.
+    ///
+    /// So the backing scales *with* the glyph, by the same factor, and the
+    /// factor is on a leash. Keeping the ratio is the whole point: the glyph
+    /// can never outgrow the shape that carries the selection, whatever the
+    /// text size. The leash exists because this row is nineteen chips sharing a
+    /// screen with a countdown — it grows to a size worth having and then
+    /// stops, and legibility past that is the ambience list in the Sound
+    /// Studio, which is a real list with real labels.
+    ///
+    /// 1.0 at every ordinary reading size through `.large`, so the default
+    /// screen is untouched.
+    private var chipScale: CGFloat {
+        switch dynamicTypeSize {
+        case .xSmall, .small, .medium, .large: 1.0
+        case .xLarge: 1.15
+        case .xxLarge: 1.3
+        case .xxxLarge: 1.45
+        default: 1.7
+        }
+    }
+
+    /// The glyph inside a chip. Sized in points rather than left as
+    /// `.footnote` so that it and its backing can only ever change together —
+    /// `.footnote` at 13pt is exactly what this is at the default size.
+    private var chipFont: Font {
+        .system(size: 13 * chipScale, weight: .semibold)
+    }
+
+    private var chipWidth: CGFloat { 38 * chipScale }
+    private var chipHeight: CGFloat { 32 * chipScale }
+
+    /// The hit target around a chip: never smaller than 44pt on either side,
+    /// and never smaller than the chip it has to contain.
+    private var chipTarget: CGSize {
+        CGSize(width: max(44, chipWidth + 6), height: max(44, chipHeight + 12))
+    }
+
     private var phaseChip: some View {
         Text(engine.phase.title)
             .font(.headline)
@@ -779,7 +1014,31 @@ struct ContentView: View {
 
     /// Three named crossings. One tap re-lengths all three phases; the dial on
     /// the ring still fine-tunes, and the moment it does no chip is selected.
-    private var expeditionRow: some View {
+    ///
+    /// Same shape of fix as the column above, one axis over: three capsules of
+    /// growing text on a 402pt phone stop fitting side by side well before the
+    /// accessibility sizes — "Deep Dive" was already "Deep Di…" at
+    /// accessibility-large and all three were two letters and an ellipsis at
+    /// the top size, which is three chips nobody can tell apart. Given the
+    /// row's own width as a minimum, the three capsules sit centred in it
+    /// exactly as they always have while they fit, and take their full names
+    /// into a sideways scroll when they don't.
+    ///
+    /// `nil` is the shipped row itself, untouched — see `ordinaryColumn`.
+    @ViewBuilder
+    private func expeditions(width: CGFloat?) -> some View {
+        if let width {
+            ScrollView(.horizontal, showsIndicators: false) {
+                expeditionChips
+                    .frame(minWidth: width)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        } else {
+            expeditionChips
+        }
+    }
+
+    private var expeditionChips: some View {
         let current = Expedition.matching(engine.settings)
         return HStack(spacing: 8) {
             ForEach(Expedition.allCases) { expedition in
@@ -873,7 +1132,10 @@ struct ContentView: View {
     /// It widens rather than stacking a second row: this row sits between
     /// the ambience list and the transport, with a `Spacer(minLength: 12)`
     /// above it, so an extra 34pt of height pushes the play button off the
-    /// bottom of a tall phone for the seven seconds the line is up.
+    /// bottom of a tall phone for the seven seconds the line is up. (Above
+    /// `.large` the transport is pinned and can no longer be pushed anywhere —
+    /// but the 34pt would come out of the timer face's room instead, which is
+    /// the same argument with a different victim, so it still widens.)
     @ViewBuilder
     private var photoControl: some View {
         // Read before the branch, on purpose. `developing()` touches the
@@ -941,34 +1203,38 @@ struct ContentView: View {
 
     /// The chip in its wide state: what just happened, and where it went.
     private var keptCapsule: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 7 * chipScale) {
             Image(systemName: "hourglass")
-                .font(.footnote.weight(.semibold))
+                .font(chipFont)
             Text("Kept. It'll be developed on the shelf by morning.")
-                .font(.footnote)
+                // On the same leash as the glyph beside it, and for the same
+                // reason: this capsule is one row tall on purpose (see above),
+                // so text that grows without its backing growing too just
+                // leaves the shape it is meant to sit on.
+                .font(.system(size: 13 * chipScale))
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
         }
         .foregroundStyle(Theme.bark.opacity(0.75))
-        .padding(.horizontal, 14)
-        .frame(height: 32)
+        .padding(.horizontal, 14 * chipScale)
+        .frame(height: chipHeight)
         // Its own backing, for the same reason the buddy's caption has one:
         // there is scenery behind this.
         .background(Capsule().fill(Theme.cream.opacity(0.78)))
-        .frame(height: 44)
+        .frame(height: chipTarget.height)
         .contentShape(Rectangle())
     }
 
     private func photoChip(icon: String, spent: Bool) -> some View {
         Image(systemName: icon)
-            .font(.footnote.weight(.semibold))
-            .frame(width: 38, height: 32)
+            .font(chipFont)
+            .frame(width: chipWidth, height: chipHeight)
             .background(
-                RoundedRectangle(cornerRadius: 11)
+                RoundedRectangle(cornerRadius: 11 * chipScale)
                     .fill(Theme.surface.opacity(0.6))
             )
             .foregroundStyle(Theme.bark.opacity(spent ? 0.5 : 0.7))
-            .frame(width: 44, height: 44)
+            .frame(width: chipTarget.width, height: chipTarget.height)
             .contentShape(Rectangle())
     }
 
@@ -993,10 +1259,10 @@ struct ContentView: View {
             ZStack(alignment: .topTrailing) {
                 Label(option.label, systemImage: option.systemImage)
                     .labelStyle(.iconOnly)
-                    .font(.footnote.weight(.semibold))
-                    .frame(width: 38, height: 32)
+                    .font(chipFont)
+                    .frame(width: chipWidth, height: chipHeight)
                     .background(
-                        RoundedRectangle(cornerRadius: 11)
+                        RoundedRectangle(cornerRadius: 11 * chipScale)
                             .fill(selected ? Theme.accent(for: engine.phase) : Theme.surface.opacity(0.6))
                     )
                     .foregroundStyle(
@@ -1008,7 +1274,7 @@ struct ContentView: View {
                     // screen is a thing the eye keeps returning to for the
                     // rest of the session, and this is a hint, not an alert.
                     .overlay(
-                        RoundedRectangle(cornerRadius: 11)
+                        RoundedRectangle(cornerRadius: 11 * chipScale)
                             .strokeBorder(
                                 Theme.accent(for: engine.phase)
                                     .opacity(suggested ? 0.8 : 0),
@@ -1018,17 +1284,18 @@ struct ContentView: View {
 
                 if !unlocked {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8 * chipScale, weight: .bold))
                         .foregroundStyle(Theme.onAccent)
-                        .padding(2)
+                        .padding(2 * chipScale)
                         .background(Circle().fill(Theme.blossom))
-                        .offset(x: 3, y: -3)
+                        .offset(x: 3 * chipScale, y: -3 * chipScale)
                 }
             }
             // The chip stays small, but the target around it is a full 44pt:
             // the visible size was below the minimum and these were genuinely
-            // hard to hit.
-            .frame(width: 44, height: 44)
+            // hard to hit. It grows with the chip from there, so a bigger
+            // glyph never means a target that has stopped containing it.
+            .frame(width: chipTarget.width, height: chipTarget.height)
             .contentShape(Rectangle())
         }
         .buttonStyle(.squishy(pressedScale: 0.86))

@@ -143,6 +143,27 @@ struct TimerRingView: View {
 
                 Text(statusLine)
                     .font(.subheadline)
+                    // The dial is a fixed 260pt circle, and this line is the
+                    // only thing inside it that scales. Left to grow, at the
+                    // accessibility sizes it took four and five lines, the
+                    // pair of them outgrew the circle, and because the stack
+                    // is centred the overflow went out of *both* ends: the
+                    // countdown was pushed clean off the top of the face and
+                    // up behind the toolbar, while the line explaining it
+                    // truncated to "set you…". Held here, it takes at most
+                    // three lines and the two together never exceed about
+                    // 150pt of the 260.
+                    //
+                    // Capping is the honest trade rather than a dodge. The
+                    // thing this line describes is set at a flat 56pt — larger
+                    // than body text at the very top accessibility size — so
+                    // the number is never the part that is hard to read, and
+                    // a hint that covers the value it is hinting about has
+                    // stopped helping anybody. VoiceOver is unaffected: it
+                    // reads the ring's own label and value, not this.
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.8)
                     .foregroundStyle(Theme.bark.opacity(0.6))
                     .multilineTextAlignment(.center)
             }

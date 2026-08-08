@@ -93,6 +93,10 @@ enum StorageKeys {
     /// greeting stores — see `GreetingLog`.
     static let greeted = "pawmodoro.greeted"
 
+    /// Codes redeemed on this device, and what they granted. Never shrinks —
+    /// see `PromoLedger`, which is the only thing that writes here.
+    static let promo = "pawmodoro.promo"
+
     /// Which hours of the clock you have been sitting for when they struck.
     ///
     /// Its own key rather than being read back out of the `Chronicle`,
@@ -107,7 +111,7 @@ enum StorageKeys {
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
         paleCoats, chronicle, anthology, longestDrift, owned, keepsakes,
-        snapshots, greeted, clockRing, chronicleAlmanac,
+        snapshots, greeted, clockRing, chronicleAlmanac, promo,
     ]
 }
 
@@ -758,6 +762,16 @@ enum LaunchOptions {
     /// Arm the golden hour call ~10 seconds out, ignoring the window and
     /// the shot — background the app (Cmd+Shift+H) to see the banner.
     static let goldenHourSoon = isSet("-PawmodoroGoldenHour")
+
+    /// Start with the promo code already redeemed.
+    ///
+    /// Not the same thing as `-PawmodoroUnlockPlus`, and kept apart from it on
+    /// purpose: that one fakes a *purchase* and short-circuits
+    /// `refreshEntitlements()`, so it proves nothing about the road a code
+    /// takes. This writes the real ledger and then leaves StoreKit alone to
+    /// say what it likes — which is the state worth looking at, because it is
+    /// the one where the store disagrees.
+    static let redeemedPromo = isSet("-PawmodoroRedeemed")
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -842,6 +856,7 @@ enum LaunchOptions {
     static let bell = false
     static let bellHour: Int? = nil
     static let clockRingHours: Int? = nil
+    static let redeemedPromo = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -863,6 +878,12 @@ enum LaunchOptions {
         }
         if unlockPlus {
             defaults.set(true, forKey: StorageKeys.hasPlus)
+        }
+        // Deliberately does *not* touch `StorageKeys.hasPlus`: the point of
+        // this flag is to watch the ledger alone hold Plus up while StoreKit
+        // says the user owns nothing.
+        if redeemedPromo {
+            PromoLedger.seedRedeemed(into: defaults)
         }
         // Any flag that replaces the session records also clears the
         // lifetime counter and first-session anchor, so `SessionLog` reseeds

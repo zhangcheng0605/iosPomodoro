@@ -6,6 +6,8 @@ struct PaywallView: View {
     @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    @State private var showRedeem = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -28,6 +30,7 @@ struct PaywallView: View {
                 }
             }
             .task { await store.loadProducts() }
+            .sheet(isPresented: $showRedeem) { RedeemCodeView() }
         }
     }
 
@@ -165,6 +168,14 @@ struct PaywallView: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.75))
+
+                // Somebody staring at a locked screen is exactly who has been
+                // handed a code, so it is offered here — quietly, in the
+                // smallest type on the sheet, below the two things most
+                // people came for.
+                Button("I have a code") { showRedeem = true }
+                    .font(.caption)
+                    .foregroundStyle(Theme.bark.opacity(0.6))
 
                 if let error = store.lastError {
                     Text(error)

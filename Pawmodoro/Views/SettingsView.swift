@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var showBuddyBook = false
     @State private var showCart = false
     @State private var showScrapbook = false
+    @State private var showRedeem = false
     /// The locked thing somebody just tapped, if the cart sells it.
     @State private var unlocking: CatalogItem?
 
@@ -171,6 +172,7 @@ struct SettingsView: View {
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
+            .sheet(isPresented: $showRedeem) { RedeemCodeView() }
         }
     }
 
@@ -259,6 +261,13 @@ struct SettingsView: View {
                     Task { await store.restore() }
                 }
                 .font(.footnote)
+            }
+
+            // Under the buy and restore rows rather than beside them: this is
+            // a corner of the app for the few people who have a code, not an
+            // invitation to go and look for one.
+            Button("Redeem a code", systemImage: "ticket") {
+                showRedeem = true
             }
 
             Button("Leave a tip", systemImage: "heart.fill") {

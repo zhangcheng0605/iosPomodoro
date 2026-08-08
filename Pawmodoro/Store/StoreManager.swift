@@ -23,8 +23,13 @@ final class StoreManager {
     private(set) var plusProduct: Product?
     private(set) var tipProducts: [Product] = []
 
-    /// True once Pawmodoro Plus is owned.
+    /// True once Pawmodoro Plus is owned — by purchase, or by a redeemed code.
+    ///
+    /// Read the note on `updateHasPlus(_:)` before changing how this is set.
     private(set) var hasPlus: Bool
+
+    /// What has been redeemed on this device. Only ever grows.
+    private(set) var promo: PromoLedger
 
     /// How many tips the user has left, purely so the app can say thank you.
     private(set) var tipsGiven: Int
@@ -45,9 +50,13 @@ final class StoreManager {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let promo = PromoLedger.load(from: defaults)
+        self.promo = promo
         // Read from the cache first so the UI doesn't flash "locked" during
-        // launch; `refreshEntitlements()` corrects it a moment later.
-        self.hasPlus = defaults.bool(forKey: Keys.hasPlus)
+        // launch; `refreshEntitlements()` corrects it a moment later. A
+        // redeemed code is read from the same breath and is not something
+        // `refreshEntitlements()` can take back.
+        self.hasPlus = defaults.bool(forKey: Keys.hasPlus) || promo.plus
         self.tipsGiven = defaults.integer(forKey: Keys.tipsGiven)
         listenForTransactions()
     }
@@ -133,6 +142,42 @@ final class StoreManager {
         }
     }
 
+    // MARK: Codes
+
+    /// What happened when somebody pressed Redeem.
+    enum RedeemOutcome: Equatable {
+        /// A code the app knows, redeemed here for the first time.
+        case opened(PromoCode)
+        /// The same code again. Says so plainly and changes nothing — typing
+        /// it twice is not a mistake worth a different-looking screen.
+        case alreadyOpen(PromoCode)
+        /// Not one of ours. No counter, no cooling-off, no consequence.
+        case notRecognised
+    }
+
+    /// Checks a typed code and, if it is one of ours, grants what it grants.
+    ///
+    /// `async` because matching deliberately costs a few milliseconds of
+    /// hashing (see `PromoCodes.rounds`) and that work has no business on the
+    /// main actor while somebody is watching a text field.
+    func redeem(_ typed: String) async -> RedeemOutcome {
+        let match = await Task.detached { PromoCodes.match(typed) }.value
+        guard let code = match else { return .notRecognised }
+
+        let already = promo.has(code)
+        var ledger = promo
+        ledger.record(code)
+        ledger.save(to: defaults)
+        promo = ledger
+
+        // Note this runs on the repeat path too. It costs nothing, and it
+        // means a device whose `hasPlus` somehow came adrift from its ledger
+        // is put right by typing the code again — which is exactly what
+        // somebody would try.
+        if ledger.plus { updateHasPlus(true) }
+        return already ? .alreadyOpen(code) : .opened(code)
+    }
+
     // MARK: Entitlements
 
     /// Still the single place that decides whether a thing is available, and
@@ -195,7 +240,23 @@ final class StoreManager {
         await transaction.finish()
     }
 
+    /// The one place `hasPlus` is written, and the one place the two roads to
+    /// it are reconciled.
+    ///
+    /// **A redeemed code wins over anything StoreKit says.** Every caller here
+    /// passes what the *store* believes, and outside Xcode the store believes
+    /// nothing: `refreshEntitlements()` finds no transactions and would
+    /// otherwise pass `false` on the next launch, the next foreground, or the
+    /// next tap of Restore. That would take Plus back, and `applyEntitlement`
+    /// downstream would then quietly put the buddy, the ambience, the theme,
+    /// the track and the place back to their free stand-ins — a redemption
+    /// that undoes itself minutes later, with nothing on screen to say why.
+    ///
+    /// So the ledger is folded in here rather than at the call sites: it
+    /// cannot be forgotten by a future caller, and there is no path through
+    /// this file that lowers a granted entitlement. Nothing decays.
     private func updateHasPlus(_ value: Bool) {
+        let value = value || promo.plus
         guard hasPlus != value else { return }
         hasPlus = value
         defaults.set(value, forKey: Keys.hasPlus)

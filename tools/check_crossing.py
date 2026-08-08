@@ -140,6 +140,12 @@ NEEDS_NO_MERGE = {
     "hasOnboarded": "a one-time flag about this install's first launch.",
     "hasPlus": "StoreKit owns this. Merging a purchase by hand would be both "
                "wrong and forgeable; the receipt is already account-wide.",
+    "promo": "codes redeemed by hand on this device. `PromoLedger.merge` is "
+             "already written and is a union with an `or` — it is excused "
+             "rather than merged because the *code itself* is the thing that "
+             "travels between devices, and typing it again on the second one "
+             "costs six characters and loses nothing. Nothing is stranded by "
+             "leaving it out, which is the test this table applies.",
     "tipsGiven": "a private count behind the tip jar, shown nowhere and used "
                  "for nothing.",
     "longestDrift": "one number, and `max` of two is so obviously the answer "

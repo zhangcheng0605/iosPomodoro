@@ -317,8 +317,16 @@ find is most audible: the app starts playing it back to you unprompted.
 
 ### Size
 
+> **The 45 MB ceiling is gone (Aug 2026).** It was never researched — it was a
+> round number picked while planning the audio phase, and every later document
+> cited it as fact. Apple's real limits are a 4 GB uncompressed bundle and a
+> ~200 MB cellular-download threshold users can override. What survives is the
+> discipline, not the number: measure the device Release `.app`, say the number
+> out loud, and give growth a reason. See `CLAUDE.md`.
+
+
 65 tracks ≈ 12.4 MB of AAC (was 9.5 MB for 50). Release `.app` went
-**37.9 MB → 40.5 MB** against a 45 MB ceiling. That leaves ~4.5 MB, which is
+**37.9 MB → 40.5 MB**. (Written against a 45 MB ceiling, retired Aug 2026 — see `CLAUDE.md`.) That left ~4.5 MB at the time, which was
 not much: the next thing to add audio should measure before it writes recipes,
 and the generator's `TOTAL_BUDGET_MB` assertion now projects over
 `len(TRACKS)` rather than a hard-coded 50.

@@ -749,7 +749,7 @@ the first thunderclap of a storm) register in the **heard** journal, which
 grows from a short list into a real collection. File cost is honest: ~16
 loops × 4 grades × 3 variants of mono AAC ≈ 15–20 MB on a 22 MB app —
 the size budget gets its own assertion in the generator, and grades/variants
-are trimmed to fit a 45 MB ceiling before anything ships.
+are trimmed to fit a 45 MB ceiling before anything ships. *(Superseded Aug 2026: there is no longer a ceiling — see `CLAUDE.md`. Measure and justify instead.)*
 
 ### W4. The Bell of Hours [7/9/7/10]
 
@@ -909,7 +909,7 @@ progress bar written out in words.
   world untouched, which exercises the shelf and nothing behind it: not the
   arrival rows, not the letter's sentence, not the rim of the year ring.
 
-**Size.** Release `.app` 37.9 MB → **40.5 MB** against the 45 MB ceiling.
+**Size.** Release `.app` 37.9 MB → **40.5 MB**. (The 45 MB ceiling was retired Aug 2026 — see `CLAUDE.md`.)
 About 4.5 MB left. Anything that adds audio after this measures first.
 
 ### W6. Flags

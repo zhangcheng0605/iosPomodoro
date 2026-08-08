@@ -144,7 +144,7 @@ The smallest honest change is four things, in this order:
 Budget note, since the repo tracks it: the ten mac renditions add roughly
 **270 KB** to the asset catalogue (measured from the preview set: 512@2x is
 111 KB, 512 is 51 KB, 256@2x is 51 KB, the rest are small). Against the ~4.5 MB
-of headroom under the 45 MB ceiling that is nothing, but say the number rather
+of headroom that is nothing (the 45 MB ceiling was retired Aug 2026 — see `CLAUDE.md`), but say the number rather
 than assume it.
 
 ---

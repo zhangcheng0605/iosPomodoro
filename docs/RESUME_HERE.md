@@ -16,7 +16,7 @@ one item still open (the Harbor/Cloudspire postcard ground — a design call,
 with the measurement already done).
 
 Two checker rules were added and **deliberately broken first to prove they
-catch anything**. Device Release is 37.7 MB against the 45 MB ceiling.
+catch anything**. Device Release is 37.7 MB. (The 45 MB ceiling was retired in Aug 2026 — see `CLAUDE.md`. Measure and justify rather than trip over a number nobody could explain.)
 
 ## Where things stand
 

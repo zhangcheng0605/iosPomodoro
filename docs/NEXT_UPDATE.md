@@ -55,7 +55,7 @@ to fail**, per the rule that a green run on unbroken code proves nothing:
   sprite name is built by interpolation, so `check_swift.py` cannot resolve it.
 - `check_swift.py`'s Release-only `#if DEBUG` rule (added earlier in the merge).
 
-Device Release measured after the new art: **37.7 MB against the 45 MB ceiling.**
+Device Release measured after the new art: **37.7 MB. (The 45 MB ceiling was retired in Aug 2026 — see `CLAUDE.md`. Measure and justify rather than trip over a number nobody could explain.)**
 
 ### Still open on the postcards
 

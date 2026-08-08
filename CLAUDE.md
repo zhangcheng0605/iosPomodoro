@@ -369,10 +369,45 @@ There are no tests. A change is verified by building and looking at it:
   `afinfo` and fails if any of them is not **1 ch, 22.05 kHz** or has drifted
   from its `loopFrames`. That format assertion is the build-2 crash written
   down — the Simulator cannot reproduce it, and nothing else looks.
-- **Sixty-five tracks is 12.4 MB and the app is 40.5 MB of a 45 MB ceiling.**
-  There is about four and a half megabytes left. Anything that adds audio or
-  art from here measures the Release `.app` first and says the number out
-  loud; the generator's own budget assertion only covers the music folder.
+- **Measure the app and say the number. There is no 45 MB ceiling any more.**
+
+  There used to be, and it is worth knowing where it came from, because
+  nobody ever wrote that down. It first appears in `DEEP_TIME_PLAN.md` while
+  the audio phase was being planned — the app was 22 MB and 15–20 MB of loops
+  were about to land, so somebody picked a round number that let the phase
+  fit. Every later document cites it as settled fact. It was never researched
+  and never justified; it was a guardrail invented on the spot, which is how
+  an arbitrary number becomes a law.
+
+  **Apple's actual limits are nowhere near.** The uncompressed app bundle may
+  be up to 4 GB. The number that genuinely bites is around **200 MB**, above
+  which iOS steers people to Wi-Fi for the download — and since iOS 13 they
+  can override even that. App thinning means the download is smaller than the
+  built bundle anyway. Confirm the current figures against Apple's docs
+  before relying on them; they have moved before (the cellular threshold was
+  150 MB until 2019) and they will move again.
+
+  **So the policy is now: comply with Apple, and stay deliberately small.**
+  No hard number to trip over, and no accidental drift either. Two rules
+  survive the ceiling, and they were always the part that mattered:
+
+  1. **Anything that adds audio or art measures the Release `.app` for a
+     device and says the number out loud.** That forcing function is why the
+     cost of every phase is known — 37.9 → 40.5 for Music III, +2.4 MB for
+     one night of ambience re-voicing. Plenty of apps learn their size from
+     a user complaint.
+  2. **Growth needs a reason.** A Pomodoro timer competing with a hundred
+     free ones benefits from downloading before somebody loses interest, and
+     that is a real product argument rather than a superstition. Under
+     ~100 MB the app still installs on a phone with very little free space,
+     which is the state a lot of phones are actually in. Past that, say what
+     the megabytes bought.
+
+  For reference: 42.83 MB for a device Release as of Aug 2026, of which
+  26.9 MB is the 169 `.m4a` files. Audio is where any future squeeze comes
+  from. `tools/generate_music.py` still asserts its own 20 MB budget over the
+  music folder alone — that one is a real fence around one generator and
+  stays.
 - **A sighting is decided once, then it's pure maths.** `rollSighting()` runs
   at the start of a focus phase and stores two points on the progress bar;
   everything after is a function of `engine.progress`, so there is no timer,

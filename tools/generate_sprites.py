@@ -1220,6 +1220,69 @@ def dream_adrift_deep():
     return outline_silhouette(g)
 
 
+def _dream_star(d, cx, cy, arm=3, fill=CREAM):
+    """One star, drawn as a cross rather than a dot.
+
+    A filled dot at this size is a full stop; the two-pixel arms are the whole
+    of what makes it read as a star. Kept as a helper because the three joining
+    dreams below draw eleven of them between them and a star that drifts in
+    shape from one bubble to the next stops being the same object."""
+    d.line([(cx - arm, cy), (cx + arm, cy)], fill=fill)
+    d.line([(cx, cy - arm), (cx, cy + arm)], fill=fill)
+
+
+def dream_joined_firstjoin():
+    """Two stars, and the line somebody drew between them.
+
+    The line is `SHADE` and the stars are `CREAM` on purpose: `outline_silhouette`
+    rings the *union*, so a line drawn in the same tone as the stars it joins
+    would arrive as one lumpy barbell with no join visible in it. The tone step
+    is what makes the drawn line read as drawn."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.line([(6, 6), (13, 13)], fill=SHADE)       # the join, drawn by a finger
+    _dream_star(d, 4, 4)
+    _dream_star(d, 15, 15)
+    return outline_silhouette(g)
+
+
+def dream_joined_figure():
+    """A whole figure, closed up.
+
+    Five stars with every link drawn, rather than any one figure out of the
+    atlas: the paw was tried first and the four links converging on its pad
+    fused into a fan under `outline_silhouette` — which is the same failure
+    `Constellation.littlepaw`'s own comment warns about, arriving here at a
+    fifth of the size. A closed ring keeps every link separate, and reads as
+    the *act* of joining rather than as a figure somebody might go looking for
+    in their own sky and not find."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    # Deliberately not a regular pentagon: an even one reads as a shape, and
+    # an uneven one reads as stars that happened to be there.
+    points = [(10, 2), (18, 7), (14, 17), (5, 16), (2, 8)]
+    for index, point in enumerate(points):
+        d.line([point, points[(index + 1) % len(points)]], fill=SHADE)
+    for x, y in points:
+        _dream_star(d, x, y, arm=2)
+    return outline_silhouette(g)
+
+
+def dream_joined_askedmoon():
+    """The moon, asked something, and answering.
+
+    A crescent with one ring going out from it. The crescent is punched rather
+    than drawn as an arc — two discs and a hole is the same cartoon terminator
+    `StarfieldView` draws in the sky, so the dream and the moon over the scene
+    are demonstrably the same moon."""
+    g = new_grid(D, D)
+    d = ImageDraw.Draw(g)
+    d.ellipse([1, 1, 18, 18], outline=SHADE)     # the answer, going out
+    d.ellipse([5, 5, 15, 15], fill=CREAM)        # the disc
+    d.ellipse([8, 3, 18, 13], fill=T)            # and the night over most of it
+    return outline_silhouette(g)
+
+
 # --- The grove -------------------------------------------------------------
 #
 # One tree per completed focus hour, at three growth stages. Drawn here rather
@@ -1812,6 +1875,9 @@ if __name__ == "__main__":
         ("adrift_rings", dream_adrift_rings),
         ("adrift_nomap", dream_adrift_nomap),
         ("adrift_deep", dream_adrift_deep),
+        ("joined_firstjoin", dream_joined_firstjoin),
+        ("joined_figure", dream_joined_figure),
+        ("joined_askedmoon", dream_joined_askedmoon),
     ):
         to_png(draw(), DREAM_PALETTE, f"dream_{name}")
     print("Effects:")

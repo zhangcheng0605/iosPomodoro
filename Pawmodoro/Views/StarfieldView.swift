@@ -14,23 +14,33 @@ struct StarfieldView: View {
     /// a bright warm yellow that still belongs to whatever theme is on.
     let moon: Color
     /// Focus sessions finished after dark, from `SessionLog.nightSessions`.
-    /// Everything drawn here is a function of this one number.
+    /// Almost everything drawn here is a function of this one number.
     let nightSessions: Int
+    /// The joins drawn by hand. Defaulted, so the call site that mounts this
+    /// never had to learn about it — see `NightSkyTouchView`, which is the
+    /// half that writes.
+    var touches: SkyTouches = .shared
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var started = Date()
 
-    private static let count = 12
-
     var body: some View {
-        Group {
+        // Read in `body` rather than inside the `Canvas` closure: a draw
+        // closure is not an observation scope, so a join made this second
+        // would sit in storage and not appear until something else redrew.
+        let joins = touches.joins
+
+        return Group {
             if reduceMotion {
-                Canvas { canvas, size in draw(&canvas, size: size, t: 0) }
+                Canvas { canvas, size in
+                    draw(&canvas, size: size, t: 0, joins: joins)
+                }
             } else {
                 TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     Canvas { canvas, size in
                         draw(&canvas, size: size,
-                             t: context.date.timeIntervalSince(started))
+                             t: context.date.timeIntervalSince(started),
+                             joins: joins)
                     }
                 }
             }
@@ -40,10 +50,13 @@ struct StarfieldView: View {
         .accessibilityHidden(true)
     }
 
-    private func draw(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
+    private func draw(
+        _ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval,
+        joins: Set<String>
+    ) {
         drawMoon(&canvas, size: size)
         drawScatter(&canvas, size: size, t: t)
-        drawConstellations(&canvas, size: size)
+        drawConstellations(&canvas, size: size, joins: joins)
         drawWanderers(&canvas, size: size, t: t)
     }
 
@@ -58,12 +71,8 @@ struct StarfieldView: View {
     private func drawMoon(_ canvas: inout GraphicsContext, size: CGSize) {
         let age = MoonPhase.age()
         let illumination = MoonPhase.illumination()
-        let band = ConstellationAtlas.skyBottom - ConstellationAtlas.skyTop
-        let center = CGPoint(
-            x: 0.86 * size.width,
-            y: (ConstellationAtlas.skyTop + 0.42 * band) * size.height
-        )
-        let radius = min(size.width, size.height) * 0.055
+        let center = SkyGeometry.moonCenter(in: size)
+        let radius = SkyGeometry.moonRadius(in: size)
 
         func disc(_ at: CGPoint, _ r: Double) -> Path {
             Path(ellipseIn: CGRect(x: at.x - r, y: at.y - r,
@@ -101,55 +110,91 @@ struct StarfieldView: View {
 
     /// The background stars that were always here.
     private func drawScatter(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
-        for index in 0..<Self.count {
+        // Positions come from `SkyGeometry` rather than from a loop here,
+        // because the new moon's answer brightens exactly these stars and it
+        // is drawn by a different view.
+        for (index, point) in SkyGeometry.scatter(in: size).enumerated() {
             let n = Double(index)
-            let x = ((n * 0.6180339887).truncatingRemainder(dividingBy: 1)) * size.width
-            // Kept to the upper third: that's the part of the screen that reads
-            // as sky, and the only part with no text over it.
-            let y = ((n * 0.7548776662).truncatingRemainder(dividingBy: 1)) * size.height * 0.34
             let twinkle = 0.5 + 0.5 * sin(t * 0.9 + n * 1.7)
             let r = 1.3 + (n.truncatingRemainder(dividingBy: 3)) * 0.55
 
             // The floor used to be 0.18, which on a phone outdoors read as
             // pitch black. The owner asked for a bright night, so the dimmest
             // a star ever gets is now most of the way on.
-            dot(&canvas, x: x, y: y, r: r, opacity: 0.5 + twinkle * 0.35)
+            dot(&canvas, x: point.x, y: point.y, r: r, opacity: 0.5 + twinkle * 0.35)
         }
     }
 
-    /// Finished figures, joined up; the one being built, as bare stars.
+    /// Finished figures, joined up; the one being built, as bare stars — plus
+    /// whatever a finger has joined.
     ///
-    /// Lines only appear on completion. A half-drawn figure with its lines
-    /// already showing reads as broken rather than as unfinished, and it also
-    /// gives away a shape that is more fun to recognise on the night it lands.
-    private func drawConstellations(_ canvas: inout GraphicsContext, size: CGSize) {
+    /// The app draws a line for one of two reasons, and they look different on
+    /// purpose. **The figure is finished**, in which case every link is drawn
+    /// faintly, as sky. Or **you drew it**, in which case that one link is
+    /// drawn a shade brighter, and it stays whether or not the rest of the
+    /// figure is up.
+    ///
+    /// The old rule — no lines at all until a figure completes, so a half-drawn
+    /// one never reads as broken and the shape stays a surprise — is intact for
+    /// everything the app draws by itself. It never applied to a line somebody
+    /// put there deliberately: a shape you recognised yourself is not a
+    /// surprise anybody spoiled.
+    private func drawConstellations(
+        _ canvas: inout GraphicsContext, size: CGSize, joins: Set<String>
+    ) {
         for (index, figure) in ConstellationAtlas.all.enumerated() {
             let lit = ConstellationAtlas.litStars(of: index, nightSessions: nightSessions)
-            guard lit > 0 else { continue }
+            let drawn = figure.links.filter {
+                joins.contains(SkyLink(figure: figure.id, $0.0, $0.1).key)
+            }
+            guard lit > 0 || !drawn.isEmpty else { continue }
             let complete = lit == figure.starCount
 
             if complete {
-                var path = Path()
-                for (a, b) in figure.links {
-                    path.move(to: point(figure.position(of: a), in: size))
-                    path.addLine(to: point(figure.position(of: b), in: size))
-                }
                 canvas.stroke(
-                    path,
+                    path(of: figure.links, in: figure, size: size),
                     with: .color(tint.opacity(0.22)),
                     lineWidth: 0.75
                 )
             }
+            if !drawn.isEmpty {
+                canvas.stroke(
+                    path(of: drawn, in: figure, size: size),
+                    with: .color(tint.opacity(complete ? 0.34 : 0.30)),
+                    lineWidth: 1.0
+                )
+            }
 
             for star in 0..<lit {
-                let at = point(figure.position(of: star), in: size)
+                let at = SkyGeometry.star(figure, star, in: size)
                 // A finished figure's stars sit brighter than the scatter, so
                 // the thing you made stands out from the thing that was there.
                 dot(&canvas, x: at.x, y: at.y,
                     r: complete ? 1.9 : 1.5,
                     opacity: complete ? 0.85 : 0.55)
             }
+            // A join may legally reach a star that isn't lit yet — that is the
+            // whole of finding a figure early. Its far end is drawn as a
+            // pin-prick so the line has somewhere to land rather than fading
+            // out into nothing, which reads as a rendering fault.
+            for (a, b) in drawn {
+                for end in [a, b] where end >= lit {
+                    let at = SkyGeometry.star(figure, end, in: size)
+                    dot(&canvas, x: at.x, y: at.y, r: 1.2, opacity: 0.34)
+                }
+            }
         }
+    }
+
+    private func path(
+        of links: [(Int, Int)], in figure: Constellation, size: CGSize
+    ) -> Path {
+        var path = Path()
+        for (a, b) in links {
+            path.move(to: SkyGeometry.star(figure, a, in: size))
+            path.addLine(to: SkyGeometry.star(figure, b, in: size))
+        }
+        return path
     }
 
     /// One loose star per five nights once the atlas is full. Never joined to
@@ -158,25 +203,11 @@ struct StarfieldView: View {
     private func drawWanderers(_ canvas: inout GraphicsContext, size: CGSize, t: TimeInterval) {
         let count = ConstellationAtlas.wanderers(nightSessions: nightSessions)
         guard count > 0 else { return }
-        for index in 0..<count {
+        for (index, point) in SkyGeometry.wanderers(count: count, in: size).enumerated() {
             let n = Double(index) + 0.5
-            let x = ((n * 0.3819660113).truncatingRemainder(dividingBy: 1)) * size.width
-            let band = ConstellationAtlas.skyBottom - ConstellationAtlas.skyTop
-            let y = (ConstellationAtlas.skyTop
-                     + ((n * 0.2360679775).truncatingRemainder(dividingBy: 1)) * band)
-                * size.height
             let twinkle = 0.5 + 0.5 * sin(t * 0.6 + n * 2.3)
-            dot(&canvas, x: x, y: y, r: 1.4, opacity: 0.3 + twinkle * 0.35)
+            dot(&canvas, x: point.x, y: point.y, r: 1.4, opacity: 0.3 + twinkle * 0.35)
         }
-    }
-
-    /// Sky-band space (0...1 on both axes) to a point on screen.
-    private func point(_ position: CGPoint, in size: CGSize) -> CGPoint {
-        let band = ConstellationAtlas.skyBottom - ConstellationAtlas.skyTop
-        return CGPoint(
-            x: position.x * size.width,
-            y: (ConstellationAtlas.skyTop + position.y * band) * size.height
-        )
     }
 
     private func dot(

@@ -105,13 +105,19 @@ enum StorageKeys {
     /// nothing in this app is allowed to decay.
     static let clockRing = "pawmodoro.clockRing"
 
+    /// The joins drawn between stars with a finger, and which moons have been
+    /// asked. Its own key rather than a field on the journal: the atlas is a
+    /// pure function of the session log and must stay one, so the only thing
+    /// that could ever be stored about the sky is what a *hand* did to it.
+    static let skyTouches = "pawmodoro.skyTouches"
+
     static let all = [
         settings, sessions, hasOnboarded, hasPlus, tipsGiven, journal, postcards,
         strayFirstSeen, strayJoined, dreams, heard, pantry, fives, tuckIn,
         doorstep, drawer, repertoire, anniversaries, lifetimeSessions, firstSession,
         nightKnown, fortunes, travels, garden, timetable, photos, setlist,
         paleCoats, chronicle, anthology, longestDrift, owned, keepsakes,
-        snapshots, greeted, clockRing, chronicleAlmanac, promo,
+        snapshots, greeted, clockRing, chronicleAlmanac, promo, skyTouches,
     ]
 }
 
@@ -763,6 +769,32 @@ enum LaunchOptions {
     /// the shot — background the app (Cmd+Shift+H) to see the banner.
     static let goldenHourSoon = isSet("-PawmodoroGoldenHour")
 
+    /// Draw the joins between stars that a finger would have drawn.
+    ///
+    /// `-PawmodoroTraced` joins every link reachable tonight in every started
+    /// figure; `-PawmodoroTraced 2` does it for the first two figures only.
+    /// Always pair it with `-PawmodoroNightSessions`, which decides what is
+    /// reachable — with no nights there are no lit stars and nothing to join,
+    /// and this correctly does nothing at all.
+    ///
+    /// Only ever seeds *reachable* links, so every state it produces is a
+    /// state somebody could have reached with a finger. A flag that could
+    /// write an impossible sky would be a flag that lies to the person looking
+    /// at it.
+    static let tracedFigures: Int? = {
+        guard arguments.contains("-PawmodoroTraced") else { return nil }
+        // `?? Int.max` and not `?? 0`: the bare flag means "all of them", and
+        // the valueless form is the one anybody types first.
+        return value(after: "-PawmodoroTraced").flatMap(Int.init) ?? Int.max
+    }()
+
+    /// The moon answers about two seconds after launch, without a tap.
+    ///
+    /// Pair with `-PawmodoroMoon full` or `new` for the two answers that are
+    /// otherwise a fortnight apart, and with `-PawmodoroClock 22` so there is
+    /// a night sky to answer into.
+    static let askMoon = isSet("-PawmodoroAskMoon")
+
     /// Start with the promo code already redeemed.
     ///
     /// Not the same thing as `-PawmodoroUnlockPlus`, and kept apart from it on
@@ -857,6 +889,8 @@ enum LaunchOptions {
     static let bellHour: Int? = nil
     static let clockRingHours: Int? = nil
     static let redeemedPromo = false
+    static let tracedFigures: Int? = nil
+    static let askMoon = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -911,11 +945,44 @@ enum LaunchOptions {
         if let clockRingHours {
             seedClockRing(clockRingHours, into: defaults)
         }
+        if let tracedFigures {
+            seedSkyJoins(figures: tracedFigures, into: defaults)
+        }
         // Last, and after `seedChronicle` on purpose: that one *replaces* the
         // event array, so anything appended before it would vanish.
         if findTapes {
             seedFoundTapes(into: defaults)
         }
+    }
+
+    /// Every join a finger could have drawn tonight, in the first `figures`
+    /// figures.
+    ///
+    /// Written straight into defaults rather than through `SkyTouches`,
+    /// because this runs in `PawmodoroApp.init()` before anything has read
+    /// `UserDefaults` — which is the point of `applyAtLaunch`, and the reason
+    /// the singleton picks the seeded sky up rather than overwriting it.
+    ///
+    /// Reachability is decided by `-PawmodoroNightSessions`, not by whatever
+    /// history happens to be in the defaults: this is a debug flag standing
+    /// beside another debug flag, and reading the log here would make the two
+    /// disagree in the one case anybody uses them together.
+    private static func seedSkyJoins(figures: Int, into defaults: UserDefaults) {
+        let nights = nightSessions ?? 0
+        var joins: [String] = []
+        for index in ConstellationAtlas.all.indices where index < figures {
+            joins += SkyTouches
+                .reachableLinks(of: index, nightSessions: nights)
+                .map(\.key)
+        }
+        // The same two-field shape `SkyTouches.Stored` encodes. A dictionary
+        // literal rather than a shared type, for the same reason the chronicle
+        // seeder writes a bare array: the storage shape is the contract, and
+        // reaching into the model for a private nested struct would only move
+        // where the drift can happen.
+        let stored: [String: [String]] = ["joins": joins.sorted(), "moonsAsked": []]
+        guard let data = try? JSONEncoder().encode(stored) else { return }
+        defaults.set(data, forKey: StorageKeys.skyTouches)
     }
 
     /// Earn all three found mixtapes the way the app would.

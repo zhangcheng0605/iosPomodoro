@@ -300,6 +300,13 @@ MERGED_BY = {
     # note on `merge(ids:)`.
     "anniversaries": "ids",
     "pantry": "ids",
+    # The sky: which figures have been traced by hand and which moons have
+    # been asked. Two sets, both of which only ever grow, so the same union
+    # carries them. Load-bearing rather than tidy — a constellation somebody
+    # closed with their finger on the phone is exactly the kind of thing that
+    # must be there when they open the Mac, and there is no other record of
+    # it: unlike a sighting it was never rolled, it was done.
+    "skyTouches": "ids",
     # The three lists of once-written, UUID-carrying records.
     "drawer": "drawer",
     "photos": "photos",

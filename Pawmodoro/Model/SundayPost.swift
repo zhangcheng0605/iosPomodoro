@@ -177,6 +177,20 @@ enum SundayPost {
                          + "and neither of us went to look.")
         }
 
+        // A field-recording card is finished the week somebody has heard all
+        // four gradings of one loop — dawn, day, dusk and night. Named, never
+        // counted: "your third card" would turn a thing you complete by
+        // happening to sit at different hours into a set to be collected, and
+        // the errand would be to be awake at four in the morning. The card
+        // itself already carries the note about what the grading does; the
+        // letter only says that it is finished.
+        let finished = events.filter { $0.kind == .recording }
+            .compactMap { Ambience(rawValue: $0.subject) }
+        if let loop = finished.first {
+            lines.append("We have heard \(loop.heardPhrase) at every hour of "
+                         + "the day now, which took a while.")
+        }
+
         // The bell writes a row only the first time an hour of the clock is
         // filled, so this sentence appears in the handful of weeks somebody
         // sat through an hour they had never sat through before — and it

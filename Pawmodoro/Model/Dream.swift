@@ -44,6 +44,8 @@ enum Dream: Hashable, Identifiable {
     case season(Season)
     /// What the sky left behind today.
     case sky(Sky)
+    /// Something a finger did to the night sky.
+    case joined(Joined)
     /// An open hour, once you have sat one.
     case adrift(Adrift)
     /// An hour of the clock you have actually been awake in.
@@ -166,6 +168,34 @@ enum Dream: Hashable, Identifiable {
             case .puddle: "Deeper than it looked, and warm."
             case .thunder: "Further off each time, and then not at all."
             case .afterglow: "Everything lit from one side, and steaming."
+            }
+        }
+    }
+
+    /// The night sky, after somebody has been touching it.
+    ///
+    /// Gated on `SkyTouches` rather than on a threshold, which is the same
+    /// rule the rest of this file follows: the store that knows already knows,
+    /// and a second table saying when these unlock could only ever disagree
+    /// with it. Note none of the three names a figure — the buddy dreams that
+    /// a line was drawn, not which constellation got it, so this stays true
+    /// whichever one you joined first.
+    enum Joined: String, CaseIterable, Hashable {
+        case firstjoin, figure, askedmoon
+
+        var subject: String {
+            switch self {
+            case .firstjoin: "two stars, and a line"
+            case .figure: "a whole figure, joined up"
+            case .askedmoon: "the moon, asked something"
+            }
+        }
+
+        var line: String {
+            switch self {
+            case .firstjoin: "Somebody drew it. It was still there in the morning."
+            case .figure: "Finished early, and the sky did not mind."
+            case .askedmoon: "It answered. Neither of them said what."
             }
         }
     }
@@ -668,6 +698,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): "sound.\(sound.rawValue)"
         case .season(let season): "season.\(season.rawValue)"
         case .sky(let sky): "sky.\(sky.rawValue)"
+        case .joined(let joined): "joined.\(joined.rawValue)"
         case .adrift(let adrift): "adrift.\(adrift.rawValue)"
         case .hour(let hour): "hour.\(hour.rawValue)"
         case .wood(let wood): "wood.\(wood.rawValue)"
@@ -696,6 +727,7 @@ enum Dream: Hashable, Identifiable {
         case "sound": return Heard(rawValue: parts[1]).map(Dream.sound)
         case "season": return Season(rawValue: parts[1]).map(Dream.season)
         case "sky": return Sky(rawValue: parts[1]).map(Dream.sky)
+        case "joined": return Joined(rawValue: parts[1]).map(Dream.joined)
         case "adrift": return Adrift(rawValue: parts[1]).map(Dream.adrift)
         case "hour": return Hour(rawValue: parts[1]).map(Dream.hour)
         case "wood": return Wood(rawValue: parts[1]).map(Dream.wood)
@@ -725,6 +757,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): "dream_heard_\(sound.rawValue)"
         case .season(let season): "dream_season_\(season.rawValue)"
         case .sky(let sky): "dream_sky_\(sky.rawValue)"
+        case .joined(let joined): "dream_joined_\(joined.rawValue)"
         case .adrift(let adrift): "dream_adrift_\(adrift.rawValue)"
         case .hour(let hour): hour.asset
         case .wood(let wood): wood.asset
@@ -749,8 +782,8 @@ enum Dream: Hashable, Identifiable {
         case .travel, .companion, .visitor, .hour, .wood, .neighbour,
              .magpie, .finery, .den, .brought, .snapshot, .flight,
              .tidal: true
-        case .memory, .regular, .sound, .season, .sky, .adrift, .yours,
-             .surreal: false
+        case .memory, .regular, .sound, .season, .sky, .joined, .adrift,
+             .yours, .surreal: false
         }
     }
 
@@ -771,6 +804,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): sound.name.lowercased()
         case .season(let season): season.name.lowercased()
         case .sky(let sky): sky.subject
+        case .joined(let joined): joined.subject
         case .adrift(let adrift): adrift.subject
         case .hour(let hour): hour.subject
         case .wood(let wood): wood.subject
@@ -798,6 +832,7 @@ enum Dream: Hashable, Identifiable {
         case .sound(let sound): sound.dreamLine
         case .season(let season): season.dreamLine
         case .sky(let sky): sky.line
+        case .joined(let joined): joined.line
         case .adrift(let adrift): adrift.line
         case .hour(let hour): hour.line
         case .wood(let wood): wood.line
@@ -830,6 +865,7 @@ enum Dream: Hashable, Identifiable {
             + Heard.allCases.map(Dream.sound)
             + Season.allCases.map(Dream.season)
             + Sky.allCases.map(Dream.sky)
+            + Joined.allCases.map(Dream.joined)
             + Adrift.allCases.map(Dream.adrift)
             + Hour.allCases.map(Dream.hour)
             + Wood.allCases.map(Dream.wood)

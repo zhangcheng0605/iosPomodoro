@@ -17,6 +17,14 @@ design problems rather than on typos:
   3. Asset names that don't exist. Every "buddy_…"/"scene_…"/"stray_…" string
      is checked against the catalog, including the ones assembled by a
      `frame("…")` call in an enum arm.
+
+The app is **two targets**, and both are walked: `Pawmodoro/` and
+`PawmodoroWidgets/`, each against its own asset catalogue. It used to be one,
+and the widget extension — its own source tree, its own `Assets.xcassets` —
+was invisible to this file and to everything else in `tools/`. A mistyped
+asset name there is the quietest bug the app can have: it builds, installs,
+and draws a blank square on a home screen where there is no console and no
+crash report.
   4. `StorageKeys` that aren't in `StorageKeys.all`, which silently breaks
      `-PawmodoroResetState`.
   5. `Theme.…` and `LaunchOptions.…` members that don't exist.
@@ -34,14 +42,45 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, "Pawmodoro")
 ASSETS = os.path.join(SOURCE, "Assets.xcassets")
 
+# The app is two targets, and each carries its own asset catalogue.
+#
+# For a long time this file knew about one of them. `SOURCE` was the app, the
+# walk started there, and `PawmodoroWidgets/` — its own source tree, its own
+# `Assets.xcassets` — was invisible to the entire toolchain. An asset name
+# typed wrong in a widget is the worst place in the app to hide one: the widget
+# builds, installs, and draws a blank square on somebody's home screen, where
+# there is no console, no crash, and nobody to notice but the owner of the
+# phone. Nothing else in `tools/` looks at that folder either.
+#
+# The two catalogues are separate on purpose and must be checked separately.
+# An extension cannot reach into the containing app's bundle for artwork, so
+# `widget_nightcap` existing in `Pawmodoro/Assets.xcassets` would prove nothing
+# about the widget — the sprites the widget needs are copied into its own
+# catalogue, which is why `buddy_cat_awake` appears in both. Checking a widget
+# string against the union of the two would pass exactly the bug this is here
+# to catch.
+#
+# `macos` says whether the target builds for the Mac. The app does, so its
+# UIKit fence is enforced; the widget extension is `platformFilter = ios` in
+# the project file and imports UIKit plainly, which is correct there.
+ROOTS = (
+    {"name": "Pawmodoro", "source": SOURCE, "assets": ASSETS, "macos": True},
+    {"name": "PawmodoroWidgets",
+     "source": os.path.join(ROOT, "PawmodoroWidgets"),
+     "assets": os.path.join(ROOT, "PawmodoroWidgets", "Assets.xcassets"),
+     "macos": False},
+)
 
-def swift_files():
-    for folder, _, names in os.walk(SOURCE):
-        if ".xcassets" in folder:
-            continue
-        for name in sorted(names):
-            if name.endswith(".swift"):
-                yield os.path.join(folder, name)
+
+def swift_files(root=None):
+    """Every Swift file in one target, or in all of them."""
+    for chosen in (ROOTS if root is None else (root,)):
+        for folder, _, names in os.walk(chosen["source"]):
+            if ".xcassets" in folder:
+                continue
+            for name in sorted(names):
+                if name.endswith(".swift"):
+                    yield os.path.join(folder, name)
 
 
 def strip(source):
@@ -108,28 +147,40 @@ def check_storage_keys(failures):
     return keys
 
 
-def imagesets():
+def imagesets(root=None):
+    """The imagesets one target's own catalogue has. Defaults to the app's."""
+    folder = (root or ROOTS[0])["assets"]
+    if not os.path.isdir(folder):
+        return set()
     return {
         name[: -len(".imageset")]
-        for name in os.listdir(ASSETS)
+        for name in os.listdir(folder)
         if name.endswith(".imageset")
     }
 
 
 ASSET_PREFIXES = ("buddy_", "wild_", "scene_", "vignette_", "fx_", "stray_",
-                  "dream_", "snail_")
+                  "dream_", "snail_", "widget_")
 
 
 def check_assets(failures):
-    """Literal asset names, plus the ones a `frame("…")` arm assembles."""
+    """Literal asset names, plus the ones a `frame("…")` arm assembles.
+
+    Each target is held to its **own** catalogue. The widget extension cannot
+    read the app's, so a name that resolves in `Pawmodoro/Assets.xcassets` and
+    nowhere else is a blank square on the home screen.
+    """
+    for root in ROOTS:
+        have = imagesets(root)
+        for path in swift_files(root):
+            source = open(path).read()
+            for name in re.findall(r'"([a-z0-9_]+)"', source):
+                if name.startswith(ASSET_PREFIXES) and name not in have:
+                    failures.append(
+                        f"{rel(path)}: no imageset named '{name}' in "
+                        f"{rel(root['assets'])}")
+
     have = imagesets()
-
-    for path in swift_files():
-        source = open(path).read()
-        for name in re.findall(r'"([a-z0-9_]+)"', source):
-            if name.startswith(ASSET_PREFIXES) and name not in have:
-                failures.append(f"{rel(path)}: no imageset named '{name}'")
-
     # `case .redpanda: frame("armsup")` -> buddy_redpanda_armsup. These are the
     # quirk tables, where a typo is invisible until the sprite doesn't appear.
     buddy = open(os.path.join(SOURCE, "Model", "Buddy.swift")).read()
@@ -239,13 +290,18 @@ def check_platform_guards(failures):
     The same goes for the UIKit-only types the app still names: `UIImage`,
     `UIColor` and the feedback generators all have `Platform*` aliases now, and
     reaching for the concrete one is how the aliases quietly stop being used.
+
+    Only the targets that build for the Mac are held to this. The widget
+    extension is iOS-only in the project file and has no `Platform.swift` of
+    its own; `import UIKit` there is not a portability bug, and reporting it as
+    one would be a false failure in the file whose whole job is to be believed.
     """
     allowed = {"Pawmodoro/Platform/Platform.swift"}
     banned = ("UIImage", "UIColor", "UIScreen", "UIApplication", "UIDevice",
               "UIImpactFeedbackGenerator", "UINotificationFeedbackGenerator",
               "UIGraphicsImageRenderer")
 
-    for path in swift_files():
+    for path in (p for r in ROOTS if r["macos"] for p in swift_files(r)):
         name = rel(path)
         if name in allowed:
             continue
@@ -583,8 +639,11 @@ def main():
     check_constellation_links(failures)
 
     files = list(swift_files())
-    print(f"checked {len(files)} Swift files, {len(imagesets())} imagesets, "
-          f"{len(enums)} CaseIterable enums "
+    targets = ", ".join(
+        f"{r['name']} {len(list(swift_files(r)))} files/"
+        f"{len(imagesets(r))} imagesets" for r in ROOTS)
+    print(f"checked {len(files)} Swift files across {len(ROOTS)} targets "
+          f"({targets}), {len(enums)} CaseIterable enums "
           f"({', '.join(f'{k}:{len(v)}' for k, v in sorted(enums.items()))})")
     if failures:
         print(f"\n{len(failures)} FAILED:")

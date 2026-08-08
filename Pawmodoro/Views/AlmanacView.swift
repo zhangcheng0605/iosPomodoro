@@ -10,6 +10,11 @@ import SwiftUI
 struct AlmanacView: View {
     @Environment(TimerEngine.self) private var engine
 
+    /// The grades of ambience actually listened through. Reached directly
+    /// rather than through the engine because the engine does not carry it —
+    /// see `FieldNotes`, which is a singleton for that reason.
+    @State private var fieldNotes = FieldNotes.shared
+
     private var dayPart: DayPart { LaunchOptions.forcedDayPart ?? DayPart.current() }
     private var place: Place { engine.settings.place }
 
@@ -24,6 +29,7 @@ struct AlmanacView: View {
             // dial is not about today at all — it is the one thing on this
             // page that took months and cannot be hurried.
             ClockRingView()
+            fieldRecordings
             elsewhere
         }
         .padding(16)
@@ -289,6 +295,103 @@ struct AlmanacView: View {
                     .foregroundStyle(Theme.bark.opacity(0.6))
             }
         }
+    }
+
+    // MARK: The field recordings
+
+    /// What the buddy has on tape, and what you last sat through.
+    ///
+    /// Two things, and the order matters. The **line** is the most recent
+    /// grade heard — "You have heard the forest at dawn" — in the past tense,
+    /// about something that already happened. The **cards** are the loops
+    /// whose four circadian grades are all in.
+    ///
+    /// The clock ring's rule applies here word for word, and for the same
+    /// reason: no count, no "three of four", no bar, nothing anywhere naming a
+    /// grade that has not been heard. Half of these are night grades, and the
+    /// only way to fill one is to be sitting still after dark — so a number
+    /// counting the gaps would turn somebody's ordinary evening into a
+    /// shortfall. A shelf shows what is on it.
+    ///
+    /// Silent until the first grade lands, so a first-week install never sees
+    /// an empty frame with a heading over it.
+    @ViewBuilder
+    private var fieldRecordings: some View {
+        if fieldNotes.hasAny {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Field recordings")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.bark.opacity(0.8))
+
+                if let line = fieldNotes.latestLine {
+                    Text(line)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.bark.opacity(0.7))
+                }
+
+                let cards = fieldNotes.cards
+                if !cards.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(cards) { loop in
+                                recordingCard(loop)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        }
+    }
+
+    /// One card: pressed paper, a loop's name, the four times of day it was
+    /// caught at, and the thing you could only have learned by catching all
+    /// four.
+    ///
+    /// Sepia is built rather than drawn — `Theme.cream` under a wash of
+    /// `Theme.bark`, so it ages the paper in every theme and both appearances
+    /// instead of being one brown that goes wrong in Ink. Nothing here is a
+    /// literal `Color`, and the text pair is the app's ordinary bark-on-cream,
+    /// which the contrast check already measures.
+    private func recordingCard(_ loop: Ambience) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Image(systemName: loop.systemImage)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.bark.opacity(0.75))
+                Text(loop.label)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.bark)
+            }
+            Text(FieldNotes.grades.map(\.rawValue).joined(separator: " · "))
+                .font(.system(size: 8))
+                .tracking(0.4)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .foregroundStyle(Theme.bark.opacity(0.55))
+            Text(loop.fieldNote)
+                .font(.caption2.italic())
+                .foregroundStyle(Theme.bark.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(9)
+        .frame(width: 138, height: 96, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(Theme.cream)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .fill(Theme.bark.opacity(0.13))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .strokeBorder(Theme.bark.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(loop.label). Heard at dawn, in daylight, "
+                            + "at dusk and after dark. \(loop.fieldNote)")
     }
 
     // MARK: Everywhere else

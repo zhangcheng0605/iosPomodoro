@@ -106,7 +106,10 @@ final class Garden {
              .den, .brought, .snapshot:
             DreamSeed(kind: PlantKind.berrybush.rawValue,
                       species: nil, offeredOn: date)
-        case .surreal, .companion, .visitor, .sound, .season, .sky,
+        // A join is a line drawn on the sky, which is not a place and is not
+        // an animal — the moonbell's whole category, and the plant that opens
+        // after dark, which is the only time any of this happens.
+        case .surreal, .companion, .visitor, .sound, .season, .sky, .joined,
              .hour, .magpie, .finery, .yours:
             DreamSeed(kind: PlantKind.moonbell.rawValue,
                       species: nil, offeredOn: date)

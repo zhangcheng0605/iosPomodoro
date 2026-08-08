@@ -35,6 +35,17 @@ enum MoonPhase {
         abs(age(on: date) - 0.5) < 0.05
     }
 
+    /// True for roughly three nights around new — the same width as `isFull`,
+    /// measured at the other end of the cycle, where the wrap is.
+    ///
+    /// Written against the *illumination* rather than the age so the wrap
+    /// costs nothing: `age` runs 0.97…1.0…0.03 through new, and a naive
+    /// `abs(age) < 0.05` would catch only half of that window and be wrong for
+    /// a night and a half every month with nothing on screen to say so.
+    static func isNew(on date: Date = WorldCalendar.now) -> Bool {
+        illumination(on: date) < 0.025
+    }
+
     static func name(on date: Date = WorldCalendar.now) -> String {
         let phase = age(on: date)
         switch phase {

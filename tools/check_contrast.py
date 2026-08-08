@@ -106,12 +106,21 @@ SCENE_VEIL = 0.52
 #
 # Every one of these has a backing now. Artwork can be any colour a place needs
 # it to be, and the text is never reading against it directly — the timer face
-# (TimerRingView), the caption capsule (BuddyView) and the paw row capsule
-# (ContentView) each carry their own. What this check proves is that those
-# backings are opaque enough to survive the darkest scene under them.
+# (TimerRingView), the caption capsule (BuddyView), the paw row capsule
+# (ContentView) and the now-playing chip (NowPlayingChip) each carry their own.
+# What this check proves is that those backings are opaque enough to survive
+# the darkest scene under them.
+#
+# The chip is the one row that is two rows: it is anchored to the bottom of the
+# dial rather than to a fixed place on the screen, so where it lands moves with
+# the phone. Measured at 0.520 on an iPhone 17; the pair below brackets it
+# across the range of supported heights, because one number would leave the
+# band it actually covers unmeasured on every other device.
 TEXT_ROWS = (
     (0.335, 0.82),   # countdown, on the timer face
     (0.412, 0.82),   # status line, same face
+    (0.500, 0.78),   # now-playing chip, top edge on a tall phone
+    (0.545, 0.78),   # now-playing chip, bottom edge on a short one
     (0.690, 0.78),   # buddy caption capsule
     (0.718, 0.70),   # paw print capsule
 )

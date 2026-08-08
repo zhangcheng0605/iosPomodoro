@@ -199,8 +199,15 @@ extension ChronicleEvent {
         // marking every first would ring the whole circle. They are the
         // Sunday Post's material, not the rim's. Trades, keepsakes and
         // snapshots are the same: things you do often, by choice.
+        // A finished field-recording card gets no mark either, and this one is
+        // a decision rather than a volume problem. The card completes on the
+        // fourth ordinary session with the same loop on, at whichever time of
+        // day was missing — nobody notices the moment, and a rim is days you
+        // would remember. The shelf is on the almanac page and can be looked
+        // at any time, which is the opposite of what the rim is for; the
+        // Sunday Post carries the sentence instead.
         case .sighting, .dream, .heard, .sound, .snail,
-             .trade, .keepsake, .snapshot: nil
+             .trade, .keepsake, .snapshot, .recording: nil
         }
     }
 }

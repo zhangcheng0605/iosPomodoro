@@ -24,16 +24,29 @@ struct WeatherView: View {
     @State private var started = Date()
 
     var body: some View {
-        if weather.hasParticles && !reduceMotion {
-            TimelineView(.periodic(from: .now, by: 1.0 / 12.0)) { context in
-                Canvas { canvas, size in
-                    draw(&canvas, size: size,
-                         t: context.date.timeIntervalSince(started))
+        ZStack {
+            if weather.hasParticles && !reduceMotion {
+                TimelineView(.periodic(from: .now, by: 1.0 / 12.0)) { context in
+                    Canvas { canvas, size in
+                        draw(&canvas, size: size,
+                             t: context.date.timeIntervalSince(started))
+                    }
                 }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+
+            // What the light is doing, over the top of whatever is falling.
+            //
+            // Hosted here rather than as a layer of its own in `ContentView`
+            // for one reason: this is already the "what the sky is doing,
+            // drawn" layer, and it already sits at the one depth the light
+            // belongs at — above the sky wash so a glint reads against the
+            // night tint, below the UI so nothing ever lands on the
+            // countdown. `FlourishView` draws no falling matter of its own,
+            // so it cannot become a second copy of the field above it.
+            FlourishView(tint: tint, accent: accent)
         }
     }
 

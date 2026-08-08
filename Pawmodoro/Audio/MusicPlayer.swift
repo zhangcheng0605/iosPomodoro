@@ -76,6 +76,10 @@ final class MusicPlayer {
         incoming.play()
 
         current = track
+        // Radio changes the track with nothing on screen to say so. This is
+        // the only thing the player tells the UI, and `NowPlaying` swallows
+        // the repeats (a resume re-schedules the track already playing).
+        NowPlaying.shared.announce(track)
         ramp(incoming, to: 1, over: crossfade)
         if outgoing.isPlaying {
             ramp(outgoing, to: 0, over: crossfade) { outgoing.stop() }
@@ -97,6 +101,7 @@ final class MusicPlayer {
     func stop(fade: TimeInterval = 0.6) {
         radioTask?.cancel()
         current = nil
+        NowPlaying.shared.silence()
         for player in players where player.isPlaying {
             ramp(player, to: 0, over: fade) { player.stop() }
         }

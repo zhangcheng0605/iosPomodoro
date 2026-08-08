@@ -1786,6 +1786,20 @@ final class TimerEngine {
         for sky in Dream.Sky.allCases where sky.reachedAt.contains(today) {
             pool.append(contentsOf: repeatElement(.sky(sky), count: 3))
         }
+        // What a finger did to the night sky. Asked of `SkyTouches` rather
+        // than of a threshold, so the gate cannot disagree with what is
+        // actually drawn up there. Weighted 2, like everything else that is
+        // reached rather than rolled.
+        let touched = SkyTouches.shared
+        if touched.hasJoinedAnything {
+            pool.append(contentsOf: repeatElement(.joined(.firstjoin), count: 2))
+        }
+        if !touched.foundFigures().isEmpty {
+            pool.append(contentsOf: repeatElement(.joined(.figure), count: 2))
+        }
+        if touched.hasAskedTheMoon {
+            pool.append(contentsOf: repeatElement(.joined(.askedmoon), count: 2))
+        }
         // The open hour, once you have actually sat one. Counted in laps
         // rather than minutes so it is reachable under fast timers too.
         let longestLaps = Drift.laps(elapsed: log.longestDrift, lapSeconds: lapSeconds)
@@ -1899,9 +1913,9 @@ final class TimerEngine {
             met = journal.record(for: species)?.firstSeen
         case .sound(let sound):
             met = journal.firstHeard(sound)
-        case .travel, .companion, .visitor, .season, .sky, .adrift, .hour,
-             .wood, .yours, .surreal, .neighbour, .flight, .tidal, .magpie,
-             .finery, .den, .brought, .snapshot:
+        case .travel, .companion, .visitor, .season, .sky, .joined, .adrift,
+             .hour, .wood, .yours, .surreal, .neighbour, .flight, .tidal,
+             .magpie, .finery, .den, .brought, .snapshot:
             met = nil
         }
         guard let met else { return nil }

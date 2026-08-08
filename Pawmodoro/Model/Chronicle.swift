@@ -106,6 +106,20 @@ struct ChronicleEvent: Codable, Equatable, Identifiable {
         /// and is already merged across devices by union. A second place to
         /// keep "has this happened" is a second place for it to disagree.
         case tape
+        /// A field-recording card finished — all four circadian grades of one
+        /// ambience loop heard. The subject is the `Ambience.rawValue`.
+        ///
+        /// The *episodic* half only. The authority on which grades have been
+        /// heard is `FieldNotes`, which has a key of its own for the reason
+        /// `StorageKeys.clockRing` gives: this log is capped and drops its
+        /// oldest rows, and a shelf of cards read back out of it would quietly
+        /// empty again after a few years. What belongs here is the day a card
+        /// was finished — which is what the weekly letter and the year ring
+        /// want and what nothing else keeps.
+        ///
+        /// Capped by the thing that writes it at eighteen rows in a lifetime,
+        /// one per loop, because a card can only be finished once.
+        case recording
     }
 }
 

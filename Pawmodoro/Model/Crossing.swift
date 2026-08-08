@@ -229,6 +229,11 @@ enum Crossing {
     /// - the anthology's quoted set, which rides alongside `merge(poems:)`
     ///   below for the same reason `surfaced` rides here — a line quoted back
     ///   on one device must not be offered as fresh on the other.
+    /// - the sky's two sets: the figures joined up by hand and the moons
+    ///   asked. These are the clearest case of all, because unlike a sighting
+    ///   nothing rolled them — somebody sat there and closed a constellation
+    ///   with a finger, and there is no second record anywhere. An un-merged
+    ///   `joins` means a night's work simply is not there on the other device.
     static func merge(ids a: Set<String>, _ b: Set<String>) -> Set<String> {
         a.union(b)
     }

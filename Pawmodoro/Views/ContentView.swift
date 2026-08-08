@@ -62,6 +62,8 @@ struct ContentView: View {
 
                 sky
 
+                skyTouch
+
                 weather
 
                 seasonal
@@ -624,6 +626,33 @@ struct ContentView: View {
             }
         }
         .allowsHitTesting(false)
+    }
+
+    /// What a finger does to the night sky.
+    ///
+    /// Its own layer rather than part of `sky`, for the same reason the stray
+    /// is not part of `scenery`: that layer is `allowsHitTesting(false)` so
+    /// the controls stay reachable through it, and a star has to be touchable
+    /// to be joined. `NightSkyTouchView` puts the hit region on the stars and
+    /// the moon alone, so everything between them still falls through to the
+    /// toys underneath.
+    ///
+    /// Above `sky` so the answers draw over the moon they are about, and below
+    /// `weather` so a storm still crosses in front of the whole thing. Deaf
+    /// during a focus phase, like the toys — see `NightSkyTouchView`.
+    @ViewBuilder
+    private var skyTouch: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            if part.showsStars {
+                NightSkyTouchView(
+                    enabled: !(engine.isRunning && !engine.phase.isBreak),
+                    nightSessions: engine.log.nightSessions,
+                    tint: Theme.bark,
+                    moon: Theme.sunshine
+                )
+            }
+        }
     }
 
     private var phaseChip: some View {

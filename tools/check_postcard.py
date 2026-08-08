@@ -18,21 +18,44 @@ one is invisible to everything else in `tools/`: the tower is the only thing on
 a postcard the app *draws* rather than loads, so there is no asset to be
 missing and no palette index to be sea.
 
-Nothing here is restated. The footings come out of `Place.swift`, the ground
-line out of `Stray.swift`, the card's geometry and the tower's measurements out
-of `PostcardView.swift`, the buddies' footprints out of the shipped sprites,
-and what counts as a surface out of `generate_scenes.py`'s own grid of palette
-indices. Break any one of them and this fails; edit only this file and it
-cannot pass.
+## What this file used to prove, and why it was worth nothing
 
-That sentence had to be earned twice. The tower rules were written first as
-`max(soles - lift, height)` in Python — the Swift's clamp copied out by hand —
-and deleting the clamp from `PostcardView` altogether still passed, because
-this file was computing the clamped answer from unclamped code. `parse_tower`
-now requires the clamp to *be there*, in shape, or refuses to run at all. Every
-rule below has been checked by deliberately breaking the thing it guards and
-watching it fail; a green run on code you have broken on purpose is the only
-evidence a checker checks anything.
+Read `Place.footing`, work out where that lands on the card, look at the pixel:
+that was the shape of it, and every step after the first was a second copy of
+`PostcardView`'s arithmetic written in Python. So it proved the *footings in the
+model* are over ground — which nothing on a phone renders.
+
+A verifier deleted the body of `PostcardView.standing` and put back the line it
+was written to replace, `CGSize(width: 0, height: -feet)`. That is the original
+bug, exactly: the cat is centred at the ground line again, which at Harbor Isle
+is the open sea. This file printed `checked 16 buddy placements ... all pass`.
+It was worse than no checker, because it read as coverage.
+
+So no arithmetic is restated here any more. `cropTop`, `standing` and
+`towerStanding` are read out of the Swift and **translated**, and the checker
+*runs the view's own expressions*; the `.offset` each sprite actually carries is
+read out of its picture block and applied the way a bottom-aligned `ZStack`
+would apply it. Where the feet land is therefore computed the way the app
+computes it, and the palette index under them is the app's answer, not a
+restatement of the model. Delete the fix and this goes red on the pixels.
+
+Nothing else is restated either. The footings come out of `Place.swift`, the
+ground line out of `Stray.swift`, the card's geometry and the tower's
+measurements out of `PostcardView.swift`, the buddies' footprints out of the
+shipped sprites, and what counts as a surface out of `generate_scenes.py`'s own
+grid of palette indices. Break any one of them and this fails; edit only this
+file and it cannot pass.
+
+That sentence had to be earned three times. The tower rules were written first
+as `max(soles - lift, height)` in Python — the Swift's clamp copied out by hand
+— and deleting the clamp from `PostcardView` altogether still passed, because
+this file was computing the clamped answer from unclamped code. Then the same
+mistake turned out to be underneath the whole file, not just the tower. The
+answer both times was to stop keeping a copy: the translator below has no
+opinion about what the view *should* say, and refuses to run rather than guess
+when it meets a shape it cannot read. Every rule has been checked by
+deliberately breaking the thing it guards and watching it fail; a green run on
+code you have broken on purpose is the only evidence a checker checks anything.
 
 Be honest about what is not covered. A palette index knows the sea from the
 shore, so the Harbor half of the bug is caught mechanically and always will be.
@@ -45,9 +68,9 @@ correct footing has *thirteen* rows of cottage wall above it — the good case
 looks more buried than the bad one, and any headroom rule ranks them the wrong
 way round. That half was found by compositing the card and looking at it, which
 is what `--preview` is for. What this file guarantees is narrower and still
-worth having: the buddy is on the card, out from under the stamp, over
-something that is not sky and not water, under a tower that fits, and the six
-places that were never wrong have not moved a pixel.
+worth having: the buddy the *view draws* is on the card, out from under the
+stamp, over something that is not sky and not water, under a tower that fits,
+and the six places that were never wrong have not moved a pixel.
 
     python3 tools/check_postcard.py [--preview [stem]]
 
@@ -149,32 +172,231 @@ def parse_footings(ground_line):
     return footings, default
 
 
-def parse_card():
-    """The card's geometry, out of PostcardView.swift.
+# ------------------------------------------------- the view's own arithmetic
+#
+# Three tiny Swift functions decide where a sprite lands on a card, and this
+# section runs them rather than agreeing with them. Everything below is
+# translation: no expression in `PostcardView` is repeated here in any form, so
+# there is nothing left for the Swift and the Python to drift apart about.
+#
+# The translator is deliberately small and deliberately brittle. It knows the
+# handful of tokens these three functions are made of, and if it meets anything
+# else it stops with a message rather than guessing — because guessing is how
+# the first version of this file ended up computing the *right* answer from the
+# *wrong* code and reporting all pass.
 
-    Returns the picture's size in points and, for each of the two pictures that
-    draw a *place*, how far the soles sit above the bottom edge and how tall
-    the buddy is. The panorama draws `HomesteadScene` and has no place in it,
-    so it is deliberately not here.
+def _size(width, height):
+    """Swift's `CGSize`, as the pair this file works in."""
+    return (width, height)
+
+
+def _offset(x=0.0, y=0.0):
+    """SwiftUI's `.offset(x:y:)`, as a pair. Either argument may be omitted,
+    exactly as the modifier allows — `.offset(y: -feet)` is the line the fix
+    replaced, and it has to translate."""
+    return (x, y)
+
+
+# Swift on the left, this file's vocabulary on the right, applied in order.
+# `stand.width` has to be rewritten before argument labels are, or `width:`
+# rules would start eating property accesses.
+SUBSTITUTIONS = (
+    (r"//[^\n]*", ""),
+    (r"\bcropTop\(name, feet: feet\)", "crop_top(feet)"),
+    (r"\btowerStanding\(name, feet: feet\)", "tower_standing(feet)"),
+    (r"\bstanding\(name, feet: feet\)", "standing(feet)"),
+    (r"\bcard\.resolvedPlace\.footing\b", "_footing()"),
+    (r"\bSelf\.sceneAspect\(name\)", "aspect"),
+    (r"\bSelf\.towerLift\b", "tower_lift"),
+    (r"\bStray\.groundLine\b", "ground_line"),
+    (r"\bBellTower\.height\b", "tower_height"),
+    (r"\bpictureHeight\b", "picture_height"),
+    (r"\bstand\.width\b", "stand[0]"),
+    (r"\bstand\.height\b", "stand[1]"),
+    (r"\btower\.width\b", "tower[0]"),
+    (r"\btower\.height\b", "tower[1]"),
+    (r"\bCGFloat\(", "("),
+    (r"\bCGSize\(", "_size("),
+    # The space goes with it: `let full = …` has to come out at the same
+    # indentation as the `return` below it or Python will not read the block.
+    (r"\blet\s+", ""),
+    (r"\b(width|height|x|y|feet)\s*:\s*", r"\1="),
+)
+
+# Every name the translated code is allowed to mention. Anything else means
+# the Swift has grown a concept this file has never heard of, and the honest
+# response is to stop.
+VOCABULARY = {
+    "return", "min", "max", "_size", "_offset", "_footing",
+    "aspect", "ground_line", "picture_height", "width", "scale", "feet",
+    "tower_height", "tower_lift", "footing", "footing.x", "footing.y",
+    "full", "soles", "ceiling", "stand", "tower",
+    "crop_top", "standing", "tower_standing",
+}
+
+
+def mentions(text):
+    """Every name the translated code refers to.
+
+    Argument labels are dropped first — `_size(width=…, height=…)` is the
+    translation of `CGSize(width:height:)`, and those two words are the label,
+    not something the expression reads.
+    """
+    text = re.sub(r"(?<=[(,])\s*[A-Za-z_]\w*\s*=", " ", text)
+    return set(re.findall(
+        r"[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*", text))
+
+
+def translate(label, body, env):
+    """Turn one small Swift body into a Python callable of `feet`."""
+    text = body
+    for pattern, replacement in SUBSTITUTIONS:
+        text = re.sub(pattern, replacement, text)
+
+    unknown = sorted(name for name in mentions(text) if name not in VOCABULARY)
+    if unknown:
+        raise SystemExit(
+            f"{label} in PostcardView.swift now uses "
+            f"{', '.join(unknown)}, which tools/check_postcard.py cannot "
+            f"translate. This file runs the view's arithmetic instead of "
+            f"keeping a copy of it, so a new shape means teaching the "
+            f"translator — never assuming the old answer, which is how a "
+            f"deleted fix once passed clean.")
+
+    exec(f"def _translated(feet):\n{text}\n", env)
+    return env.pop("_translated")
+
+
+def evaluate(label, expression, env):
+    """One translated Swift expression, evaluated in the same vocabulary."""
+    text = expression
+    for pattern, replacement in SUBSTITUTIONS:
+        text = re.sub(pattern, replacement, text)
+    unknown = sorted(name for name in mentions(text) if name not in VOCABULARY)
+    if unknown:
+        raise SystemExit(
+            f"{label}: cannot translate `{expression.strip()}` — it mentions "
+            f"{', '.join(unknown)}")
+    return eval(text, env)
+
+
+class Footing:
+    """`Place.Footing`, so `footing.x` translates to itself."""
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+def body_of(source, signature, label):
+    block = re.search(rf"func {signature}\(.*?\) -> CG\w+ \{{(.*?)\n    \}}",
+                      source, re.S)
+    if not block:
+        raise SystemExit(f"could not find PostcardView.{label} in "
+                         f"PostcardView.swift")
+    return block.group(1)
+
+
+def parse_view(ground_line, aspect):
+    """The card's geometry and the three functions that place a sprite in it.
+
+    Returns the picture's size in points, the stamp's box, a per-kind record of
+    what each picture draws and where it offsets it, and a `place(footing,
+    kind)` that answers with the sprite's soles and centre — computed by the
+    Swift, translated.
+
+    The panorama draws `HomesteadScene` and has no place in it, so it is
+    deliberately not here.
     """
     source = read(CARD_FILE)
 
     width = re.search(r"var width: CGFloat = ([\d.]+)", source)
+    divisor = re.search(r"var scale: CGFloat \{ width / ([\d.]+) \}", source)
     height = re.search(r"var pictureHeight: CGFloat \{ ([\d.]+) \* scale \}", source)
-    if not width or not height:
+    if not width or not divisor or not height:
         raise SystemExit("could not parse the card's size from PostcardView.swift")
+    width = float(width.group(1))
+    scale = width / float(divisor.group(1))
+    picture_height = float(height.group(1)) * scale
+
+    tower = {}
+    for key in ("roofHeight", "shaftHeight", "width"):
+        match = re.search(rf"static let {key}: CGFloat = ([\d.]+)", source)
+        if not match:
+            raise SystemExit(f"could not parse BellTower.{key} from PostcardView.swift")
+        tower[key] = float(match.group(1))
+    if not re.search(
+        r"static var height: CGFloat \{ roofHeight \+ shaftHeight \}", source
+    ):
+        raise SystemExit("BellTower.height is no longer roof + shaft — re-read it")
+    tower_height = tower["roofHeight"] + tower["shaftHeight"]
+    lift = re.search(r"static let towerLift: CGFloat = ([\d.]+)", source)
+    if not lift:
+        raise SystemExit("could not parse PostcardView.towerLift from PostcardView.swift")
+
+    # The environment the translated Swift runs in. `current` is the place
+    # being checked; `_footing` hands it over, so `let footing =
+    # card.resolvedPlace.footing` translates to a call rather than to a
+    # self-assignment Python would read as an unbound local.
+    current = [Footing(0.5, ground_line)]
+    env = {
+        "_size": _size, "_offset": _offset, "min": min, "max": max,
+        "_footing": lambda: current[0],
+        "aspect": aspect, "ground_line": ground_line, "width": width,
+        "picture_height": picture_height, "scale": scale,
+        "tower_height": tower_height, "tower_lift": float(lift.group(1)),
+    }
+    env["crop_top"] = translate(
+        "cropTop", body_of(source, "cropTop", "cropTop"), env)
+    env["standing"] = translate(
+        "standing", body_of(source, "standing", "standing"), env)
+    env["tower_standing"] = translate(
+        "towerStanding", body_of(source, "towerStanding", "towerStanding"), env)
 
     kinds = {}
     for name in ("bellTowerPicture", "placePicture"):
-        block = re.search(
-            rf"var {name}: some View \{{(.*?)\n    \}}", source, re.S)
+        block = re.search(rf"var {name}: some View \{{(.*?)\n    \}}", source, re.S)
         if not block:
             raise SystemExit(f"could not find {name} in PostcardView.swift")
-        feet = re.search(r"let feet: CGFloat = ([\d.]+) \* scale", block.group(1))
-        size = re.search(r"BuddySprite\(.*?size: ([\d.]+) \* scale\)", block.group(1))
-        if not feet or not size:
-            raise SystemExit(f"could not parse {name}'s feet/buddy size")
-        kinds[name] = (float(feet.group(1)), float(size.group(1)))
+        block = block.group(1)
+
+        feet = re.search(r"let feet: CGFloat = ([\d.]+) \* scale", block)
+        if not feet:
+            raise SystemExit(f"could not parse {name}'s feet")
+        if "ZStack(alignment: .bottom)" not in block:
+            raise SystemExit(
+                f"{name} is no longer a bottom-aligned ZStack. Every offset in "
+                f"it is measured from the bottom edge of the picture, here and "
+                f"in the Swift; re-derive both before changing it.")
+        if not re.search(r"\.frame\(width: width, height: pictureHeight\)", block):
+            raise SystemExit(f"{name} no longer sizes itself to the picture")
+        if not re.search(r"sceneImage\(name, feet: feet\)", block):
+            raise SystemExit(
+                f"{name} no longer draws its scene through sceneImage — the "
+                f"crop under the buddy's feet is no longer the one this checks")
+
+        # What each sprite is offset by, taken from the modifier it actually
+        # carries. A sprite with no `.offset` sits at the bottom centre, which
+        # is what an empty expression evaluates to — and is exactly the state
+        # the Harbor bug was in.
+        sprites = {}
+        for key, call in (("buddy", r"BuddySprite\([^)]*?size: ([\d.]+) \* scale\)"),
+                          ("tower", r"BellTower\(scale: scale\)()")):
+            # No `\s*` outside the optional group: a greedy run of whitespace
+            # in front of an optional match swallows the newline, the group
+            # then matches empty, and every sprite reads as unoffset — which
+            # is the bug this whole file exists for, silently reintroduced by
+            # a regex.
+            found = re.search(call + r"(?:\s*\n\s*\.offset\(([^)]*)\))?", block)
+            if not found:
+                if key == "tower":
+                    continue
+                raise SystemExit(f"could not find {name}'s {key}")
+            sprites[key] = (float(found.group(1) or 0.0) * scale,
+                            found.group(2) or "")
+        if "buddy" not in sprites:
+            raise SystemExit(f"could not find {name}'s buddy sprite")
+        kinds[name] = (float(feet.group(1)) * scale, sprites)
 
     stamp = re.search(r"\.frame\(width: ([\d.]+) \* scale, height: ([\d.]+) \* scale\)\n"
                       r"\s*\.background\(Theme\.cream", source)
@@ -182,60 +404,35 @@ def parse_card():
     if not stamp or not pad:
         raise SystemExit("could not parse the stamp's box from PostcardView.swift")
 
-    return (float(width.group(1)), float(height.group(1))), kinds, (
-        float(stamp.group(1)), float(stamp.group(2)), float(pad.group(1)))
+    def place(footing, kind):
+        """Where the view puts things, for one place and one card kind.
 
+        Returns the buddy's soles and centre in card points, the crop the
+        picture behind it uses, and the tower's base and centre if the card has
+        one. Every number in here came out of the Swift a moment ago.
+        """
+        current[0] = Footing(*footing)
+        feet, sprites = kinds[kind]
+        env["stand"] = env["standing"](feet)
+        env["tower"] = env["tower_standing"](feet)
+        env["feet"] = feet
 
-def parse_tower():
-    """The bell tower's own measurements, and how far it floats.
+        size, expression = sprites["buddy"]
+        dx, dy = evaluate(f"{kind}/buddy", f"_offset({expression})", env)
+        buddy = (picture_height + dy, width / 2 + dx, size)
 
-    Four numbers, all read out of `BellTower` and `PostcardView` rather than
-    typed here. The tower is the one thing on a postcard the app *invents*
-    rather than loads, which is exactly why nothing else can see it go wrong:
-    there is no asset to be missing and no palette index to be sea. It moved
-    with the buddy when the footings did, and at Cloudspire — whose footing is
-    most of the way up the card — an unclamped tower put its roof twenty-seven
-    points above the picture, where the card's corner radius quietly ate it.
+        tower_at = None
+        if "tower" in sprites:
+            _, expression = sprites["tower"]
+            tx, ty = evaluate(f"{kind}/tower", f"_offset({expression})", env)
+            tower_at = (picture_height + ty, width / 2 + tx)
+        return buddy, env["crop_top"](feet), tower_at
 
-    The clamp is *parsed*, not assumed, and that distinction is the whole
-    value of this function. The first draft of it read the four numbers and
-    then recomputed the tower's box as `max(soles - lift, height)` — which is
-    the clamp written out a second time, in Python. Deleting the clamp from
-    the Swift altogether left this file computing the clamped answer from the
-    unclamped code and reporting all pass, exactly as `check_touch.py` did
-    with its five deliberate breaks. So the shape is required here: no
-    `max(...)` in `towerStanding` against a ceiling of the tower's own height,
-    no parse, no run.
-    """
-    source = read(CARD_FILE)
-    found = {}
-    for key in ("roofHeight", "shaftHeight", "width"):
-        match = re.search(rf"static let {key}: CGFloat = ([\d.]+)", source)
-        if not match:
-            raise SystemExit(f"could not parse BellTower.{key} from PostcardView.swift")
-        found[key] = float(match.group(1))
-    lift = re.search(r"static let towerLift: CGFloat = ([\d.]+)", source)
-    if not lift:
-        raise SystemExit("could not parse PostcardView.towerLift from PostcardView.swift")
-
-    block = re.search(
-        r"func towerStanding\(.*?\) -> CGSize \{(.*?)\n    \}", source, re.S)
-    if not block:
-        raise SystemExit("could not find PostcardView.towerStanding in PostcardView.swift")
-    body = block.group(1)
-    if not re.search(
-        r"let ceiling = BellTower\.height \* scale - pictureHeight", body
-    ) or not re.search(
-        r"height: max\(stand\.height - Self\.towerLift \* scale, ceiling\)", body
-    ):
-        raise SystemExit(
-            "PostcardView.towerStanding is no longer clamped against the "
-            "tower's own height — Cloudspire's footing is high enough in the "
-            "frame that the roof leaves the picture without it, and the card's "
-            "corner radius takes it silently. Restore the clamp, or teach this "
-            "function the new shape and re-derive the geometry below.")
-
-    return found["roofHeight"] + found["shaftHeight"], found["width"], float(lift.group(1))
+    return ((width, picture_height),
+            (float(stamp.group(1)) * scale, float(stamp.group(2)) * scale,
+             float(pad.group(1)) * scale),
+            sorted(kinds), (tower_height * scale, tower["width"] * scale),
+            place)
 
 
 def scene_aspect():
@@ -282,7 +479,7 @@ def footprint():
 
 # ---------------------------------------------------------------- the picture
 
-def preview(footings, size2d, kinds, tower, kind, path):
+def preview(footings, size2d, tower, place, kind, path):
     """Composite the eight cards and save them, because a green checker is not
     a look. Four times of day across, one place per row.
 
@@ -290,47 +487,44 @@ def preview(footings, size2d, kinds, tower, kind, path):
     original bug — the buddy halfway down a cliff face — is *rock* under the
     feet at the palette level and always will be, so it passes every mechanical
     test in here and is obvious the moment anybody renders the card. Same
-    arithmetic as `main`, same crop, same sprite; only the eye is different.
+    arithmetic as `main` — which is to say the view's — same crop, same sprite;
+    only the eye is different.
     """
     width, height = size2d
     scale = 3
     parts = scenes.PARTS
     places = [name for name, _, _ in scenes.PLACES]
-    feet, size = kinds[kind]
-    tower_height, tower_width, lift = tower
+    tower_height, tower_width = tower
     aspect = scene_aspect()
     full = width * aspect
-    top = min(max(0.0, parse_ground_line() * full - height + feet),
-              max(0.0, full - height))
 
     sheet = Image.new("RGBA", (int(width * scale * len(parts)),
                                int(height * scale * len(places))))
-    sprite = Image.open(os.path.join(
+    art_sprite = Image.open(os.path.join(
         ASSETS, "buddy_cat_awake.imageset", "buddy_cat_awake.png")).convert("RGBA")
-    sprite = sprite.resize((int(size * scale), int(size * scale)), Image.NEAREST)
 
-    for row, place in enumerate(places):
-        fx, fy = footings[place]
+    for row, name in enumerate(places):
+        (soles, cx, size), top, tower_at = place(footings[name], kind)
+        sprite = art_sprite.resize((int(size * scale), int(size * scale)),
+                                   Image.NEAREST)
         for column, part in enumerate(parts):
-            name = f"scene_{place}_{part}"
+            asset = f"scene_{name}_{part}"
             art = Image.open(os.path.join(
-                ASSETS, f"{name}.imageset", f"{name}.png")).convert("RGBA")
+                ASSETS, f"{asset}.imageset", f"{asset}.png")).convert("RGBA")
             art = art.resize((int(width * scale), int(round(full * scale))),
                              Image.NEAREST)
             tile = Image.new("RGBA", (int(width * scale), int(height * scale)))
             tile.alpha_composite(art, (0, -int(round(top * scale))))
-            soles = fy * full - top
-            cx = fx * width
 
             # The tower goes on first: the buddy stands in front of it.
-            if kind == "bellTowerPicture":
-                bottom = max(soles - lift, tower_height)
+            if tower_at is not None:
+                base, tcx = tower_at
                 block = Image.new("RGBA", (int(tower_width * scale),
                                            int(tower_height * scale)),
                                   (60, 48, 42, 210))
                 tile.alpha_composite(block, (
-                    int(round((cx - tower_width / 2) * scale)),
-                    int(round((bottom - tower_height) * scale)),
+                    int(round((tcx - tower_width / 2) * scale)),
+                    int(round((base - tower_height) * scale)),
                 ))
 
             tile.alpha_composite(sprite, (
@@ -354,32 +548,28 @@ def overlaps(a, b):
 def main():
     ground_line = parse_ground_line()
     footings, default = parse_footings(ground_line)
-    (width, height), kinds, (stamp_w, stamp_h, pad) = parse_card()
-    tower_height, tower_width, lift = parse_tower()
-    left_edge, right_edge, buddies = footprint()
     aspect = scene_aspect()
+    ((width, height), (stamp_w, stamp_h, pad), kind_names,
+     (tower_height, tower_width), place) = parse_view(ground_line, aspect)
+    left_edge, right_edge, buddies = footprint()
     grids = {name: draw() for name, draw, _ in scenes.PLACES}
+    full = width * aspect
 
     failures = []
     checked = 0
     stamp_box = (width - pad - stamp_w, pad, width - pad, pad + stamp_h)
 
-    for kind, (feet, size) in sorted(kinds.items()):
-        full = width * aspect
-        top = min(max(0.0, ground_line * full - height + feet),
-                  max(0.0, full - height))
-
-        for place in sorted(grids):
-            grid = grids[place]
-            if place not in footings:
-                failures.append(f"{place}: no footing — Place.footing lost a case")
+    for kind in kind_names:
+        for name in sorted(grids):
+            grid = grids[name]
+            if name not in footings:
+                failures.append(f"{name}: no footing — Place.footing lost a case")
                 continue
-            fx, fy = footings[place]
 
-            # Where the buddy ends up on the card, in points.
-            soles = fy * full - top          # down from the picture's top edge
+            # Where the buddy ends up on the card, in points — asked of the
+            # view's own `standing` and its own `.offset`, not worked out here.
+            (soles, cx, size), top, tower_at = place(footings[name], kind)
             crown = soles - size
-            cx = fx * width
             box = (cx - size / 2, crown, cx + size / 2, soles)
             checked += 1
 
@@ -388,17 +578,17 @@ def main():
             #    place and nobody in it.
             if crown < 0 or soles > height:
                 failures.append(
-                    f"{kind}/{place}: the buddy does not fit the picture "
+                    f"{kind}/{name}: the buddy does not fit the picture "
                     f"(top {crown:.1f}, soles {soles:.1f} of {height:.0f})")
             if box[0] < 0 or box[2] > width:
                 failures.append(
-                    f"{kind}/{place}: the buddy runs off the side "
+                    f"{kind}/{name}: the buddy runs off the side "
                     f"({box[0]:.1f}..{box[2]:.1f} of {width:.0f})")
 
             # 2. Never under the stamp. The stamp is opaque and the buddy is
             #    the subject; a card with a franked cat on it is a bad card.
             if overlaps(box, stamp_box):
-                failures.append(f"{kind}/{place}: the buddy is under the stamp")
+                failures.append(f"{kind}/{name}: the buddy is under the stamp")
 
             # 2b. The bell tower, which moves with the buddy.
             #
@@ -406,47 +596,53 @@ def main():
             #     drawn by `BellTower` rather than loaded, so there is no
             #     asset to be missing and no palette index to be wrong, and
             #     the card is unreachable without twenty-four lit hours.
-            if kind == "bellTowerPicture":
-                base = max(soles - lift, tower_height)
-                tower_box = (cx - tower_width / 2, base - tower_height,
-                             cx + tower_width / 2, base)
+            if tower_at is not None:
+                base, tcx = tower_at
+                tower_box = (tcx - tower_width / 2, base - tower_height,
+                             tcx + tower_width / 2, base)
                 if tower_box[1] < 0 or tower_box[3] > height:
                     failures.append(
-                        f"{kind}/{place}: the tower does not fit the picture "
+                        f"{kind}/{name}: the tower does not fit the picture "
                         f"(roof {tower_box[1]:.1f}, base {tower_box[3]:.1f} "
                         f"of {height:.0f}) — its roof is cut off")
                 if tower_box[0] < 0 or tower_box[2] > width:
                     failures.append(
-                        f"{kind}/{place}: the tower runs off the side "
+                        f"{kind}/{name}: the tower runs off the side "
                         f"({tower_box[0]:.1f}..{tower_box[2]:.1f})")
                 if overlaps(tower_box, stamp_box):
-                    failures.append(f"{kind}/{place}: the tower is under the stamp")
+                    failures.append(f"{kind}/{name}: the tower is under the stamp")
                 # The card is called "beneath a bell tower". The buddy has to
                 # be *under* it — its head at or below the tower's base line,
                 # and never poking out above the roof.
                 if not (tower_box[1] <= crown <= tower_box[3]):
                     failures.append(
-                        f"{kind}/{place}: the buddy is not beneath the tower "
+                        f"{kind}/{name}: the buddy is not beneath the tower "
                         f"(head {crown:.1f}, tower {tower_box[1]:.1f}"
                         f"..{tower_box[3]:.1f})")
 
-            # 3. Standing on something, all the way across its feet. Read out
-            #    of the generator's grid, which is the only place in this
-            #    repo that knows the sea from the shore.
-            row = int(fy * scenes.H)
+            # 3. Standing on something, all the way across its feet.
+            #
+            #    The row is the soles *as drawn* — the point the sprite's
+            #    bottom edge lands on, put back into the painting through the
+            #    crop the picture behind it is using. That is the whole repair:
+            #    it is a fact about the rendered card, so deleting the fix from
+            #    `standing` moves this row back onto the sea and fails here,
+            #    where the old version read the model and never noticed.
+            row = int((soles + top) / full * scenes.H)
             span = (
                 int(round((cx - size / 2 + size * left_edge) / width * scenes.W)),
                 int(round((cx - size / 2 + size * right_edge) / width * scenes.W)),
             )
             if not (0 <= row < scenes.H):
-                failures.append(f"{kind}/{place}: footing row {row} is off the art")
+                failures.append(f"{kind}/{name}: the soles land on scene row "
+                                f"{row}, which is off the art")
                 continue
-            if place not in SOAKING:
+            if name not in SOAKING:
                 for column in range(max(0, span[0]), min(scenes.W, span[1])):
                     under = int(grid[row, column])
                     if under in UNSTANDABLE:
                         failures.append(
-                            f"{kind}/{place}: nothing to stand on at scene "
+                            f"{kind}/{name}: nothing to stand on at scene "
                             f"({column}, {row}) — palette index {under}")
                         break
 
@@ -460,11 +656,27 @@ def main():
             f"footings other than Harbor and Cloudspire have moved: {moved} — "
             f"every other card is drawn at {default} and must stay there")
 
+    # 4b. And the two that were wrong must have actually reached the card. A
+    #     footing the view does not read is a footing that changes nothing:
+    #     the whole of the old bug was `standing` ignoring `Place.footing`, and
+    #     rule 3 only catches that where the ignored ground happens to be sea.
+    #     Cloudspire's is not, so it is checked directly — the buddy must land
+    #     somewhere different from where the default footing would put it.
+    for kind in kind_names:
+        for name in moved:
+            (soles, cx, _), _, _ = place(footings[name], kind)
+            (was, was_cx, _), _, _ = place(default, kind)
+            if abs(soles - was) < 0.5 and abs(cx - was_cx) < 0.5:
+                failures.append(
+                    f"{kind}/{name} has a moved footing {footings[name]} that "
+                    f"the card draws in the same place as the default "
+                    f"{default} — PostcardView is not reading Place.footing")
+
     # 5. No stale exemptions. A reason written about a place that no longer
     #    exists is a hole in the check nobody would ever notice.
-    for place in sorted(SOAKING):
-        if place not in grids:
-            failures.append(f"SOAKING names '{place}', which is not a place")
+    for name in sorted(SOAKING):
+        if name not in grids:
+            failures.append(f"SOAKING names '{name}', which is not a place")
 
     # 5b. A place may have a moved footing or a soaking exemption, never both.
     #
@@ -477,14 +689,15 @@ def main():
     #     and of nowhere else. A moved footing says somebody has already
     #     found the ground and put the buddy on it. Needing both means the
     #     footing was not ground after all.
-    for place in sorted(set(SOAKING) & set(moved)):
+    for name in sorted(set(SOAKING) & set(moved)):
         failures.append(
-            f"'{place}' has both a moved footing {footings[place]} and a "
+            f"'{name}' has both a moved footing {footings[name]} and a "
             f"SOAKING exemption — pick one: either the footing is ground, or "
             f"the buddy is in the water on purpose at {default}")
 
     print(f"checked {checked} buddy placements across "
-          f"{len(grids)} places x {len(kinds)} card kinds, "
+          f"{len(grids)} places x {len(kind_names)} card kinds, "
+          f"through PostcardView's own cropTop/standing/towerStanding, "
           f"feet {left_edge:.2f}-{right_edge:.2f} of the box "
           f"(widest of {buddies} buddies)")
     print(f"moved off the middle: {', '.join(moved) if moved else 'nothing'}")
@@ -499,9 +712,9 @@ def main():
                 and not sys.argv[index + 1].startswith("-")
                 else os.path.join(ROOT, "postcard_preview"))
         stem = stem[:-4] if stem.endswith(".png") else stem
-        for kind in sorted(kinds):
-            preview(footings, (width, height), kinds,
-                    (tower_height, tower_width, lift), kind, f"{stem}_{kind}.png")
+        for kind in kind_names:
+            preview(footings, (width, height), (tower_height, tower_width),
+                    place, kind, f"{stem}_{kind}.png")
 
     if failures:
         unique = sorted(set(failures))

@@ -238,12 +238,11 @@ extension Color {
     /// out through the platform colour so it composites the same way the
     /// palette does.
     func mix(with other: Color, by amount: Double) -> Color {
-        let a = PlatformColor(self)
-        let b = PlatformColor(other)
-        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
-        a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-        b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        // Through `rgbaComponents`, never `getRed` directly: the AppKit
+        // spelling raises on a catalog colour, and every `Theme` colour is
+        // one. See `Platform.swift`.
+        let (r1, g1, b1, a1) = PlatformColor(self).rgbaComponents
+        let (r2, g2, b2, a2) = PlatformColor(other).rgbaComponents
         let t = CGFloat(min(1, max(0, amount)))
         return Color(PlatformColor(
             red: r1 + (r2 - r1) * t,

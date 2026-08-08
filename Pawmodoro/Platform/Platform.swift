@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 #if canImport(UIKit)
@@ -23,6 +24,8 @@ import AppKit
 /// - **The shake.** No accelerometer. The snow globe gets a menu item instead
 ///   — see `docs/HEARTH_PLAN.md`.
 /// - **Live Activities.** iOS only, by construction.
+/// - **The audio session.** There is no `AVAudioSession` on macOS; sound just
+///   plays. `activateAmbientAudioSession()` is where that stops mattering.
 ///
 /// ### What survives untouched, and why that is not luck
 ///
@@ -52,7 +55,49 @@ enum Platform {
     /// stretch the ground line out from under the cat. `check_stray.py` and
     /// `check_snail.py` both carry this aspect as a fixture row for exactly
     /// that reason.
-    static let macWindow = CGSize(width: 400, height: 740)
+    /// 900 rather than the 740 this was written as on Linux, measured rather
+    /// than guessed: the main screen needs about 848 points of *content*, and
+    /// a Mac window with a toolbar spends roughly 52 of its height on the
+    /// title bar that a phone's status bar never charged for. At 740 the
+    /// phase pill sat behind the toolbar and the start button was cut off by
+    /// the bottom edge.
+    static let macWindow = CGSize(width: 400, height: 900)
+
+    /// The smallest the Mac window may be dragged to.
+    ///
+    /// Not a taste call, and not a guess either — this is where the screen
+    /// stops fitting. The main screen is a fixed stack, not a scroll view: at
+    /// 780 the phase pill disappears behind the toolbar and the start button
+    /// is cut off by the bottom edge, which is a broken app rather than a
+    /// small one. 860 is the first height where every row is whole, and it
+    /// still leaves room under the menu bar of the shortest Mac laptop screen.
+    static let macWindowMinimum = CGSize(width: 360, height: 860)
+
+    /// The widest the Mac window may be dragged to.
+    ///
+    /// A ceiling on the *width* only — height is free. Every scene is exported
+    /// at 396×858 and drawn `scaledToFill`, so a window wider than it is tall
+    /// crops the artwork to a horizontal band through the middle of the sky:
+    /// the hills, the ground and the house all fall outside it and what is
+    /// left reads as a flat wash of colour. Bounding the width is what keeps a
+    /// place looking like a place. `SceneryView` anchors the remaining crop to
+    /// the ground as a second line of defence.
+    static let macWindowMaximum = CGSize(width: 520, height: CGFloat.infinity)
+
+    /// Put the process's audio on the ambient category, once per launch.
+    ///
+    /// `.ambient` mixes with whatever else is playing and honours the ringer
+    /// switch, which is what keeps this app off the background-audio
+    /// capability App Review scrutinises. macOS has no `AVAudioSession` at all
+    /// — sound simply plays — so this is the fourth deliberate no-op, and the
+    /// two audio channels call it rather than each carrying their own `#if`.
+    static func activateAmbientAudioSession() {
+        #if canImport(UIKit)
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, mode: .default)
+        try? session.setActive(true)
+        #endif
+    }
 }
 
 #if canImport(UIKit)
@@ -106,6 +151,34 @@ extension PlatformImage {
               let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
         return bitmap.representation(using: .png, properties: [:])
         #endif
+    }
+}
+
+extension PlatformColor {
+
+    /// This colour's sRGB components, safely, on either platform.
+    ///
+    /// `UIColor.getRed(…)` returns `Bool` and copes with any colour you hand
+    /// it. `NSColor.getRed(…)` returns `Void` and **raises
+    /// `NSInvalidArgumentException` on any non-RGB colorspace** — and
+    /// `dynamicColor` below returns a *catalog* `NSColor`, which is exactly
+    /// that. So on the Mac every `Theme` colour threw the moment anything
+    /// tried to blend it, and one click on Stats took the whole app down, in
+    /// Release as well as Debug. Resolving through `usingColorSpace(.sRGB)`
+    /// first is the whole difference. The fallback is reachable only by a
+    /// colour with no RGB representation at all, which nothing here has.
+    ///
+    /// This is exactly why the platform seam is one file. The same trap waits
+    /// for anyone who reaches for a bare `PlatformColor` accessor next.
+    var rgbaComponents: (CGFloat, CGFloat, CGFloat, CGFloat) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #if canImport(UIKit)
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        #else
+        guard let rgb = usingColorSpace(.sRGB) else { return (0, 0, 0, 1) }
+        rgb.getRed(&r, green: &g, blue: &b, alpha: &a)
+        #endif
+        return (r, g, b, a)
     }
 }
 
@@ -176,3 +249,106 @@ func renderJPEG(size: CGSize, quality: CGFloat = 0.82,
                                  properties: [.compressionFactor: quality])
     #endif
 }
+
+// MARK: - The iOS-only spellings, absorbed
+
+/// The handful of SwiftUI modifiers that exist on iOS and not on macOS.
+///
+/// Every one of them is decoration a Mac window has no place to put: there is
+/// no navigation bar to size a title in, and no page dots under a `TabView`.
+/// They are given macOS spellings that do nothing, rather than each call site
+/// being taught a `#if`, for the reason the rest of this file exists — but
+/// also for a reason particular to this app. Most of Pawmodoro is written days
+/// before it meets a compiler, phone-first and by habit. A named
+/// `compactNavigationTitle()` helper would have to be *remembered* by every
+/// view written from here on, and forgetting it breaks only the Mac build,
+/// which is the pass nobody runs. Absorbing the iOS spelling here means the
+/// phone code stays the only code and the Mac drops what it cannot show.
+///
+/// Nothing below adds behaviour. If a modifier ever needs to *do* something
+/// different on the Mac it does not belong here — it belongs above, named for
+/// what it does, like `activateAmbientAudioSession()`.
+#if os(macOS)
+
+/// iOS's `NavigationBarItem.TitleDisplayMode`, in name only.
+enum NavigationBarTitleDisplayMode {
+    case automatic, inline, large
+}
+
+/// iOS's `PageIndexViewStyle`, in name only.
+struct PageIndexViewStyleShim {
+    enum BackgroundDisplayMode { case automatic, interactive, always, never }
+
+    static func page(
+        backgroundDisplayMode: BackgroundDisplayMode = .automatic
+    ) -> PageIndexViewStyleShim {
+        PageIndexViewStyleShim()
+    }
+}
+
+extension TabViewStyle where Self == DefaultTabViewStyle {
+    /// There is no swipeable page style on macOS. The default container is
+    /// what the two paged screens — onboarding and the year card — fall back
+    /// to; both carry their own forward button, so nothing is unreachable.
+    static var page: DefaultTabViewStyle { DefaultTabViewStyle() }
+}
+
+extension View {
+    func navigationBarTitleDisplayMode(_ mode: NavigationBarTitleDisplayMode) -> some View {
+        self
+    }
+
+    func indexViewStyle(_ style: PageIndexViewStyleShim) -> some View { self }
+}
+
+#endif
+
+#if os(macOS)
+
+/// iOS's `TextInputAutocapitalization`, in name only — a hardware keyboard
+/// does not autocapitalise, so there is nothing here to turn off.
+struct TextInputAutocapitalizationShim {
+    static let never = TextInputAutocapitalizationShim()
+    static let characters = TextInputAutocapitalizationShim()
+    static let words = TextInputAutocapitalizationShim()
+    static let sentences = TextInputAutocapitalizationShim()
+}
+
+extension View {
+    func textInputAutocapitalization(_ style: TextInputAutocapitalizationShim?) -> some View {
+        self
+    }
+}
+
+#endif
+
+#if os(macOS)
+
+extension ToolbarItemPlacement {
+    /// iOS's two navigation-bar placements, mapped to the Mac's window
+    /// toolbar. `.navigation` is the leading group beside the title;
+    /// `.primaryAction` is the trailing one. Same reading order, so a screen
+    /// laid out for a phone comes out the right way round on a Mac.
+    static var topBarLeading: ToolbarItemPlacement { .navigation }
+    static var topBarTrailing: ToolbarItemPlacement { .primaryAction }
+}
+
+#endif
+
+#if os(macOS)
+
+extension View {
+    /// A Mac window has no full screen to cover. The three screens that ask
+    /// for one — onboarding, the year card, the camera — are all modal and
+    /// all dismiss themselves, so a sheet is the same interaction with a
+    /// different frame around it.
+    func fullScreenCover<Content: View>(
+        isPresented: Binding<Bool>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        sheet(isPresented: isPresented, onDismiss: onDismiss, content: content)
+    }
+}
+
+#endif

@@ -39,7 +39,9 @@ final class HapticsDirector {
         if supportsHaptics {
             transient(intensity: 0.45, sharpness: 0.8, fallback: .light)
         } else {
+            #if canImport(UIKit)
             UISelectionFeedbackGenerator().selectionChanged()
+            #endif
         }
     }
 

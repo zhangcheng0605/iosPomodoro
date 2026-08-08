@@ -115,8 +115,6 @@ final class SoundPlayer {
     private func configureSessionIfNeeded() {
         guard !sessionConfigured else { return }
         sessionConfigured = true
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, mode: .default)
-        try? session.setActive(true)
+        Platform.activateAmbientAudioSession()
     }
 }

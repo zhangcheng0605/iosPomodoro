@@ -20,13 +20,33 @@ struct SceneryView: View {
     /// Raising this fades the place; lowering it risks the countdown.
     static let veil: Double = 0.52
 
+    /// Where the crop is taken from when the frame is not the art's shape.
+    ///
+    /// `scaledToFill` in a frame wider than the artwork throws away the top
+    /// and bottom in equal measure, and a scene's whole subject — the horizon,
+    /// the hills, the ground the buddy stands on — lives in its bottom half.
+    /// Centred, a landscape window keeps a band of empty sky and the place
+    /// reads as a flat wash of colour. Anchored to the bottom it keeps the
+    /// ground and loses sky it can spare.
+    ///
+    /// Desktop only, and deliberately so. On a phone the frame is the art's
+    /// own shape to within a pixel or two, so there is no vertical crop to
+    /// place — except on a short phone, where the scene *is* centred today and
+    /// `check_stray.py` holds the resulting ground line as a fixture. Moving
+    /// it there would be a change to a shipped screen dressed up as a Mac fix.
+    private var fillAnchor: Alignment { Platform.isDesktop ? .bottom : .center }
+
     var body: some View {
         GeometryReader { geometry in
             Image(place.assetName(for: part))
                 .interpolation(.none)      // keep the pixel edges crisp
                 .resizable()
                 .scaledToFill()
-                .frame(width: geometry.size.width, height: geometry.size.height)
+                .frame(
+                    width: geometry.size.width,
+                    height: geometry.size.height,
+                    alignment: fillAnchor
+                )
                 .clipped()
                 .overlay(Theme.cream.opacity(Self.veil))
                 .overlay(weatherVeil)

@@ -5,11 +5,6 @@ import WidgetKit
 /// The buddy on the home screen (Duolingo's lever, Widgetable's proof —
 /// minus the guilt half of both).
 ///
-/// **Target-gated like the Live Activity**: this file, and the
-/// `Assets.xcassets` beside it, join the same one-time Widget Extension
-/// target that `PawmodoroLiveActivity.swift` has been waiting on. One
-/// 30-second Xcode step unlocks both. See `docs/LIVE_ACTIVITY.md`.
-///
 /// v1 is deliberately zero-plumbing: what the widget shows is a pure
 /// function of the wall clock and the calendar — asleep at night, up at
 /// dawn, Luna keeping her watch after dark, a night-cap in December —
@@ -91,22 +86,12 @@ struct HomeBuddyView: View {
     }
 
     /// Asleep at night — except Luna, who keeps the watch she keeps in
-    /// the app — and up the rest of the day.
-    private var wantedName: String {
-        if isNight {
-            return entry.buddy == "owl"
-                ? "buddy_owl_watch"
-                : "buddy_\(entry.buddy)_asleep"
-        }
-        return "buddy_\(entry.buddy)_awake"
-    }
-
-    /// The graceful fallback: an identity the catalog doesn't know (a
-    /// future buddy, a corrupted suite) degrades to the cat, never to a
-    /// blank square.
+    /// the app — and up the rest of the day. `WidgetSprite` holds both that
+    /// rule and the degrade-to-the-cat fallback, because the Live Activity
+    /// needs exactly the same two and a second copy would be a second
+    /// answer to the same question.
     private var assetName: String {
-        if UIImage(named: wantedName) != nil { return wantedName }
-        return isNight ? "buddy_cat_asleep" : "buddy_cat_awake"
+        WidgetSprite.buddy(entry.buddy, asleep: isNight)
     }
 
     var body: some View {

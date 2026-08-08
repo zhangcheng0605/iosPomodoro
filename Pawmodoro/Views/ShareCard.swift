@@ -58,8 +58,8 @@ struct ShareableCardSheet<Content: View>: View {
 
                     if let rendered {
                         ShareLink(
-                            item: Image(uiImage: rendered),
-                            preview: SharePreview(title, image: Image(uiImage: rendered))
+                            item: Image(platform: rendered),
+                            preview: SharePreview(title, image: Image(platform: rendered))
                         ) {
                             Label("Share as image", systemImage: "square.and.arrow.up")
                                 .font(.subheadline.weight(.semibold))

@@ -222,9 +222,7 @@ final class MusicPlayer {
     private func configureSessionIfNeeded() {
         guard !sessionConfigured else { return }
         sessionConfigured = true
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, mode: .default)
-        try? session.setActive(true)
+        Platform.activateAmbientAudioSession()
     }
 
     /// Decodes the track once and trims it to the generator's exact loop

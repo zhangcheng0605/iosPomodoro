@@ -1,136 +1,93 @@
-# Resume here
+# Resume here — paused 10 Aug 2026, mid-submission
 
-**Paused 9 Aug 2026, ~03:10 SGT, cleanly.** Branch
-`claude/pet-interactions-retention-7caoj8`, everything committed and pushed,
-working tree clean, all 24 checkers green, Debug and Release both build.
-Nothing is lost.
+Everything is committed and pushed. `git status` is clean, `HEAD` is
+`5843090`, and the remote matches. Nothing was lost by stopping.
 
-## The one line to paste next session
+## Where this stands
 
-> Read docs/RESUME_HERE.md. Finish the two paused features — the buddy
-> acrobatics and the Dynamic Type fix — then walk docs/NEXT_UPDATE.md.
+**The code is done and green.** All 25 checkers pass. iOS Debug, iOS Release,
+macOS Debug and macOS Release all build. Five adversarial verifiers ran
+against the five parallel fixes and **none was disputed**.
 
----
+The two facts that matter most for the submission, both proved rather than
+assumed:
 
-## Two features are half-built and NEITHER has been seen on screen
+- **The promo code is out of the Release build.** `zac888` exists in Debug so
+  Cheng can test Plus without buying it from himself, and is absent from both
+  Release binaries. Verified on both sides — digest, `Redeem`, `promo`,
+  `keeper`, `PromoCodes`, `showRedeem` all present in Debug and absent in
+  Release — and then photographed: Settings ▸ Pawmodoro Plus has four buttons
+  in Debug and three in Release.
+- **The macOS app icon ships.** `CFBundleIconName` is present and the rendered
+  icon matches the true 1024 rendition to a mean of 0.002/255 (against
+  1.86/255 for a 256px upscale), so macOS is drawing our art rather than a
+  placeholder. Nothing local would have caught its absence: an earlier archive
+  had no icon at all and Xcode's own `-validate-for-store` passed.
 
-They are committed because the tree is coherent, not because they work.
-`5d1b017` is the pause commit and its message has the detail.
+Also landed: the Scrapbook's macOS import control (a Mac sheet has no toolbar,
+so `.topBarLeading` had been rendering nothing and the feature was
+unreachable); the snail no longer standing on the ambience row; Mac hover
+states, tooltips, context menus and a toolbar that does not collapse into a
+chevron; `NSSupportsLiveActivities` conditioned per-SDK; and the doc and
+checker debt an adversarial verifier found around the icon.
 
-### 1. Buddy acrobatics — sprites done, wiring done, never watched
+## What was interrupted, and is therefore NOT done
 
-The owner asked for buddies to do real tricks when tapped instead of just
-smiling. 29 sprites are generated, `Antics.swift` exists, `Antic:7` is in the
-enum, `BuddyView` carries the state, everything compiles.
+Two agents were running when this stopped. Neither had produced a result, so
+there is nothing to recover — just work to redo:
 
-**Nobody — no human and no agent — has watched a single buddy move.**
+1. **The macOS App Store screenshots.** The existing eight at 1440x900 in
+   `docs/MAC_STORE_ASSETS.md` § 2 **still predate the menu-bar fix** and show
+   the 418pt buddy. They must be re-shot before upload. The lead shot should
+   be the menu bar extra — it is the thing the phone cannot do. Engine:
+   `mas-assets/final/shot.py` (in the session scratchpad, which does not
+   survive — it may need rebuilding on `tools/mac_probe.py`).
+2. **A pre-submission walk.** Nobody has yet driven the *combined* result of
+   five parallel changes end to end. This is where this app has historically
+   broken, so it is worth doing before upload rather than after a rejection.
 
-First job: finish the debug flags that play a move on demand. Without them,
-checking this means tapping a buddy six times to reach its signature, for
-twelve buddies. Then drive all twelve and *look at the frames in order* — a
-tumble that smears at 8fps is a failure even when every frame is right alone.
+## How to drive the Mac build
 
-Watch specifically: the owl (flaps, does not somersault), the hedgehog (rolls
-into a ball, reusing its sleeping frame), the penguin's bellyslide, and the
-capybara — whose signature is that it **refuses to move**, which must read as
-a deliberate joke rather than a bug. Also put a hat and collar on a buddy
-mid-tumble: anchors are measured per frame, and a new frame without one sends
-the hat somewhere.
+**Do not use the mouse.** Cheng works at this machine and has said so twice.
+`tools/mac_probe.py` is built for exactly this — read its docstring, which
+records what is measured rather than assumed, including the two traps that
+have already been paid for (`HOME` does not isolate the app; `defaults export`
+returns a partial view that destroys state) and the one thing it genuinely
+cannot do (hover cannot be synthesised).
 
-### 2. Dynamic Type — partial, and this is the one that should block a release
+## What only Cheng can do — the real critical path
 
-At the largest **ordinary** text size — no accessibility setting, on a 6.3"
-phone — the transport row is clipped by the screen edge and **the start button
-is partly unhittable**. At accessibility sizes it is entirely off screen and
-nothing scrolls. A Pomodoro timer whose start button cannot be pressed is a
-serious bug for anyone who bumped their text size, which is a lot of people.
+None of this depends on any further code.
 
-Two more from the same root cause (a plain centred `VStack` with no
-`ScrollView`, overflowing at both ends): the phase chip renders *under* the
-toolbar reading "…cus", and ambience glyphs outgrow their backing badly enough
-to measure **1.00:1** against scenery and hide the selected-state pill.
+1. **Add Platform → macOS** on the existing **Paawmodoro** record. **Never a
+   new app** — a second record permanently loses Universal Purchase and
+   orphans the paying iOS users. Reversible until the Mac version is
+   *approved*, not until the click.
+2. **Paid Applications Agreement, banking and tax must all be active.** This
+   is the slowest item on the entire list because it involves his bank, and if
+   it is not green then Plus and the tip jar cannot sell however good the
+   build is. The bank account holder name must match the developer account
+   exactly (an individual account: Cheng Zhang).
+3. **App Store Small Business Program** — 15 % commission instead of 30 %. It
+   is not automatic; it must be applied for, and nothing prompts you.
+4. **Pricing and Availability → "iPhone and iPad Apps on Mac"** — with
+   `TARGETED_DEVICE_FAMILY = 1` the iOS build may already be offered on Apple
+   Silicon Macs, and two Pawmodoros in one search result looks bad.
+5. **macOS metadata** — description (lead with the menu bar), keywords,
+   category Productivity, support URL, review notes.
+6. **Validate before uploading** — `altool --validate-app` or the Organizer's
+   Validate button. Needs an app-specific password, so it cannot be done from
+   here. It is the last cheap failure before an irreversible upload.
+7. **The listening pass on real hardware.** Headphones *and* built-in
+   speakers, changing the output device **while a track is playing**. This is
+   build 2's scar: all fifty tracks were unplayable on every real iPhone and
+   no simulator could show it. A Mac's output device is 48 kHz or 44.1 and
+   changes mid-session. Nobody but the owner has ears on this machine.
 
-**The constraint on resume: the default layout must come out pixel-identical.**
-Build the pre-fix source separately and diff it. Do not assert it.
+## One honest note
 
----
-
-## Waiting on the owner — only he can do these
-
-1. **The five regressed ambience loops.** `snowhush` and the three `raintent`
-   variants measured *toward* noise after re-voicing; `storm_v2` marginally.
-   Numbers cannot settle it — snowhush was near a pure tone before, which may
-   have sounded like an artificial drone, so 0.27 flatness may be better
-   despite the worse figure. **Listen, then say keep or revert.** One commit
-   back either way.
-2. **Alternate icons: does switching work twice on a real phone?** On the
-   Simulator only the *first* change per install succeeded; later taps never
-   reached `setAlternateIconName` at all. Unknown whether that is a wedged
-   Simulator or a real bug. One minute to settle.
-3. **The Mac App Store** still needs: the sandbox entitlement wired to the
-   macOS build, screenshots, and StoreKit tested under sandbox. See
-   `docs/MAC_APP_STORE.md`.
-
----
-
-## What landed on 8-9 Aug (all committed and pushed)
-
-- **The sky answers a finger.** Trace constellations star by star; the moon
-  answers by phase. All 48 links across all 7 figures verified working. The
-  atlas is still earned by nights — a link is only drawable once one of its
-  stars is lit, so no sequence of taps shortcuts it.
-- **The sky leans when you tap a chip.** Real parallax, verified by tracking
-  24 stars and solving back to the source constants. A sun was drawn because
-  there was none. **Clouds cannot move** — they are painted into the scene
-  PNGs; that would be a generator change.
-- **Crickets and cicadas re-voiced.** 80 % of the old files was inaudible
-  sub-150 Hz rumble that set the level for everything else. Flatness 0.375 →
-  0.026. Eight other loops re-voiced alongside.
-- **Phase Z shipped** — home-screen widget and Live Activity, after the owner
-  added the Widget Extension target.
-- **The Mac is a real platform** — native macOS, universal binary. It was
-  "Designed for iPad" before, which is why every `#if os(macOS)` block in the
-  repo was dead code.
-- **The Mac audio was never broken.** Measured signal reaching the mixer. The
-  Sound Studio was drawing a *sounding* speaker beside a track that had never
-  been asked to play, because both channels follow the timer by design.
-- Five app icons chosen by CIELAB measurement; a promo code (`zac888`) that
-  **cannot reach the App Store** — compiled out of Release entirely, proven by
-  grepping both bundles.
-- **Two checkers that were lying** — `check_postcard.py` was checking the
-  model instead of the card, and `check_swift.py` walked one target of two.
-  Both fixed and broken deliberately to prove they catch anything.
-- **The 45 MB ceiling was retired**, with the reasoning recorded in
-  `CLAUDE.md`. It was never researched — a round number picked while planning
-  the audio phase. What survives is the discipline: measure the device Release
-  `.app`, say the number, and give growth a reason.
-
-**Device Release: 42.83 MB**, of which 26.9 MB is the 169 `.m4a` files.
-
----
-
-## How this session worked, and what to repeat
-
-Every builder agent had an **adversarial verifier** behind it, defaulting to
-REFUTED. That doubled the wall-clock and was worth it: it caught three
-constellations that could never be traced, a sparkle layer burning seven times
-the app's entire idle CPU, and a checker that passed while the bug it existed
-to catch was present. All three would have shipped.
-
-Each agent gets its **own simulator**, created and deleted by itself — sharing
-one causes agents to install builds over each other mid-verification.
-
-**Never drive the Mac app with the mouse.** The owner cannot use his computer
-while that happens. Use `AXPress`, or better, add a launch flag so there is
-nothing to click.
-
-## Standing traps
-
-- iCloud Desktop breaks codesign: always `-derivedDataPath` outside the repo.
-- Generators churn encodings: byte-compare outside the three MP4 timestamp
-  atoms (offsets 50-56, 166-172, 266-272) before believing a file changed.
-- The Simulator lies about audio formats and cannot hear.
-- Transient UI outruns a screenshot: burst-capture, or read durable state from
-  the container plist — and note that plist lags `cfprefsd` by tens of
-  seconds, so read it with `defaults export` while the app is running.
-- `git add -A` sweeps up other agents' in-flight files. Use targeted paths.
+Before `mac_probe.preserve()` existed, test launches seeded the **Mac** app's
+state (bond, journal) in
+`~/Library/Preferences/com.pawmodoro.zhangcheng.plist`. The iPhone was never
+touched, the container is intact, and nothing in this app decays — but if that
+Mac state should be pristine, `-PawmodoroResetState` clears it.

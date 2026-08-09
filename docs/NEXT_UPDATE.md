@@ -83,6 +83,35 @@ nor `sceneImage`.
 
 ## Known and NOT yet fixed
 
+0. **On a small phone at the DEFAULT text size there is no play button.**
+   Found 9 Aug by a verifier that created an iPhone SE (3rd gen) — which
+   *does* run on the installed iOS 26.3 runtime; an earlier claim that no SE
+   runtime existed was simply wrong. On a 375x667 screen at `content_size
+   large`, the entire transport row is off the bottom and the phase chip is
+   off the top behind the status bar.
+
+   **It is pre-existing** — the same failure is on `ac8d928`, before any of
+   this — but it is the exact bug commit `316a410` was written to kill, and
+   it survives because that fix hands the *original* view back verbatim at and
+   below `.large`. So the cure covers large text on a big phone and misses
+   small phones entirely.
+
+   The adaptive path itself is fine on SE: at xxxLarge and AX5 the transport
+   is pinned and visible and the region scrolls correctly. So the fix is
+   probably one line — choose the adaptive column on available *height*, not
+   on text size alone — plus a re-verify on both phones.
+
+   The owner has said he does not care about iPhone SE users, and that is his
+   call to make. Recording it anyway because this is not an SE polish issue:
+   it is a Pomodoro timer with no reachable start button on a supported
+   device at default settings, and App Review tests on hardware nobody
+   chooses.
+
+   Second, cosmetic, same area: `scrollFade` fades only the bottom, so a
+   scrolled region hard-cuts at the top — on SE at AX5 the buddy's head is
+   guillotined by the top edge. Resting state is clean everywhere.
+
+
 1. ~~**`Views/AlbumView.swift:35` — postcards rasterize on the main thread.**~~
    **Fixed, never compiled.** `Postcard` conforms to `Transferable` and the
    PNG is drawn once, on demand, after a tap; the share preview is a line of

@@ -971,11 +971,33 @@ struct ContentView: View {
         }
     }
 
-    /// The glyph inside a chip. Sized in points rather than left as
-    /// `.footnote` so that it and its backing can only ever change together —
-    /// `.footnote` at 13pt is exactly what this is at the default size.
+    /// The glyph inside a chip.
+    ///
+    /// Above `.large` it is sized in points so that it and its backing can
+    /// only ever change together — the whole reason the backing stopped being
+    /// outgrown. But `.system(size:)` is a *fixed* size and does not answer
+    /// Dynamic Type at all, while `.footnote` does: 13pt at `.large` and
+    /// about 12 at `.medium`. Sizing every ordinary reading size at a flat 13
+    /// therefore made the glyphs visibly **larger** than shipped for anyone
+    /// reading below the default, inside backings that had not grown — a
+    /// regression at `.medium` measured at 3,739 pixels and a channel delta
+    /// of 176, found by an adversarial verifier diffing against the shipped
+    /// binary rather than against the default size alone.
+    ///
+    /// So the ordinary sizes keep the exact font they always had, and the
+    /// point-sized branch starts where the adaptive layout does.
     private var chipFont: Font {
-        .system(size: 13 * chipScale, weight: .semibold)
+        dynamicTypeSize <= .large
+            ? .footnote.weight(.semibold)
+            : .system(size: 13 * chipScale, weight: .semibold)
+    }
+
+    /// The padlock badge on a locked chip, on the same terms and for the same
+    /// reason as `chipFont`.
+    private var chipBadgeFont: Font {
+        dynamicTypeSize <= .large
+            ? .footnote
+            : .system(size: 13 * chipScale)
     }
 
     private var chipWidth: CGFloat { 38 * chipScale }
@@ -1211,7 +1233,7 @@ struct ContentView: View {
                 // reason: this capsule is one row tall on purpose (see above),
                 // so text that grows without its backing growing too just
                 // leaves the shape it is meant to sit on.
-                .font(.system(size: 13 * chipScale))
+                .font(chipBadgeFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         }

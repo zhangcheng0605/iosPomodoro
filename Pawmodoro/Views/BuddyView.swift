@@ -527,6 +527,8 @@ struct BuddyView: View {
             // tumble` plays one and then pins every tap to it.
             if LaunchOptions.anticParade {
                 await paradeAntics()
+            } else if let times = LaunchOptions.tapTimes {
+                await tapParade(times)
             } else if let id = LaunchOptions.forcedAntic,
                       let antic = Antic(rawValue: id) {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -1113,6 +1115,25 @@ struct BuddyView: View {
                 land()
             }
             try? await Task.sleep(nanoseconds: UInt64(beat.hold * 1_000_000_000))
+        }
+    }
+
+    /// `-PawmodoroTaps 8`: eight real taps, a second apart, through `pet()`.
+    ///
+    /// The parade below is the wrong instrument for the escalation and always
+    /// was: it hands moves straight to `playAntic`, so `AnticBag` is never
+    /// drawn from and the ladder — two gentle taps, then the bag, then the
+    /// signature from the sixth — has no way to appear on screen. This takes
+    /// the finger's own path, which is also the only way to watch the fence
+    /// hold: with `-PawmodoroTapsInFocus` the phase is already running when
+    /// the taps land, and every one of them has to come back a stir.
+    private func tapParade(_ times: Int) async {
+        if LaunchOptions.tapDuringFocus { engine.start() }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        for _ in 0..<times {
+            guard !Task.isCancelled else { return }
+            pet()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
         }
     }
 

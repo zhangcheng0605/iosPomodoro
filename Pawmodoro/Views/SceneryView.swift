@@ -8,6 +8,13 @@ import SwiftUI
 /// legible over eight different places in four times of day without
 /// hand-tuning each combination. `tools/check_contrast.py` measures the result
 /// against the real pixels.
+///
+/// Two images now, not one. The sky's clouds were pixels in this picture and
+/// therefore could not move; they have been lifted into a transparent sheet of
+/// their own — see `DriftingCloudsView` — which sits between the artwork and
+/// the veil, exactly where the painted cloud used to be. Composited at rest it
+/// is the same picture to the byte, and the generator's own run proves that
+/// rather than claiming it.
 struct SceneryView: View {
     let place: Place
     let part: DayPart
@@ -48,6 +55,15 @@ struct SceneryView: View {
                     alignment: fillAnchor
                 )
                 .clipped()
+                // Above the artwork and *below* both veils, which is the one
+                // depth that keeps the still frame identical: the painted
+                // cloud was under those veils too.
+                .overlay(
+                    DriftingCloudsView(
+                        place: place, part: part,
+                        size: geometry.size, anchor: fillAnchor
+                    )
+                )
                 .overlay(Theme.cream.opacity(Self.veil))
                 .overlay(weatherVeil)
         }
@@ -67,6 +83,200 @@ struct SceneryView: View {
             tint
                 .opacity(weather.veilOpacity)
                 .animation(.easeInOut(duration: 1.2), value: weather)
+        }
+    }
+}
+
+// MARK: - The clouds
+
+/// The sky's clouds, on their own sheet, so they can move.
+///
+/// ## Why this exists
+///
+/// `SunView` says it plainly: `generate_scenes.py` painted the clouds into
+/// each place's grid, so they were pixels in a PNG and **could not budge**. A
+/// stir moved the cloud body by the eight parts in 255 of the glow wash while
+/// the sun — three drawn shapes — moved seventy. The honest fix was never a
+/// second, invented cloud layer over the painted one; it was to stop painting
+/// them into the picture. The generator now exports one transparent sheet per
+/// place per time of day carrying the same clouds, at the same centres, in the
+/// same grade, and the scene underneath is the same scene with sky where they
+/// used to be. Laid back over it at rest, every one of the thirty-two
+/// composites matches the old export with a maximum per-channel difference of
+/// zero — the sheet's alpha is only ever 0 or 255, so source-over is exact and
+/// there is no fringe to argue about.
+///
+/// ## Why it is cheap
+///
+/// One image, drawn twice, and a `Double`. There is no `TimelineView` here and
+/// no `Canvas`: the drift is a single linear `offset` animation that repeats
+/// forever, which SwiftUI hands to its own display link and which costs no
+/// body evaluation at all — the same argument `SunView` makes for the stir.
+/// The layer is 0.3–1.1 % opaque, so the largest of the thirty-two sheets is
+/// 1,842 bytes and all of them together are 55 KB — the compositor is blending
+/// almost nothing, and the download barely notices.
+///
+/// Compare what it sits next to: `WeatherView` runs a twelve-frame-a-second
+/// `Canvas` whenever it is raining, and it runs it through a focus phase,
+/// because weather is what it is like outside and does not wait to be asked.
+/// A cloud crossing in a minute and a half is the quietest moving thing on
+/// this screen by some distance, which is why it is not gated on the phase the
+/// way a *touch* answer is.
+struct DriftingCloudsView: View {
+    let place: Place
+    let part: DayPart
+    /// The scene's frame, so this sheet lands in exactly the same place the
+    /// artwork does. Passed in rather than measured again: two geometry
+    /// readers is two chances to disagree.
+    let size: CGSize
+    /// `SceneryView.fillAnchor`, for the same reason.
+    let anchor: Alignment
+
+    /// Nothing here carries information, so all of it goes under Reduce
+    /// Motion — the clouds simply stay where the artist put them, which is
+    /// pixel for pixel the sky this app shipped with.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The shared signal a chip sends. Watched here rather than passed in:
+    /// `ContentView` already refuses to bump it during a focus phase and under
+    /// Reduce Motion (`SkyStir.allowed`, `stirSky`), so subscribing to the
+    /// count inherits both rules instead of restating them.
+    @State private var skyStir = SkyStir.shared
+    /// 0 still, 1 at the furthest point of a stir. One stored `Double`.
+    @State private var lean: Double = 0
+    /// How far through a lap the sky is, 0 to 1. Animated once, on appear.
+    @State private var lap: Double = 0
+
+    /// The generator's canvas, `W, H` in `tools/generate_scenes.py`.
+    ///
+    /// It is here because a tiled layer has to know how wide one tile is, and
+    /// `scaledToFill` will not say. `generate_scenes.py` reads these two
+    /// numbers back out of this file on every run and fails if they have
+    /// drifted — a duplicated constant that asks the other copy is the only
+    /// kind this repo allows.
+    static let artSize = CGSize(width: 132, height: 286)
+
+    /// How long one full width takes to pass, in seconds.
+    ///
+    /// A minute and a half, which on an iPhone 17 measures 4.46 points a
+    /// second: the widest cloud in the app — Harbor Isle's, 122 points across
+    /// — takes twenty-seven seconds to travel its own width. That is
+    /// deliberately below the speed at which movement
+    /// pulls the eye. This is a focus timer, and a sky that visibly scrolls is
+    /// a thing to watch instead of working — the drift is meant to be
+    /// something you notice on the second glance, not the first.
+    static let lapSeconds: Double = 90
+
+    /// Rightward, because that is the way the stir already pushes.
+    ///
+    /// `skyStirred` is a positive — clockwise — rotation about a pivot far
+    /// below the screen, so everything above that pivot leans to the right and
+    /// comes back. A drift that ran the other way would make every stir read
+    /// as the wind briefly reversing.
+    private var offsetX: CGFloat { CGFloat(lap) * tile }
+
+    /// One tile is the artwork's drawn width, which is what `scaledToFill`
+    /// produces in this frame: the larger of the frame's width and the height
+    /// scaled by the art's aspect.
+    private var tile: CGFloat {
+        max(size.width, size.height * Self.artSize.width / Self.artSize.height)
+    }
+
+    private var assetName: String { "\(place.assetName(for: part))_clouds" }
+
+    var body: some View {
+        ZStack {
+            // Two copies, a tile apart, so a cloud that leaves on the right
+            // arrives on the left. The generator paints the sheet with
+            // wrapping columns, so the seam is continuous by construction —
+            // and today it is also empty, since the nearest cloud stops ten
+            // columns short of an edge. That is what makes `tile` a
+            // forgiving number rather than a load-bearing one.
+            sheet.offset(x: offsetX)
+            sheet.offset(x: offsetX - tile)
+        }
+        // The same lean the sun takes, from the same signal. The heavy things
+        // in the sky move together and trail the stars; see `SkyStir.heavyLean`.
+        .skyStirred(lean * SkyStir.heavyLean)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onAppear(perform: setSailing)
+        // **Re-armed whenever the tile changes, and that is load-bearing.**
+        // See `setSailing` for what goes wrong without it.
+        .onChange(of: tile) { _, _ in setSailing() }
+        .onChange(of: skyStir.count) { _, _ in
+            // The two legs, out fast and back slow, and the return leg in the
+            // completion handler — written as two calls in one tick it would
+            // animate nothing at all. `ContentView` explains why at length;
+            // this is the same movement on a different layer, which is why the
+            // durations come from `SkyStir` rather than from here.
+            withAnimation(.easeOut(duration: SkyStir.out)) {
+                lean = 1
+            } completion: {
+                withAnimation(.easeInOut(duration: SkyStir.back)) {
+                    lean = 0
+                }
+            }
+        }
+    }
+
+    /// One sheet, framed exactly as `SceneryView` frames the scene — same
+    /// `scaledToFill`, same frame, same anchor — so copy zero registers with
+    /// the artwork to the pixel.
+    ///
+    /// Deliberately *not* clipped. The scene is, because a scene that bled
+    /// would show artwork outside its frame; this bleeds nothing but
+    /// transparency, and clipping it would put a hard edge across a cloud
+    /// mid-lap and give the stir's rotation a corner to cut.
+    private var sheet: some View {
+        Image(assetName)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size.width, height: size.height, alignment: anchor)
+    }
+
+    /// Start the lap.
+    ///
+    /// A single `repeatForever` linear animation from 0 to 1. At the end of a
+    /// lap the layer is in exactly the state it started in — copy zero has
+    /// taken copy one's place — so the restart is invisible and there is
+    /// nothing to schedule, nothing to tick and nothing to unmount.
+    ///
+    /// ## Why it re-arms, and why arming once was wrong
+    ///
+    /// `.offset` animates *points*, so the distance a lap covers is fixed at
+    /// the moment the animation is armed — and `onAppear` fires while the
+    /// enclosing `GeometryReader` is still being sized. Measured on an iPhone
+    /// 17, this view is offered `292 x 1304.7` and `402 x 900.2` before it
+    /// settles on `402 x 874`, which is a tile of **602 pt** and then **403**.
+    /// Armed once, the sheets ended up 403 pt apart while the animation swept
+    /// 602 — so the sky ran half as fast again as it was asked to (a lap in
+    /// 60 s rather than 90) and dropped 199 pt backwards once per lap, which
+    /// on screen is a cloud visibly flinching. It was not the eye that caught
+    /// it; it took logging the geometry.
+    ///
+    /// Re-arming on every change of `tile` fixes it at the root: the last arm
+    /// is the one made with the size the view actually has. During launch that
+    /// is three or four arms inside a tenth of a second, before anything is on
+    /// screen. Afterwards `tile` only moves when the window does — a rotation
+    /// or a resized Mac window — and restarting the lap there is the right
+    /// answer anyway, since the distance it has to cover has changed.
+    ///
+    /// The reset has to land in its **own** runloop turn. Written as
+    /// `lap = 0` and `lap = 1` back to back, SwiftUI coalesces the two, sees
+    /// 1 → 1, and animates nothing at all — the same trap `ContentView`
+    /// documents for the sky's two-legged stir.
+    private func setSailing() {
+        guard !reduceMotion else { return }
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) { lap = 0 }
+        Task { @MainActor in
+            withAnimation(
+                .linear(duration: Self.lapSeconds).repeatForever(autoreverses: false)
+            ) {
+                lap = 1
+            }
         }
     }
 }

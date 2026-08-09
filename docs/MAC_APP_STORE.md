@@ -9,6 +9,33 @@ project** — the pbxproj, the Swift, or a real build I ran. Everything I could
 not check is marked **VERIFY** and says how to check it. Nothing here is
 copied from a generic tutorial without being confirmed against Pawmodoro.
 
+> ## Update, 9 Aug 2026 — three VERIFYs closed, three new Mac bugs
+>
+> Run on this Mac against the working tree, with an ad-hoc-signed sandboxed
+> build. What changed since the above was written:
+>
+> - **Blocker 2 is done.** `CODE_SIGN_ENTITLEMENTS[sdk=macosx*]` is wired up in
+>   `project.pbxproj` (lines 459-461 / 496-498), alongside iOS entitlement
+>   files for both iPhone SDKs. A sandboxed build runs, `libsystem_secinit`
+>   logs `AppSandbox`, and everything lands in the container.
+> - **Blocker 4 is answered: StoreKit does *not* need
+>   `com.apple.security.network.client`.** See § 3.3, which now has evidence
+>   rather than a question.
+> - **Blocker 1 is unchanged** — still no macOS icon, re-verified. Do not trust
+>   `assetutil --info | grep -c AppIcon`; it counts the twenty
+>   `iconpreview_AppIcon*` renditions of the alternate-icon picker. The check
+>   that means anything is `CFBundleIconName` in the built `Info.plist`.
+> - **Screenshots exist** — eight at 1440×900, plain and captioned, listed in
+>   `docs/MAC_STORE_ASSETS.md` § 2.1.
+> - **Three Mac bugs, all in shipping code**, written up in
+>   `docs/MAC_STORE_ASSETS.md` § 3. The first is a submission blocker in
+>   spirit if not in the rules: **the menu bar extra draws the buddy at about
+>   400 points**, so the menu bar shows a clipped band of orange cat. That is
+>   the screenshot § 5.2 below calls the Mac's whole pitch, and it cannot be
+>   taken. The other two: the Scrapbook has no import control on macOS
+>   (`.topBarLeading` renders nothing in a Mac sheet), and the old snail
+>   stands on the ambience row.
+
 I could not edit `project.pbxproj` (two other agents are writing to it) or any
 Swift file, so the two build-setting changes below are yours to make in
 Xcode's GUI. The one file I did write is
@@ -48,15 +75,17 @@ one of them is real work.
 | # | Blocker | Why | Effort |
 |---|---|---|---|
 | 1 | **There is no macOS app icon.** | Verified: the Mac `Info.plist` I built has no `CFBundleIconName` and no `CFBundleIconFile`, and `assetutil --info` on the built `Assets.car` shows **no app-icon entries at all**. `AppIcon.appiconset/Contents.json` declares exactly one image, tagged `"platform": "ios"`. App Store Connect rejects a Mac upload with no icon. Note the trap: Xcode's own `builtin-validationUtility -validate-for-store` step **passed** on this build, so nothing local will tell you. | Half a day (see § 5) |
-| 2 | **The app is not sandboxed, and has no entitlements file.** | Verified: there is no `.entitlements` file anywhere in the repo and `CODE_SIGN_ENTITLEMENTS` appears nowhere in `project.pbxproj`. App Sandbox is mandatory for the Mac App Store. | 10 minutes — the file is written, you wire it up |
+| 2 | ~~**The app is not sandboxed, and has no entitlements file.**~~ **DONE, 9 Aug.** | `CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Pawmodoro/Mac/Pawmodoro.entitlements` is in `project.pbxproj`, with separate iOS files for both iPhone SDKs. A sandboxed build was run and drove the timer, audio, notifications, StoreKit and the Scrapbook sheet with no denials. | — |
 | 3 | **Audio has never been played on real Mac hardware.** | This is build 2's scar repeating. All fifty tracks were unplayable on every real iPhone because the player nodes were wired at the hardware's format while the files are mono 22.05 kHz; the Simulator could not show it. A Mac's default output device is 48 kHz, often 44.1 on headphones, and can change mid-session when you plug in. `HEARTH_PLAN` calls this pass non-negotiable and it still has not happened. | One evening of listening |
-| 4 | **StoreKit under the sandbox is unproven.** | If purchases silently return nothing, that is a functional failure and a guideline 2.1 rejection. It is also the one place I could not settle whether an extra entitlement is needed — see § 3.3. | 30 minutes of testing |
+| 4 | ~~**StoreKit under the sandbox is unproven.**~~ **Mostly answered, 9 Aug.** | The sandbox does not block it: the mach lookup for `com.apple.storekitagent` succeeds, the product request round-trips and decodes, and there are no denials. **Do not add `network.client`.** What is left is the last step only — a signed build with a Sandbox Apple Account, to see products actually listed. § 3.3 has the log. | 15 minutes |
 | 5 | **Add the macOS platform to the existing app record — do not create a new app.** | Creating a second App Store Connect record loses Universal Purchase forever and orphans your paying iOS users. See § 2. | One click, done correctly |
 
 ### SHOULD FIX — will not block review, will make the app feel wrong
 
 | Item | Detail |
 |---|---|
+| **The menu bar extra is broken (9 Aug).** | Top of this list by a distance, because it is the feature the Mac version exists for. `MenuBarBuddy` asks for a 16 pt sprite and gets a ~400 pt one, so the menu bar shows a clipped band of orange cat. Measured, with evidence, in `docs/MAC_STORE_ASSETS.md` § 3.1. Not a rejection risk; it is a "this app is broken" risk with every Mac user who launches it. |
+| **The Scrapbook has no import control on macOS (9 Aug).** | `ToolbarItem(placement: .topBarLeading)` renders nothing in a Mac sheet, so the Scrapbook can only show pictures added on the phone. `docs/MAC_STORE_ASSETS.md` § 3.2. Decide this before answering § 3.4's camera question — the answer changes. |
 | **The Mac window cannot really be resized.** | `PawmodoroApp` sets `.windowResizability(.contentSize)` with a frame of min 360×860 / ideal 400×900 / max width 520. Height is free, width is clamped to a 160-point band. That is a deliberate, well-argued decision (`Platform.swift` explains it: the scenes are exported at 396×858 and a wide window crops the art to a band of sky) — but a Mac app that is a phone column and cannot be zoomed reads as a port. It will not fail review. It will be the first thing a Mac user notices. |
 | **No ⌘, (Settings) and no Help menu.** | `PawmodoroApp` adds a `CommandMenu("Session")` and a `MenuBarExtra`, but no `Settings` scene. Settings live inside the window, reachable only by pointing. Every Mac user reaches for ⌘, first. |
 | **iOS-only keys are in the Mac `Info.plist`.** | Verified in the built bundle: `NSSupportsLiveActivities = 1`, `UILaunchScreen`, `UIApplicationSceneManifest`, `UIApplicationSupportsIndirectInputEvents`, `UISupportedInterfaceOrientations~iphone/~ipad`. Harmless — macOS ignores them — but `NSSupportsLiveActivities` on a Mac is a claim that is not true, and this app's whole habit is not to claim things that are not true. Fix with SDK-conditional build settings, e.g. `INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]`. **VERIFY** that `INFOPLIST_KEY_*` accepts an `[sdk=…]` condition in Xcode 26 — I did not test it, and if it does not, the alternative is a real `Info.plist` file for the macOS SDK. |
@@ -245,13 +274,50 @@ into the archive and the upload is rejected.
 notarization/Developer ID requirement. Leave `ENABLE_HARDENED_RUNTIME` off
 unless something later needs it.
 
-### 3.3 The one entitlement question I could not settle
+### 3.3 The entitlement question, now answered
 
 **Does StoreKit work in the sandbox without `com.apple.security.network.client`?**
 
-I could not find an authoritative Apple statement either way, and I am not
-willing to guess on the thing that decides whether your paying customers can
-buy anything. What I know:
+**No entitlement is needed. Do not add `network.client`.** Settled on this Mac
+on 9 Aug 2026, by running the same Debug build twice — once ad-hoc signed with
+`Pawmodoro/Mac/Pawmodoro.entitlements` (so `com.apple.security.app-sandbox` and
+nothing else), once unsigned and unsandboxed as a control — and reading the
+unified log for both processes.
+
+`StoreManager.loadProducts()` is called at launch from `PawmodoroApp.swift:32`,
+so this needs no navigation: the product request happens whether or not
+anything opens the paywall. The sandboxed run:
+
+```
+Pawmodoro[4074] (libsystem_secinit.dylib) AppSandbox
+Pawmodoro[4074] [com.apple.xpc:connection] activating connection: mach=true … name=com.apple.storekitagent
+Pawmodoro[4074] [com.apple.storekit:Default] [347c471e_SK2] Starting product request
+Pawmodoro[4074] [com.apple.storekit:Default] [347c471e_SK2] Decoded product response
+Pawmodoro[4074] [com.apple.storekit:Default] [347c471e_SK2] Finished product request
+Pawmodoro[4074] [com.apple.storekit:Default] [347c471e_SK2] Parsing 0 products in response
+```
+
+Three things matter in that. The **mach lookup for `com.apple.storekitagent`
+succeeds** — that is the call the sandbox would have refused, and it is the
+whole question. The request then **round-trips and the response decodes**, so
+the daemon did the network on the app's behalf exactly as the theory says.
+And there are **zero sandbox denials** anywhere in the process's log
+(`grep -ci deny` over five minutes of `--info --debug` for this process: 0).
+
+The "0 products" is not the sandbox. The unsandboxed control run gets `Parsing
+0 products in response` too, and the accompanying error is
+`ASDErrorDomain Code=509` — no store account on this Mac. An ad-hoc-signed
+local build has no team, no receipt and no signed-in sandbox Apple Account, so
+an empty catalogue is the correct answer for *both* builds.
+
+**What this proves and what it does not.** It proves the App Sandbox does not
+block StoreKit's path, which is the thing that would have cost an evening to
+rediscover. It does not prove products *appear* — that still wants the last
+step below, on a properly signed build with a Sandbox Apple Account signed in.
+But if that test fails, `network.client` is not the reason and adding it will
+not help.
+
+The reasoning, kept because it is why the answer is believable:
 
 - StoreKit's purchase UI and transaction work happen in Apple's own daemon
   process, not yours — which is the usual reason an entitlement is not needed.
@@ -283,13 +349,25 @@ buy anything. What I know:
 4. Whichever answer you get, **write it into this document.** It is the kind of
    fact that costs an evening to rediscover.
 
-The same shape of doubt applies, more weakly, to **`PhotosPicker` under the
-sandbox on macOS**. The out-of-process design says no entitlement. **VERIFY** by
-opening the Scrapbook in the sandboxed build and importing a picture. If the
-import silently fails, the two candidate fixes, in order of how little they
-claim: replace the Mac path with an `NSOpenPanel` / `.fileImporter` and add
-`com.apple.security.files.user-selected.read-only` (the narrowest possible
-claim: "the user handed me this one file"), or add
+The same shape of doubt applied, more weakly, to **`PhotosPicker` under the
+sandbox on macOS**, and it is now half answered — for a reason nobody expected.
+
+Opening the Scrapbook in the sandboxed build (through the window toolbar's
+third button, pressed with `perform action "AXPress"`) works, connects out to
+`com.apple.photos.service`, initialises `PHPhotoLibrary`, and produces **no
+sandbox denial**. So the sandbox is not standing in the way.
+
+**But the picker cannot be reached at all on macOS**, sandboxed or not:
+`ScrapbookView.swift:50` puts the `PhotosPicker` in
+`ToolbarItem(placement: .topBarLeading)`, which renders nothing in a Mac
+sheet. The sheet has exactly one button and it is `Done`. See
+`docs/MAC_STORE_ASSETS.md` § 3.2 — fix the placement first, then finish this
+test by actually importing a picture.
+
+If an import ever does fail, the two candidate fixes remain, in order of how
+little they claim: replace the Mac path with an `NSOpenPanel` /
+`.fileImporter` and add `com.apple.security.files.user-selected.read-only`
+(the narrowest possible claim: "the user handed me this one file"), or add
 `com.apple.security.personal-information.photos-library` (a much larger claim,
 and one your privacy label would have to answer for). Prefer the first.
 
@@ -459,15 +537,21 @@ skip it.
 
 The awkward part is Pawmodoro-specific: your window is a **400 × 900 point
 column**, which is 5:11 — nothing like 16:10. A raw window capture will never be
-a valid screenshot. You will be composing: the window shot, at 2× so it is
-sharp, placed on a 2880 × 1800 canvas with a background. Use a theme colour
-from `AppTheme.swift` for that background rather than a stock desktop —
-Pawmodoro's whole visual argument is its palette.
+a valid screenshot. Every one is a composite: the window shot, scaled, on a
+canvas of a legal size, on the app's own cream→blush gradient rather than a
+stock desktop — Pawmodoro's whole visual argument is its palette.
 
-Worth showing, in this order: the menu bar extra with the buddy and countdown
-in the actual macOS menu bar (that is the Mac's pitch and no iPhone screenshot
-can show it), the main window with a place behind the timer, the journal, the
-Sunday Post, the Cabinet of Clocks.
+**Eight are made and ready**, at 1440 × 900, plain and captioned, from real
+running sessions rather than the idle 25:00 screen. `docs/MAC_STORE_ASSETS.md`
+§ 2 has the list, the flags behind each one, how to re-shoot, and why
+1440 × 900 rather than 2880 × 1800 on this particular machine.
+
+Two corrections to what this section used to advise. **The menu bar extra
+cannot be the first screenshot**, because it is broken — see
+`MAC_STORE_ASSETS.md` § 3.1. And **no dawn or dusk shot is worth uploading**:
+those two grades flatten the scenery to about a third of the day grade's
+contrast, measured, which is what made the earlier "flat beige wash" capture.
+The eight that exist are all day or night.
 
 ### 5.3 Category and minimum version
 
@@ -531,15 +615,21 @@ Ordered so that the things that can fail cheaply fail first.
 
 **Make the app submittable**
 
-5. Wire up `CODE_SIGN_ENTITLEMENTS[sdk=macosx*]` (§ 3.1). Rebuild for iOS too
-   and confirm the iOS build is unchanged.
+5. ~~Wire up `CODE_SIGN_ENTITLEMENTS[sdk=macosx*]` (§ 3.1).~~ **Done.** It is in
+   `project.pbxproj`, per-SDK, with iOS entitlement files of its own. Rebuild
+   for iOS once and confirm the iOS build is unchanged.
 6. Rebuild for Mac and confirm the sandbox is on:
    `codesign -d --entitlements - --xml <path>/Pawmodoro.app | plutil -p -`
    should print exactly `com.apple.security.app-sandbox => 1`.
 7. **Drive the sandboxed build.** Timer, notifications (background the app),
    audio, Scrapbook import (§ 3.3), postcard share, StoreKit (§ 3.3). A sandbox
    failure is silent — a thing simply does not happen — so you have to touch
-   each one.
+   each one. Partly done on 9 Aug: launch, window restoration, notifications,
+   CoreAudio, StoreKit and opening the Scrapbook all ran sandboxed with **zero
+   denials**. The way to check for a silent sandbox failure without a UI to
+   look at is the log — `/usr/bin/log show --last 5m --info --debug
+   --predicate 'processImagePath CONTAINS "Pawmodoro"'`, then `grep -i deny`.
+   Note `log` is a zsh builtin, so the absolute path matters.
 8. The macOS icon (§ 5.1). Add `make_mac_icon()` to
    `tools/generate_assets.py`, run it **bare or with `2>&1`** — never piped
    into `grep`, per this repo's standing trap — populate the macOS wells,
@@ -570,13 +660,14 @@ So you can check them off rather than hunt for them.
 
 | § | Question | How to answer it |
 |---|---|---|
-| 3.3 | Does StoreKit need `com.apple.security.network.client` in the sandbox? | Sandbox Apple Account + sandboxed build, paywall, without the entitlement first |
-| 3.3 | Does `PhotosPicker` work in the sandbox on macOS with no entitlement? | Import a picture in the sandboxed build |
-| Blockers | Does the bare-Space menu shortcut swallow spaces in the rename field? | Settings → rename buddy → type a space |
+| 3.3 | ~~Does StoreKit need `com.apple.security.network.client` in the sandbox?~~ | **ANSWERED 9 Aug: no.** Mach lookup to `storekitagent` succeeds, request round-trips, zero denials. Still open, separately: do products *list* on a signed build with a Sandbox Apple Account |
+| 3.3 | ~~Does `PhotosPicker` work in the sandbox on macOS with no entitlement?~~ | **Half answered 9 Aug:** the sandbox permits it (`com.apple.photos.service` connects, `PHPhotoLibrary` initialises, no denials) — but the picker has no control on macOS at all (`MAC_STORE_ASSETS.md` § 3.2). Fix the toolbar placement, then import a picture |
+| Blockers | Does the bare-Space menu shortcut swallow spaces in the rename field? | **Partly answered 9 Aug:** the *main* menu bar carries no Space — read through the accessibility API, `Session ▸ Start` has an empty `AXMenuItemCmdChar` and only `Give It a Shake` has one (⌘K). So the binding lives in the `MenuBarExtra` menu alone, which is the reading that made it look safe. Still worth typing a space into the rename field once |
 | 2 | Is "iPhone and iPad Apps on Mac" currently on for the iOS app? | App Store Connect → Pricing and Availability |
 | 4.2 | Is the App ID enabled for macOS? | Certificates, IDs & Profiles → Identifiers — or just let the first archive tell you |
 | 4.3 | `ExportOptions.plist` method spelling, and whether `altool --upload-app` still works | `xcrun altool --help`; or avoid entirely and use the Organizer |
-| 5.1 | Does Xcode 26 accept a single-size macOS app icon? | The asset catalog will say |
+| 5.1 | ~~Does Xcode 26 accept a single-size macOS app icon?~~ | **ANSWERED 8 Aug: no.** The ten-entry `"idiom": "mac"` ladder is required, and adding it does not disturb the iPhone icon. `MAC_STORE_ASSETS.md` § 1 |
+| Blockers | Do the iOS-only `Info.plist` keys still ship in the Mac bundle? | **Still yes, 9 Aug.** `NSSupportsLiveActivities = 1`, `UILaunchScreen` and `UIApplicationSceneManifest` are all in the built Mac `Info.plist` |
 | 5.1 | Current HIG inset and corner radius for a macOS icon | Apple HIG → App icons → macOS |
 | 5.4 | Are App Privacy answers shared across platforms? | Visible in App Store Connect once the platform is added |
 | Blockers | Do `INFOPLIST_KEY_*` settings accept `[sdk=…]` conditions? | Add one, build, `plutil -p` the result |

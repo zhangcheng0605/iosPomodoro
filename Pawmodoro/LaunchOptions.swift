@@ -760,6 +760,27 @@ enum LaunchOptions {
     /// escalation bag means you cannot even choose which one you get.
     static let anticParade = isSet("-PawmodoroAntics")
 
+    /// Tap the buddy n times for real, a second apart: `-PawmodoroTaps 8`.
+    ///
+    /// The parade above calls `playAntic` directly, so it proves the moves
+    /// *draw* and nothing at all about the escalation — `AnticBag` is never
+    /// asked, the two gentle taps never happen, and the sixth tap that lets
+    /// the signature into the bag is never counted. This goes through `pet()`,
+    /// which is the path a finger takes, so the whole ladder is on screen: two
+    /// bounces, then draws with no immediate repeat, then the signature joins.
+    /// A second apart clears the 0.25s throttle and stays well inside the 8s
+    /// rest window, so the count actually climbs.
+    static let tapTimes: Int? = {
+        guard arguments.contains("-PawmodoroTaps") else { return nil }
+        return value(after: "-PawmodoroTaps").flatMap(Int.init) ?? 8
+    }()
+
+    /// Start a focus phase before those taps land: `-PawmodoroTapsInFocus`.
+    /// The one way to see the fence from outside — a tap mid-focus has to be a
+    /// stir and nothing else, and there is no other way to hold a phase open
+    /// and touch the buddy in the same run.
+    static let tapDuringFocus = isSet("-PawmodoroTapsInFocus")
+
     /// Fire an idle vignette a few seconds after launch, e.g.
     /// `-PawmodoroVignette 3` to pin the table row.
     static let forcedVignette: Int? = {
@@ -875,6 +896,8 @@ enum LaunchOptions {
     static let forceShower = false
     static let forcedAntic: String? = nil
     static let anticParade = false
+    static let tapTimes: Int? = nil
+    static let tapDuringFocus = false
     static let forcedVignette: Int? = nil
     static let forcedSeasonLetter: String? = nil
     static let forcedYearCard = false

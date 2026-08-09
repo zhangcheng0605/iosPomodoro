@@ -225,11 +225,14 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
-    /// The second half of a two-part signature. Only the hedgehog has one —
-    /// the ball cracking open again for a face.
+    /// The second half of a two-part signature: the hedgehog's ball cracking
+    /// open again for a face, and the owl's wings coming back *down* between
+    /// beats — a flap held on one spread-wing drawing is a hover, and the
+    /// perched drawing already has the wings folded, so no new art was needed.
     var anticTailFrame: String? {
         switch self {
         case .hedgehog: frame("wake")
+        case .owl: frame("awake")
         default: nil
         }
     }

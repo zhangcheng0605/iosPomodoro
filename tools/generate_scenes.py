@@ -18,6 +18,7 @@ Pawmodoro/Model/Place.swift; the `id` strings here must match its
 """
 import json
 import os
+import re
 
 import numpy as np
 from PIL import Image
@@ -173,8 +174,20 @@ def sky_gradient(grid, horizon):
                 break
 
 
-def cloud(grid, cx, cy, scale, rng):
-    """A few overlapping lozenges with a shaded underside."""
+def cloud(grid, cx, cy, scale, rng=None):
+    """A few overlapping lozenges with a shaded underside.
+
+    Painted straight into `grid`, which makes it part of the picture and
+    therefore immovable. That is right for cloud that is *scenery* — the bank
+    Cloudspire's island floats on is the ground of that place, not its sky —
+    and wrong for cloud in the sky, which lives in `SKY_CLOUDS` instead and is
+    exported to its own layer. See `cloud_layer`.
+
+    Columns wrap. Nothing in the shipped compositions comes near an edge (the
+    nearest is ten columns clear), so this changes no pixel today; it exists
+    so that the same primitive can paint the drifting layer, where a cloud cut
+    off at the right edge would reappear sliced in half at the left.
+    """
     puffs = [(0, 0, 1.0), (-scale, 1, 0.72), (scale, 1, 0.66),
              (-scale // 2, -1, 0.6), (scale // 2, -1, 0.55)]
     for dx, dy, factor in puffs:
@@ -182,12 +195,14 @@ def cloud(grid, cx, cy, scale, rng):
         ry = max(1, int(scale * factor * 0.45))
         for y in range(cy + dy - ry, cy + dy + ry + 1):
             for x in range(cx + dx - rx, cx + dx + rx + 1):
-                if not (0 <= x < W and 0 <= y < H):
+                if not 0 <= y < H:
                     continue
                 nx = (x - (cx + dx)) / rx
                 ny = (y - (cy + dy)) / ry
                 if nx * nx + ny * ny <= 1.0:
-                    grid[y, x] = CLOUD_SH if y > cy + dy + ry - 2 else CLOUD
+                    grid[y, x % W] = (
+                        CLOUD_SH if y > cy + dy + ry - 2 else CLOUD
+                    )
     del rng
 
 
@@ -340,6 +355,52 @@ def birds(grid, rng, count, y_from, y_to):
         speck(grid, x + 2, y, FAR_2)
 
 
+# --- The sky's own layer ---------------------------------------------------
+#
+# Every cloud that is *sky* used to be painted straight into the place, which
+# is why it could not move: it was pixels in the picture, and a stir moved it
+# by the 8/255 of the glow wash while the sun — three drawn shapes — moved 70.
+#
+# So the sky clouds come out into a layer of their own, exported once per place
+# per time of day as a transparent PNG that `SceneryView` draws over the scene
+# and under the veil. Composited at rest it is the same picture, pixel for
+# pixel; given an offset it drifts, and given a stir it leans with the sun.
+#
+# These are the same centres, heights and scales that were in the composition
+# functions, moved verbatim. Nothing was added and nothing was invented:
+#
+#   * **Cloudspire keeps its bank.** The three clouds *below* the island are
+#     still `cloud(g, …)` calls inside `cloudspire()`, because they are not
+#     sky — they are the ground of that place, the thing the rock floats over,
+#     and they sit at the bottom of the screen where the buddy stands. Only the
+#     two overhead ones drift.
+#   * **The Onsen is not enclosed.** Its recipe draws open sky down to row 150
+#     with two clouds in it, so it gets a layer like everywhere else.
+#
+# Anything added here has to keep two promises, both asserted below: it stays
+# clear of the countdown's rows, and the rows it occupies are nothing but sky
+# all the way across — because a drifting cloud visits every column, and a
+# cloud that slides in front of a mountain is a cloud in the wrong place.
+SKY_CLOUDS = {
+    "meadow":     ((34, 26, 9), (96, 40, 7), (66, 14, 5)),
+    "woods":      ((24, 20, 6), (104, 30, 8)),
+    "harbor":     ((88, 34, 12), (30, 22, 8), (112, 16, 6)),
+    "blossom":    ((40, 28, 9), (100, 20, 7)),
+    "keep":       ((26, 24, 7), (108, 34, 9)),
+    "cloudspire": ((30, 30, 10), (104, 22, 8)),
+    "peaks":      ((96, 26, 7),),
+    "onsen":      ((34, 24, 7), (100, 32, 9)),
+}
+
+
+def cloud_layer(name):
+    """The transparent sheet of drifting cloud for one place."""
+    layer = np.full((H, W), T, dtype=np.uint8)
+    for cx, cy, scale in SKY_CLOUDS.get(name, ()):
+        cloud(layer, cx, cy, scale)
+    return layer
+
+
 # --- The places ------------------------------------------------------------
 
 def meadow():
@@ -347,9 +408,6 @@ def meadow():
     g = new_scene()
     rng = Rng(11)
     sky_gradient(g, 186)
-    cloud(g, 34, 26, 9, rng)
-    cloud(g, 96, 40, 7, rng)
-    cloud(g, 66, 14, 5, rng)
     birds(g, rng, 3, 56, 88)
     hills(g, 168, 6, 190, FAR, phase=0.6)
     hills(g, 186, 9, 150, LAND_LO, phase=1.8)
@@ -373,8 +431,6 @@ def woods():
     g = new_scene()
     rng = Rng(23)
     sky_gradient(g, 176)
-    cloud(g, 24, 20, 6, rng)
-    cloud(g, 104, 30, 8, rng)
     hills(g, 166, 5, 210, FAR, phase=2.2)
     hills(g, 188, 7, 160, LAND_LO, phase=0.9)
     band(g, 198, H, LAND_HI)
@@ -405,9 +461,6 @@ def harbor():
     g = new_scene()
     rng = Rng(37)
     sky_gradient(g, 172)
-    cloud(g, 88, 34, 12, rng)
-    cloud(g, 30, 22, 8, rng)
-    cloud(g, 112, 16, 6, rng)
     birds(g, rng, 4, 60, 96)
     water(g, 174, rng, 0.04)
     for x in range(0, W):                    # far shore
@@ -441,8 +494,6 @@ def blossom():
     g = new_scene()
     rng = Rng(53)
     sky_gradient(g, 180)
-    cloud(g, 40, 28, 9, rng)
-    cloud(g, 100, 20, 7, rng)
     # Two shallow pastel ranges rather than one heavy mass — layered depth
     # instead of a magenta blob across the middle of the screen.
     for x in range(W):
@@ -482,8 +533,6 @@ def keep():
     g = new_scene()
     rng = Rng(71)
     sky_gradient(g, 174)
-    cloud(g, 26, 24, 7, rng)
-    cloud(g, 108, 34, 9, rng)
     birds(g, rng, 3, 62, 92)
     hills(g, 178, 4, 200, FAR, phase=0.4)
     band(g, 184, H, LAND_LO)
@@ -520,8 +569,6 @@ def cloudspire():
     g = new_scene()
     rng = Rng(89)
     sky_gradient(g, H)
-    cloud(g, 30, 30, 10, rng)
-    cloud(g, 104, 22, 8, rng)
     birds(g, rng, 4, 66, 104)
     top = 196
     for x in range(26, 108):                 # the island's grassy cap
@@ -550,7 +597,6 @@ def peaks():
     g = new_scene()
     rng = Rng(101)
     sky_gradient(g, 182)
-    cloud(g, 96, 26, 7, rng)
     for x in range(W):                       # two ridge layers
         # Base chosen so the tallest peak still clears the countdown band.
         y = 172 + int(14 * np.sin(x / 26.0 + 1.2)) + int(6 * np.sin(x / 9.0))
@@ -581,8 +627,6 @@ def onsen():
     g = new_scene()
     rng = Rng(127)
     sky_gradient(g, 178)
-    cloud(g, 34, 24, 7, rng)
-    cloud(g, 100, 32, 9, rng)
     for x in range(W):
         y = 150 + int(16 * np.sin(x / 24.0 + 0.7))
         for yy in range(max(0, y), 196):
@@ -665,6 +709,81 @@ def assert_quiet_band(name, grid):
         raise AssertionError(
             f"{name}: rows {QUIET_TOP}-{QUIET_BOTTOM} are behind the countdown "
             f"and must be sky only; found palette indices {sorted(found)}"
+        )
+
+
+def assert_drifting_layer(name, grid, layer):
+    """The two rules a cloud has to keep once it is allowed to move.
+
+    Both are invisible in a single screenshot, which is why they are assertions
+    rather than something to check by eye:
+
+    1. **It stays out of the countdown's rows.** `assert_quiet_band` lets cloud
+       into that band because painted cloud is a fixed, known backdrop that
+       `check_contrast.py` has measured. A *drifting* cloud is not: it visits
+       every column of those rows over a lap, so nothing that moves may enter
+       them at all. Today the lowest cloud pixel in the app is row 43, nine
+       rows clear.
+    2. **Every row it occupies is sky the whole way across.** A cloud drawn at
+       one x with a mountain 40 columns away looks fine standing still and
+       becomes a cloud in front of the mountain thirty seconds later.
+    """
+    rows = np.where((layer != T).any(axis=1))[0]
+    if rows.size == 0:
+        return
+    top, bottom = int(rows.min()), int(rows.max())
+    if bottom >= QUIET_TOP:
+        raise AssertionError(
+            f"{name}: a drifting cloud reaches row {bottom}, and rows "
+            f"{QUIET_TOP}-{QUIET_BOTTOM} are behind the countdown. Nothing "
+            f"that moves may enter them."
+        )
+    sky = {SKY_HI, SKY_MID, SKY_LO}
+    behind = set(np.unique(grid[top:bottom + 1, :]).tolist()) - sky
+    if behind:
+        raise AssertionError(
+            f"{name}: rows {top}-{bottom} carry drifting cloud, so they must "
+            f"be sky all the way across — a cloud visits every column. Found "
+            f"palette indices {sorted(behind)}"
+        )
+
+
+def assert_view_agrees():
+    """The drifting layer is tiled, so the view has to know one tile's width.
+
+    `scaledToFill` will not tell it, so `DriftingCloudsView` carries the
+    canvas's aspect as `artSize` — the only copy of a number this file owns
+    that lives anywhere else. It asks rather than assumes, which is the rule
+    the sprite and species checkers already live by: if a tool has a value
+    another file also has, it is already wrong.
+
+    The asset-name suffix is checked the same way. `check_swift.py` cannot see
+    it — the name is assembled by interpolation, not written as a literal — so
+    renaming the export here and nowhere else would leave the sky cloudless
+    with nothing in the toolchain to notice.
+    """
+    path = os.path.join(ROOT, "Pawmodoro", "Views", "SceneryView.swift")
+    source = open(path).read()
+
+    found = re.search(
+        r"static let artSize = CGSize\(width: ([\d.]+), height: ([\d.]+)\)",
+        source,
+    )
+    if not found:
+        raise AssertionError(
+            "SceneryView.swift: could not find DriftingCloudsView.artSize"
+        )
+    if (int(float(found.group(1))), int(float(found.group(2)))) != (W, H):
+        raise AssertionError(
+            f"SceneryView.swift: artSize is {found.group(1)}x{found.group(2)} "
+            f"but this canvas is {W}x{H} — the cloud layer would tile at the "
+            f"wrong width"
+        )
+
+    if 'assetName(for: part))_clouds"' not in source:
+        raise AssertionError(
+            "SceneryView.swift: DriftingCloudsView no longer builds its asset "
+            "name as scene_<place>_<part>_clouds, which is what this exports"
         )
 
 
@@ -756,14 +875,20 @@ def train():
 
 
 if __name__ == "__main__":
+    assert_view_agrees()
     print("Places:")
     for name, draw, overrides in PLACES:
         grid = draw()
+        layer = cloud_layer(name)
         assert_quiet_band(name, grid)
+        assert_drifting_layer(name, grid, layer)
         palette = {**BASE, **overrides}
         for part in PARTS:
             to_png(grid, graded(palette, part), f"scene_{name}_{part}")
-        print(f"  {name}: {W * UPSCALE}x{H * UPSCALE} x{len(PARTS)} parts")
+            to_png(layer, graded(palette, part), f"scene_{name}_{part}_clouds")
+        clouds = len(SKY_CLOUDS.get(name, ()))
+        print(f"  {name}: {W * UPSCALE}x{H * UPSCALE} x{len(PARTS)} parts"
+              f" (+{clouds} drifting cloud{'' if clouds == 1 else 's'})")
     print("Vignettes:")
     for maker in (sailboat, balloon, train):
         maker()

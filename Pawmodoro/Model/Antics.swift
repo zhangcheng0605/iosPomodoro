@@ -276,17 +276,38 @@ enum AnticShape: Equatable {
 
     var beats: [AnticBeat] {
         switch self {
+        // Three pumps, not one hold.
+        //
+        // The first draft raised the sprite two points, held the raised-paw
+        // frame for four tenths of a second and put it down, under the caption
+        // "waves a paw. Just the one". Measured on screen that is a 6px lift
+        // on a 104pt sprite and then nothing: the frame swap does all the
+        // work, and what you watch is a cat standing still in a different
+        // drawing. It was indistinguishable from the capybara's `still`, which
+        // is the move whose entire joke is that nothing happens.
+        //
+        // A wave is repetition — that is the whole of what makes it a wave
+        // rather than a raised paw — so the lift goes to six points and
+        // happens three times. It is the beckoning-cat pump, and it is the
+        // sprite that moves rather than the paw, which is honest: there is one
+        // drawing, and a pumped whole-body beckon is what that drawing can say.
         case .held:
             [
-                AnticBeat(dy: -2, frame: .signature, curve: .easeOut, hold: 0.16),
-                AnticBeat(dy: -2, frame: .signature, curve: .linear, hold: 0.42),
+                AnticBeat(dy: -6, frame: .signature, curve: .easeOut, hold: 0.14),
+                AnticBeat(dy: -1, frame: .signature, curve: .easeIn, hold: 0.12),
+                AnticBeat(dy: -6, frame: .signature, curve: .easeOut, hold: 0.14),
+                AnticBeat(dy: -1, frame: .signature, curve: .easeIn, hold: 0.12),
+                AnticBeat(dy: -6, frame: .signature, curve: .easeOut, hold: 0.16),
                 AnticBeat(curve: .easeIn, hold: 0.16),
             ]
+        // Two pumps and a longer look, for someone still deciding about you.
         case .heldSlow:
             [
-                AnticBeat(dy: -2, frame: .signature, curve: .easeOut, hold: 0.24),
-                AnticBeat(dy: -2, frame: .signature, curve: .linear, hold: 0.62),
-                AnticBeat(curve: .easeIn, hold: 0.24),
+                AnticBeat(dy: -5, frame: .signature, curve: .easeOut, hold: 0.22),
+                AnticBeat(dy: -1, frame: .signature, curve: .easeIn, hold: 0.18),
+                AnticBeat(dy: -5, frame: .signature, curve: .easeOut, hold: 0.22),
+                AnticBeat(dy: -5, frame: .signature, curve: .linear, hold: 0.32),
+                AnticBeat(curve: .easeIn, hold: 0.22),
             ]
         case .bowThenSpin:
             [
@@ -336,13 +357,24 @@ enum AnticShape: Equatable {
                 AnticBeat(dx: 22, dy: 2, frame: .signature, curve: .linear, hold: 0.22),
                 AnticBeat(curve: .spring, hold: 0.26),
             ]
+        // Wings *down* between the wings-up frames, or it is a hover.
+        //
+        // Held on one drawing this was an owl with its wings permanently
+        // spread, bobbing four points up and down — which reads as a bird
+        // being lifted rather than one flying. There is no second flap sprite
+        // and there does not need to be: the ordinary perched drawing has its
+        // wings folded, so alternating the two *is* the wingbeat, and
+        // `signatureTail` already exists for exactly this (the hedgehog's ball
+        // cracking open). Every up in the bob is a wings-out frame and every
+        // dip is a wings-in one, so the two channels say the same thing.
         case .flap:
             [
                 AnticBeat(dy: -4, frame: .signature, curve: .easeOut, hold: 0.16),
-                AnticBeat(dy: -16, frame: .signature, curve: .easeOut, hold: 0.20),
-                AnticBeat(dy: -12, frame: .signature, curve: .linear, hold: 0.14),
-                AnticBeat(dy: -18, frame: .signature, curve: .linear, hold: 0.14),
-                AnticBeat(dy: -12, frame: .signature, curve: .linear, hold: 0.14),
+                AnticBeat(dy: -16, frame: .signature, curve: .easeOut, hold: 0.18),
+                AnticBeat(dy: -12, frame: .signatureTail, curve: .linear, hold: 0.12),
+                AnticBeat(dy: -20, frame: .signature, curve: .linear, hold: 0.16),
+                AnticBeat(dy: -14, frame: .signatureTail, curve: .linear, hold: 0.12),
+                AnticBeat(dy: -20, frame: .signature, curve: .linear, hold: 0.16),
                 AnticBeat(curve: .spring, hold: 0.26),
             ]
         case .still:

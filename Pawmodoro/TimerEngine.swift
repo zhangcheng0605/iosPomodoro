@@ -441,6 +441,18 @@ final class TimerEngine {
             }
         }
         armGoldenHour()
+        // Nothing else calls the mirror at launch: `settingsDidChange()` runs
+        // only on a real change, so somebody who installed the app, picked a
+        // buddy once and never opened Settings again had an empty suite and
+        // got the widget's `?? "cat"` fallback forever. One write here closes
+        // that, and it is free after the first launch — the payload matches
+        // and `sync` returns without touching WidgetKit.
+        // `self.` because the initialiser's parameter shadows the property,
+        // and the parameter is the optional the caller may not have passed.
+        WidgetMirror.sync(
+            buddy: self.settings.buddy.rawValue,
+            place: self.settings.place.rawValue
+        )
     }
 
     /// Set by `-PawmodoroTrick`, played by `BuddyView` shortly after launch —
@@ -1293,15 +1305,14 @@ final class TimerEngine {
         ThemeManager.shared.theme = settings.theme
         HapticsDirector.shared.isEnabled = settings.hapticsEnabled
         // The home-screen widget reads the buddy's identity from the App
-        // Group suite. Without the entitlement the write lands in a
-        // private container and the widget's cat fallback holds — so this
-        // is safe to run before the group is ever configured. Not in
-        // StorageKeys on purpose: it's a mirror, not state; the app never
-        // reads it back.
-        if let suite = UserDefaults(suiteName: "group.com.pawmodoro") {
-            suite.set(settings.buddy.rawValue, forKey: "widget.buddy")
-            suite.set(settings.place.rawValue, forKey: "widget.place")
-        }
+        // Group suite. `WidgetMirror` owns the write and the WidgetKit
+        // reload, and does neither unless the payload actually moved — this
+        // method is called from `.onChange(of: engine.settings)`, so a
+        // volume slider drag arrives here dozens of times and must not wake
+        // the extension once.
+        WidgetMirror.sync(
+            buddy: settings.buddy.rawValue, place: settings.place.rawValue
+        )
         if runState == .idle {
             remaining = phaseDuration
         }

@@ -25,7 +25,9 @@ struct HomeBuddyEntry: TimelineEntry {
 struct HomeBuddyProvider: TimelineProvider {
 
     func placeholder(in context: Context) -> HomeBuddyEntry {
-        HomeBuddyEntry(date: Date(), buddy: "cat")
+        // The gallery and the redacted loading state get the real buddy too,
+        // so adding the widget never shows a stranger's cat for a beat.
+        entry(at: Date())
     }
 
     func getSnapshot(in context: Context, completion: @escaping (HomeBuddyEntry) -> Void) {
@@ -43,9 +45,21 @@ struct HomeBuddyProvider: TimelineProvider {
         completion(Timeline(entries: entries, policy: .atEnd))
     }
 
+    /// The App Group suite the app mirrors into. The names are duplicated
+    /// from `WidgetMirror` in the app target — the extension is a separate
+    /// target and cannot see it without a shared file, which would mean
+    /// editing `project.pbxproj`. `WidgetMirror`'s doc comment is the other
+    /// half of this pair; change one and change the other.
+    private static let suiteName = "group.com.pawmodoro"
+    private static let buddyKey = "widget.buddy"
+
+    /// Read at timeline-build time, not at draw time. That is only fresh
+    /// because the app calls `WidgetCenter.shared.reloadAllTimelines()` when
+    /// the buddy actually moves — without that this went stale until the next
+    /// day-part boundary, which is up to nine hours overnight.
     private func entry(at date: Date) -> HomeBuddyEntry {
-        let buddy = UserDefaults(suiteName: "group.com.pawmodoro")?
-            .string(forKey: "widget.buddy") ?? "cat"
+        let buddy = UserDefaults(suiteName: Self.suiteName)?
+            .string(forKey: Self.buddyKey) ?? "cat"
         return HomeBuddyEntry(date: date, buddy: buddy)
     }
 

@@ -108,7 +108,7 @@ struct ScrapbookView: View {
         @ViewBuilder label: () -> Label
     ) -> some View {
         PhotosPicker(selection: $picking, matching: .images, label: label)
-            .buttonStyle(.plain)
+            .buttonStyle(.squishy)
             .disabled(importing)
             .accessibilityLabel("Keep a picture of where you are")
     }
@@ -154,12 +154,17 @@ struct ScrapbookView: View {
             // empty state carries its own way in rather than pointing at a
             // control somewhere else.
             keepPicker {
+                // `blossom` rather than any other green or brown on hand:
+                // `Theme.onAccent` is only *measured* against the three
+                // accents (`check_contrast.py` walks blossom/sage/sunshine),
+                // so a capsule in any other colour would be a contrast claim
+                // nothing in the toolchain checks.
                 Label("Keep a picture", systemImage: "photo.badge.plus")
-                    .font(.subheadline.weight(.medium))
+                    .font(.headline)
                     .foregroundStyle(Theme.onAccent)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.forest))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 11)
+                    .background(Capsule().fill(Theme.blossom))
             }
             .padding(.top, 8)
         }

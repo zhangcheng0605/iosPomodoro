@@ -854,12 +854,17 @@ struct ContentView: View {
                     .frame(width: proxy.size.width)
                     .background(columnMeasure)
 
-                let _ = debugMeasure(proxy.size.height, columnHeight <= proxy.size.height ? "fits" : "SCROLLS")
                 if columnHeight <= proxy.size.height {
                     column
                 } else {
                     ScrollView(.vertical) { column }
                         .scrollBounceBehavior(.basedOnSize)
+                        // The system's own way of saying "there is more here",
+                        // and the reason the fade is not carrying that alone:
+                        // a fade says the picture continues, an indicator says
+                        // you may move it. Costs nothing and touches nothing.
+                        .scrollIndicatorsFlash(onAppear: true)
+                        .mask(alignment: .top) { scrollFade }
                 }
             }
             // A scroll view's clip region is not its frame: it is allowed to
@@ -871,7 +876,7 @@ struct ContentView: View {
             .clipped()
 
             ambienceRow
-                .padding(.bottom, 22)
+                .padding(.bottom, air.ambience)
 
             controls
         }
@@ -887,6 +892,47 @@ struct ContentView: View {
         .ignoresSafeArea(.container, edges: .bottom)
     }
 
+    /// What the bottom edge of the scrolling region looks like.
+    ///
+    /// **A hard cut through a sprite reads as a bug; a fade reads as a page.**
+    /// The region only scrolls when the group genuinely does not fit, and the
+    /// ordinary sizes now all fit — see `air` and `TimerRingView.diameter`.
+    /// The accessibility ones cannot: measured on a 402×874pt phone the top
+    /// group wants 855pt at AX5 where 507 exist, and the buddy's caption alone
+    /// accounts for close to three hundred of them. No arrangement of a phase
+    /// chip, a dial and a cat fits beside that on a phone, so something has to
+    /// be below the fold. What can be chosen is what the fold looks like.
+    /// Clipped, the last row stops mid-stroke with the ambience chips
+    /// beginning immediately underneath and nothing on screen saying there is
+    /// more — which is exactly how the regression this replaces looked, and
+    /// why it read as a rendering fault rather than as a scroll nobody had
+    /// scrolled.
+    ///
+    /// Twenty-six points of alpha ramp, so whatever meets the fold dissolves
+    /// into the row below instead of being guillotined by it. Not a colour and
+    /// not themed — a mask is read for its alpha channel and never drawn, so
+    /// there is nothing here for `check_contrast.py` to measure and nothing
+    /// for a theme to change.
+    ///
+    /// **What goes under it is chosen, and the order is the point.** The group
+    /// gives way from the bottom, and the bottom is the treat tray, then the
+    /// caption, then the sprite. So the tray goes first at
+    /// accessibility-medium and -large; only past that does the caption start
+    /// to run under the fade; and the cat itself is whole at every size this
+    /// app has been driven at. The one thing that must never happen — a sprite
+    /// sliced in half with chips drawn across the cut — is the thing that is
+    /// furthest down the list.
+    private var scrollFade: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+            LinearGradient(
+                colors: [.black, .black.opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 26)
+        }
+    }
+
     /// The rows above the old `Spacer`: the part of the screen that gives way.
     ///
     /// One list, used by both columns, so the two can never drift apart. The
@@ -897,10 +943,8 @@ struct ContentView: View {
     private func timerRows(width: CGFloat?) -> some View {
         phaseChip
             .padding(.bottom, air.chip)
-            .background(debugRow("chip"))
 
         TimerRingView()
-            .background(debugRow("ring"))
 
         // Only while idle: mid-session is the wrong moment to be
         // offered a different session.
@@ -908,12 +952,10 @@ struct ContentView: View {
             expeditions(width: width)
                 .padding(.top, air.expeditions)
                 .transition(.opacity)
-                .background(debugRow("expeditions"))
         }
 
         BuddyView()
             .padding(.top, air.buddy)
-            .background(debugRow("buddy"))
 
         // Only when nothing is counting down. A treat offered
         // mid-focus would be a reason to touch the screen during
@@ -922,7 +964,6 @@ struct ContentView: View {
             TreatTray()
                 .padding(.top, air.treats)
                 .transition(.opacity)
-                .background(debugRow("treats"))
         }
     }
 
@@ -959,38 +1000,7 @@ struct ContentView: View {
         // rather than a Spacer on purpose — a flexible child would make this
         // group report whatever height it was handed, and the measurement has
         // to be the height it actually wants.
-        .padding(.bottom, 12)
-    }
-
-    private func debugRow(_ name: String) -> some View {
-        GeometryReader { g in
-            Color.clear.onAppear { debugWrite("ROW \(name)=\(g.size.height)") }
-        }
-    }
-
-    private func debugWrite(_ text: String) {
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Documents/measure.txt")
-        if let handle = try? FileHandle(forWritingTo: url) {
-            handle.seekToEndOfFile()
-            handle.write(Data((text + "\n").utf8))
-            try? handle.close()
-        } else {
-            try? (text + "\n").write(to: url, atomically: true, encoding: .utf8)
-        }
-    }
-
-    private func debugMeasure(_ avail: CGFloat, _ note: String) {
-        let line = "MEASURE avail=\(avail) want=\(columnHeight) \(note)\n"
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Documents/measure.txt")
-        if let handle = try? FileHandle(forWritingTo: url) {
-            handle.seekToEndOfFile()
-            handle.write(Data(line.utf8))
-            try? handle.close()
-        } else {
-            try? line.write(to: url, atomically: true, encoding: .utf8)
-        }
+        .padding(.bottom, air.floor)
     }
 
     /// The top group's natural height, as last measured.
@@ -1021,13 +1031,26 @@ struct ContentView: View {
     /// Island. Measured, "Focus" read as "…cus" with the camera button drawn on
     /// top of it. The toolbar's glyph buttons barely grow, so the clearance the
     /// chip needs is roughly its own growth, and that is what this is.
+    ///
+    /// **That ramp was measured on the layout that overflows, and charged to
+    /// the one that doesn't.** The clearance problem is real on
+    /// `ordinaryColumn`, which is taller than its container and hangs forty
+    /// points above it — there the chip does climb into the toolbar's pills.
+    /// `adaptiveColumn` is top-anchored *inside* that container, and the
+    /// container already begins below the floating toolbar: measured on a
+    /// 402×874pt phone the toolbar's lower edge is at 103pt and the container
+    /// starts at 116, so the chip clears it by thirteen points before this
+    /// adds anything. The ramp reached forty-eight, and every one of those
+    /// points came out of the region the buddy lives in — empty sky above a
+    /// chip with nothing to be clear of, on the one screen with nothing spare.
+    ///
+    /// Eight where it always was, and four more at the accessibility sizes as
+    /// the one hedge worth keeping: the toolbar's own buttons are the thing
+    /// here nobody has measured on every phone.
     private var topInset: CGFloat {
         switch dynamicTypeSize {
-        case .xSmall, .small, .medium, .large: 8
-        case .xLarge: 16
-        case .xxLarge: 24
-        case .xxxLarge: 32
-        default: 48
+        case .xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge: 8
+        default: 12
         }
     }
 
@@ -1453,6 +1476,52 @@ struct ContentView: View {
         return ""
     }
 
+    /// Undo, play and skip.
+    ///
+    /// **The glyphs are held at `.xxxLarge` because the circles behind them
+    /// cannot grow.** Same failure as the ambience chips — a glyph that
+    /// answers Dynamic Type inside a backing that does not — and it was left
+    /// on the one row the Dynamic Type work exists to protect, where nobody
+    /// could see it before, because until that work the transport was off the
+    /// bottom of the screen at these sizes. `.title2` is 22pt at `.large` and
+    /// 58 at AX5, inside a fixed 56pt circle.
+    ///
+    /// Measured off the screen on a 402×874pt phone, as the furthest any of
+    /// the glyph's own ink gets from the centre of the disc it sits on, in
+    /// units of that disc's 28pt radius — 1.0 is the rim:
+    ///
+    ///                       undo   skip
+    ///     large             0.42   0.45
+    ///     xxxLarge          0.52   0.57
+    ///     accessibility-L   0.73   0.78
+    ///     AX5               1.06   1.12   ← ink outside the circle
+    ///
+    /// At the top sizes they are not glyphs on buttons any more; they are two
+    /// brown shapes lying on the grass, and skip is close enough to the play
+    /// button to read as part of it.
+    ///
+    /// The chips answered this by growing their backing, and that was right
+    /// for them: a 38×32 chip carrying the accent pill that says which
+    /// ambience is playing is small enough that growing it is worth having.
+    /// It is the wrong answer here, for two reasons. These circles are 56 and
+    /// 84 points against a 44pt minimum — already the most generous targets on
+    /// the screen, and growing them buys nothing a finger can feel. And this
+    /// row is *pinned*: every point it grows is a point taken off the region
+    /// above it, which is the region where the buddy's caption and the treat
+    /// tray were being cut off in the first place. A fix for one regression
+    /// that pays for itself out of the other is not a fix.
+    ///
+    /// So the backing keeps the size it shipped at and the glyph is capped at
+    /// the largest size that fits inside it. Held at `.xxxLarge` that is 28pt
+    /// of `.title2` in a 56pt circle and 40pt of `.largeTitle` in an 84 — half
+    /// the diameter in both cases, against 0.39 at the default size, so the
+    /// glyphs do still visibly answer the text size right up to the cap: 0.57
+    /// of the radius in the table above, with 43% of it still spare. Nothing
+    /// below `.xxxLarge` is touched at all, which is every ordinary reading
+    /// size. The same trade, and the same wording, as the status line inside
+    /// `TimerRingView`: an icon-only control whose target is already twice the
+    /// minimum is not the part of this screen that is hard to use, and
+    /// VoiceOver reads the labels either way.
     private var controls: some View {
         HStack(spacing: 20) {
             Button {
@@ -1512,6 +1581,9 @@ struct ContentView: View {
             .buttonStyle(.squishy)
             .accessibilityLabel("Skip to next phase")
         }
+        // The cap. It belongs on the row rather than on the three glyphs so a
+        // fourth control added here cannot be the one that forgets it.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }
 

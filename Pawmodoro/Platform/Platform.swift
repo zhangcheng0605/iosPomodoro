@@ -75,16 +75,37 @@ enum Platform {
     /// still leaves room under the menu bar of the shortest Mac laptop screen.
     static let macWindowMinimum = CGSize(width: 360, height: 860)
 
-    /// The widest the Mac window may be dragged to.
+    /// The biggest the Mac window may be dragged to — **the shape of the art**.
     ///
-    /// A ceiling on the *width* only — height is free. Every scene is exported
-    /// at 396×858 and drawn `scaledToFill`, so a window wider than it is tall
-    /// crops the artwork to a horizontal band through the middle of the sky:
-    /// the hills, the ground and the house all fall outside it and what is
-    /// left reads as a flat wash of colour. Bounding the width is what keeps a
-    /// place looking like a place. `SceneryView` anchors the remaining crop to
-    /// the ground as a second line of defence.
-    static let macWindowMaximum = CGSize(width: 520, height: CGFloat.infinity)
+    /// Every scene is exported at 396×858 and drawn `scaledToFill`, so a window
+    /// wider than that aspect crops the artwork to a horizontal band through
+    /// the middle of the sky: the hills, the ground and the house all fall
+    /// outside it and what is left reads as a flat wash of colour. Bounding the
+    /// width at 520 is what keeps a place looking like a place. `SceneryView`
+    /// anchors the remaining crop to the ground as a second line of defence.
+    ///
+    /// ### The height used to be free, and that was the Zoom bug
+    ///
+    /// `CGFloat.infinity` here is what the green traffic light reads as "you
+    /// may have the whole screen": pressing Zoom on a 2160-point display gave a
+    /// **520 × 2135 sliver** — the countdown at the top, the ground at the
+    /// bottom and about 900 points of empty sky in between. It looked like a
+    /// mistake because it was one. A window is only allowed to grow into shapes
+    /// the app has art for.
+    ///
+    /// So the ceiling is the scene's own aspect at the maximum width:
+    /// 520 × 858/396 = 1127 points of content. At exactly that size the
+    /// artwork fills the window with nothing cropped and nothing stretched,
+    /// which makes it the honest answer to Zoom: not "as big as the screen",
+    /// but "as big as this looks right". Derived rather than chosen, so
+    /// re-exporting the scenes at another aspect moves it.
+    ///
+    /// The floor stays 860, so the window still resizes over a real range
+    /// (860…1127 of content) rather than being pinned.
+    static let macWindowMaximum = CGSize(
+        width: 520,
+        height: (520 * (858.0 / 396.0)).rounded()
+    )
 
     /// Put the process's audio on the ambient category, once per launch.
     ///

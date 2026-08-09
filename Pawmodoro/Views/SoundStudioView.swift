@@ -29,11 +29,18 @@ struct SoundStudioView: View {
                 }
                 .padding()
             }
+            .sheetSize()
             .background(Theme.cream.ignoresSafeArea())
             .navigationTitle("Sound Studio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                // `.confirmationAction`, not `.topBarTrailing`. This was the
+                // last screen in the app still asking a sheet's toolbar for a
+                // primary control, and on macOS that renders *nothing*: the
+                // Sound Studio had a title, a scroll area, and no button of
+                // any kind. Escape closed it, and nothing on screen said so.
+                // The placement table in `Platform.swift` has the measurement.
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }

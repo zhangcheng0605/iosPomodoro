@@ -31,6 +31,7 @@ struct CartView: View {
                 }
                 .padding()
             }
+            .sheetSize()
             .background(Theme.cream.ignoresSafeArea())
             .navigationTitle("The magpie's cart")
             .navigationBarTitleDisplayMode(.inline)
@@ -38,7 +39,6 @@ struct CartView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-                ToolbarItem(placement: .topBarLeading) { pouchLabel }
             }
             .sheet(item: $opened) { UnlockSheet(item: $0) }
             .sheet(isPresented: $showPaywall) { PaywallView() }
@@ -49,6 +49,15 @@ struct CartView: View {
 
     /// Two frames at the homestead's pace — she tilts her head at you and goes
     /// back to her pile. Anything faster would be a shop assistant hovering.
+    ///
+    /// The pouch count sits here, beside her, and that is where it belongs
+    /// rather than where it used to be. It was a `.topBarLeading` toolbar item,
+    /// which a Mac sheet has nowhere to put and therefore does not draw at all:
+    /// on macOS you shopped without ever seeing your balance. Moving it into
+    /// the content is the Scrapbook's fix again — one control, drawn by the
+    /// same code on both platforms — and it reads better on the phone too,
+    /// because the number you are about to spend is now next to the person you
+    /// are about to spend it with.
     private var magpie: some View {
         HStack(alignment: .bottom, spacing: 10) {
             TimelineView(.periodic(from: .now, by: Self.frameSeconds)) { context in
@@ -58,19 +67,23 @@ struct CartView: View {
                     .scaledToFit()
                     .frame(width: 46, height: 50)
             }
+            .accessibilityHidden(true)
             Image("cart_1")
                 .interpolation(.none)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 84, height: 54)
-            Text(greeting)
-                .font(.footnote)
-                .foregroundStyle(Theme.bark.opacity(0.7))
-                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 6) {
+                pouchLabel
+                Text(greeting)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.bark.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer(minLength: 0)
         }
         .padding(.bottom, 4)
-        .accessibilityElement(children: .combine)
     }
 
     /// Slower than the homestead's neighbours, which is the point: she looks

@@ -43,6 +43,11 @@ struct ScrapbookView: View {
                     .padding()
                 }
             }
+            // The same bound every other sheet in the app now carries. A
+            // scrapbook is the one collection here with no ceiling on it, so
+            // it is the one most certain to grow a Mac sheet past the bottom
+            // of the display and take Done with it. See `sheetSize()`.
+            .sheetSize()
             .background(Theme.cream.ignoresSafeArea())
             .navigationTitle("Where you were")
             .navigationBarTitleDisplayMode(.inline)

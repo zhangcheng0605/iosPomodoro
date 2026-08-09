@@ -24,6 +24,46 @@ struct SettingsView: View {
         if let item { unlocking = item } else { showPaywall = true }
     }
 
+    /// A section footer that wraps rather than truncating.
+    ///
+    /// On a phone a `Form` is the width of the phone and its footers wrap by
+    /// themselves. In a Mac sheet the Form is as wide as the widest row in it
+    /// and the footers were cut off mid-word — "…and pauses when th…", "…calls
+    /// them stra…", "Thank yo…". `fixedSize(horizontal:vertical:)` is the
+    /// difference: it says the height may grow to fit the text, which is what
+    /// makes it wrap instead of clipping. Identical on the phone, where the
+    /// text already fitted.
+    /// A footer is full-width in the grouped style — unlike a *row's* label,
+    /// which lives in a column and must never ask for infinite width. So the
+    /// leading alignment is safe here and is not safe there; see
+    /// `stepperLabel`. Without it the Mac sets footers ragged-left against the
+    /// right edge, which reads as a caption rather than the aside it is.
+    private func footer(_ copy: String) -> some View {
+        Text(copy)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A stepper's label, ditto.
+    ///
+    /// A `Stepper` built from a `String` puts its title in a single line the
+    /// Mac aligns to the *trailing* edge, so the longest of the four rows lost
+    /// its first characters off the left of the sheet: "Long break every 4
+    /// sessions" rendered as "g break every 4 sessions". A `Text` label that is
+    /// allowed to grow downwards has nowhere to be clipped.
+    ///
+    /// **No `maxWidth: .infinity` here.** That was tried and it destroyed the
+    /// whole screen: a macOS `Form` lays labels and controls out in two
+    /// columns, so a label asking for infinite width takes the entire sheet
+    /// and squeezes every control into a fifteen-point gutter — the Form came
+    /// out as one letter per line down the right-hand edge. Nothing on the
+    /// phone can show that, because a phone's `Form` has no column layout to
+    /// wreck.
+    private func stepperLabel(_ copy: String) -> some View {
+        Text(copy)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     var body: some View {
         @Bindable var engine = engine
 
@@ -33,7 +73,7 @@ struct SettingsView: View {
                     BuddyPicker(onLockedTap: lockedTap)
                     HStack {
                         Text("Name")
-                        Spacer()
+                        Spacer(minLength: 12)
                         TextField(
                             engine.settings.buddy.name,
                             text: Binding(
@@ -45,23 +85,37 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                         .submitLabel(.done)
+                        // A `TextField` wants every point it can get, and on a
+                        // phone the row is the width of the phone so that
+                        // reads as "the rest of the row". In a Mac sheet the
+                        // row is as wide as the widest thing in the Form and
+                        // the field ran off the right edge of the sheet.
+                        // Bounding it costs the phone nothing: 220 points is
+                        // longer than any buddy name anybody types.
+                        .frame(maxWidth: 220)
                     }
                     Button {
                         showBuddyBook = true
                     } label: {
                         HStack {
                             Text("The buddy book")
+                                .foregroundStyle(Theme.bark)
                             Spacer()
                             Image(systemName: "book.closed.fill")
                                 .foregroundStyle(Theme.blossom)
                         }
                     }
+                    // Like the cart and the scrapbook rows below. Without it
+                    // macOS draws a *bordered* button around a label that ends
+                    // in a `Spacer`, which asks for infinite width and gets
+                    // clipped by the sheet.
+                    .buttonStyle(.plain)
                     WardrobePicker(onLockedTap: lockedTap)
                 } header: {
                     Text("Your buddy")
                 } footer: {
-                    Text("Leave the name blank to go back to \(engine.settings.buddy.name). "
-                         + "What they wear is remembered per buddy.")
+                    footer("Leave the name blank to go back to \(engine.settings.buddy.name). "
+                           + "What they wear is remembered per buddy.")
                 }
 
                 Section {
@@ -69,9 +123,9 @@ struct SettingsView: View {
                 } header: {
                     Text("Little journeys")
                 } footer: {
-                    Text("An off-duty buddy comes back when it comes back — "
-                         + "with a letter, and something for the drawer. "
-                         + "Picking a traveler for duty calls them straight home.")
+                    footer("An off-duty buddy comes back when it comes back — "
+                           + "with a letter, and something for the drawer. "
+                           + "Picking a traveler for duty calls them straight home.")
                 }
 
                 Section {
@@ -79,26 +133,26 @@ struct SettingsView: View {
                 } header: {
                     Text("Where you are")
                 } footer: {
-                    Text("Finish focus sessions to travel further. Places you reach stay yours.")
+                    footer("Finish focus sessions to travel further. Places you reach stay yours.")
                 }
 
                 Section("Durations") {
-                    Stepper(
-                        "Focus: \(engine.settings.focusMinutes) min",
-                        value: $engine.settings.focusMinutes, in: 5...90, step: 5
-                    )
-                    Stepper(
-                        "Short break: \(engine.settings.shortBreakMinutes) min",
-                        value: $engine.settings.shortBreakMinutes, in: 1...30
-                    )
-                    Stepper(
-                        "Long break: \(engine.settings.longBreakMinutes) min",
-                        value: $engine.settings.longBreakMinutes, in: 5...60, step: 5
-                    )
-                    Stepper(
-                        "Long break every \(engine.settings.sessionsPerLongBreak) sessions",
-                        value: $engine.settings.sessionsPerLongBreak, in: 2...8
-                    )
+                    Stepper(value: $engine.settings.focusMinutes,
+                            in: 5...90, step: 5) {
+                        stepperLabel("Focus: \(engine.settings.focusMinutes) min")
+                    }
+                    Stepper(value: $engine.settings.shortBreakMinutes,
+                            in: 1...30) {
+                        stepperLabel("Short break: \(engine.settings.shortBreakMinutes) min")
+                    }
+                    Stepper(value: $engine.settings.longBreakMinutes,
+                            in: 5...60, step: 5) {
+                        stepperLabel("Long break: \(engine.settings.longBreakMinutes) min")
+                    }
+                    Stepper(value: $engine.settings.sessionsPerLongBreak,
+                            in: 2...8) {
+                        stepperLabel("Long break every \(engine.settings.sessionsPerLongBreak) sessions")
+                    }
                 }
 
                 Section {
@@ -106,7 +160,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Ambience")
                 } footer: {
-                    Text("Ambient sound plays while the timer is running, and pauses when the app is closed.")
+                    footer("Ambient sound plays while the timer is running, and pauses when the app is closed.")
                 }
 
                 Section("Theme") {
@@ -134,8 +188,8 @@ struct SettingsView: View {
                 } header: {
                     Text("Behaviour")
                 } footer: {
-                    Text("Settling in takes three slow breaths before the "
-                         + "countdown starts. Tap anywhere to skip it. The lock "
+                    footer("Settling in takes three slow breaths before the "
+                         + "countdown starts. \(Pointing.Tap) anywhere to skip it. The lock "
                          + "screen countdown is drawn by the system, so it costs "
                          + "no battery. The golden hour call is at most one "
                          + "quiet notification a day, when the light is good "
@@ -156,9 +210,17 @@ struct SettingsView: View {
                         dismiss()
                     }
                 } footer: {
-                    Text("Duration changes take effect on the next session. Pawmodoro keeps everything on your device — no account, no tracking, version \(appVersion).")
+                    footer("Duration changes take effect on the next session. Pawmodoro keeps everything on your device — no account, no tracking, version \(appVersion).")
                 }
             }
+            // The phone's `Form` is grouped and always has been; the Mac's
+            // default is the two-column style, which is what put a section
+            // header hard against the previous section's footer and
+            // right-aligned every label. Asking for the grouped style is a
+            // no-op on iOS — it is already that — and makes the Mac read like
+            // the screen this is.
+            .formStyle(.grouped)
+            .sheetSize()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -209,8 +271,8 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
         } footer: {
-            Text("Keep a picture of wherever you are sitting. They stay on this "
-                 + "device — the app has no way to send them anywhere.")
+            footer("Keep a picture of wherever you are sitting. They stay on this "
+                   + "device — the app has no way to send them anywhere.")
         }
     }
 
@@ -235,8 +297,8 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
         } footer: {
-            Text("The wood drops an acorn every twenty minutes you sit. "
-                 + "She trades.")
+            footer("The wood drops an acorn every twenty minutes you sit. "
+                   + "She trades.")
         }
     }
 

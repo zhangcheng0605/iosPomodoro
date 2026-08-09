@@ -1,5 +1,126 @@
 import SwiftUI
 
+#if os(macOS)
+import AppKit
+#endif
+
+#if os(macOS)
+/// The two things about this window that SwiftUI has no modifier for.
+///
+/// Both are about the same sentence: **this window does not do full screen.**
+/// The scenes are exported at 396×858 and drawn `scaledToFill`; a window at a
+/// display's aspect crops every place to a horizontal band of sky with the
+/// ground, the hills and the house outside it. That measurement is what bounds
+/// the width at 520 in `Platform.swift`, and now the height with it — so full
+/// screen is not a feature this app is missing, it is a shape its art does not
+/// have. `NSWindowCollectionBehavior.fullScreenNone` is how you say that in
+/// AppKit — it is what stops `Window ▸ Move & Resize` and a modifier-held
+/// green button from putting the window into a shape the art has no picture
+/// for. It does **not** take `Enter Full Screen` out of the View menu, which
+/// is the second half and is `trimEmptyMenus()` below. Both are here because
+/// they are the same sentence said to two different parts of AppKit.
+///
+/// A view rather than an `NSApplicationDelegate` because the thing being
+/// configured is a *window*, and this is the only place in SwiftUI that has
+/// one. `updateNSView` re-applies both because a `WindowGroup` may make a
+/// second window, and because SwiftUI rebuilds the main menu whenever
+/// `sessionCommands` changes — which it does on every start and pause, since
+/// the first item is titled "Start" or "Pause".
+private struct MacWindowRules: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        // The window is not attached yet on the first layout pass.
+        DispatchQueue.main.async {
+            apply(to: view.window)
+            MacMenuKeeper.shared.start()
+        }
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        apply(to: view.window)
+    }
+
+    private func apply(to window: NSWindow?) {
+        guard let window else { return }
+        var behavior = window.collectionBehavior
+        behavior.remove(.fullScreenPrimary)
+        behavior.remove(.fullScreenAuxiliary)
+        behavior.insert(.fullScreenNone)
+        window.collectionBehavior = behavior
+    }
+}
+
+/// Keeps the View menu off the menu bar, because there is nothing in it.
+///
+/// This took four tries and the first three are worth recording, since each
+/// looked obviously right and each did nothing you could see.
+///
+/// 1. `CommandGroup(replacing: .sidebar) { }`. It does empty the menu;
+///    SwiftUI is simply not what fills it.
+/// 2. `NSWindowCollectionBehavior.fullScreenNone` on the window. The honest
+///    declaration, and the item stayed exactly where it was, still greyed.
+/// 3. Walking `NSApp.mainMenu` once, when the window appears, and removing
+///    any item whose action is `toggleFullScreen:`. Dumping the menu from
+///    inside the running app is what explained this one: at the moment
+///    SwiftUI has finished building it, **the View menu holds zero items**.
+///    AppKit inserts `Enter Full Screen` lazily, on the way to displaying the
+///    menu, so at every moment your own code can run there is nothing there
+///    to remove. The empty *menu* is the thing to take out, before AppKit has
+///    anywhere to put the item.
+///
+/// Which leaves why this is a live observer rather than one pass. SwiftUI
+/// rebuilds the whole main menu whenever `commands` re-evaluates, and this
+/// app's first Session item is titled "Start" or "Pause" — so **the View menu
+/// came back the first time the timer started**, measured, three seconds after
+/// it had been removed. `didUpdateNotification` fires after each pass of the
+/// event loop, which is the only hook that is reliably *after* a rebuild.
+/// The guard makes the common case an integer comparison: the menu we last
+/// trimmed, still holding the number of items we left it holding, is a menu
+/// with nothing to do.
+///
+/// **The last menu is skipped on purpose, and it is the Help menu.** That one
+/// is empty too — deliberately, see the `.help` group in `sessionCommands` —
+/// but macOS puts its own search row in it, so an empty Help menu is not an
+/// empty menu on screen. Skipping the last item rather than matching the title
+/// "View" is what keeps this working in a language this app does not speak
+/// yet; Help is the rightmost menu in every Mac app there is.
+@MainActor
+private final class MacMenuKeeper {
+    static let shared = MacMenuKeeper()
+
+    private var observer: (any NSObjectProtocol)?
+    private var trimmedMenu: NSMenu?
+    private var trimmedCount = -1
+
+    func start() {
+        guard observer == nil else { return }
+        observer = NotificationCenter.default.addObserver(
+            forName: NSApplication.didUpdateNotification,
+            object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { MacMenuKeeper.shared.trim() }
+        }
+        trim()
+    }
+
+    private func trim() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+        if mainMenu === trimmedMenu, mainMenu.numberOfItems == trimmedCount {
+            return
+        }
+        for top in mainMenu.items.dropLast() {
+            guard let submenu = top.submenu, submenu.items.isEmpty else {
+                continue
+            }
+            mainMenu.removeItem(top)
+        }
+        trimmedMenu = mainMenu
+        trimmedCount = mainMenu.numberOfItems
+    }
+}
+#endif
+
 @main
 struct PawmodoroApp: App {
     @State private var engine: TimerEngine
@@ -10,6 +131,11 @@ struct PawmodoroApp: App {
         // Before the engine and the store are built, since both read
         // UserDefaults on init and the debug launch options rewrite it.
         LaunchOptions.applyAtLaunch()
+        #if os(macOS)
+        // Before any window is made, which is the only time this is read.
+        // See the View menu note in `sessionCommands` for why.
+        NSWindow.allowsAutomaticWindowTabbing = false
+        #endif
         let engine = TimerEngine()
         let store = StoreManager()
         // The two roads to the same door, introduced. `isUnlocked(_:)` stays
@@ -45,6 +171,14 @@ struct PawmodoroApp: App {
                 // `Platform.swift` enforced rather than hoped for. The art is
                 // phone-shaped, so the window stays phone-shaped.
                 //
+                // `maxHeight` is stated for the same reason the width is, and
+                // it is what the green traffic light reads. Left free, Zoom
+                // took the window to the full height of the display — a
+                // 520 × 2135 column with 900 points of empty sky in it.
+                // Bounded, Zoom means "as big as the artwork looks right at",
+                // which is a Mac window doing the Mac thing rather than an
+                // iPhone stretched.
+                //
                 // **The backing.** On macOS a window is only as opaque as the
                 // view inside it. The bottom layer of this app is
                 // `Theme.background(for:)`, whose top stop is
@@ -58,9 +192,11 @@ struct PawmodoroApp: App {
                     idealWidth: Platform.macWindow.width,
                     maxWidth: Platform.macWindowMaximum.width,
                     minHeight: Platform.macWindowMinimum.height,
-                    idealHeight: Platform.macWindow.height
+                    idealHeight: Platform.macWindow.height,
+                    maxHeight: Platform.macWindowMaximum.height
                 )
                 .background(Theme.cream)
+                .background(MacWindowRules())
                 #endif
         }
         #if os(macOS)
@@ -135,6 +271,29 @@ struct PawmodoroApp: App {
         // stops resolving to anything. If a help book is ever written, delete
         // this line and the item comes back on its own.
         CommandGroup(replacing: .help) { }
+
+        // The View menu goes by the same argument, and it was the whole menu:
+        // `Enter Full Screen`, `Show Tab Bar` and `Show All Tabs`, and nothing
+        // this app does.
+        //
+        // **Full screen is not an oversight — this window cannot have one.**
+        // The scenes are exported at 396×858 and drawn `scaledToFill`; at a
+        // display's aspect a full-screen window would crop every place to a
+        // horizontal band of sky with the ground, the hills and the house
+        // outside it. That is the same measurement that bounds the width at
+        // 520, and it is why `Platform.macWindowMaximum` now bounds the height
+        // too. A window that cannot fill a screen should not offer to.
+        //
+        // Tabs are the other half: this app has a single scene showing a
+        // single engine, so two windows are two views of the same session and
+        // merging them into tabs means nothing.
+        //
+        // Neither is removed from here, and that is worth writing down because
+        // it looks like it should be. `CommandGroup(replacing: .sidebar) { }`
+        // changed nothing at all — measured, in the running app: SwiftUI is
+        // not what puts `Enter Full Screen` in that menu, AppKit is. The two
+        // that do work are `NSWindow.allowsAutomaticWindowTabbing` in `init()`
+        // for the tab items, and `MacWindowRules` for the full screen one.
 
         CommandMenu("Session") {
             Button(engine.isRunning ? "Pause" : "Start") { engine.toggle() }

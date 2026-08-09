@@ -45,7 +45,7 @@ struct SettleInView: View {
                     .foregroundStyle(Theme.bark.opacity(0.8))
                     .animation(.easeInOut, value: prompt)
 
-                Text("Tap to skip")
+                Text("\(Pointing.Tap) to skip")
                     .font(.footnote)
                     .foregroundStyle(Theme.bark.opacity(0.45))
             }

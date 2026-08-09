@@ -44,21 +44,17 @@ struct StatsView: View {
                     TimetableView()
                     SetlistView()
                     FortuneShelf()
+                    clearRow
                 }
                 .padding()
             }
+            .sheetSize()
             .background(Theme.cream.ignoresSafeArea())
             .navigationTitle("Your paw prints")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Clear", role: .destructive) {
-                        confirmingClear = true
-                    }
-                    .disabled(log.totalSessions == 0)
                 }
             }
             .confirmationDialog(
@@ -76,6 +72,34 @@ struct StatsView: View {
             .sheet(isPresented: $showTipJar) {
                 TipJarView()
             }
+        }
+    }
+
+    /// The way to clear your history.
+    ///
+    /// It was a `.topBarLeading` toolbar item, which a Mac sheet draws as
+    /// nothing at all — so on macOS there was no way to clear a session
+    /// history, anywhere, which is not a polish problem but a missing feature
+    /// in a screen about your own data. In the content it is one control on
+    /// both platforms, the way the Scrapbook's import tile is.
+    ///
+    /// At the bottom, past everything, and deliberately not shouting: erasing
+    /// what you did is the last thing anybody comes here for, and a red word
+    /// beside the title would have been the first thing they read. Nothing is
+    /// destroyed by this button on its own — the confirmation is still the
+    /// gate.
+    @ViewBuilder
+    private var clearRow: some View {
+        if log.totalSessions > 0 {
+            VStack(spacing: 8) {
+                Divider().opacity(0.35)
+                Button("Clear session history", role: .destructive) {
+                    confirmingClear = true
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.bark.opacity(0.7))
+            }
+            .padding(.top, 8)
         }
     }
 

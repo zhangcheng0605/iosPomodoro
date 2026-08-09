@@ -36,19 +36,17 @@ struct SnapshotView: View {
                     }
 
                     stocks
+
+                    removeRow
                 }
                 .padding()
             }
+            .sheetSize()
             .background(Theme.cream.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Remove", role: .destructive) {
-                        confirmingRemoval = true
-                    }
                 }
             }
             .sheet(item: $unlocking) { UnlockSheet(item: $0) }
@@ -65,6 +63,26 @@ struct SnapshotView: View {
                      + "about the session changes.")
             }
         }
+    }
+
+    /// The only way to let a photograph go.
+    ///
+    /// It was a `.topBarLeading` toolbar item, which a Mac sheet does not draw
+    /// — so on macOS a picture could be imported and never deleted, in the one
+    /// part of this app that holds a photograph of somebody's actual room.
+    /// `docs/PRIVACY.md` promises the scrapbook never leaves the device; being
+    /// unable to remove one is the other half of that promise, and it was
+    /// missing. In the content it is one control on both platforms.
+    private var removeRow: some View {
+        VStack(spacing: 8) {
+            Divider().opacity(0.35)
+            Button("Let this one go", role: .destructive) {
+                confirmingRemoval = true
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.bark.opacity(0.7))
+        }
+        .padding(.top, 6)
     }
 
     /// Every stock, always shown, padlocked where it is not owned — the app's

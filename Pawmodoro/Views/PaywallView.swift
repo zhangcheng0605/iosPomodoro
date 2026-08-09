@@ -92,7 +92,7 @@ struct PaywallView: View {
                 // *balance* between the two channels, not their coexistence —
                 // see `TimerEngine.applyEntitlement(hasPlus:)`.
                 title: "The Sound Almanac",
-                detail: "Fifty lo-fi tracks the moment you tap, the mixer that sets the balance between a sound and a track, and radio — which picks for you, matched to where you are and the hour."
+                detail: "Fifty lo-fi tracks the moment you \(Pointing.tap), the mixer that sets the balance between a sound and a track, and radio — which picks for you, matched to where you are and the hour."
             )
             feature(
                 icon: "paintpalette.fill",

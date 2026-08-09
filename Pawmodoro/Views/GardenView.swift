@@ -80,10 +80,10 @@ struct GardenView: View {
 
     private func label(for pocket: GardenPocket?) -> String {
         guard let pocket, let kind = PlantKind(rawValue: pocket.kind) else {
-            return engine.garden.seedOnOffer != nil ? "tap to plant" : "soil"
+            return engine.garden.seedOnOffer != nil ? "\(Pointing.tap) to plant" : "soil"
         }
         let stage = engine.garden.stage(of: pocket, log: engine.log)
-        if stage >= Garden.bloomStage { return "tap to pick" }
+        if stage >= Garden.bloomStage { return "\(Pointing.tap) to pick" }
         return "day \(stage + 1)"
     }
 
@@ -110,12 +110,12 @@ struct GardenView: View {
     private func accessibilityLine(for pocket: GardenPocket?, slot: Int) -> String {
         guard let pocket, let kind = PlantKind(rawValue: pocket.kind) else {
             return engine.garden.seedOnOffer != nil
-                ? "Empty pocket. Tap to plant the offered seed."
+                ? "Empty pocket. \(Pointing.Tap) to plant the offered seed."
                 : "Empty pocket."
         }
         let stage = engine.garden.stage(of: pocket, log: engine.log)
         return stage >= Garden.bloomStage
-            ? "\(kind.name), in bloom. Tap to pick."
+            ? "\(kind.name), in bloom. \(Pointing.Tap) to pick."
             : "\(kind.name), day \(stage + 1) of growing."
     }
 }

@@ -143,6 +143,30 @@ struct ContentView: View {
                     .transition(.opacity)
                 }
             }
+            // Five items at idle, and on a Mac they need a **455-point window**
+            // to all be drawn. Measured on 9 Aug 2026 by resizing the running
+            // window five points at a time: at 450 the last two fall into the
+            // `»` overflow, at 455 every one of them is there. The window's
+            // default is `Platform.macWindow` = 400, so a first-run Mac user —
+            // idle is the first-run state — met a toolbar with **Settings and
+            // the haiku bench in the overflow, and out of the accessibility
+            // tree entirely**: a search of the whole tree for "Settings" found
+            // nothing until the chevron was opened, so VoiceOver and keyboard
+            // navigation could not reach the gear either.
+            //
+            // Three things were tried here and none of them is the fix, so
+            // that nobody spends the afternoon again. An **empty
+            // `navigationTitle`** changes nothing — the ~165 points between
+            // the leading and trailing groups is AppKit's own reserve, not the
+            // title, and it is still there when the window has no title.
+            // Moving the trailing pair to **`.automatic`** changes nothing
+            // either; on macOS it resolves to the same trailing group.
+            // **Shrinking the glyphs** to a uniform 30 points recovers about
+            // 46 and lands at 409, which is still over.
+            //
+            // The fix is the window: `Platform.macWindow.width` 400 → 480. It
+            // is one line, it is inside the 360…520 clamp the same file
+            // documents, and it is the only lever that reaches this.
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {

@@ -2,21 +2,32 @@
 
 Companion to `docs/MAC_APP_STORE.md`, which works out *whether* and *how* the
 app can ship on the Mac App Store. This file is only about the pictures: the
-app icon and the screenshots. It also records the three Mac bugs the
-screenshot pass walked into, because two of them are in the shots and one of
-them **is** a shot.
+app icon and the screenshots. It also records the Mac bugs the screenshot
+passes walked into, because some of them are in the shots and one of them
+**is** a shot.
 
-Everything produced sits outside the repo, in two scratch directories:
+Everything produced sits outside the repo, in three scratch directories:
 
 ```
-…/scratchpad/mas-assets/   the 8 Aug pass (icon preview, first six candidates)
-…/scratchpad/mas2/         the 9 Aug pass (this file's screenshots)
+…/scratchpad/mas-assets/          the 8 Aug pass (icon preview, first six candidates)
+…/scratchpad/mas2/                the 9 Aug afternoon pass (eight candidates)
+…/scratchpad/mas-assets/final/    the 9 Aug evening pass — THE FINAL SET
 ```
 
 where `…` is
 `/private/tmp/claude-501/-Users-zhangcheng-Desktop-iosPomodoro/efd66388-5c4b-4ba5-a1b2-7351e3e69bdb`.
-Nothing in `Assets.xcassets`, `tools/` or the project file was touched. Scratch
-is not backed up — copy anything you want to keep.
+
+The final set was shot from a **Debug macOS build made at 20:47 on 9 Aug**,
+from the working tree at that moment (`55faf15` plus the in-flight scenery
+work). Other workflows edited `Antics.swift`, `Buddy.swift`,
+`PomodoroSettings.swift`, `TimerEngine.swift`, `PaywallView.swift` and
+`SettingsView.swift` after that build. Nothing in those files is visible in
+these ten shots as far as this pass can tell, but if a buddy sprite, a preset
+or the paywall changes, re-shoot rather than assume.
+
+Nothing in `Assets.xcassets`, `tools/`, `Pawmodoro/` or the project file was
+touched by any of them. **Scratch is not backed up — copy the final set
+somewhere real before you rely on it.**
 
 ---
 
@@ -24,357 +35,470 @@ is not backed up — copy anything you want to keep.
 
 | Asset | State | Where |
 |---|---|---|
-| macOS app icon | **Still missing.** Re-checked on 9 Aug against a fresh build: `AppIcon.appiconset/Contents.json` is still one universal 1024 tagged `"platform": "ios"`, the Mac `Info.plist` still has no `CFBundleIconName`, and there is still no `.icns` in the bundle | preview only, `mas-assets/icon/` |
-| macOS icon preview (1024 + ten sizes) | Produced 8 Aug, unchanged | `mas-assets/icon/` |
-| Mac screenshots, store size | **Eight produced at 1440×900**, plain and captioned | `mas2/screenshots-1440x900/` |
-| Raw window captures (400×912) | Twenty-eight, including the rejects | `mas2/raw/` |
-| 2560×1600 / 2880×1800 | **Not produced** — needs a Retina Mac, see § 2.2 | — |
-| Menu-bar-extra screenshot | **Cannot be taken: the menu bar extra is broken.** See § 3.1 | `mas2/zz-menubar-evidence.png` |
+| **Mac screenshots — final set** | **Ten, at 1440 × 900, plain and captioned.** RGB, no alpha, asserted by `compose.py` | `mas-assets/final/out/plain/`, `…/out/captioned/` |
+| Raw window captures | ~80, including sweeps and rejects | `mas-assets/final/raw/` |
+| 2560 × 1600 / 2880 × 1800 | **Not produced, and cannot honestly be from this Mac.** § 2.4 | — |
+| macOS app icon | Changed under me while this was written — § 1 | `Pawmodoro/Assets.xcassets/AppIcon.appiconset` |
+| Menu-bar-extra screenshot | **Still cannot be taken: the menu bar extra is still broken.** Re-measured on tonight's build, § 3.1 | `mas2/zz-menubar-evidence.png` |
 
-Three bugs came out of this pass. None of them is a screenshot problem and all
-three are in shipping code, not in the working tree's uncommitted scenery work:
-
-1. **The menu bar extra draws the buddy at ~400 pt** and the menu bar clips it
-   to a meaningless orange band (§ 3.1). This is the one screenshot
-   `MAC_APP_STORE.md` calls the Mac's whole pitch.
-2. **The Scrapbook has no way to add a picture on macOS** — the `PhotosPicker`
-   is a `ToolbarItem(placement: .topBarLeading)`, which renders nothing in a
-   Mac sheet (§ 3.2).
-3. **The old snail stands on the ambience row** rather than on the ground
-   (§ 3.3). Not Mac-specific as far as anything here can tell.
+Which set to upload: **`out/plain/`** if the listing copy is doing the talking,
+**`out/captioned/`** if it is not. Do not mix them — App Store Connect shows
+the ten in a row and half-captioned reads as an accident. The captions are one
+line each, SF Rounded, `Theme.bark`, measured at 6.9 : 1 contrast or better
+against their own backdrop.
 
 ---
 
-## 1. The app icon
+## 1. The app icon — read this before believing anything
 
-Nothing has changed since 8 Aug, and it was re-verified rather than assumed:
+**The ground moved while this pass was running.** At the time the Mac build
+used for these screenshots was made (Debug, 20:47 tonight), the icon was still
+missing exactly as the 8 and 9 Aug write-ups said: the built Mac `Info.plist`
+had no `CFBundleIconName` and the bundle had no `.icns`.
+
+By the end of the pass, `AppIcon.appiconset/Contents.json` had **eleven**
+entries — the original universal 1024 tagged `"platform": "ios"`, plus the full
+ten-entry `"idiom": "mac"` ladder (16/32/128/256/512 at 1× and 2×). That is
+another workflow's work landing, and it is the right shape. **It has not been
+built or verified here**, and a populated asset catalogue is not the same thing
+as an icon in the bundle.
+
+The check that means anything, on a *fresh* build:
 
 ```sh
-python3 -c "import json;print(json.load(open('Pawmodoro/Assets.xcassets/AppIcon.appiconset/Contents.json'))['images'])"
-# → [{'filename': 'AppIcon.png', 'idiom': 'universal', 'platform': 'ios', 'size': '1024x1024'}]
-plutil -p <built>.app/Contents/Info.plist | grep -i icon      # → nothing
-find <built>.app -name '*.icns'                               # → nothing
+plutil -p <built>.app/Contents/Info.plist | grep -i icon      # must not be empty
+assetutil --info <built>.app/Contents/Resources/Assets.car \
+  | grep -c '"Name": "AppIcon"'                               # the exact name
 ```
 
-One trap worth writing down, because it nearly produced a wrong "it's fixed"
-here: `assetutil --info Assets.car | grep -c AppIcon` returns **20**, and that
-is not the app icon. Those twenty renditions are `iconpreview_AppIcon`,
+One trap worth keeping, because it nearly produced a wrong "it's fixed" twice:
+`assetutil --info Assets.car | grep -c AppIcon` returns **20**, and none of
+those twenty is the app icon. They are `iconpreview_AppIcon`,
 `iconpreview_AppIconEmber`, … — the pictures the alternate-icon picker shows,
-at 44 pt and 88 pt. Count the ones whose name is exactly `AppIcon`, or check
-`CFBundleIconName` in the built `Info.plist`, which is the thing App Store
-Connect actually reads.
+at 44 pt and 88 pt. Count the ones whose name is exactly `AppIcon`, or read
+`CFBundleIconName` out of the built `Info.plist`, which is what App Store
+Connect reads.
 
-Everything else about the icon — the ten-entry ladder being required, the
-squircle geometry, what `tools/generate_assets.py` would need — is unchanged
-from the 8 Aug write-up and is preserved in `mas-assets/` and in the previous
-revision of this file's § 1.
+Everything else about the icon — why the ladder is required, the squircle
+geometry a macOS icon needs that an iOS one does not, and what
+`tools/generate_assets.py` would have to grow — is unchanged from the 8 Aug
+write-up and is preserved in `mas-assets/icon/` alongside a 1024 preview and
+the ten rendered sizes.
 
 ---
 
 ## 2. Screenshots
 
-### 2.1 The eight that are ready to upload
+### 2.1 The ten that are ready to upload
 
-`mas2/screenshots-1440x900/plain/` — window centred on the app's own
-cream→blush gradient, no text.
-`mas2/screenshots-1440x900/captioned/` — same window on the left, one line of
-SF Rounded copy on the right.
+`mas-assets/final/out/plain/` — the window (or the sheet) centred, shadowed, on
+a backdrop made from its own artwork. No text.
+`mas-assets/final/out/captioned/` — the same art on the left, one line of SF
+Rounded copy on the right.
 
-All sixteen files assert 1440×900, mode RGB, no alpha channel, in
-`compose.py`'s own check.
+All twenty files are **1440 × 900, mode RGB, no alpha channel**, asserted in
+`compose.py`'s own check rather than eyeballed.
 
-| File | State shown | Flags behind the raw capture |
-|---|---|---|
-| `01-meadow-focus` | running, 23:20, cat asleep | `meadow` / clock 12 / clear / ambience off |
-| `02-blossom-idle` | idle, 25:00, the three presets | `blossom` / clock 12 / clear |
-| `03-woods-night` | running, 22:50, stars | `woods` / clock 22 / clear |
-| `04-cloudspire` | running, 22:19 | `cloudspire` / clock 10 / clear |
-| `05-peaks-snow` | running, 21:50, snow falling | `peaks` / clock 11 / winter / snow |
-| `06-keep-afternoon` | running, 22:50 | `keep` / clock 15 / clear |
-| `07-harbor-noon` | idle, the sill and the snacks | `harbor` / clock 12 / clear |
-| `08-cycle-complete` | the "Cycle complete" card | `meadow` / clock 12 / `-PawmodoroCelebrate`, captured at 3 s |
+| # | File | What it shows | Caption |
+|---|---|---|---|
+| 01 | `01-meadow-day` | Meadow Home, clear, midday, sakura theme. A **running** focus phase at 24:13, Mochi asleep, the drifting cloud sheet and the new near-plane grass both visible | Twenty-five minutes somewhere quiet |
+| 02 | `02-woods-night` | Whispering Woods at 22:00, midnight theme, Luna the owl awake ("owls work night shifts"), stars out, 23:43 | After dark the wood carries on without you |
+| 03 | `03-homestead` | The stats sheet: 14-day streak, 200 all-time, the week chart, and **the homestead** — 83 trees, one per hour, with the pond, birdhouse, hive, well, bench and basket among them | One tree for every hour you have ever sat |
+| 04 | `04-peaks-snow` | Starfall Peaks, winter, snow falling, snowdrift theme, Pebble the penguin, 23:13 | The season and the weather are the real ones |
+| 05 | `05-field-journal` | The field journal — **81 of 81**, Meadow Home 14/14 and Whispering Woods 18/18, each animal with its own sketch and its own sentence | Eighty-one animals, and not one of them for sale |
+| 06 | `06-blossom-sakura` | Blossom Village in blossom season, petals falling, Maple the red panda, 22:43 | Eight places, and you walk to every one |
+| 07 | `07-sound-studio` | The Sound Studio: the ambience list (Off through Embers), the ambience/music mixer, Radio, and the first mixtape | Eighteen ambiences and sixty-five tracks, none of it streamed |
+| 08 | `08-harbor-day` | Harbor Isle at noon, high tide, matcha theme, Pip the otter, 22:13 | The tide turns whether or not you are watching |
+| 09 | `09-postcards` | The year ring, the shelf of hours, and **two postcards** — "The whole wood" and "Made it to Whispering Woods", both signed by Mochi | A postcard arrives when you get somewhere new |
+| 10 | `10-cloudspire-day` | Cloudspire — the floating island — lavender theme, Yuzu the fox, 21:43 | Somewhere further, every time you go |
 
-Every one also carries `-PawmodoroSkipOnboarding
--PawmodoroSuppressNotificationPrompt -PawmodoroUnlockPlus -PawmodoroUnlockPlaces
--PawmodoroBond 200 -PawmodoroSnail -1`.
+Six places, six buddies, six themes, four seasons, day and night, snow and
+petals; four different screens.
+
+Every one carries these flags:
+
+```
+-PawmodoroSkipOnboarding -PawmodoroSuppressNotificationPrompt
+-PawmodoroUnlockPlus -PawmodoroUnlockPlaces -PawmodoroUnlockSounds
+-PawmodoroUnlockMusic -PawmodoroSeedStats -PawmodoroBond 200
+```
+
+plus, per shot, `-PawmodoroClock`, `-PawmodoroWeather`, `-PawmodoroSeason`,
+`-PawmodoroTide`, and a `-pawmodoro.settings` blob in the **argument** domain
+that pins place, buddy, theme, ambience and a 25/5 preset for that one launch
+without writing anything to disk. The sheet shots add `-PawmodoroFillJournal 5
+-PawmodoroPostcard -PawmodoroPanorama -PawmodoroFillDreams -PawmodoroBloom
+-PawmodoroFillDrawer -PawmodoroKeepsakes 6 -PawmodoroClockRing 23
+-PawmodoroSeedChronicle -PawmodoroFillTastes -PawmodoroFindTapes
+-PawmodoroPhoto -PawmodoroDevelop -PawmodoroAnthology`.
+
+**`-PawmodoroDemo` is still the wrong flag for store art.** It expands to
+include `-PawmodoroFastTimers`, and a 25-minute phase then ends in 25 seconds:
+the first pass photographed a clock reading `00:25`, which looks like a broken
+app. Six of these ten are real running sessions instead — see § 2.3 — so the
+countdown in each picture is honestly the number of seconds the shot waited.
 
 Two things to know before believing these pictures:
 
-- **They were taken from the working tree, not from `HEAD`.** Another workflow
-  is mid-change on `tools/generate_scenes.py`, `Pawmodoro/Views/SceneryView.swift`
-  and all thirty-two `scene_*` PNGs — it is lifting sky cloud out of the
-  painted scene onto its own drifting layer. The scenery in these shots is
-  that in-flight work. If it is reverted or reworked, re-shoot.
-- **`-PawmodoroDemo` is still the wrong flag for store art**, for the reason
-  the last pass found: it includes `-PawmodoroFastTimers` and the clock reads
-  `00:25`. Use the three flags it expands to, minus `FastTimers`.
+- **They come from the working tree, not from `HEAD`.** The drifting cloud
+  sheet and the near plane (`SceneForegroundView`, `scene_*_fg`) are in-flight
+  work by another workflow, and they are in every scenery shot — they are
+  also, frankly, most of why these look better than the 8 Aug set. If that
+  work is reverted or reworked, re-shoot.
+- **This is a Debug build**, because every flag above is compiled out of
+  Release. Nothing visual differs; `LaunchOptions` is the only difference.
 
-### 2.2 Why every Mac screenshot is a composite, and why 1440×900
+### 2.2 Why every Mac screenshot is a composite
 
-Unchanged and re-measured: the window comes back **400 × 912 px** every time,
-`.windowResizability(.contentSize)` pins it, and 912 > 900 while 1824 > 1800,
-so no scale drops it into a legal canvas. `compose.py` scales the capture to
-812 px tall (0.89×) and centres it, leaving 44 px of margin.
+Re-measured, unchanged: the window comes back **400 × 912 px** every time and
+`.windowResizability(.contentSize)` pins it. 912 > 900 and 1824 > 1800, so no
+scale drops a raw grab into a legal canvas. `compose.py` scales the capture to
+812 px tall (0.89 ×) and centres it, leaving 44 px of margin.
 
-1440 × 900 is the ceiling **on this machine**, not in general: the display is
-7680 × 2160 at 1×, so `screencapture` returns one pixel per point and a
-2880 × 1800 set built from it would be a 2× upscale of a 1× grab sold as
-Retina art. To get the 2× set, run `mas2/shoot.sh` and `mas2/compose.py`
-unchanged on any MacBook and set `W, H = 2880, 1800` and `SHOT_H = 1624`.
+The backdrop is the one design decision worth defending. It is **not** a stock
+desktop and **not** an invented gradient: it is the shot's own artwork,
+enlarged, blurred to 90 px and lifted 46 % toward the app's cream, with a wide
+soft corner darkening to seat the window. So the snow shot sits on a cold
+field, the onsen on a warm one, and **no colour on the canvas is a colour the
+app does not already use.** That is the same argument `Theme` makes about
+literal `Color` values, applied to marketing art.
 
 ### 2.3 Getting a *running* session into a shot, without touching the mouse
 
-The idle screen (25:00, "drag the ring to set your focus") is the weaker
-picture: the cat is awake, the ring is empty and nothing is happening. Six of
-the eight are real running sessions instead, and the way in is worth keeping:
+The owner is using this machine, so nothing here moves the cursor or fronts a
+window. Three techniques carry the whole pass:
 
 ```sh
+# start a real focus phase — no cursor, no fronting, no FastTimers
 osascript -e 'tell application "System Events" to tell process "Pawmodoro" \
   to perform action "AXPress" of menu item "Start" of menu 1 \
   of menu bar item "Session" of menu bar 1'
+
+# open a sheet: toolbar buttons 1..3 are Stats, Sound Studio, Scrapbook
+osascript -e '… perform action "AXPress" of button 1 of toolbar 1 of window 1'
+
+# scroll a sheet to any position, in one launch, with no input events
+osascript -e '… set value of scroll bar 1 of scroll area 1 of group 1 \
+  of sheet 1 of window 1 to 0.23'
 ```
 
-`perform action "AXPress"` on the menu *item* works without opening the menu,
-without fronting the app and without moving the cursor. `mas2/shootrun.sh`
-wraps it: launch, press Start, wait N seconds, capture by window id, quit. The
-countdown in the shot is then honestly N seconds in — `-PawmodoroFastTimers`
-is never involved.
+That third one is new and it is what made the sheet shots possible.
+`StatsView` is a single long `ScrollView` — almanac, Sunday Post, bond,
+homestead, year ring, shelf of hours, postcards, star atlas, field journal,
+dream diary, garden, drawer, mailbox, photo shelf, timetable, setlist,
+fortunes — so the homestead, the journal and the postcards are the *same
+window* at different scroll offsets. `sweep_stats.py` opens the sheet once and
+captures a ladder of them; a relaunch per frame would have cost fifteen seconds
+each.
 
-What that does **not** buy: the SwiftUI content is not enumerable through
-System Events (`entire contents of window 1` returns zero elements), so
-nothing inside the window can be pressed this way. The window's *toolbar*
-can — `button 1..3 of toolbar 1 of window 1` are Stats, Sound Studio and the
-Scrapbook, and pressing them opens their sheets. That is how § 3.2 was found.
+What none of this buys: the SwiftUI content of the **main window** is still not
+enumerable through System Events (`entire contents of window 1` returns zero
+elements), so nothing inside the timer screen can be pressed. Sheets are the
+exception, and only because their scroll area surfaces as a real `AXScrollArea`.
 
-### 2.4 The two things the last pass flagged — both real, one misattributed
+**Two hazards, both of which cost time tonight.** First, `screencapture -l`
+against a window whose sheet is open returns the **sheet's** window, at
+470 × 924, with the parent's dimmed title bar as the top 52 rows — which is why
+`compose.py` crops sheets at `(0, 52, 470, 924)`. Second, and worse: two other
+workflows had their own Pawmodoro builds running, and
+`tell process "Pawmodoro"` binds to *a* process of that name, not yours. The
+symptom is `Can't get window 1 of process "Pawmodoro". Invalid index. (-1719)`
+while your own capture-by-`CGWindowID` succeeds — proof that the window exists
+and System Events is looking at somebody else's process. Check `pgrep -fl
+Pawmodoro` before blaming your script, and **never `pkill -f Pawmodoro`**;
+match on your own derived-data path.
 
-**"A sleeping animal drawn on top of the ambience row at peaks/day."** Real,
-reproduced on a fresh build, and it is not a sleeping animal: it is **the old
-snail**. See § 3.3.
+### 2.4 The 2× set, and why there isn't one
 
-**"A harbor/golden capture that came out a flat beige wash."** The flatness is
-real. The cause is not golden, and not harbor. Measured on the two vertical
-strips of pure scenery the UI never covers (x 0–55 and 345–400, y 430–700),
-per-channel standard deviation:
-
-| Shot | sd (R, G, B) |
-|---|---|
-| `07-harbor-noon` — clear, **day** | 27.1, 20.3, 19.9 |
-| `17-harbor-dusk` — clear, **dusk** | 9.2, 8.6, 8.7 |
-| `08-harbor-golden` — golden, **dusk** | 7.5, 7.6, 8.8 |
-| `01-meadow-noon` — clear, day | 15.0, 12.9, 30.8 |
-| `15-meadow-golden` — golden, dusk | 5.0, 5.8, 9.7 |
-| `09-keep-afternoon` — clear, day | 14.9, 12.9, 21.4 |
-| `18-keep-golden` — golden, dusk | 5.0, 5.8, 8.3 |
-| `16-onsen-noon` — clear, day | 16.6, 18.5, 25.1 |
-| `05-onsen-dawn` — clear, **dawn** | 6.3, 8.0, 9.9 |
-
-Clear dusk and golden dusk are the same picture to within noise. **It is the
-dawn and dusk grades that flatten the scenery, not the weather veil**, and it
-happens in every place. The arithmetic agrees: `Weather.golden.veilOpacity` is
-0.26, and an alpha blend can only scale contrast by (1 − a) = 0.74, nowhere
-near the 0.35 observed. The source art already carries most of it —
+`system_profiler SPDisplaysDataType` on this Mac:
 
 ```
-place        dawn   day   dusk  night      (mean per-channel sd of the exported PNG)
-meadow       21.6  35.0   20.5   11.6
-harbor       29.6  47.8   28.0   15.8
-keep         17.1  27.6   16.3    9.5
+Odyssey G95NC:  Resolution: 7680 x 2160    UI Looks like: 7680 x 2160
 ```
 
-— dawn and dusk are 0.58–0.62 of day before the app touches them, and then
-`SceneryView.veil = 0.52` multiplies by another 0.48, and the time-of-day sky
-wash goes on top of that.
+One point per pixel. `screencapture` therefore returns 1× art, and a
+2880 × 1800 set built from it would be a 2× upscale sold as Retina. It was not
+made, and it should not be faked.
 
-This is exactly the failure `Palette.weatherMix`'s own comment predicted:
-*"What a bad veil would really cost is the scenery becoming unreadable as
-scenery, and that is an eye judgement no checker makes."* It is a judgement
-call, not a defect, so it is recorded here rather than in § 3 — but the
-practical consequence for this pass is firm: **no dawn or dusk shot is good
-enough to upload**, which is why all eight are day or night, and why
-`02-blossom-dusk` and `05-onsen-dawn` from the 8 Aug set were dropped.
+To get one: run `mas-assets/final/shot.py`, `scenery.py` and `sweep_stats.py`
+unchanged on any Retina Mac, then set `W, H = 2880, 1800` and `SHOT_H = 1624`
+in `compose.py`. Everything else scales.
 
-### 2.5 Still missing
+1280 × 800 is also legal and is a *downscale* of what exists, so it is honest
+today: set `W, H = 1280, 800` and `SHOT_H = 722`.
 
-- **The menu bar extra** — blocked by the bug in § 3.1, not by tooling.
-- **The Journal, the Sunday Post, the Cabinet, the stats screen.** Reachable
-  now (§ 2.3 opens toolbar sheets), but a sheet is a separate `CGWindowID`
-  whose capture composites oddly — `mas2/raw/sbx-photos-16766.png` shows what
-  you get: the sheet card floating on a dimmed copy of the window, 470 px
-  wide over a 400 px window. Usable as evidence, not as store art.
-- **Dark appearance.** Everything here is light. `xcrun simctl ui` does not
-  apply to a Mac app and switching appearance means System Settings, which is
-  the owner's machine to change.
-- **The 2× set** (§ 2.2).
+### 2.5 The two things the previous pass flagged — both re-measured
 
-### 2.6 The name in the title bar
+**"A sleeping animal drawn on top of the ambience row at peaks/day."**
+**Reproduced.** It is the old snail, and § 3.3 has it. One refinement the
+previous pass did not have: it happens on the **idle** screen and not while a
+phase runs. On idle the transport is one Play button and there is a second chip
+row, which lifts the ambience row about 64 px; at `-PawmodoroSnail 50` her foot
+lands exactly on the top edge of the fourth chip. In a running phase the row
+sits lower and she clears it — in `04-peaks-snow` she is standing on a fence
+rail in the near plane, which reads as charming rather than broken. **The bug
+is real; it is just not in any of the ten.**
 
-Unchanged and still worth a decision before uploading: the window title, the
-menu bar and the About box all say **Pawmodoro**; the App Store name is
-**Paawmodoro**. It is in all eight screenshots.
+**"A harbor/golden capture that came out a flat beige wash."** The previous
+pass concluded it was the dusk *grade* rather than the golden weather. That is
+right, and here is the control it did not run — the same place and weather at
+two times of day. Per-channel standard deviation over the two vertical strips
+of pure scenery the UI never covers (x 0–55 and 345–400, y 430–700):
+
+| Shot | sd (R, G, B) | mean | vs clear/day |
+|---|---|---|---|
+| harbor, **clear, day** | 27.2, 20.3, 19.3 | 22.3 | — |
+| harbor, **golden, day** | 20.2, 15.3, 14.8 | 16.8 | **0.75 ×** |
+| harbor, **clear, dusk** | 10.3, 10.2, 9.4 | 10.0 | **0.45 ×** |
+| harbor, **golden, dusk** | 8.6, 8.9, 9.2 | 8.9 | 0.40 × |
+
+`Weather.golden.veilOpacity` is 0.26, and an alpha blend can only scale
+contrast by (1 − a) = 0.74. Golden-at-day measures 0.75 ×, which is the veil
+and *nothing but* the veil — the weather is exactly as expensive as the
+arithmetic says and no more. Dusk costs 0.45 × on its own, and that is where
+the beige wash came from. **Golden weather is fine for store art; dusk and dawn
+are not.** All ten are day or night.
+
+### 2.6 Things in these shots you may want changed before uploading
+
+None of these is a defect that blocks a submission. All are visible in the art.
+
+- **The window title says "Pawmodoro"; the App Store name is "Paawmodoro".**
+  The title bar, the menu bar and the About box all say the former. It is in
+  all six window shots. Decide which is the name.
+- **The toolbar overflows on the idle screen.** Five toolbar items (Stats,
+  Sound Studio, Scrapbook / Settings, Bench) do not fit 400 pt, so macOS
+  collapses the trailing ones behind a `»` chevron and the gear disappears.
+  During a focus phase the camera button hides itself and everything fits,
+  which is why no shot here shows the chevron — but the first thing a user
+  sees does.
+- **A macOS sheet comes up 470 pt wide over a 400 pt window** — wider than its
+  own parent, overhanging 35 pt on each side. That is why every sheet shot here
+  is cropped to the card rather than shown attached. Cosmetic, and odd.
+- **Harbor Isle's water has white specks painted into it.** They are in
+  `scene_harbor_day.png` itself — sea sparkle, not weather and not the near
+  plane; `scene_harbor_day_fg.png` is opaque only in rows 720–858. At full size
+  they read as sparkle. At thumbnail size they read as snow, in August.
+- **The star atlas reads "0 of 7 — none of them yet"** in any shot that
+  includes it, and cannot be made to read otherwise with these flags. See
+  § 4.1: that is two debug-flag bugs rather than an app bug, but it is why
+  `09-postcards` stops where it does.
 
 ---
 
-## 3. The three bugs
+## 3. The bugs
 
-### 3.1 The menu bar extra draws the buddy at ~400 pt
+### 3.1 The menu bar extra draws the buddy at ~400 pt — STILL BROKEN
 
-`Pawmodoro/Views/MenuBarBuddy.swift:23` asks for `BuddySprite(…, size: 16)`.
-What appears in the menu bar is roughly **250 px of orange cat**, clipped
-top and bottom by the 24 px menu bar, with the countdown beside it. Idle, you
-get a slice of the cat's face — the pink nose is recognisable and nothing else
-is. Running, you get a horizontal band of her body and `24:57`.
-
-Measured through the accessibility API on the live app:
+Re-measured tonight through the accessibility API, on a build made from the
+current working tree:
 
 ```
-menu bar item 1 of menu bar 2  →  position {6640, -189}  size {418, 402}   (idle)
-                                  position {6597, -189}  size {461, 402}   (running)
+menu bar item 1 of menu bar 2  →  position {6191, -189}   size {418, 402}
 ```
 
-A 402-point-tall status item. Evidence, at 3×, idle above and running below:
-`mas2/zz-menubar-evidence.png`. It is definitely ours — quitting the app makes
-both the band and the countdown disappear (`mas2/raw/zz-mb-after-quit.png`).
+A 402-point-tall status item, unchanged from the 9 Aug measurement of
+{418, 402}. `MenuBarBuddy.swift:23` asks for `BuddySprite(…, size: 16)`; what
+the menu bar shows is a clipped horizontal band of orange cat. `git log` on
+that file has no commit since. Evidence at 3×, idle above and running below:
+`mas2/zz-menubar-evidence.png`.
 
-`BuddySprite` is not at fault; it applies `.frame(width: size, height: size)`
-and draws correctly everywhere else in the app at every size. What is
-different here is the context: `PawmodoroApp.swift:141-145` hands an arbitrary
-`View` to `MenuBarExtra`'s `label:` with `.menuBarExtraStyle(.menu)`, and that
-label is rendered from the view's own idea of its size rather than being
-constrained to the status bar's height. The fix that is known to behave is to
-give `MenuBarExtra` an `Image` (or `Label`) directly — a pre-sized `NSImage`
-built from the sprite, or `Image(nsImage:)` with `size` set — rather than a
-`HStack`.
+`BuddySprite` is not at fault — it applies `.frame(width:height:)` and draws
+correctly everywhere else at every size. The context is:
+`PawmodoroApp.swift` hands an arbitrary `View` to `MenuBarExtra`'s `label:`
+with `.menuBarExtraStyle(.menu)`, and that label is rendered from the view's
+own idea of its size rather than being constrained to the status bar's height.
+The fix known to behave is to give `MenuBarExtra` an `Image` or `Label`
+directly — a pre-sized `NSImage`, or `Image(nsImage:)` with `size` set —
+rather than an `HStack`.
 
-Two consequences beyond the picture: this is the first thing a Mac user sees,
-and `docs/MAC_APP_STORE.md` § 5.2 lists the menu bar extra as the **first**
-screenshot to upload because it is the one thing no iPhone shot can show. It
-cannot be shipped as it stands.
+**This is why there is no menu-bar screenshot.** `MAC_APP_STORE.md` § 5.2 calls
+the menu bar extra the one thing no iPhone shot can show and wants it first in
+the listing. It cannot be photographed, and it is the first thing a Mac user
+will see.
 
-### 3.2 The Scrapbook cannot import a picture on macOS
+### 3.2 The Scrapbook's missing import control — FIXED, and verified on screen
 
-`Pawmodoro/Views/ScrapbookView.swift:50-56` puts the `PhotosPicker` in
-`ToolbarItem(placement: .topBarLeading)`. In the Mac sheet that renders
-**nothing**. The sheet has exactly one button:
+The 9 Aug entry said the Scrapbook had no way to add a picture on macOS,
+because its `PhotosPicker` sat in `ToolbarItem(placement: .topBarLeading)` and
+a Mac sheet silently drops that placement.
 
-```
-UI elements of group 1 of sheet 1 of window 1
-  → AXStaticText "Where you were", AXScrollArea, AXButton   (the AXButton is "Done")
-```
+**That is fixed in the current tree and it was checked, not assumed.** The
+picker now lives in the sheet's *content* as the first cell of the grid, and a
+capture of the Mac Scrapbook sheet shows a dashed **＋ Keep one** tile ahead of
+the kept photographs: `mas-assets/final/raw/V6-scrapbook.png`. The placement
+table that explains the original bug is now written into `Platform.swift`'s
+toolbar shim, which is the right place for it.
 
-and the capture agrees — title, the row of kept pictures, `Done`, and no `+`.
-See `mas2/raw/sbx-photos-16766.png`.
+What is still not verified on macOS: an actual import all the way through
+`SnapshotImport.prepare` to a file in the container. `MAC_APP_STORE.md` § 3.3
+says the sandbox permits it; nobody has yet picked a picture on this platform
+and seen it land.
 
-So on the Mac the Scrapbook is a viewer for pictures that can only have been
-put there on the phone. `docs/MAC_APP_STORE.md` § 3.4 frames the Mac Scrapbook
-decision as "camera, or no camera"; it is really "no way in at all". The
-smallest fix is a placement macOS honours (`.primaryAction`, or
-`.navigation`), not a new feature.
+### 3.3 The old snail stands on the ambience row — CONFIRMED, and narrowed
 
-`.confirmationAction` — the placement "Done" uses — clearly does work, which
-is the useful half of the evidence: the toolbar is being read, and only that
-one placement is being dropped.
+`-PawmodoroSnail 50 -PawmodoroPlace peaks -PawmodoroClock 12`, idle: her foot
+sits on the top edge of the fourth ambience chip and she reads as climbing on
+the UI. `mas-assets/final/raw/V1-peaks-snail-50.png`, zoomed in
+`…/raw/zz-V1-snail.png`; the 8 and 9 Aug passes caught the same thing.
 
-### 3.3 The old snail stands on the ambience row
+New tonight: **it is the idle screen only.** During a focus phase the ambience
+row sits about 64 px lower (one Pause button instead of the preset row and the
+photo chip) and she clears it — `raw/03-peaks-snow.png` has her on a fence rail
+instead, which looks deliberate.
 
-`-PawmodoroSnail 50 -PawmodoroPlace peaks` puts her foot on the top edge of
-the fourth ambience chip, level with the row and reading as though she is
-climbing on the UI. `mas2/raw/13-peaks-snail.png`, zoomed in `mas2/zz13.png`;
-the 8 Aug pass caught the same thing at `mas-assets/raw/06-peaks-day.png`.
+`Snail.groundLine` is 0.79 of the screen, the same value as `Stray.groundLine`,
+and `tools/check_snail.py` asserts there is scenery under her feet at every x
+of every place she visits. It has no opinion about what the *app* draws over
+that scenery. This is the lesson in `CLAUDE.md` about the residents buried in
+the grove, again: **composite the finished surface**, not just the sprite over
+the art.
 
-`Snail.groundLine` is 0.79 of the screen, deliberately the same value as
-`Stray.groundLine`, and `tools/check_snail.py` asserts there is scenery under
-her feet at every x of every place she visits. It has no opinion about what
-the *app* draws over that scenery, and the ambience row's chips start at
-about 0.774 of the content height. The two collide.
-
-**This is very unlikely to be Mac-specific and was not confirmed on iOS.**
-The Mac window is 400 × 900 of which roughly 52 points go to the title bar
-(`Platform.macWindow`'s own comment), so the content is ~400 × 848 against
-the iPhone's 396 × 858 — the same aspect to within 1 %, and everything
-involved is placed by a fraction of it. The check worth running is one
-`-PawmodoroSnail 50 -PawmodoroPlace peaks` launch on an iPhone simulator.
-
-Whichever way that comes out, a checker cannot see it today: `check_snail.py`
-composites the scene and the sprite, and the collision is with a control that
-is not in the composite. This is the same shape as the lesson in `CLAUDE.md`
-about the residents buried in the grove — *composite the finished surface*.
+Still not confirmed on iOS. The Mac window is 400 × 900 of which ~52 goes to
+the title bar, so the content is ~400 × 848 against the iPhone's 396 × 858 —
+the same aspect to within 1 %, and everything involved is placed by a fraction
+of it. One `-PawmodoroSnail 50 -PawmodoroPlace peaks` launch on an iPhone
+simulator settles it.
 
 ---
 
 ## 4. How to redo any of it
 
 ```sh
-cd …/scratchpad/mas2
+cd …/scratchpad/mas-assets/final
 
-./shoot.sh    <name> [--wait N] <flags...>   # idle capture
-./shootrun.sh <name> <run-seconds> <flags...> # presses Session ▸ Start first
-python3 compose.py                            # raw/ -> screenshots-1440x900/
+python3 scenery.py                      # the six window shots, each a real run
+python3 sweep_stats.py T 0.1,0.15,0.2 1 # sheet frames: prefix, scroll values, toolbar button
+python3 verify.py                       # the § 2.5 and § 3 measurements
+python3 compose.py                      # raw/ -> out/plain/ and out/captioned/
 ```
 
-Five things about this machinery cost time and are worth keeping:
+`shot.py` is the engine — launch with flags, press what needs pressing through
+the accessibility API, capture every layer-0 window the process owns by
+`CGWindowID`, kill only the instance it started.
+
+Six things about this machinery cost time and are worth keeping:
 
 - **`open -n` does not work for this app.** LaunchServices resolves
   `com.pawmodoro.zhangcheng` to an App Store *placeholder* bundle, so `open`
-  returns 0 and nothing starts. `launch.py` double-forks and `setsid`s the
-  executable directly.
+  returns 0 and nothing starts. `launch.py` double-forks, `setsid`s and
+  `execv`s the executable directly.
 - **Capture by `CGWindowID`, never by screen rectangle.** `screencapture -R`
-  grabs whatever is on top of that rectangle. `wins.swift` lists window ids
-  for one pid and `screencapture -x -o -l <id>` captures that window even when
-  it is covered, without fronting it.
+  grabs whatever is on top of that rectangle. `wins.swift` lists window ids for
+  one pid and `screencapture -x -o -l <id>` captures that window even when it
+  is covered, without fronting it and without moving the cursor.
+- **`tell process "Pawmodoro"` is ambiguous when another workflow is also
+  running a build.** § 2.3 has the symptom and the fix.
 - **Never name a shell variable `LINES` in zsh.** It is a special integer
-  variable; assigning window-list text to it fails with the wonderfully
-  unhelpful `bad math expression: lvalue required`, pointing at the assignment
-  line. Half an hour.
+  variable; assigning window-list text to it fails with `bad math expression:
+  lvalue required`, pointing at the assignment line. Half an hour.
 - **`log` is a zsh builtin.** `log show …` inside a `zsh -c` silently becomes
   "too many arguments" and you get an empty log file rather than an error you
   can read. Use `/usr/bin/log`.
 - **Set the app's settings through the argument domain, not by writing
-  defaults.** `NSUserDefaults` reads `-<key> <value>` off the command line
-  into a volatile domain that outranks the stored one, so
-
-  ```sh
-  ./shoot.sh hero … -pawmodoro.settings "<7b22666f...>"     # JSON, as a hex data literal
-  ```
-
-  pins the preset, ambience, theme and clock face for one launch and writes
-  nothing to disk. This is how every shot here reads 25:00 rather than the 50
+  defaults.** `NSUserDefaults` reads `-<key> <value>` off the command line into
+  a volatile domain that outranks the stored one, so
+  `-pawmodoro.settings "<7b22666f…>"` (the settings JSON as a hex data literal)
+  pins preset, ambience, theme, place, buddy and clock face for one launch and
+  writes nothing to disk. This is how every shot reads 25:00 rather than the 50
   minutes the owner's Mac is actually set to.
 
-### 4.1 A warning about `defaults` and this bundle id — and a state apology
+### 4.1 Three debug-flag traps that shaped these screenshots
 
-`defaults read com.pawmodoro.zhangcheng` **does not read the file the
-unsandboxed Mac app writes.** A sandbox container exists for this bundle id
-(`~/Library/Containers/com.pawmodoro.zhangcheng/…`), and `defaults` redirects
-the whole domain into it:
+All three are in `LaunchOptions.swift`, all three are Debug-only, and none of
+them touches a shipping user. They are written down because each one silently
+produced a *plausible* screenshot that was not the state asked for.
 
-```
-The domain/default pair of (/Users/zhangcheng/Library/Containers/com.pawmodoro.
-zhangcheng/Data/Library/Preferences/com.pawmodoro.zhangcheng, pawmodoro.settings)
-does not exist
-```
+**`-PawmodoroSnail -1` can never work.** `LaunchOptions.value(after:)` returns
+`nil` for any value beginning with `-`, so the documented "sends her away" form
+parses as no value at all and `forcedSnail` comes out `nil` — the derived
+position, which is the opposite of what was asked. Both `CLAUDE.md`'s flag
+table and the property's own doc comment promise it. Every valued flag that
+could take a negative number has the same hole.
 
-The unsandboxed build writes `~/Library/Preferences/com.pawmodoro.zhangcheng.plist`
-instead. So the 8 Aug pass's `defaults export` / `defaults import` backed up
-and restored the *container*, and never protected the file it meant to.
+**`-PawmodoroBond n` discards `-PawmodoroSeedStats` and
+`-PawmodoroNightSessions`.** `seedSessionCount` *replaces* `StorageKeys.sessions`
+outright, while `seedNightSessions` reads the existing records and appends —
+and `applyAtLaunch` runs the appending one first. So `-PawmodoroSeedStats
+-PawmodoroNightSessions 40 -PawmodoroBond 200` yields exactly the 200 records
+Bond wrote, all of them at 9 a.m. onwards.
 
-The consequence, stated plainly rather than buried: **the Mac's copy of
-`~/Library/Preferences/com.pawmodoro.zhangcheng.plist` now carries seeded
-state** — `pawmodoro.lifetimeSessions` is 200, from `-PawmodoroBond 200`. This
-pass's own backup was taken after two probe launches had already written it,
-so the pre-seed value could not be restored; the container's copy, which is
-the closest thing to a witness, said 45. Nothing on the iPhone is affected —
-that is a different device with its own store. If you want the Mac back to
-nothing, delete that plist and the container; if you would rather not lose it,
-200 sessions on a Mac that has never run one is harmless and only ever appears
-in the Mac app's own stats screen.
+**`log.nightSessions` is judged against the pinned `-PawmodoroClock` hour.**
+So even seeding night sessions alone does not light the star atlas while the
+clock is pinned to noon. Between the two, the atlas card reads "0 of 7 — none
+of them yet" in every sheet shot here. To photograph a lit atlas: drop
+`-PawmodoroBond`, and use `-PawmodoroClock 22 -PawmodoroNightSessions 45
+-PawmodoroTraced`.
 
-The right procedure from here is `cp` of the file itself, before the first
-launch:
+### 4.2 The owner's Mac state — backed up and restored this time
+
+The 8 Aug pass backed up the wrong thing: `defaults export
+com.pawmodoro.zhangcheng` redirects into the sandbox **container**
+(`~/Library/Containers/…`), while the unsandboxed Mac build writes
+`~/Library/Preferences/com.pawmodoro.zhangcheng.plist`. So that pass left
+`pawmodoro.lifetimeSessions = 200` on the owner's Mac and could not undo it.
+
+This pass copied the file itself before the first launch and copied it back at
+the end, and checked with `cmp` that the restored file is byte-identical to the
+backup:
 
 ```sh
-cp ~/Library/Preferences/com.pawmodoro.zhangcheng.plist  /somewhere/safe.plist
+cp ~/Library/Preferences/com.pawmodoro.zhangcheng.plist /somewhere/safe.plist
 … run everything …
 cp /somewhere/safe.plist ~/Library/Preferences/com.pawmodoro.zhangcheng.plist
-killall -u "$USER" cfprefsd          # or cfprefsd flushes its cache over you
+killall -u "$USER" cfprefsd      # or cfprefsd flushes its cache over you
+cmp -s /somewhere/safe.plist ~/Library/Preferences/com.pawmodoro.zhangcheng.plist
 ```
+
+The backup and the dirty copy are kept at
+`mas-assets/final/PREFS-BACKUP-BEFORE-LNCH.plist` and
+`…/PREFS-AFTER-LNCH-dirty.plist`. Note this restores the Mac to the state the
+8 Aug pass left it in — the 200 lifetime sessions are still there, because no
+witness to the value before *that* exists.
+
+---
+
+## 5. What App Store Connect will and will not object to
+
+Checked against Apple's [screenshot
+specifications](https://developer.apple.com/help/app-store-connect/reference/screenshot-specifications/).
+
+**Will pass:**
+
+| Requirement | These files |
+|---|---|
+| One of 1280 × 800, 1440 × 900, 2560 × 1600, 2880 × 1800 | **1440 × 900**, all twenty, asserted |
+| PNG or JPEG | PNG |
+| **No alpha channel** | mode `RGB`, no `transparency` chunk, asserted |
+| 1 to 10 per platform | **10** |
+| 16:10 | 1440 : 900 = 16 : 10 |
+
+**Will not be objected to, but is worth a decision:**
+
+- **The name in the title bar** (§ 2.6). Review does not compare a title bar to
+  a store name, but a customer does.
+- **No menu bar extra in the set** (§ 3.1). The Mac listing's whole argument is
+  a feature that cannot currently be photographed. `docs/MAC_LISTING.md` is
+  another workflow's file — make sure the copy there does not promise a menu
+  bar picture that is not in the upload.
+- **The captioned set contains English text.** If the listing is ever
+  localised, captions have to be re-rendered per language; the plain set does
+  not. That is a real argument for uploading `out/plain/`.
+
+**Nothing here claims a feature the Mac build does not have.** No widget, no
+Live Activity, no camera, no haptics; all four are absent from both the art and
+the captions.
+
+---
+
+## 6. Still not photographed
+
+- **The menu bar extra** — blocked by § 3.1, not by tooling.
+- **Dark appearance.** Everything here is light. `xcrun simctl ui` does not
+  apply to a Mac app, and switching appearance means System Settings, which is
+  the owner's machine to change. Worth one shot if he is willing.
+- **The Magpie's Cart, the haiku bench, the Sunday Post, the Cabinet's clock
+  faces, the celebration card.** All reachable now that sheets can be opened
+  and scrolled (§ 2.3); they were left out because ten is the ceiling and the
+  ten chosen cover more ground.
+- **The 2× set** (§ 2.4).

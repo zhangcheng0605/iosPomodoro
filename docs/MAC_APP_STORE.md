@@ -670,3 +670,83 @@ work (yes); does Xcode 26 accept a single-size macOS icon (no).
 
 Everything else came from this repository or from builds and runs I made
 against it on this Mac.
+
+---
+
+## 7. The privacy manifest (added 9 Aug 2026) — DONE
+
+**Why:** the app uses `UserDefaults`, a required-reason API, and had no
+`PrivacyInfo.xcprivacy` anywhere. An upload can return an **ITMS-91053**
+notice. Better settled before a submission than during one.
+
+*(This section was lost once to a destructive `git checkout -- .` run by an
+agent and rebuilt from its report. The manifests, the checker and the builds
+were never affected — only this prose.)*
+
+### What the app actually uses — audited, not assumed
+
+Grepped both targets for all five required-reason categories, with comments
+and string literals stripped first. That mattered: `Model/Antics.swift` says
+*"a stat that decays"* in prose, which a naive word match hits.
+
+| Category | Present | Evidence |
+|---|---|---|
+| File timestamp | **No** | `FileManager` appears only in `Model/Snapshot.swift:107-177`, and the listing is `contentsOfDirectory(atPath:)` — names only. No `includingPropertiesForKeys`, no `resourceValues`, no `attributesOfItem`. |
+| System boot time | **No** | All six `ProcessInfo` sites are `.arguments`. No `systemUptime`, no `mach_absolute_time`. |
+| Disk space | **No** | No `statfs`, no `volumeAvailableCapacity*`. |
+| Active keyboards | **No** | No `activeInputModes`. |
+| **User defaults** | **Yes, two kinds** | `UserDefaults.standard` across ~30 model types; and the App Group suite in `LiveActivity/WidgetMirror.swift:70`, read by `PawmodoroWidgets/PawmodoroHomeWidget.swift:61`. |
+
+Also confirmed: zero `URLSession` / `NWConnection` / `WKWebView` / `http(s)://`
+in any Swift file, no SPM or CocoaPods, and only `SwiftUI` and `WidgetKit`
+linked.
+
+### The codes, and the one that is easy to get wrong
+
+- **App** — `CA92.1` **and** `1C8F.1`.
+- **Widget** — `1C8F.1` only. It never touches `UserDefaults.standard`.
+
+`CA92.1` alone would have been an **under-declaration**, which is the failure
+mode that looks like the careful answer: Apple's text for it explicitly
+excludes *"writing information that can be accessed by other apps"*, and the
+App Group write is exactly that. `C56D.1` is third-party-SDK only and there
+are none; `AC6B.1` is MDM. All three "collect nothing" keys are false or empty
+in both manifests.
+
+**Scope note:** Apple lists the requirement for iOS, iPadOS, tvOS, visionOS
+and watchOS — **macOS is not on that list**. One multiplatform target means
+the Mac carries it anyway, which is harmless and equally true.
+
+### Proven in the product, not the source tree
+
+That distinction is the whole point — it is how the Mac shipped with no icon
+at all while Xcode's own validation passed.
+
+- iOS Release: `Pawmodoro.app/PrivacyInfo.xcprivacy` (3747 B) **and**
+  `.../PlugIns/PawmodoroWidgetsExtension.appex/PrivacyInfo.xcprivacy` (1898 B)
+- macOS Release: `Pawmodoro.app/Contents/Resources/PrivacyInfo.xcprivacy`
+- `cmp` byte-identical to source in all three; `plutil -lint` clean.
+
+No pbxproj edit was needed — both folders are synchronized groups, so the
+files joined their targets on their own.
+
+### `tools/check_privacy.py` — new, and broken seven ways first
+
+It never reads a manifest and agrees with it. It reads the **Swift**, derives
+the required categories per target (parsing `membershipExceptions` out of the
+pbxproj, so the one app file the widget also compiles counts on the widget's
+side), and demands an exact match in both directions.
+
+Seven deliberate breaks, all seven caught: a dropped `1C8F.1`; an unbacked
+`FileTimestamp`; `NSPrivacyTracking` set true; a fabricated code `CA92.2`; a
+new file calling `systemUptime`; the widget manifest deleted; and
+`UserDefaults.standard` added to the one shared file — which failed the
+**widget's** manifest, proving the pbxproj exception parsing is genuinely read
+rather than decorative.
+
+### Still the owner's, in App Store Connect
+
+- Confirm App Privacy still says **Data Not Collected**.
+- Confirm the privacy policy URL is hosted and reachable.
+- Confirm the answers cover macOS once the platform is added.
+- Only a real upload can prove ITMS-91053 is gone.

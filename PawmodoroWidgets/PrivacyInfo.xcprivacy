@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    PawmodoroWidgetsExtension — privacy manifest.
+
+    An app extension is its own bundle with its own executable, so it needs
+    its own manifest; the app's copy at Pawmodoro/PrivacyInfo.xcprivacy does
+    not reach inside the .appex.
+
+    This target compiles two things: everything in PawmodoroWidgets/, and
+    exactly one file borrowed from the app —
+    Pawmodoro/LiveActivity/PawmodoroActivityAttributes.swift, named in the
+    membership exception in project.pbxproj. Both were audited together.
+
+    Only one required-reason API appears, once:
+
+      1C8F.1  — PawmodoroHomeWidget.swift:61 opens
+                UserDefaults(suiteName: "group.com.pawmodoro") to read the
+                buddy the app mirrored there, so the widget draws the right
+                animal. App Group container, both sides claim the group in
+                their entitlements.
+
+    CA92.1 is deliberately NOT declared here. The extension never touches
+    UserDefaults.standard — a reason with nothing behind it is a claim this
+    app has no business making, even a harmless-looking one.
+
+    The other four categories — file timestamp, system boot time, disk
+    space, active keyboards — are absent from this target, the same as in
+    the app. No network, no tracking, no collection.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

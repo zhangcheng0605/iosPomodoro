@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    Pawmodoro — app privacy manifest.
+
+    This file is a legal declaration. Every key in it was put here because a
+    grep of Pawmodoro/ found the API, at a line number written down in
+    docs/MAC_APP_STORE.md § 7. Nothing here is aspirational and nothing is
+    copied from a template. If you add a key, be able to name the file and
+    line it is true of; if you delete code, come back and delete the key.
+
+    The five required-reason categories, and what the audit found:
+
+      File timestamp    — NOT USED. The only FileManager calls are
+                          Model/Snapshot.swift:107-177: urls(for:in:),
+                          fileExists, createDirectory, contentsOfDirectory
+                          (atPath: — names only, no attribute keys),
+                          removeItem. None of them reads a timestamp.
+      System boot time  — NOT USED. ProcessInfo is touched only for
+                          .arguments (the debug launch flags). No
+                          systemUptime, no mach_absolute_time.
+      Disk space        — NOT USED. No statfs, no volumeAvailableCapacity*.
+      Active keyboards  — NOT USED. No activeInputModes; the app has one
+                          text field and does not care what is typing into it.
+      User defaults     — USED. Declared below.
+
+    Two reasons are declared for user defaults, not one, and the second is
+    the one that is easy to get wrong:
+
+      CA92.1  — the app's own container. UserDefaults.standard, in about
+                thirty model types (Model/*.swift), holding settings, the
+                session history, the journal, the bond and every other store.
+                Nothing in there is read by anything but this app.
+
+      1C8F.1  — the App Group container. LiveActivity/WidgetMirror.swift:70
+                opens UserDefaults(suiteName: "group.com.pawmodoro") and
+                writes two strings that the home-screen widget extension
+                reads back. CA92.1 explicitly does NOT cover that: it says
+                it "does not permit ... writing information that can be
+                accessed by other apps". Declaring CA92.1 alone would be an
+                under-declaration, which is the same kind of untrue as an
+                over-declaration.
+
+    NSPrivacyTracking is false, the tracking-domain list is empty and the
+    collected-data list is empty, and those three are the same fact stated
+    three ways: this app makes no network calls at all. Zero hits for
+    URLSession, NWConnection, WKWebView or an http(s) literal across every
+    .swift file in the project. docs/PRIVACY.md says so out loud, and that
+    sentence is load-bearing.
+
+    Scope: Apple applies required-reason API rules to iOS, iPadOS, tvOS,
+    visionOS and watchOS — macOS is not on that list. This is one
+    multiplatform target, so the Mac build carries the manifest too. That is
+    harmless and it is also true there, so there is nothing to condition.
+
+    The widget extension is a separate bundle and needs its own manifest;
+    it has one at PawmodoroWidgets/PrivacyInfo.xcprivacy.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -230,7 +230,7 @@ first-launch notification prompt, and the paywall's locked state.
 ## Verifying a change
 
 **Run every `python3 tools/check_*.py` before ending any session written
-without a Mac** — there are twenty-two now (`swift`, `contrast`, `grove`,
+without a Mac** — there are twenty-five now (`swift`, `contrast`, `grove`,
 `residents`, `species`, `catalog`, `accessories`, `touch`, `film`, `post`,
 `weather`, `yearring`, `clocks`, `stray`, `snail`, `crossing`, `flyway`,
 `tide`, `greeting`, `treats`, `bell`, `music`), they take about half a minute

@@ -83,34 +83,23 @@ nor `sceneImage`.
 
 ## Known and NOT yet fixed
 
-0. **On a small phone at the DEFAULT text size there is no play button.**
-   Found 9 Aug by a verifier that created an iPhone SE (3rd gen) — which
-   *does* run on the installed iOS 26.3 runtime; an earlier claim that no SE
-   runtime existed was simply wrong. On a 375x667 screen at `content_size
-   large`, the entire transport row is off the bottom and the phase chip is
-   off the top behind the status bar.
+0. ~~**On a small phone at the DEFAULT text size there is no play button.**~~
+   **DECIDED, 9 Aug 2026 — the owner will not support small phones.** His
+   words: "screw small phone, ignore them." Recorded as a decision rather
+   than an open bug so nobody dispatches work on it again.
 
-   **It is pre-existing** — the same failure is on `ac8d928`, before any of
-   this — but it is the exact bug commit `316a410` was written to kill, and
-   it survives because that fix hands the *original* view back verbatim at and
-   below `.large`. So the cure covers large text on a big phone and misses
-   small phones entirely.
+   The facts, kept because the decision should be re-examinable: on a
+   375x667 screen at `content_size large` the transport row is off the
+   bottom and the phase chip is behind the status bar. It is pre-existing —
+   `ac8d928` fails identically — and it survives because the Dynamic Type
+   fix hands the original view back verbatim at and below `.large`. The
+   adaptive path itself is fine on that screen at larger text sizes.
 
-   The adaptive path itself is fine on SE: at xxxLarge and AX5 the transport
-   is pinned and visible and the region scrolls correctly. So the fix is
-   probably one line — choose the adaptive column on available *height*, not
-   on text size alone — plus a re-verify on both phones.
-
-   The owner has said he does not care about iPhone SE users, and that is his
-   call to make. Recording it anyway because this is not an SE polish issue:
-   it is a Pomodoro timer with no reachable start button on a supported
-   device at default settings, and App Review tests on hardware nobody
-   chooses.
-
-   Second, cosmetic, same area: `scrollFade` fades only the bottom, so a
-   scrolled region hard-cuts at the top — on SE at AX5 the buddy's head is
-   guillotined by the top edge. Resting state is clean everywhere.
-
+   **The accepted risk:** App Review picks its own hardware, and a timer
+   with no reachable start button reads as broken rather than unsupported.
+   The likely fix remains one line — branch the adaptive column on
+   available *height* rather than on text size alone. If a rejection ever
+   cites it, that is the fix.
 
 1. ~~**`Views/AlbumView.swift:35` — postcards rasterize on the main thread.**~~
    **Fixed, never compiled.** `Postcard` conforms to `Transferable` and the
@@ -221,3 +210,27 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   focused once and picked up a stray keystroke, silently becoming
   `com.pawmodoro.zhangchenso-`. A wrong bundle ID uploads fine and then fails
   to match the App Store record.
+
+
+---
+
+## Owner verdicts, 9 Aug 2026 — settled, do not re-open
+
+- **The re-voiced ambience is good.** He listened to the whole set,
+  including the five that measured *toward* noise after re-voicing —
+  `snowhush` and the three `raintent` variants. Verdict: keep. So the
+  metric was right that they moved and wrong about what it meant: they
+  were near-tonal before, which sounded like an artificial drone, and the
+  extra texture is an improvement the number could not see. **A flatness
+  figure ranks how noise-like a bed is; it does not rank how good it
+  sounds.** Worth remembering the next time a measurement disagrees with
+  an ear.
+
+- **Alternate app icons work on real hardware.** He switched to the paw
+  icon on his iPhone with no trouble. So the Simulator's
+  "only one change succeeds per install" — where later taps never reached
+  `setAlternateIconName` at all, surviving reinstall, SpringBoard restart
+  and reboot — **is a Simulator defect, not an app bug.** No work needed.
+  The structural gap that remains is only that the refusal line cannot
+  render, since `refused` is set inside a completion UIKit sometimes never
+  calls; on real hardware that path does not fire.

@@ -43,6 +43,26 @@ Xcode's GUI. The one file I did write is
 
 ---
 
+
+> **§ 3.3 ANSWERED, 9 Aug 2026.** `PhotosPicker` works under the macOS App
+> Sandbox and **needs no extra entitlement** — do not add
+> `files.user-selected.read-only` or `personal-information.photos-library`.
+> Proved on a sandboxed ad-hoc build: the picker extension launched, a photo
+> was selected, `SnapshotImport.prepare` ran, and a 116,530-byte JPEG landed
+> in the container. **Zero sandbox denials** across the run. The EXIF strip
+> holds on the macOS `renderJPEG` path too — the written file's only surviving
+> metadata is a pixel-dimension pointer and an empty Photoshop block. No GPS,
+> no make/model, no timestamps.
+>
+> The reason it looked broken: **a macOS sheet has no window toolbar**, and
+> SwiftUI silently drops `.navigation` and `.primaryAction` placements there
+> while keeping the semantic ones. The control simply never rendered. The
+> placement table is now written into `Platform.swift`'s toolbar shim, whose
+> old comment ("a screen laid out for a phone comes out the right way round on
+> a Mac") was true in a window and false in a sheet — which is where the bug
+> was born.
+
+
 ## Verdict
 
 **Pawmodoro is already a native macOS app and it already builds, archives and

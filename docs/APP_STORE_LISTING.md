@@ -3,6 +3,14 @@
 Everything below is ready to paste into the fields on the version page.
 Character counts are against Apple's limits, checked.
 
+> **This file is the iOS listing only.** The macOS platform needs its own
+> name, subtitle, promotional text, description, keywords, screenshots,
+> categories, URLs, copyright and review notes — none of them carry over.
+> They are written out in **`docs/MAC_LISTING.md`**, along with the App
+> Privacy and age-rating answers (both app-level, both already correct), how
+> to phrase Universal Purchase, and what to do about the app calling itself
+> "Pawmodoro" while the Store says "Paawmodoro".
+
 ---
 
 ## ⚠️ Pick the right signing team — there are two accounts, one paid

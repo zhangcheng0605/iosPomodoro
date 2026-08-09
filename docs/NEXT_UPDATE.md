@@ -57,17 +57,27 @@ to fail**, per the rule that a green run on unbroken code proves nothing:
 
 Device Release measured after the new art: **37.7 MB. (The 45 MB ceiling was retired in Aug 2026 — see `CLAUDE.md`. Measure and justify rather than trip over a number nobody could explain.)**
 
-### Still open on the postcards
+### ~~Still open on the postcards~~ — CLOSED 9 Aug 2026
 
-**Harbor Isle and Cloudspire draw the buddy standing on open water and open
-air.** The crop now anchors on `Stray.groundLine`, which is correct for the six
-places the stray visits — and Harbor and Cloudspire are precisely the two that
-`Place.strayVisits` excludes, for this exact reason. Measured on the day
-scenes: Harbor's island and jetty sit *right of centre* (source x 210–385 of
-396), so the horizontal centre is sea at every height and **no vertical line
-fixes it**. This wants the same answer `strayVisits` gave — either omit the
-standing buddy on those two cards or move it out of the picture — and that is a
-design decision, not a number to tune.
+**Harbor Isle and Cloudspire no longer draw the buddy on open water and open
+air.** The fix had in fact been written blind in `d880ce6` and never compiled
+or looked at; this entry outlived it. Verified properly since.
+
+The design call was *not* the `strayVisits` answer of omitting the buddy — a
+postcard is of the place you reached, and a card with no buddy is a
+screenshot. Instead `Place.footing` names the one surface with a top in each:
+Harbor's jetty at (0.62, 0.736), Cloudspire's grassy cap west of the spire at
+(0.36, 0.694). The crop stays anchored on `Stray.groundLine`, so the *place*
+is still recognisable.
+
+Verified by rendering rather than asserting: every place x 4 day-parts x both
+card kinds, composited before and after. The six other places are **0 pixels**
+different across all 48 cells; only Harbor and Cloudspire move. The panorama
+is untouched by construction — `Place.footing` is read at exactly one line,
+inside `standing`, and the panorama body calls neither `standing`, `cropTop`
+nor `sceneImage`.
+
+`check_postcard.py` was broken eight ways and caught all eight.
 
 ---
 

@@ -11,7 +11,7 @@ import sys
 import wave
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 SR = 22050
 # Derived from this file's own location, like every other generator here.
@@ -28,6 +28,11 @@ THEME_SWIFT = os.path.join(ROOT, "Pawmodoro", "Model", "AppTheme.swift")
 # are a warm off-white rather than pure white so they sit on cream without a
 # hard edge.
 OFFWHITE = (255, 251, 246)
+
+# The tomato's rim highlight, as a fraction of the icon's width. Named because
+# `draw_icon` both draws it and decides whether it is thick enough to be worth
+# drawing, and those two must be the same number.
+RIM_WIDTH = 0.014
 
 os.makedirs(RES, exist_ok=True)
 os.makedirs(ICONSET, exist_ok=True)
@@ -2130,17 +2135,26 @@ def paw_colour(palette):
     return palette["onAccent"]
 
 
-def make_icon(size=1024, scale=2, theme="sakura", appearance="light",
-              name="AppIcon", quiet=False):
-    """Cozy icon: a tomato-timer circle with a paw print, drawn supersampled.
+def draw_icon(size, scale, palette):
+    """The drawing itself, at `size` px, supersampled `scale`× and downsampled.
 
-    `theme`/`appearance` pick which of `AppTheme.palette`'s colours it is drawn
-    in; `name` is the `.appiconset` it is written to. The default arguments
-    reproduce the shipped icon byte for byte — that is asserted by
-    `check_icons.py`, because "the alternates landed" must never quietly mean
-    "and the one on everybody's Home screen moved too".
+    Split out of `make_icon` so the same art can be rendered *at* a size rather
+    than resized into one. That distinction is the whole of the macOS icon: a
+    Mac wants the picture at 16, 32, 64, 128, 256, 512 and 1024 px, and taking
+    the 1024 down to 16 in a second LANCZOS pass puts a resample on top of a
+    resample — the rim highlight is `0.014·big` wide, about a pixel once it
+    lands, and it does not survive being averaged twice.
+
+    Always an opaque full-bleed square: that is what iOS wants (an app icon
+    with an alpha channel is rejected at upload, not at build), and the macOS
+    caller gets its rounded corners by masking this rather than by asking for
+    a transparent canvas. The first attempt did ask, and the gradient went
+    with it — the corners were right and the icon was a black tile.
+
+    Every dimension here is a fraction of `big`, so the drawing is resolution
+    independent; what is *not* independent is `int()`, which truncates a stem
+    to nothing below about 70 px of `big`. Callers supersample accordingly.
     """
-    palette = PALETTES[theme][appearance]
     cream, blush = palette["cream"], palette["blush"]
     blossom, sage, forest = palette["blossom"], palette["sage"], palette["forest"]
     bark, pads = palette["bark"], paw_colour(palette)
@@ -2166,12 +2180,26 @@ def make_icon(size=1024, scale=2, theme="sakura", appearance="light",
     )
     # The tomato body.
     d.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=blossom)
-    # Highlight crescent for a little depth.
-    inset = int(radius * 0.14)
-    d.ellipse(
-        [cx - radius + inset, cy - radius + inset, cx + radius - inset, cy + radius - inset],
-        outline=(255, 255, 255, 46), width=int(big * 0.014),
-    )
+    # Highlight crescent for a little depth — but only where it is at least a
+    # pixel wide once the supersampling comes off.
+    #
+    # It is a hairline, 1.4 % of the square, which is 14 px on the 1024 that
+    # ships and a fifth of a pixel on a 16 pt Mac icon. A sub-pixel white ring
+    # does not read as depth; it reads as a second, paler circle laid over the
+    # tomato's edge, and it is what turns the paw into a smudge down there.
+    # Found by looking at the 32 px rendition beside Notes and Todoist: the
+    # four toes separate the moment the ring goes.
+    #
+    # The threshold is on `size`, the finished width, so it cannot be moved by
+    # changing `scale`. It keeps the ring on everything from 128 px up and on
+    # every iOS rendition, which is why the shipped icon is unmoved.
+    if size * RIM_WIDTH >= 1.0:
+        inset = int(radius * 0.14)
+        d.ellipse(
+            [cx - radius + inset, cy - radius + inset,
+             cx + radius - inset, cy + radius - inset],
+            outline=(255, 255, 255, 46), width=int(big * RIM_WIDTH),
+        )
 
     # Stem and two angled leaves on top, echoing the pomodoro tomato.
     stem_w = int(big * 0.015)
@@ -2204,23 +2232,174 @@ def make_icon(size=1024, scale=2, theme="sakura", appearance="light",
         rr = int(radius * fr)
         d.ellipse([tx - rr, ty - int(rr * 1.2), tx + rr, ty + int(rr * 1.2)], fill=pads)
 
-    img = img.resize((size, size), Image.LANCZOS)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def make_icon(size=1024, scale=2, theme="sakura", appearance="light",
+              name="AppIcon", quiet=False):
+    """The iOS app icon: one opaque 1024 square, written to its `.appiconset`.
+
+    `theme`/`appearance` pick which of `AppTheme.palette`'s colours it is drawn
+    in; `name` is the `.appiconset` it is written to. The default arguments
+    reproduce the shipped icon byte for byte — that is asserted by
+    `check_icons.py`, because "the alternates landed" must never quietly mean
+    "and the one on everybody's Home screen moved too".
+
+    `AppIcon` also gets the macOS ladder written beside it; see `MAC_ICON`.
+    """
+    img = draw_icon(size, scale, PALETTES[theme][appearance])
     if quiet:
         return img
     folder = os.path.join(ASSETS, f"{name}.appiconset")
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, f"{name}.png")
     img.save(path, "PNG")
+    entries = [{"filename": f"{name}.png", "idiom": "universal",
+                "platform": "ios", "size": "1024x1024"}]
+    if name == MAC_ICON:
+        entries += write_mac_ladder(folder, name, theme, appearance)
+    # Contents.json is written here rather than kept by hand, and that is not
+    # tidiness. Ten macOS PNGs beside a Contents.json nobody updated are ten
+    # files that ship in git, cost nothing at build time, and leave the Mac
+    # with no icon — which is the exact bug this ladder exists to fix, one
+    # level down. The manifest and the pixels come out of the same run or the
+    # generator has not done its job.
     with open(os.path.join(folder, "Contents.json"), "w") as f:
-        json.dump({
-            "images": [{"filename": f"{name}.png", "idiom": "universal",
-                        "platform": "ios", "size": "1024x1024"}],
-            "info": {"author": "xcode", "version": 1},
-        }, f, indent=2, separators=(",", " : "))
+        json.dump({"images": entries, "info": {"author": "xcode", "version": 1}},
+                  f, indent=2, separators=(",", " : "))
         f.write("\n")
     print(f"  {name}.png: {size}x{size}, mode={img.mode}, "
           f"{os.path.getsize(path) / 1024:.0f} KB")
     return img
+
+
+# ------------------------------------------------------------ the macOS icon
+#
+# A Mac icon is not the iOS icon resized. iOS hands the system a full-bleed
+# opaque square and the system rounds it; macOS hands the system a picture and
+# the system draws exactly that, so the rounding, the inset and the shadow are
+# all the app's job. Get it wrong and Pawmodoro is a hard pink square in a Dock
+# of soft ones.
+#
+# **These four numbers were measured off this Mac, not copied out of a
+# tutorial.** `NSWorkspace.icon(forFile:)` was drawn at 1024 for fifteen apps —
+# eight of Apple's own (Notes, Mail, Music, Calendar, Reminders, App Store,
+# Freeform, Terminal) and seven third-party (Slack, Telegram, Todoist, Claude,
+# Obsidian, Postman, GitHub Desktop) — and the alpha channel measured:
+#
+#   * **Body 824×824 at (100, 100)** on the 1024 canvas. Fourteen of the
+#     fifteen agree to the pixel. (The fifteenth is Safari, whose icon is a
+#     circle; Apple's grid lets a circle run wider, which is not our shape.)
+#   * **Corner radius 185.5 px**, fitted to the measured edge of the top-left
+#     quadrant at 0.83 px mean error. Worth knowing because the folklore says
+#     "squircle": a continuous superellipse fits the *same* curve at n≈5.1 and
+#     1.7 px, i.e. worse. At 1024 the two shapes differ by about two pixels at
+#     45°, so this is a circular-arc rounded rectangle and PIL can draw it.
+#   * **Shadow: σ ≈ 10 px, offset 10 px down, peak alpha 0.30.** Read straight
+#     off Apple's own icons rather than fitted by eye — their alpha is 0.145
+#     one pixel outside the right edge, 0.251 one pixel below the bottom edge,
+#     and 0.043 eight pixels above the top edge, which is a single blurred
+#     rectangle nudged downwards and no more than that.
+#
+# Everything is a fraction of the canvas, so the same recipe draws the 16 px
+# icon and the 1024 px one.
+MAC_BODY = 824.0 / 1024.0
+MAC_CORNER = 185.5 / 824.0
+MAC_SHADOW_SIGMA = 10.0 / 1024.0
+MAC_SHADOW_OFFSET = 10.0 / 1024.0
+MAC_SHADOW_ALPHA = 0.30
+
+# The ten renditions Xcode's `mac` idiom asks for. There is no single-size
+# support for this idiom — checked in Xcode 26.3 — so it is all ten or none,
+# and "none" is what the app shipped with.
+MAC_LADDER = [(points, scale) for points in (16, 32, 128, 256, 512)
+              for scale in (1, 2)]
+
+# Only the primary icon carries the ladder, and that is a decision rather than
+# an oversight.
+#
+# The four alternates are *user-facing on iOS*: Settings has a picker, and
+# `UIApplication.setAlternateIconName` swaps the Home screen. **macOS has no
+# equivalent.** `AppIcons.supported` is hard-coded false off iOS,
+# `AppIcons.set` returns `false`, and there is no AppKit call that swaps an
+# asset-catalogue app icon — `NSApp.applicationIconImage` only paints the Dock
+# tile of the running process, and it forgets the moment the app quits, so it
+# could not be the picker's answer even if somebody wired it up.
+#
+# So mac renditions on the alternates would be forty PNGs and ~1 MB of
+# catalogue that nothing on any platform can ever select. Worse, they would
+# read as support: the next person to open the picker on a Mac would assume it
+# works and go hunting for the bug. `check_icons.py` asserts the shape of this
+# decision in both directions — the primary has the ladder, the alternates do
+# not — so if macOS ever gains alternate icons, the checker is where you go to
+# change your mind, and it is one line.
+MAC_ICON = "AppIcon"
+
+
+def rounded_mask(side, corner=MAC_CORNER, supersample=8):
+    """An L-mode rounded-square mask, antialiased by supersampling.
+
+    PIL's `rounded_rectangle` is aliased, and at 16 px an aliased corner is the
+    difference between an icon and a postage stamp with the corners bitten off.
+    """
+    big = side * supersample
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [0, 0, big - 1, big - 1], radius=corner * big, fill=255)
+    return mask.resize((side, side), Image.LANCZOS)
+
+
+def make_mac_icon(px, theme="sakura", appearance="light"):
+    """One macOS rendition: the art inside the grid's body, with its shadow.
+
+    Returns an RGBA image `px` square. The art is drawn *at the body's own
+    size* — `draw_icon(body, …)` — never by resizing the 1024.
+    """
+    body = int(round(px * MAC_BODY))
+    inset = (px - body) / 2.0
+    # Supersample enough that the drawing's `int()` truncations still land on
+    # something: below about 70 px of internal canvas the stem rounds away to
+    # nothing, and at 16 px the body is 13 px across.
+    scale = max(2, -(-1024 // body))
+    art = draw_icon(body, scale, PALETTES[theme][appearance]).convert("RGBA")
+    art.putalpha(rounded_mask(body))
+
+    canvas = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+    sigma = px * MAC_SHADOW_SIGMA
+    if sigma > 0.05:
+        shadow = Image.new("L", (px, px), 0)
+        shadow.paste(art.getchannel("A"),
+                     (int(round(inset)),
+                      int(round(inset + px * MAC_SHADOW_OFFSET))))
+        shadow = shadow.filter(ImageFilter.GaussianBlur(sigma))
+        shadow = shadow.point(lambda v: int(v * MAC_SHADOW_ALPHA))
+        canvas.paste(Image.new("RGBA", (px, px), (0, 0, 0, 255)), (0, 0), shadow)
+    canvas.alpha_composite(art, (int(round(inset)), int(round(inset))))
+    return canvas
+
+
+def write_mac_ladder(folder, name, theme, appearance):
+    """Write the ten `idiom: mac` PNGs and return their `Contents.json` rows.
+
+    Ten entries, seven distinct pixel sizes: 16@2x and 32@1x are both 32 px of
+    the same picture, and so on up the ladder. They are written as separate
+    files anyway, because that is what the entries name and a shared filename
+    is a thing to explain rather than a thing to read.
+    """
+    entries = []
+    for points, scale in MAC_LADDER:
+        px = points * scale
+        suffix = f"@{scale}x" if scale > 1 else ""
+        filename = f"{name}-mac-{points}{suffix}.png"
+        make_mac_icon(px, theme, appearance).save(
+            os.path.join(folder, filename), "PNG")
+        entries.append({"filename": filename, "idiom": "mac",
+                        "scale": f"{scale}x", "size": f"{points}x{points}"})
+    total = sum(os.path.getsize(os.path.join(folder, e["filename"]))
+                for e in entries)
+    print(f"  {name} macOS ladder: {len(entries)} renditions, "
+          f"{total / 1024:.0f} KB")
+    return entries
 
 
 # Which icons exist, and why these.

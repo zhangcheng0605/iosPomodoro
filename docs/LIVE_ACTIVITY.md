@@ -8,8 +8,9 @@
 >   into `TimerEngine.start/pause/reset/skipPhase/completePhase`
 > - `PawmodoroWidgets/PawmodoroLiveActivity.swift` — the widget UI, **in no
 >   target yet** because the target doesn't exist
-> - `INFOPLIST_KEY_NSSupportsLiveActivities = YES` on both app build configs,
->   so Step 2 is done too
+> - `INFOPLIST_KEY_NSSupportsLiveActivities` on both app build configs, so
+>   Step 2 is done too — but **SDK-conditional**, not plain: see Step 2 for the
+>   exact two lines and why one of them is not optional
 > - A "Lock screen countdown" toggle in Settings → Behaviour
 >
 > So the whole job is now: **create the target (Step 1), delete the files Xcode
@@ -58,13 +59,26 @@ their contents below.
 
 ## Step 2 — Let the app declare Live Activity support
 
-Select the **Pawmodoro** app target → **Info** tab → hover a row, click **+**, and add:
+**Already done, and done in a shape worth copying rather than simplifying.**
+The app is multiplatform, so the setting is conditioned on the SDK — on **both**
+iPhone SDKs, in both build configurations of the `Pawmodoro` target:
 
-| Key | Type | Value |
-|---|---|---|
-| `Supports Live Activities` (`NSSupportsLiveActivities`) | Boolean | `YES` |
+```
+"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]" = YES;
+"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphonesimulator*]" = YES;
+```
 
-Without this the app can't start an activity at runtime.
+Without this the app cannot start an activity at runtime. And **naming only
+`iphoneos*` is a bug, not a shortcut**: an unmatched `[sdk=…]` condition is
+still emitted into the `Info.plist`, as boolean *false*, so the Simulator build
+would come out with `NSSupportsLiveActivities = 0` and every activity would
+quietly fail to appear — in the one place this repo does its verifying. That
+was measured on Xcode 26.3; `docs/MAC_APP_STORE.md` has the three-state table,
+and `tools/check_icons.py` fails on either condition going missing.
+
+The plain unconditional form works fine for a single-platform app; it is wrong
+here because it also ships `NSSupportsLiveActivities = true` in the macOS
+bundle, which is a claim macOS cannot honour.
 
 ## Step 3 — Shared attributes file
 
@@ -239,9 +253,12 @@ Live Activities work in the **simulator** (iOS 16.2+) and on device. Start a
 timer, then lock the screen (**⌘L** in the simulator). For the Dynamic Island,
 pick an iPhone 15 Pro or newer simulator.
 
-If nothing appears, check in order: `NSSupportsLiveActivities` is set on the
-**app** target, the shared attributes file has **both** target memberships, and
-Live Activities aren't disabled in **Settings → Pawmodoro**.
+If nothing appears, check in order: **`plutil -p` the built app's `Info.plist`
+and confirm `NSSupportsLiveActivities` is `1` there** — reading the build
+setting is not enough, because an `[sdk=…]` condition that misses emits the key
+as `0` rather than leaving it out (Step 2) — then that the shared attributes
+file has **both** target memberships, and that Live Activities aren't disabled
+in **Settings → Pawmodoro**.
 
 ## Things worth knowing
 

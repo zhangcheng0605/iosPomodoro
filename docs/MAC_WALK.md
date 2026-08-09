@@ -228,10 +228,15 @@ in practice.
 
 ### 10. Small and already known
 
-- `NSSupportsLiveActivities = 1` is still in the built Mac `Info.plist` — a
-  claim that is not true on this platform.
-- `NSHumanReadableCopyright` is still unset; the About box will have no
-  copyright line.
+- ~~`NSSupportsLiveActivities = 1` is still in the built Mac `Info.plist`~~ —
+  **fixed 10 Aug.** The setting is conditioned on `[sdk=iphoneos*]` *and*
+  `[sdk=iphonesimulator*]`, and the Mac now gets `0`. Naming only `iphoneos*`
+  — which is what `MAC_APP_STORE.md` prescribed at the time of this walk —
+  turns Live Activities off in the **Simulator** too; that measurement, and
+  the two static rules in `tools/check_icons.py` that now guard it, are in
+  `MAC_APP_STORE.md` under "Should fix".
+- ~~`NSHumanReadableCopyright` is still unset~~ — **fixed 10 Aug**, on all four
+  configurations.
 - No `Settings` scene, so **⌘,** does nothing. Every Mac user tries it first.
 - The bare Space binding is confirmed to live only in the status menu:
   `Start` there carries `AXMenuItemCmdChar = space, AXMenuItemCmdModifiers =

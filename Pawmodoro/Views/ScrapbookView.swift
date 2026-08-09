@@ -176,14 +176,60 @@ struct ScrapbookView: View {
         .padding(40)
     }
 
+    /// One kept photograph, in a cell the width of its column.
+    ///
+    /// ### The cell is an empty box the picture is painted into, and it has to be
+    ///
+    /// A grid is a promise that the cells line up, and a photograph is the one
+    /// thing in this app whose shape the app did not choose. `scaledToFill`
+    /// **reports a size larger than the one it was offered** — that is what
+    /// filling means — so any layout that lets the picture answer the question
+    /// "how wide is this cell?" gets a different answer for every photograph.
+    ///
+    /// Two ways of asking have now been tried and both are that mistake:
+    ///
+    /// - `.aspectRatio(1, contentMode: .fill).frame(height: 104)` reads like
+    ///   "square" and is not.
+    /// - `.frame(maxWidth: .infinity).frame(height: 104)` reads like "as wide
+    ///   as the column" and is not: a flexible frame clamps its child's size
+    ///   into `min…max`, and with `max` at `.infinity` there is no upper
+    ///   clamp, so a child wider than the proposal simply wins. Measured on an
+    ///   iPhone 17 Pro (26.3) with a 1600 × 700 photograph imported into a
+    ///   118 pt column: **231 pt of it on screen, from x = 85 to x = 316** —
+    ///   104 × the picture's own aspect, near enough — drawn straight across
+    ///   the neighbouring "Keep one" tile, square-cornered because `clipShape`
+    ///   was clipping to the overflowing frame rather than to the column, and
+    ///   running past the trailing padding. The same photograph in the same
+    ///   column now measures 117 pt, x = 142 to x = 259.
+    ///
+    /// `Color.clear` is the fix because it is the one view that takes exactly
+    /// what it is offered and reports nothing of its own. The photograph goes
+    /// in as an **overlay**, which by definition cannot change the size of what
+    /// it is over, and `clipShape` then cuts the overflow off at the box. The
+    /// crop is still `scaledToFill`'s and still centred — that part was always
+    /// right, and it is what keeps a portrait photograph from being squashed.
+    /// It just no longer decides how wide the cell is.
+    ///
+    /// Worth knowing before trusting a screenshot of this: **the debug seed
+    /// cannot show the bug.** `SnapshotSeed` renders three 900 × 1200 cards,
+    /// and a portrait picture at 104 pt tall is 78 pt wide — narrower than the
+    /// column, so the flexible frame's clamp never fires and all four cells
+    /// line up perfectly. It takes a photograph wider than about 1.13:1 to
+    /// break the row, which is most photographs anybody actually takes and
+    /// none of the ones `-PawmodoroSeedScrapbook` provides. Import a wide one
+    /// (`xcrun simctl addmedia`) before believing this row is fixed.
     private func tile(_ snapshot: Snapshot) -> some View {
         Button {
             opened = snapshot
         } label: {
-            SnapshotImage(snapshot: snapshot, in: scrapbook)
-                .aspectRatio(1, contentMode: .fill)
+            Color.clear
+                .frame(maxWidth: .infinity)
                 .frame(height: 104)
+                .overlay { SnapshotImage(snapshot: snapshot, in: scrapbook) }
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                // `clipShape` cuts the drawing, not the hit testing, so
+                // without this the tappable area is still the square.
+                .contentShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(snapshot.caption)

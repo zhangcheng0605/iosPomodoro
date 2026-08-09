@@ -37,6 +37,24 @@ extension View {
     /// (1280 × 800 points): 620 plus the sheet's own action row still leaves
     /// room under the menu bar, so this does not have to ask the display how
     /// big it is. Do not raise it without checking that arithmetic again.
+    ///
+    /// ### What 620 actually costs, measured
+    ///
+    /// The number here is the *content*; what a screen has to fit is the
+    /// window around it, and the two differ by enough to matter on the small
+    /// laptop this was sized for. Measured on 10 Aug 2026 by reading the
+    /// window frames out of the running app:
+    ///
+    /// | Door | Window |
+    /// |---|---|
+    /// | `Settings` scene (⌘,) | 540 × **700** |
+    /// | Settings sheet (toolbar gear) | 540 × **719** |
+    ///
+    /// So the real ask is 719, against 800 minus a 25-point menu bar = 775.
+    /// Fifty-six points of headroom, not the hundred and fifty this comment
+    /// used to imply. Raising 620 by more than that overflows the shortest
+    /// Mac laptop screen — which is the arithmetic the paragraph above tells
+    /// you to redo, now with the constant it needs.
     func sheetSize(width: CGFloat = 540, height: CGFloat = 620) -> some View {
         #if os(macOS)
         return frame(width: width, height: height)

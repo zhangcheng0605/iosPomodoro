@@ -95,6 +95,21 @@ enum StorageKeys {
 
     /// Codes redeemed on this device, and what they granted. Never shrinks —
     /// see `PromoLedger`, which is the only thing that writes here.
+    ///
+    /// **Nothing in a Release build reads or writes this.** `PromoLedger` is
+    /// `#if DEBUG` in its entirety, so on a device that once ran a Debug build
+    /// this key is an orphan: a blob of JSON no shipped code knows the type
+    /// of, which is why a Release build cannot trip over it.
+    ///
+    /// It is declared unconditionally anyway, for two reasons. Fencing it
+    /// would take it out of `StorageKeys.all` too — and Swift will not accept
+    /// an `#if` inside an array literal (measured: "expected expression in
+    /// container literal"), so the array would have to be built in a closure,
+    /// which is the shape `check_swift.py`'s `check_storage_keys` cannot parse
+    /// and would blind that rule for all forty keys. And the name being
+    /// visible in Release is how a future author sees the name is taken. What
+    /// ships is the string `"pawmodoro.promo"` and nothing else — no code
+    /// path, no digest, no type.
     static let promo = "pawmodoro.promo"
 
     /// Which hours of the clock you have been sitting for when they struck.
@@ -840,6 +855,45 @@ enum LaunchOptions {
     /// a night sky to answer into.
     static let askMoon = isSet("-PawmodoroAskMoon")
 
+    /// Hold every pointer affordance in `Mac/Pointer.swift` on, as though the
+    /// cursor were resting on all of them at once. macOS only — on iOS every
+    /// one of those modifiers is `self`, so this flag correctly does nothing.
+    ///
+    /// ### This exists because a hover cannot be driven, at all
+    ///
+    /// Not "is awkward to drive": cannot. `CGEventPostToPid` with a
+    /// `mouseMoved` does not reach SwiftUI's `.onHover`, and the reason is
+    /// structural rather than a flag nobody has found — `mouseEntered` and
+    /// `mouseExited` are synthesized by the **window server** from the real
+    /// cursor's position against a window's tracking areas, so an event posted
+    /// into a process's own queue never passes through the thing that makes
+    /// them. Measured with a probe app whose `.onHover` logged every
+    /// transition: zero after eight posted moves, and a screenshot still
+    /// reading "hover off". So the only ways to see a hover state are to move
+    /// the owner's cursor — which this machine's rules forbid outright while
+    /// he is typing — or to render the hovered state and photograph that.
+    /// This is the second one.
+    ///
+    /// ### What a screenshot under this flag does and does not prove
+    ///
+    /// It proves the **appearance**: the ring is drawn in the control's own
+    /// shape, it is the themed colour, it is strong enough to see in all four
+    /// themes and both appearances, and it does not sit over any text. That is
+    /// the half that is otherwise unknowable, and it is the half a reviewer
+    /// would have been guessing at.
+    ///
+    /// It proves nothing whatsoever about the **wiring** — whether `.onHover`
+    /// fires, whether it is attached to the right subview, whether the target
+    /// is big enough to land on. That half is read, not seen, and anything
+    /// claiming otherwise is claiming something no tool here can do.
+    ///
+    /// Pinned rather than toggled on a timer for a reason worth keeping: a
+    /// screenshot of a state that is *animating* is a screenshot of an
+    /// arbitrary frame, and `PointerTiming.animation` would put the ring at
+    /// whatever opacity the capture happened to catch. Held on, the pixels are
+    /// the settled value and the same run twice gives the same file.
+    static let pinHover = isSet("-PawmodoroHover")
+
     /// Start with the promo code already redeemed.
     ///
     /// Not the same thing as `-PawmodoroUnlockPlus`, and kept apart from it on
@@ -940,6 +994,7 @@ enum LaunchOptions {
     static let redeemedPromo = false
     static let tracedFigures: Int? = nil
     static let askMoon = false
+    static let pinHover = false
 #endif
 
     /// How many seconds one "minute" of a phase lasts.
@@ -965,9 +1020,19 @@ enum LaunchOptions {
         // Deliberately does *not* touch `StorageKeys.hasPlus`: the point of
         // this flag is to watch the ledger alone hold Plus up while StoreKit
         // says the user owns nothing.
+        //
+        // Fenced rather than left to fold away on a `false` constant, because
+        // `PromoLedger` does not *exist* in Release — the whole of
+        // `PromoCode.swift` is `#if DEBUG`. A constant `false` stops the
+        // branch running, not the name being resolved, which is the exact
+        // failure `check_swift.py`'s `check_debug_only_symbols` exists to
+        // catch. `redeemedPromo` keeps its Release stand-in below all the
+        // same, so the parity rule still holds.
+        #if DEBUG
         if redeemedPromo {
             PromoLedger.seedRedeemed(into: defaults)
         }
+        #endif
         // Any flag that replaces the session records also clears the
         // lifetime counter and first-session anchor, so `SessionLog` reseeds
         // both from the records being written — otherwise an earlier run's

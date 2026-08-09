@@ -10,7 +10,12 @@ struct SettingsView: View {
     @State private var showBuddyBook = false
     @State private var showCart = false
     @State private var showScrapbook = false
+    // Debug-only, like the row and the sheet it drives — see the note in
+    // `PaywallView`: a stored property's *name* ships in the struct's
+    // reflection metadata even when nothing reads it.
+    #if DEBUG
     @State private var showRedeem = false
+    #endif
     /// The locked thing somebody just tapped, if the cart sells it.
     @State private var unlocking: CatalogItem?
 
@@ -36,11 +41,28 @@ struct SettingsView: View {
     /// A footer is full-width in the grouped style — unlike a *row's* label,
     /// which lives in a column and must never ask for infinite width. So the
     /// leading alignment is safe here and is not safe there; see
-    /// `stepperLabel`. Without it the Mac sets footers ragged-left against the
-    /// right edge, which reads as a caption rather than the aside it is.
+    /// `stepperLabel`.
+    ///
+    /// **The two alignments are different things, and only stating both works.**
+    /// `frame(alignment:)` places the finished text *block* within the row;
+    /// `multilineTextAlignment` decides how the lines sit against each other
+    /// *inside* that block. This helper stated the first and not the second,
+    /// which is why the Mac walk's "truncated mid-word" footers came back
+    /// wrapped but ragged-left — every continuation line pushed hard against
+    /// the right edge, so "…comes back — with a letter, and something" sat
+    /// full width and "for the drawer. Picking a traveler…" hung off the right.
+    /// A block that is leading-aligned in a full-width frame looks identical
+    /// to one that is trailing-aligned when its first line happens to fill the
+    /// width, which is exactly how this survived a fix that was aimed at it.
+    ///
+    /// The trailing default is not arbitrary: a macOS `Form` lays out labels in
+    /// a right-aligned column and the footer inherits that environment. On iOS
+    /// the environment is already leading, so saying it costs nothing and
+    /// changes nothing there.
     private func footer(_ copy: String) -> some View {
         Text(copy)
             .fixedSize(horizontal: false, vertical: true)
+            .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -59,9 +81,32 @@ struct SettingsView: View {
     /// out as one letter per line down the right-hand edge. Nothing on the
     /// phone can show that, because a phone's `Form` has no column layout to
     /// wreck.
+    ///
+    /// `multilineTextAlignment` for the same reason as `footer` — a label that
+    /// is allowed to grow downwards will one day grow, and when it does the
+    /// inherited trailing alignment is what decides where the second line
+    /// goes. Stating it now costs nothing and removes the surprise.
+    ///
+    /// **Driven at last, 10 Aug 2026** — this had been written and shipped
+    /// without anybody seeing it work, because the row is four sections down
+    /// and a Mac sheet cannot be scrolled by a posted event. Read off the
+    /// running app through both doors, Debug and Release, by scrolling the
+    /// Form from its scroll bar's accessibility value and photographing the
+    /// window by id:
+    ///
+    /// | Row | x | width |
+    /// |---|---|---|
+    /// | Focus: 25 min | 3600 | 84 |
+    /// | Short break: 5 min | 3600 | 108 |
+    /// | Long break: 15 min | 3600 | 112 |
+    /// | Long break every 4 sessions | 3600 | **168** |
+    ///
+    /// One left margin for all four, and the longest row at its full natural
+    /// width on one 16-point line. Clipped, it read "g break every 4 sessions".
     private func stepperLabel(_ copy: String) -> some View {
         Text(copy)
             .fixedSize(horizontal: false, vertical: true)
+            .multilineTextAlignment(.leading)
     }
 
     var body: some View {

@@ -395,10 +395,11 @@ LIVE_ACTIVITY.md Step 1. Hand-editing a second target into
 `project.pbxproj` is possible but that doc's own warning stands — one slip
 can make the project unopenable. **Recommended split:** the user performs the
 30-second target creation; the implementing session does everything else.
-(`NSSupportsLiveActivities` can be added as the
-`INFOPLIST_KEY_NSSupportsLiveActivities = YES` build setting on the app
-target — the project uses generated Info.plists, so that part *is* a safe
-text edit.)
+(`NSSupportsLiveActivities` is already set as an
+`INFOPLIST_KEY_NSSupportsLiveActivities` build setting on the app target — the
+project uses generated Info.plists, so that part *is* a safe text edit. It is
+conditioned on **both** iPhone SDKs, and `LIVE_ACTIVITY.md` Step 2 says why
+naming only `iphoneos*` breaks the Simulator.)
 
 ### D2. Beyond the doc's baseline
 

@@ -23,13 +23,20 @@ final class StoreManager {
     private(set) var plusProduct: Product?
     private(set) var tipProducts: [Product] = []
 
-    /// True once Pawmodoro Plus is owned — by purchase, or by a redeemed code.
+    /// True once Pawmodoro Plus is owned — by purchase, and in a Debug build
+    /// also by a redeemed code.
     ///
     /// Read the note on `updateHasPlus(_:)` before changing how this is set.
     private(set) var hasPlus: Bool
 
+    #if DEBUG
     /// What has been redeemed on this device. Only ever grows.
+    ///
+    /// Debug-only along with the rest of the code path — see the header of
+    /// `PromoCode.swift`. In Release there is no second road to `hasPlus`:
+    /// StoreKit is the only one.
     private(set) var promo: PromoLedger
+    #endif
 
     /// How many tips the user has left, purely so the app can say thank you.
     private(set) var tipsGiven: Int
@@ -50,13 +57,21 @@ final class StoreManager {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        // Read from the cache first so the UI doesn't flash "locked" during
+        // launch; `refreshEntitlements()` corrects it a moment later.
+        #if DEBUG
+        // A redeemed code is read from the same breath and is not something
+        // `refreshEntitlements()` can take back.
         let promo = PromoLedger.load(from: defaults)
         self.promo = promo
-        // Read from the cache first so the UI doesn't flash "locked" during
-        // launch; `refreshEntitlements()` corrects it a moment later. A
-        // redeemed code is read from the same breath and is not something
-        // `refreshEntitlements()` can take back.
         self.hasPlus = defaults.bool(forKey: Keys.hasPlus) || promo.plus
+        #else
+        // Release knows one road. If a Debug build on this device once wrote
+        // `true` here by redeeming, it is read as the ordinary entitlement
+        // cache it has always been and then corrected by
+        // `refreshEntitlements()` — see `updateHasPlus(_:)`.
+        self.hasPlus = defaults.bool(forKey: Keys.hasPlus)
+        #endif
         self.tipsGiven = defaults.integer(forKey: Keys.tipsGiven)
         listenForTransactions()
     }
@@ -144,6 +159,7 @@ final class StoreManager {
 
     // MARK: Codes
 
+    #if DEBUG
     /// What happened when somebody pressed Redeem.
     enum RedeemOutcome: Equatable {
         /// A code the app knows, redeemed here for the first time.
@@ -177,6 +193,7 @@ final class StoreManager {
         if ledger.plus { updateHasPlus(true) }
         return already ? .alreadyOpen(code) : .opened(code)
     }
+    #endif
 
     // MARK: Entitlements
 
@@ -240,25 +257,40 @@ final class StoreManager {
         await transaction.finish()
     }
 
-    /// The one place `hasPlus` is written, and the one place the two roads to
-    /// it are reconciled.
+    /// The one place `hasPlus` is written, and — in Debug — the one place the
+    /// two roads to it are reconciled.
     ///
-    /// **A redeemed code wins over anything StoreKit says.** Every caller here
-    /// passes what the *store* believes, and outside Xcode the store believes
-    /// nothing: `refreshEntitlements()` finds no transactions and would
-    /// otherwise pass `false` on the next launch, the next foreground, or the
-    /// next tap of Restore. That would take Plus back, and `applyEntitlement`
-    /// downstream would then quietly put the buddy, the ambience, the theme,
-    /// the track and the place back to their free stand-ins — a redemption
-    /// that undoes itself minutes later, with nothing on screen to say why.
+    /// **In a Debug build a redeemed code wins over anything StoreKit says.**
+    /// Every caller here passes what the *store* believes, and outside Xcode
+    /// the store believes nothing: `refreshEntitlements()` finds no
+    /// transactions and would otherwise pass `false` on the next launch, the
+    /// next foreground, or the next tap of Restore. That would take Plus back,
+    /// and `applyEntitlement` downstream would then quietly put the buddy, the
+    /// ambience, the theme, the track and the place back to their free
+    /// stand-ins — a redemption that undoes itself minutes later, with nothing
+    /// on screen to say why.
     ///
     /// So the ledger is folded in here rather than at the call sites: it
     /// cannot be forgotten by a future caller, and there is no path through
-    /// this file that lowers a granted entitlement. Nothing decays.
+    /// this file that lowers a granted entitlement.
+    ///
+    /// **In Release there is no ledger and no second road**, and this is the
+    /// single line that makes that true. It also does the whole of the
+    /// requirement that a Release build not trip over a grant a Debug build
+    /// left on the same device: the cached `true` under `StorageKeys.hasPlus`
+    /// is lowered here on the first `refreshEntitlements()`, exactly as a
+    /// revoked purchase would be. Nothing a user *paid* for is affected —
+    /// StoreKit's receipt is account-wide and says so every launch — so the
+    /// "nothing decays" rule is intact; what evaporates is a grant the
+    /// developer issued himself in a build nobody else has.
     private func updateHasPlus(_ value: Bool) {
-        let value = value || promo.plus
-        guard hasPlus != value else { return }
-        hasPlus = value
-        defaults.set(value, forKey: Keys.hasPlus)
+        #if DEBUG
+        let granted = value || promo.plus
+        #else
+        let granted = value
+        #endif
+        guard hasPlus != granted else { return }
+        hasPlus = granted
+        defaults.set(granted, forKey: Keys.hasPlus)
     }
 }

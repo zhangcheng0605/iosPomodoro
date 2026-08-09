@@ -20,21 +20,86 @@ import Foundation
 /// puts her back exactly where she was.
 enum Snail {
 
-    /// Where her shell sits, as a fraction of screen height — her **feet**,
-    /// not her middle, which is the lesson `Stray.groundLine` paid for.
+    /// The shape every scene is drawn at, in `tools/generate_scenes.py`'s own
+    /// grid units. Every place is exported at this aspect and drawn
+    /// `scaledToFill`, so this is the only thing needed to turn a row of the
+    /// artwork into a row of the screen. `check_snail.py` asserts it against
+    /// `generate_scenes.W/H` rather than trusting it.
+    static let sceneSize = CGSize(width: 132, height: 286)
+
+    /// The row of the **artwork** her feet stand on — not a fraction of the
+    /// screen, and that difference is the whole of a bug.
     ///
-    /// Deliberately the same value as the stray's, and not by coincidence:
-    /// `tools/check_snail.py` searched every hundredth of the screen on both a
-    /// tall phone and a short one, and 0.79 is inside the standable band of
-    /// all five places she visits. That it is also where the cat sits is the
-    /// nice part — it is the same ground.
+    /// She used to be placed at 0.79 of the screen, the same line the stray
+    /// stands on. It read as one number doing one job and it was two:
+    ///
+    /// * **The ground moved under her.** A screen fraction lands on a
+    ///   different row of the artwork on every shape, because the scene is
+    ///   `scaledToFill`. Measured: 0.79 was scene row 226 on an iPhone 17 Pro,
+    ///   row 236 on an iPhone SE and somewhere else again on a Mac window the
+    ///   owner had dragged taller. Keeping her on the ground therefore meant
+    ///   finding a fraction that was standable on *three* aspects at once, and
+    ///   the intersection of those three was a band twelve thousandths of the
+    ///   screen wide — 0.779…0.791, with nothing whatever above it.
+    /// * **She stood on the app.** That sliver is exactly where the ambience
+    ///   chips sit on the idle screen, and their backing is translucent, so
+    ///   she showed *through* the fourth chip and read as climbing on the UI.
+    ///   Seen on macOS (`MAC_STORE_ASSETS.md` § 3.3) and then on both an
+    ///   iPhone 17 Pro and an iPhone SE. During a focus phase the row sits
+    ///   lower and she cleared it, which is why it hid for so long.
+    ///
+    /// Pinning her to a row of the artwork unties the two. She now stands on
+    /// the same painted pixel on every device and at every window size — which
+    /// is what "she is standing on the ground" was always supposed to mean —
+    /// and the standable band widens from that sliver to rows 208…225, wide
+    /// enough that a line clearing the chrome exists at all.
+    ///
+    /// 219 is measured, not chosen, and it is a *trade* rather than a maximum.
+    /// The row with the largest clearance from chrome is 215 (about 19pt clear
+    /// on both phones); 219 keeps 7pt, which is still over half her own
+    /// height below the ambience chips, and buys the thing 215 could not: on a
+    /// tall phone she passes *below* the treat tray rather than behind it.
+    /// Being hidden is its own failure — a hundred and twenty trees buried
+    /// eight residents once already — and the treats are three opaque sprites
+    /// covering a third of the crossing, which is nine weeks of a six-month
+    /// walk spent invisible. On an iPhone SE the two cannot both be had: the
+    /// two phones' layouts are three and a half scene rows apart, so there she
+    /// still grazes the underside of the tray. That is written down rather
+    /// than smoothed over, and `check_snail.py` reports it every run.
+    ///
+    /// Photographed rather than believed. On an iPhone 17 Pro her foot line
+    /// lands on screen row 2007 of 2622 against the 2008 this predicts, and
+    /// the chips' painted edge is 21 device pixels below it — the 7pt above,
+    /// measured off the glass, at x = 0.13, 0.50 and 0.92 and in both a
+    /// running phase and an idle screen. On a Mac window the same arithmetic
+    /// comes out at 38pt. **On an iPhone SE it is still wrong**, and not by
+    /// any fault of this number: the main column overflows that screen by
+    /// about 68pt, every layer in the stack is handed the overflowing box,
+    /// and she is drawn inside the fourth chip. `check_snail.py`'s
+    /// `KNOWN_BROKEN` has the evidence; the fix is in `ContentView`.
     ///
     /// She is harder to place than the stray, and the reason is worth knowing:
     /// the stray stands at three fixed x positions, so a line only has to be
     /// ground in three places. The snail visits *every* x, so a line has to be
     /// ground across the whole width. That is what rules three places out
     /// below.
-    static let groundLine: Double = Stray.groundLine
+    static let groundRow: Double = 219
+
+    /// Where her feet land, in the coordinates of the layer she is drawn in.
+    ///
+    /// The same arithmetic `SceneryView` hands to `scaledToFill` — including
+    /// its `fillAnchor`, which is `.bottom` on the desktop and `.center` on a
+    /// phone. Getting that wrong would put her on the ground of an artwork
+    /// nobody is looking at.
+    static func feetY(in size: CGSize, bottomAnchored: Bool) -> Double {
+        let scale = max(size.width / sceneSize.width,
+                        size.height / sceneSize.height)
+        let drawn = sceneSize.height * scale
+        let originY = bottomAnchored
+            ? size.height - drawn
+            : (size.height - drawn) / 2
+        return originY + groundRow * scale
+    }
 
     /// Must match the aspect she is drawn at in `tools/generate_sprites.py`,
     /// or `scaledToFit` letterboxes her.

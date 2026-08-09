@@ -67,7 +67,10 @@ You'll need:
 1. In Xcode: **Product → Archive**, then in the Organizer window click **Distribute App → App Store Connect → Upload**.
 2. In App Store Connect → TestFlight, add friends by email as internal/external testers.
 3. External testers require a lightweight "beta review" (usually < 24h).
-4. Fix what they find, bump the build number, upload again.
+4. Fix what they find, bump the build number **on both targets** — `Pawmodoro`
+   and `PawmodoroWidgetsExtension` must carry the same `CURRENT_PROJECT_VERSION`
+   or the upload warns — and upload again. `docs/SHARE_WITH_TESTERS.md` has
+   the detail.
 
 ## Step 7 — Submit for review
 1. In App Store Connect, select your uploaded build, fill in every listing field.

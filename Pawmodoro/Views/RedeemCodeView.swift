@@ -1,4 +1,13 @@
+#if DEBUG
+
 import SwiftUI
+
+// Debug-only, whole file, for the reason written out at the top of
+// `PromoCode.swift`: a redeem field is a visible affordance sitting on a
+// screen a reviewer opens, and guideline 3.1.1 names it. There is no Release
+// spelling of this view — the two places that present it (`PaywallView` and
+// `SettingsView`) are fenced too, and `check_swift.py` fails on any third one
+// that isn't.
 
 /// Somewhere to type a code in.
 ///
@@ -175,3 +184,5 @@ struct RedeemCodeView: View {
         .environment(StoreManager())
         .fontDesign(.rounded)
 }
+
+#endif

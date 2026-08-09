@@ -143,30 +143,25 @@ struct ContentView: View {
                     .transition(.opacity)
                 }
             }
-            // Five items at idle, and on a Mac they need a **455-point window**
-            // to all be drawn. Measured on 9 Aug 2026 by resizing the running
-            // window five points at a time: at 450 the last two fall into the
-            // `»` overflow, at 455 every one of them is there. The window's
-            // default is `Platform.macWindow` = 400, so a first-run Mac user —
-            // idle is the first-run state — met a toolbar with **Settings and
-            // the haiku bench in the overflow, and out of the accessibility
-            // tree entirely**: a search of the whole tree for "Settings" found
-            // nothing until the chevron was opened, so VoiceOver and keyboard
-            // navigation could not reach the gear either.
+            // Five items at idle, and on a Mac they need a **455-point
+            // window** for all five to be drawn — below that the last of them
+            // fall into AppKit's `»` overflow and out of the accessibility
+            // tree with it, where VoiceOver and the keyboard cannot reach
+            // them. The lever is not here and not `Platform.macWindow` either,
+            // which was measured to have no effect on the opening size at all:
+            // it is **`Platform.macWindowMinimum.width`**, which is both the
+            // drag floor and — because `.defaultSize` is not honoured under
+            // `.windowResizability(.contentSize)` — the opening width. That
+            // file carries the five-build measurement and the three fixes that
+            // were tried first and didn't work.
             //
-            // Three things were tried here and none of them is the fix, so
-            // that nobody spends the afternoon again. An **empty
-            // `navigationTitle`** changes nothing — the ~165 points between
-            // the leading and trailing groups is AppKit's own reserve, not the
-            // title, and it is still there when the window has no title.
-            // Moving the trailing pair to **`.automatic`** changes nothing
-            // either; on macOS it resolves to the same trailing group.
-            // **Shrinking the glyphs** to a uniform 30 points recovers about
-            // 46 and lands at 409, which is still over.
+            // The margin at 460 is five points. **A sixth item added to this
+            // toolbar spends it**, so re-measure there before adding one.
             //
-            // The fix is the window: `Platform.macWindow.width` 400 → 480. It
-            // is one line, it is inside the 360…520 clamp the same file
-            // documents, and it is the only lever that reaches this.
+            // The tooltips are macOS-only for a reason worth knowing: `.help`
+            // sets the *accessibility hint* on iOS, so an unguarded one here
+            // would put "The weeks so far" in VoiceOver's mouth on a phone.
+            // `tooltip` in `Mac/Pointer.swift` is `self` there.
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -174,8 +169,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "chart.bar.fill")
                             .foregroundStyle(Theme.bark)
+                            .pointerBacking()
                     }
                     .accessibilityLabel("Stats")
+                    .tooltip("The weeks so far")
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -185,8 +182,10 @@ struct ContentView: View {
                               ? "music.note" : "music.note.list")
                             .foregroundStyle(engine.settings.music == nil
                                              ? Theme.bark : Theme.blossom)
+                            .pointerBacking()
                     }
                     .accessibilityLabel("Sound Studio")
+                    .tooltip("Sounds and music")
                 }
                 // The gentle nudge to photograph where you sit today: one
                 // glyph, no new row, and gone entirely while focus runs —
@@ -199,8 +198,10 @@ struct ContentView: View {
                         } label: {
                             Image(systemName: "camera")
                                 .foregroundStyle(Theme.bark)
+                                .pointerBacking()
                         }
                         .accessibilityLabel("Keep a picture of where you are sitting")
+                        .tooltip("A picture of where you are sitting")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -209,8 +210,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "gearshape.fill")
                             .foregroundStyle(Theme.bark)
+                            .pointerBacking()
                     }
                     .accessibilityLabel("Settings")
+                    .tooltip("Settings")
                 }
                 // The bench is furniture: it only exists while nothing is
                 // running, and it never asks. Off-hours only, like sitting
@@ -222,8 +225,10 @@ struct ContentView: View {
                         } label: {
                             Image(systemName: "scroll")
                                 .foregroundStyle(Theme.bark)
+                                .pointerBacking()
                         }
                         .accessibilityLabel("The haiku bench")
+                        .tooltip("The haiku bench")
                     }
                 }
             }
@@ -1228,12 +1233,15 @@ struct ContentView: View {
                                 : Theme.cream.opacity(0.72)
                         )
                     )
+                    .pointerRing(Capsule())
                 }
                 .buttonStyle(.squishy(pressedScale: 0.9))
                 .accessibilityLabel(
                     "\(expedition.name): \(expedition.focusMinutes) minute focus, "
                         + "\(expedition.shortBreakMinutes) minute break"
                 )
+                .tooltip("\(expedition.focusMinutes) minutes of focus, "
+                         + "\(expedition.shortBreakMinutes) minute break")
                 .accessibilityAddTraits(selected ? [.isSelected] : [])
             }
         }
@@ -1330,6 +1338,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.squishy(pressedScale: 0.86))
                 .accessibilityLabel("Keep today's picture of this place")
+                .tooltip("Today's picture of this place")
             } else {
                 // The shot is spent. Usually it is still in the bath; if it
                 // has already developed (a day rolled over with the screen
@@ -1358,6 +1367,9 @@ struct ContentView: View {
                         ? "Today's picture is on the shelf. Open the photo shelf"
                         : "Today's picture is developing. Open the photo shelf"
                 )
+                .tooltip(developing == nil
+                         ? "Today's picture, on the shelf"
+                         : "Today's picture, still developing")
             }
         }
     }
@@ -1382,6 +1394,7 @@ struct ContentView: View {
         // Its own backing, for the same reason the buddy's caption has one:
         // there is scenery behind this.
         .background(Capsule().fill(Theme.cream.opacity(0.78)))
+        .pointerRing(Capsule())
         .frame(height: chipTarget.height)
         .contentShape(Rectangle())
     }
@@ -1395,6 +1408,7 @@ struct ContentView: View {
                     .fill(Theme.surface.opacity(0.6))
             )
             .foregroundStyle(Theme.bark.opacity(spent ? 0.5 : 0.7))
+            .pointerRing(RoundedRectangle(cornerRadius: 11 * chipScale))
             .frame(width: chipTarget.width, height: chipTarget.height)
             .contentShape(Rectangle())
     }
@@ -1442,6 +1456,11 @@ struct ContentView: View {
                                 lineWidth: 1.5
                             )
                     )
+                    // On the chip rather than on the 44pt target around it, so
+                    // the ring is the shape the eye can see. Under the pointer
+                    // only; a weather suggestion is still the accent ring
+                    // above, and the two are different colours on purpose.
+                    .pointerRing(RoundedRectangle(cornerRadius: 11 * chipScale))
 
                 if !unlocked {
                     Image(systemName: "lock.fill")
@@ -1470,6 +1489,9 @@ struct ContentView: View {
         .accessibilityHint(
             suggested ? "Suggested \(engine.weather.suggestionNote ?? "")" : ""
         )
+        // Nineteen chips of icon and nothing else is exactly the row a Mac
+        // reads with the pointer. The padlock says the rest.
+        .tooltip(unlocked ? option.label : "\(option.label) — Pawmodoro Plus")
     }
 
     private var driftQuestion: Binding<Bool> {
@@ -1498,6 +1520,19 @@ struct ContentView: View {
             return "Press and hold to cast off an open hour with no end time"
         }
         return ""
+    }
+
+    /// The same thing the hint says, in the length a tooltip has room for.
+    ///
+    /// The hold is the only way into and out of a drift, and on a Mac there is
+    /// no VoiceOver rotor and no long-press habit to discover it with — so the
+    /// one surface that can mention it is the one the pointer rests on. Said
+    /// as what the button *is*, not as an instruction.
+    private var playTooltip: String {
+        if engine.isDrifting { return "Drifting — hold to come back in" }
+        if engine.isRunning { return "Pause" }
+        if engine.phase.isBreak { return "Start" }
+        return "Start — or hold, for an open hour with no end time"
     }
 
     /// Undo, play and skip.
@@ -1556,9 +1591,11 @@ struct ContentView: View {
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
+                    .pointerRing(Circle())
             }
             .buttonStyle(.squishy)
             .accessibilityLabel("Restart phase")
+            .tooltip("Restart this phase")
 
             Button {
                 if engine.isDrifting { return }   // holding is the way back
@@ -1571,6 +1608,7 @@ struct ContentView: View {
                     .foregroundStyle(Theme.onAccent)
                     .shadow(color: Theme.accent(for: engine.phase).opacity(0.4), radius: 10, y: 4)
                     .contentTransition(.symbolEffect(.replace))
+                    .pointerRing(Circle())
             }
             // A little deeper than the rest: it's the biggest target and the
             // one press people repeat most.
@@ -1592,6 +1630,7 @@ struct ContentView: View {
             }
             .accessibilityLabel(playLabel)
             .accessibilityHint(playHint)
+            .tooltip(playTooltip)
 
             Button {
                 withAnimation { engine.skipPhase() }
@@ -1601,9 +1640,11 @@ struct ContentView: View {
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Theme.surface.opacity(0.7)))
                     .foregroundStyle(Theme.bark)
+                    .pointerRing(Circle())
             }
             .buttonStyle(.squishy)
             .accessibilityLabel("Skip to next phase")
+            .tooltip("Skip to the next phase")
         }
         // The cap. It belongs on the row rather than on the three glyphs so a
         // fourth control added here cannot be the one that forgets it.

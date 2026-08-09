@@ -225,6 +225,7 @@ struct PawmodoroApp: App {
 
         #if os(macOS)
         menuBar
+        settingsScene
         #endif
     }
 
@@ -307,6 +308,54 @@ struct PawmodoroApp: App {
 
             Button("Give It a Shake") { SceneShake.shared.shake() }
                 .keyboardShortcut("k", modifiers: .command)
+        }
+    }
+
+    /// ⌘, — the one Mac keystroke every Mac user tries first.
+    ///
+    /// Until this existed, pressing it did nothing at all: the shortcut is
+    /// synthesised by AppKit only when an app declares a `Settings` scene, and
+    /// `Pawmodoro ▸ Settings…` was simply absent from the application menu.
+    /// The gear in the toolbar was the only way in, and at the shipping
+    /// default window width the gear is behind the toolbar's overflow chevron
+    /// (see `docs/MAC_WALK.md` § 4) — so the app's settings were two
+    /// discoveries deep on the platform where they are conventionally one
+    /// keystroke away.
+    ///
+    /// **This is a second way in, not a second screen.** The rule in
+    /// `Platform.swift` is that a Mac gets extra doors and never a Mac
+    /// spelling of a view, so this is the same `SettingsView` the sheet
+    /// presents, with the same environment behind it. Anything fixed in that
+    /// file is fixed in both places by construction.
+    ///
+    /// `.sheetSize()` is what makes it a *window* rather than a column: it is
+    /// already on the `Form` inside `SettingsView`, and a `Settings` scene
+    /// sizes itself to its content exactly the way a sheet does — so without
+    /// it this scene would open at the 547 × 2972 the Mac walk measured, which
+    /// is worse than no ⌘, at all. Nothing extra is stated here on purpose:
+    /// one number in one file, and the two doors cannot drift apart.
+    ///
+    /// **Measured, 10 Aug 2026**, both doors, Debug and Release: the window is
+    /// **540 × 700** — the 540 × 620 `Form` plus the title bar and the row the
+    /// Done button sits in — and the `Form` scrolls inside it. The sheet
+    /// through the toolbar gear is 540 × 719, nineteen points taller because a
+    /// sheet has no title bar but does have a wider action row. Say 700 rather
+    /// than 620 when quoting this window: 620 is what `sheetSize` asks for,
+    /// not what the user's screen has to fit.
+    ///
+    /// The Done button in the view's toolbar keeps working — `dismiss()`
+    /// closes a `Settings` window the same way it dismisses a sheet — so there
+    /// is no "which door am I behind" branch inside the view, which is the
+    /// thing that would have made this a second screen. Driven rather than
+    /// assumed: pressing it takes the window out of the process's
+    /// accessibility window list, and ⌘, brings it straight back.
+    @SceneBuilder
+    private var settingsScene: some Scene {
+        Settings {
+            SettingsView()
+                .environment(engine)
+                .environment(store)
+                .fontDesign(.rounded)
         }
     }
 

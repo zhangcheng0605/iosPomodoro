@@ -193,6 +193,11 @@ struct BuddyView: View {
                         .offset(helloOffset)
                         .contentShape(Rectangle())
                         .gesture(petGesture)
+                        // On a Mac the pointer sits on things before it
+                        // presses them, and a buddy that never notices reads
+                        // as wallpaper. Nothing on iOS — see `Pointer.swift`.
+                        .pointerGlow()
+                        .tooltip(isResting ? "Check on \(name)" : "Pet \(name)")
 
                     if let helloMoth {
                         HelloMothView(
@@ -420,39 +425,29 @@ struct BuddyView: View {
         // is not documented to accumulate, and the whole point of this list is
         // that nothing quietly falls off it.
         .accessibilityActions {
-            // The drop without the drag: same verdict, same answer.
-            if let snack = sillSnack {
-                Button("Give \(name) \(snack.label)") {
-                    snackLanded(snackVerdict())
-                }
-            }
-            if showsTuckChip {
-                Button("Tuck \(name) in") { tuckNow() }
-            }
-            // The drag has an opposite; so must the spoken list. A blanket
-            // that can only be put on is a trap either way you reach it.
-            if isTuckedAsleep {
-                Button("Take \(name)'s blanket off") { liftBlanket() }
-            }
-            if let fiveWindow, fiveWindow.contains(Date()) {
-                Button("High five \(name)") { landFive() }
-            }
-            if let find = visibleFind {
-                Button("Keep the \(find.name.lowercased())") { bankFind() }
-            }
-            if let burr = engine.doorstep.burr {
-                Button("Brush off \(burr.label)") { popBurr(burr) }
-            }
+            handActions
+
             // A touch region cannot be aimed at without sight, so each spot
             // gets its own action. The favourite is not marked in any of these
             // labels: finding it is the feature, and a list that gave it away
             // would take the feature from exactly the people this is for.
+            //
+            // These are the one part of the list that does **not** go in the
+            // right-click menu: a pointer can already aim at an ear.
             if !isResting {
                 ForEach(TouchSpot.allCases) { spot in
                     Button("Touch \(spot.name)") { touchNamed(spot) }
                 }
             }
         }
+        // The same list, reached the Mac way. Everything on it is a gesture
+        // this app already has — a snack slid over, a blanket, a paw raised,
+        // something picked up off the doorstep — and every one of them is a
+        // *drag* or a well-timed tap, which is the class of interaction a
+        // trackpad is worst at and a right-click is best at. Nothing new is
+        // offered here; this is the same six actions VoiceOver has always
+        // been able to reach, given an edge for the pointer.
+        .pointerMenu(when: hasHandActions) { handActions }
         .onAppear {
             animator.setBase(restingPose)
             engine.greetIfOwed()
@@ -549,6 +544,59 @@ struct BuddyView: View {
                 greetTheMorning()
             }
         }
+    }
+
+    // MARK: The things a hand can do, by name
+
+    /// Everything you could do to the buddy right now that is otherwise a
+    /// drag or a moment's timing.
+    ///
+    /// One list with two readers — `accessibilityActions` and the Mac's
+    /// right-click menu — because two copies of a conditional list is two
+    /// copies that drift, and the way it drifts is silent: an action added to
+    /// one and forgotten in the other simply isn't there, and nothing on
+    /// screen says so.
+    @ViewBuilder
+    private var handActions: some View {
+        // The drop without the drag: same verdict, same answer.
+        if let snack = sillSnack {
+            Button("Give \(name) \(snack.label)") {
+                snackLanded(snackVerdict())
+            }
+        }
+        if showsTuckChip {
+            Button("Tuck \(name) in") { tuckNow() }
+        }
+        // The drag has an opposite; so must the spoken list. A blanket
+        // that can only be put on is a trap either way you reach it.
+        if isTuckedAsleep {
+            Button("Take \(name)'s blanket off") { liftBlanket() }
+        }
+        if let fiveWindow, fiveWindow.contains(Date()) {
+            Button("High five \(name)") { landFive() }
+        }
+        if let find = visibleFind {
+            Button("Keep the \(find.name.lowercased())") { bankFind() }
+        }
+        if let burr = engine.doorstep.burr {
+            Button("Brush off \(burr.label)") { popBurr(burr) }
+        }
+    }
+
+    /// Whether `handActions` would build anything at all.
+    ///
+    /// Written out rather than derived, because a `ViewBuilder` cannot be
+    /// asked whether it is empty. The rule when adding an action above is to
+    /// add its condition here too; the cost of forgetting is a right-click
+    /// that opens an empty rectangle.
+    private var hasHandActions: Bool {
+        if sillSnack != nil { return true }
+        if showsTuckChip { return true }
+        if isTuckedAsleep { return true }
+        if let fiveWindow, fiveWindow.contains(Date()) { return true }
+        if visibleFind != nil { return true }
+        if engine.doorstep.burr != nil { return true }
+        return false
     }
 
     /// One small event per look, in a strict order: a homecoming outranks

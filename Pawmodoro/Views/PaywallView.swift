@@ -6,7 +6,14 @@ struct PaywallView: View {
     @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    // Fenced along with the button and the sheet below. A `@State` on a
+    // `View` is a stored property, and a struct's stored-property *names*
+    // reach the binary in its reflection metadata — so an unfenced
+    // `showRedeem` would still put the word in `strings` output long after
+    // the feature it drove was compiled out.
+    #if DEBUG
     @State private var showRedeem = false
+    #endif
 
     var body: some View {
         NavigationStack {

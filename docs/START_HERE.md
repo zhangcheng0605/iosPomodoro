@@ -164,7 +164,9 @@ If Archive is greyed out, change the run destination from a simulator to
 ### 15. TestFlight with friends first (2–3 days)
 App Store Connect → **TestFlight** → add a few people by email. External testers
 need a quick beta review (usually under a day). Let them use it for a couple of
-days. Fix what they find, then upload a new build with a bumped build number.
+days. Fix what they find, then upload a new build with a bumped build number —
+bumped on **both** targets, the app and the widget extension, which have to
+agree. `docs/SHARE_WITH_TESTERS.md` says how.
 
 ### 16. Submit for review
 Select your build, fill in every field, set the price to **Free**, hit

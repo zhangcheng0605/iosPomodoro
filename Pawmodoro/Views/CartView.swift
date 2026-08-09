@@ -178,12 +178,17 @@ struct CartView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Theme.surface.opacity(owned ? 0.9 : 0.5))
             )
+            // A full-width row with `.plain` on it looks exactly like a label
+            // until something answers the pointer.
+            .pointerRing(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
             owned ? "\(item.name), yours"
                   : "\(item.name), \(item.price) acorns"
         )
+        .tooltip(owned ? "\(item.name) — yours"
+                       : "\(item.name) — \(item.price) acorns")
     }
 
     /// The one place the whole hoard is priced, and the quietest possible way

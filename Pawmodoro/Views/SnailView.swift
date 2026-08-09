@@ -29,8 +29,25 @@ struct SnailView: View {
                         x: geometry.size.width * x,
                         // The sprite is placed by its centre, so half its
                         // height comes back off the ground line.
-                        y: geometry.size.height * Snail.groundLine
-                            - Snail.size.height / 2
+                        //
+                        // The line itself is a row of the *artwork*, resolved
+                        // through the same `scaledToFill` the scenery uses —
+                        // see `Snail.groundRow`. A fraction of this view's own
+                        // height would have been simpler and was wrong twice
+                        // over: it lands on a different part of the picture on
+                        // every shape of screen, and this view is not the
+                        // screen anyway. On an iPhone SE the column overflows,
+                        // the ZStack grows to about 735pt on a 667pt phone
+                        // (solved back from her measured foot line, see
+                        // `check_snail.py`'s KNOWN_BROKEN), and every layer in
+                        // it — this one included — is handed that. The scenery
+                        // is handed it too, which is exactly why asking the
+                        // artwork is the answer: both sides use the same box,
+                        // so she cannot come off the ground.
+                        y: Snail.feetY(
+                            in: geometry.size,
+                            bottomAnchored: Platform.isDesktop
+                        ) - Snail.size.height / 2
                     )
             }
             .ignoresSafeArea()

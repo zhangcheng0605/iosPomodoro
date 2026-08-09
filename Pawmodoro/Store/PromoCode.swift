@@ -1,5 +1,53 @@
+#if DEBUG
+
 import CryptoKit
 import Foundation
+
+// MARK: - This whole file is Debug-only, and that is the point
+//
+// Every type below — `PromoCode`, `PromoCodes`, `PromoLedger` — is compiled
+// out of Release entirely. Not hidden, not gated behind a flag: **absent**.
+// `strings` over a Release binary turns up no digest, no salt, no round
+// count and no ledger.
+//
+// The reason is App Review guideline 3.1.1, which names this exact mechanism
+// ("apps may not use their own mechanisms to unlock content or
+// functionality, such as license keys…"), and Apple's rejection letter for it
+// leads with promo codes. Merely *hiding* the field would trade a 3.1.1
+// problem for a 2.3.1 "hidden, dormant, or undocumented features" one, whose
+// remedy reaches removal from the developer program. So the code is not in
+// the shipped binary to be found.
+//
+// It stays in Debug because it is the only way the owner reaches his own paid
+// content on his own device: StoreKit vends nothing to an app installed
+// outside Xcode, so without this there is no way to test what he built.
+//
+// `tools/check_swift.py`'s `check_debug_only_symbols` is what holds the line.
+// A file whose first line is `#if DEBUG` has no Release stand-in by design,
+// so the checker fails on any *unfenced* mention of a name declared here. Add
+// a reference from ordinary code and the checker says so before Xcode does.
+//
+// ## What a Debug redemption leaves behind, and why Release doesn't trip
+//
+// Redeeming writes two things: the ledger under `StorageKeys.promo`, and
+// `true` under `StorageKeys.hasPlus` (see `StoreManager.updateHasPlus`).
+// Running a Release build on the same device afterwards:
+//
+// - **`pawmodoro.promo`** is an orphan. Nothing in a Release binary knows the
+//   type that wrote it, so nothing decodes it and nothing can fail on it. The
+//   key stays in `StorageKeys.all` so `-PawmodoroResetState` still clears it
+//   in Debug, and so a future author can see the name is taken.
+// - **`pawmodoro.hasPlus`** is read at launch as the entitlement cache it has
+//   always been, and then corrected by `refreshEntitlements()` the way a
+//   revoked purchase would be — `updateHasPlus` no longer folds a ledger in,
+//   so it passes StoreKit's answer straight through and a self-issued grant
+//   evaporates on the first launch of a Release build. That is the *correct*
+//   outcome, and it is not a decay: nothing a user paid for is touched, only
+//   something the developer gave himself in a build nobody else has.
+//
+// The sanctioned replacement, when a real code is ever wanted, is StoreKit
+// Offer Codes — extended to non-consumables at iOS 16.3, and this app targets
+// 17. See docs/PROMO_CODES.md.
 
 /// A code somebody can type in to be let in.
 ///
@@ -187,3 +235,5 @@ struct PromoLedger: Codable, Equatable, Sendable {
         ledger.save(to: defaults)
     }
 }
+
+#endif

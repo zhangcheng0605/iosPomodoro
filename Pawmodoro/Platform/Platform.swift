@@ -29,6 +29,17 @@ import AppKit
 ///   and its note carries the measurement proving the no-op is not why a Mac
 ///   was once reported silent.
 ///
+/// ### What macOS gets that iOS does not — and where it lives
+///
+/// One thing, and it is not a feature: the pointer. A Mac control that does
+/// not answer the cursor reads as disabled, and the walk found `.onHover`,
+/// `.help()` and `.contextMenu` appearing essentially nowhere in this app.
+/// That layer is `Mac/Pointer.swift` rather than this file, because it is not
+/// a platform *seam* — nothing forks, nothing needs a second implementation,
+/// and every one of its modifiers is literally `self` on iOS. This file is for
+/// the places the two platforms cannot be written the same way; that one is
+/// for the sentence a Mac adds after them.
+///
 /// ### What survives untouched, and why that is not luck
 ///
 /// The countdown derives from an absolute end `Date`, so **App Nap cannot
@@ -63,7 +74,60 @@ enum Platform {
     /// title bar that a phone's status bar never charged for. At 740 the
     /// phase pill sat behind the toolbar and the start button was cut off by
     /// the bottom edge.
-    static let macWindow = CGSize(width: 400, height: 900)
+    ///
+    /// ### This constant does not decide the opening size. Measured.
+    ///
+    /// Read that before reaching for it. `.defaultSize(Platform.macWindow)`
+    /// and the `idealWidth`/`idealHeight` in `PawmodoroApp` are **not
+    /// honoured** under `.windowResizability(.contentSize)`. The window opens
+    /// at the content's own natural size — **460 × 860 of content**, 912 of
+    /// window once the 52-point title bar is added — clamped upward by
+    /// `macWindowMinimum` and by nothing else.
+    ///
+    /// Measured on 10 Aug 2026 by deleting the saved frame
+    /// (`defaults delete com.pawmodoro.zhangcheng "NSWindow Frame
+    /// main-AppWindow-1"`, confirmed absent), launching, and reading the size
+    /// back off `CGWindowListCopyWindowInfo`. Five builds:
+    ///
+    /// | `macWindow` | `macWindowMinimum` | Window opens at |
+    /// |---|---|---|
+    /// | 400 × 900 | 360 × 860 | **460 × 912** |
+    /// | 480 × 900 | 400 × 860 | **460 × 912** |
+    /// | 480 × 900 | 440 × 860 | **460 × 912** |
+    /// | 480 × 900 | 460 × 860 | **460 × 912** |
+    /// | 480 × 900 | 500 × 860 | **500 × 912** |
+    ///
+    /// 480 never appears in that column, and neither does 400. The minimum is
+    /// the only one of the three numbers that moves the opening size, and it
+    /// only moves it *up*. So this constant is advisory: it is what the window
+    /// would open at if SwiftUI ever honoured the request, and it is kept in
+    /// step with the minimum for that day. **A toolbar that overflows is not
+    /// fixed here.**
+    ///
+    /// ### What the width is actually for
+    ///
+    /// The idle screen carries five toolbar items — Stats, the Sound Studio,
+    /// the camera, the gear, the bench. Below about 455 points the last of
+    /// them fall into AppKit's `»` overflow, and that is worse than a chevron
+    /// to click: a collapsed item **does not exist in the accessibility
+    /// tree**, so a search of the running app for "Settings" finds nothing and
+    /// neither VoiceOver nor keyboard navigation can reach the gear.
+    ///
+    /// That was reported as a first-run bug and it is not one — at every
+    /// setting of these constants, including the original 400/360, the window
+    /// opens at 460 with all five items drawn and no chevron (photographed).
+    /// It is a **drag** bug: the old floor was 360, so the overflow was two
+    /// inches of pointer travel away and permanent once there, because the
+    /// frame is saved. `macWindowMinimum` is where that is fenced.
+    ///
+    /// Three things were tried before reaching for the width, and none of them
+    /// is the fix, so that nobody spends the afternoon again. An empty
+    /// `navigationTitle` changes nothing — the ~165 points between the leading
+    /// and trailing groups is AppKit's own reserve, not the title. Moving the
+    /// trailing pair to `.automatic` changes nothing either; on macOS it
+    /// resolves to the same trailing group. Shrinking the glyphs to a uniform
+    /// 30 points recovers about 46 and lands at 409, which is still over.
+    static let macWindow = CGSize(width: 480, height: 900)
 
     /// The smallest the Mac window may be dragged to.
     ///
@@ -73,7 +137,39 @@ enum Platform {
     /// is cut off by the bottom edge, which is a broken app rather than a
     /// small one. 860 is the first height where every row is whole, and it
     /// still leaves room under the menu bar of the shortest Mac laptop screen.
-    static let macWindowMinimum = CGSize(width: 360, height: 860)
+    ///
+    /// ### The width here is the whole of the toolbar fix
+    ///
+    /// 460 rather than the 360 it was, and this — not `macWindow` — is the
+    /// number that does the work, for two reasons that are worth keeping
+    /// apart.
+    ///
+    /// It is the **drag floor**: below roughly 455 the gear and the haiku
+    /// bench fall into the `»` overflow and out of the accessibility tree with
+    /// it, and a floor is the only thing that stops a pointer putting them
+    /// there. The old 360 left that two inches of travel away and permanent
+    /// once reached, because AppKit saves the frame.
+    ///
+    /// It is also the **opening size**, which is the part nobody expects:
+    /// `.defaultSize` is not honoured here (see `macWindow` above for the
+    /// five-build measurement), so the window opens at the content's natural
+    /// 460 × 860 clamped up by this. Raising this raises the opening size;
+    /// raising `macWindow` does nothing at all. Which means a future author
+    /// who lowers this "because it is only a minimum" has changed what every
+    /// new user's first window looks like.
+    ///
+    /// 460 leaves five points over the 455 threshold rather than a comfortable
+    /// margin, and that is deliberate rather than overlooked: 460 is the width
+    /// the layout asks for on its own, so taking it keeps the opening window
+    /// at its natural size instead of forcing it wider. The five points are
+    /// backed by a photograph at exactly 460 with all five glyphs drawn and no
+    /// chevron. If a sixth toolbar item is ever added, that margin is gone and
+    /// this number has to be re-measured — not nudged.
+    ///
+    /// It leaves 460…520 of horizontal travel, which is narrow, and that is
+    /// the honest shape of an app whose every scene is exported at a phone's
+    /// aspect: the width was never a place this window had much to say.
+    static let macWindowMinimum = CGSize(width: 460, height: 860)
 
     /// The biggest the Mac window may be dragged to — **the shape of the art**.
     ///

@@ -92,9 +92,25 @@ App Store Connect. That's the bit that makes this genuinely good for UAT.
 
 ## Shipping updates during testing
 
-Every upload needs a **higher build number**. Bump `CURRENT_PROJECT_VERSION` in
-the target's build settings (or Xcode's **Build** field) — `1` → `2` → `3`.
-`MARKETING_VERSION` (the `1.0` users see) only changes when you want it to.
+Every upload needs a **higher build number**. Bump `CURRENT_PROJECT_VERSION`
+— `1` → `2` → `3` — **in both targets**: `Pawmodoro` *and*
+`PawmodoroWidgetsExtension`. Build 2 is already live on the App Store, so the
+next upload has to go past it.
+
+Both, because an app and the extension embedded inside it must carry the same
+`CFBundleVersion`; bump only the app and the upload comes back with a
+mismatch warning. In Xcode that is the **Build** field on each target's
+General tab, and it is easy to do once and think you are done.
+`tools/check_icons.py` fails if the two disagree, so run it after a bump —
+but the checker is a net, not a reminder.
+
+Not theory: in a simulator build made from the current tree, the app's
+`Info.plist` says `CFBundleVersion = 2` and the extension embedded inside it at
+`PlugIns/PawmodoroWidgetsExtension.appex/Info.plist` says `CFBundleVersion = 2`
+as well. Those two numbers are what Apple compares.
+
+`MARKETING_VERSION` (the `1.0` users see) only changes when you want it to,
+and it lives on both targets too.
 
 Builds expire **90 days** after upload; upload a new one and testers move over.
 

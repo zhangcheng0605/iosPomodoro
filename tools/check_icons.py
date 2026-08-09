@@ -63,11 +63,30 @@ Eight things are checked, and the first is the one that matters:
    and were not re-run after a palette change are the failure this catches, and
    nothing else in the toolchain looks at them twice.
 
-Rules 6-8 are static: they read the asset catalogue. `--bundle PATH` adds the
-end-to-end one — that a *built* `.app` really does carry `CFBundleIconName`,
-an `.icns`, and the renditions in its `Assets.car`. That is the assertion the
-original bug would have failed, and it needs a Mac and a build, so it is opt-in
-and says loudly when it has not run.
+Two more rules are here that are not about icons at all, and the reason is in
+the comment above `build_settings`: the system this file really guards is
+**what the shipped bundle claims about itself**, and an app with no icon, an
+app claiming Live Activities on a Mac, and an app whose extension carries a
+different build number are one bug wearing three hats. All three are true in
+the build settings, false in the product, and silent.
+
+9. **Live Activities are claimed on both iPhone SDKs and neither Mac one.**
+   `INFOPLIST_KEY_NSSupportsLiveActivities` conditioned on `iphoneos*` alone
+   — which this repo's own documentation prescribed until 10 Aug — ships the
+   *Simulator* build with `NSSupportsLiveActivities = 0`, because an unmatched
+   `[sdk=…]` condition is emitted as boolean false rather than left out.
+
+10. **The app and the widget extension carry the same build number.** A
+    mismatch is an upload warning, it has been fixed once already, and every
+    doc that tells you to bump a build number says "the target's build
+    settings" as though there were one.
+
+Rules 6-8 read the asset catalogue and 9-10 read `project.pbxproj`, so all of
+them run on Linux, on every plain invocation. `--bundle PATH` adds the
+end-to-end ones — that a *built* `.app` really does carry `CFBundleIconName`,
+an `.icns`, the renditions in its `Assets.car`, and no Live Activities claim.
+Those are the assertions the original bugs would have failed, and they need a
+Mac and a build, so they are opt-in and say loudly when they have not run.
 
     python3 tools/check_icons.py [--report] [--bundle path/to/Pawmodoro.app]
 
@@ -647,6 +666,140 @@ def check_mac_art_is_the_icon(failures):
     print(f"  macOS art: 512@2x matches the shipped drawing to {drift:.1f}/255")
 
 
+# ------------------------------------------------- the two pbxproj promises
+#
+# Not icons. They live here because this is the file that already reads
+# `project.pbxproj` and already opens a built bundle's `Info.plist`, and
+# because both are the same shape of bug as an app with no icon: true in the
+# build settings, false in the product, and nothing in the toolchain warns.
+# A forty-line checker of their own would be a twenty-sixth file to remember
+# to run, and the thing they guard — what the shipped bundle *claims about
+# itself* — is one system, not two.
+
+
+def build_settings():
+    """Every native target's build settings, keyed `(target, configuration)`.
+
+    The pbxproj carries its own names in comments — `/* Build configuration
+    list for PBXNativeTarget "Pawmodoro" */` and `<id> /* Release */` — so no
+    UUID has to be understood, only followed. Values that span lines (the
+    `LD_RUNPATH_SEARCH_PATHS` arrays) are skipped rather than parsed; nothing
+    here needs one, and half-parsing an array is how you get a checker that
+    believes something false.
+    """
+    source = open(PBXPROJ).read()
+    blocks = dict(re.findall(
+        r"\n\t\t([0-9A-Fa-f]{24}) /\* \w+ \*/ = \{\n"
+        r"\t\t\tisa = XCBuildConfiguration;(.*?)\n\t\t\};", source, re.S))
+    out = {}
+    for target, body in re.findall(
+            r"/\* Build configuration list for PBXNativeTarget \"([^\"]+)\" "
+            r"\*/ = \{(.*?)\n\t\t\};", source, re.S):
+        for cid, name in re.findall(r"([0-9A-Fa-f]{24}) /\* (\w+) \*/", body):
+            if cid not in blocks:
+                continue
+            pairs = re.findall(
+                r"\n\t+(\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_]*) = ([^\n]*);",
+                blocks[cid])
+            out[(target, name)] = {k.strip('"'): v.strip().strip('"')
+                                   for k, v in pairs}
+    return out
+
+
+LIVE_ACTIVITY_KEY = "INFOPLIST_KEY_NSSupportsLiveActivities"
+
+
+def check_live_activities_is_iphone_only(failures, table):
+    """Live Activities are claimed on both iPhone SDKs and on neither Mac one.
+
+    Static, so it runs on Linux and on every plain invocation — which is the
+    whole point. The built-bundle half of this rule (in `check_built_bundle`)
+    only fires when somebody passes `--bundle` on a Mac, and a guard that
+    needs a Mac and a build and a flag is a guard that is off.
+
+    Three states, measured on Xcode 26.3 by building and reading the plist:
+
+      * setting absent entirely            -> key absent from the Info.plist
+      * `[sdk=…]` condition does not match -> key present, value `false`
+      * `[sdk=…]` condition matches        -> key present, value `true`
+
+    So `INFOPLIST_KEY_*` *does* take an `[sdk=…]` condition. But the key is
+    still emitted either way, because `GENERATE_INFOPLIST_FILE` writes one
+    entry per `INFOPLIST_KEY_` name declared anywhere in the table and an
+    unmatched condition evaluates to the empty string, which lands as boolean
+    false. That is why **both** iPhone SDKs have to be named: condition it on
+    `iphoneos*` alone, as this repo's own docs prescribed until 10 Aug, and
+    the Simulator build gets `NSSupportsLiveActivities = 0` — the Simulator
+    being the entire verification loop for this app.
+    """
+    before = len(failures)
+    declaring = {key: s for key, s in table.items()
+                 if any(k.startswith(LIVE_ACTIVITY_KEY) for k in s)}
+    if not declaring:
+        failures.append(
+            f"no target declares {LIVE_ACTIVITY_KEY} at all — the iPhone app "
+            f"ships a Live Activity it never says it supports, and it simply "
+            f"does not start. Deleting the setting is not how you turn this "
+            f"off on the Mac; conditioning it is")
+        return
+    for (target, config), s in sorted(declaring.items()):
+        where = f"{target}/{config}"
+        if LIVE_ACTIVITY_KEY in s:
+            failures.append(
+                f"{where} sets {LIVE_ACTIVITY_KEY} unconditionally — the Mac "
+                f"build then ships NSSupportsLiveActivities = true, which is "
+                f"a claim macOS cannot honour. Condition it on the two iPhone "
+                f"SDKs")
+        for sdk in IOS_SDKS:
+            value = s.get(f"{LIVE_ACTIVITY_KEY}[sdk={sdk}]")
+            if value != "YES":
+                failures.append(
+                    f"{where} has {LIVE_ACTIVITY_KEY}[sdk={sdk}] = {value!r}, "
+                    f"expected YES — an unmatched condition is emitted as "
+                    f"boolean false, so leaving out {sdk} does not leave the "
+                    f"key alone, it turns Live Activities off there")
+    if len(failures) == before:
+        print(f"  Live Activities: {' '.join(sorted(IOS_SDKS))} only, on "
+              f"{len(declaring)} configurations")
+
+
+def check_build_numbers_pair(failures, table):
+    """The app and the widget extension carry the same `CURRENT_PROJECT_VERSION`.
+
+    An app whose embedded extension has a different `CFBundleVersion` uploads
+    with a warning and is exactly the mismatch that had to be fixed once
+    already. It is easy to reintroduce because every doc that says how to ship
+    a build says "bump the build number in the target's build settings", and
+    this project has two targets that need it.
+
+    Build 2 is live on the App Store, so the next upload has to go past it in
+    both places at once. Both numbers are read out of the pbxproj rather than
+    written down here — a stored expected value would just be a third copy to
+    forget.
+    """
+    before = len(failures)
+    seen = {}
+    for (target, config), s in sorted(table.items()):
+        value = s.get("CURRENT_PROJECT_VERSION")
+        if value is None:
+            failures.append(
+                f"{target}/{config} sets no CURRENT_PROJECT_VERSION — it "
+                f"falls back to 1 and no longer moves when the other target "
+                f"is bumped")
+            continue
+        seen.setdefault(value, []).append(f"{target}/{config}")
+    if len(seen) > 1:
+        detail = "; ".join(f"{v} on {', '.join(w)}" for v, w in sorted(seen.items()))
+        failures.append(
+            f"CURRENT_PROJECT_VERSION disagrees across targets — {detail}. An "
+            f"app and its embedded extension must carry the same "
+            f"CFBundleVersion; bump both or neither")
+    elif seen and len(failures) == before:
+        (value, where), = seen.items()
+        print(f"  build number: CURRENT_PROJECT_VERSION = {value} on all "
+              f"{len(where)} configurations")
+
+
 def check_built_bundle(failures, app):
     """The end-to-end one: a built `.app` really does carry the icon.
 
@@ -666,6 +819,33 @@ def check_built_bundle(failures, app):
                 f"the built app's Info.plist has no {key} — this is exactly "
                 f"the state the app shipped in: actool emitted nothing, "
                 f"warned about nothing, and Xcode's -validate-for-store passed")
+    # Not an icon, and it lives here anyway: this is the only checker in the
+    # repo that opens a *built Mac bundle's* Info.plist, and a Mac that claims
+    # Live Activities is the same shape of bug as a Mac with no icon — true in
+    # the build settings, false in the world, and nothing warns.
+    #
+    # The mechanism is worth writing down because it is not what you would
+    # guess, and it was measured three ways on Xcode 26.3:
+    #
+    #   * setting absent entirely            -> key absent from the plist
+    #   * `[sdk=…]` condition does not match -> key present, value `false`
+    #   * `[sdk=…]` condition matches        -> key present, value `true`
+    #
+    # So `INFOPLIST_KEY_*` *does* accept an `[sdk=…]` condition — but the key
+    # is still emitted, because `GENERATE_INFOPLIST_FILE` writes one entry for
+    # every `INFOPLIST_KEY_` name declared anywhere in the settings table and
+    # an unmatched condition evaluates to the empty string, which lands as
+    # boolean false. `false` is the honest answer on a Mac, so that is where
+    # this stops; making the key vanish would need a hand-written macOS
+    # `Info.plist`, i.e. a second source of truth for everything else in it.
+    if info.get("NSSupportsLiveActivities"):
+        failures.append(
+            "the built Mac app's Info.plist says NSSupportsLiveActivities = "
+            "true — there are no Live Activities on macOS, so that is a claim "
+            "the app cannot honour. Condition the setting on the iPhone SDKs: "
+            '"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]" = YES '
+            "(and the same for iphonesimulator*, or the Simulator loses them)")
+
     icns = os.path.join(app, "Contents", "Resources",
                         f"{info.get('CFBundleIconFile', 'AppIcon')}.icns")
     if not os.path.exists(icns):
@@ -694,7 +874,8 @@ def check_built_bundle(failures, app):
             f"the built app's Assets.car has {len(sized)} {assets.MAC_ICON} "
             f"renditions, expected at least {len(MAC_LADDER)}")
     print(f"  built bundle: CFBundleIconName={info.get('CFBundleIconName')}, "
-          f"{os.path.basename(icns)} present, {len(sized)} renditions")
+          f"{os.path.basename(icns)} present, {len(sized)} renditions, "
+          f"NSSupportsLiveActivities={info.get('NSSupportsLiveActivities')}")
 
 
 def main():
@@ -714,6 +895,9 @@ def main():
     check_alternates_are_ios_only(failures)
     check_mac_geometry(failures)
     check_mac_art_is_the_icon(failures)
+    table = build_settings()
+    check_live_activities_is_iphone_only(failures, table)
+    check_build_numbers_pair(failures, table)
     if bundle:
         check_built_bundle(failures, bundle)
     else:

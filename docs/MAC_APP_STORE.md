@@ -38,25 +38,43 @@ marked **VERIFY** and says how to check it.
 >   **I did not build or verify that**, and this document did not touch those
 >   files. Checklist step 5 says how to confirm it in one command.
 
+> ## Update, 10 Aug 2026 — the icon is confirmed in a build, and two more fences
+>
+> - **Checklist step 5 is closed.** The ladder reached the product: a built Mac
+>   bundle carries `CFBundleIconName`, a 37,266-byte `AppIcon.icns` and the
+>   `mac` renditions in `Assets.car`. § 5.1.
+> - **Step 6 is closed** (`e83cc81`). The menu bar extra is 36 × 24 points.
+> - **`INFOPLIST_KEY_*` takes an `[sdk=…]` condition — and the fix this
+>   document used to prescribe was wrong.** Conditioning Live Activities on
+>   `iphoneos*` alone turns them **off in the Simulator**, which is the whole
+>   verification loop for this app. Measured; see the box under "Should fix".
+> - **Two new static rules** in `tools/check_icons.py` guard that setting and
+>   the app/widget build-number pairing, on every plain invocation, on Linux
+>   included. Both were broken deliberately and caught.
+> - **How to drive the Mac build without touching the owner's mouse:**
+>   `tools/mac_probe.py`. See "Driving the Mac build" below.
+
 ---
 
 ## Verdict
 
 **Pawmodoro is a native macOS app that builds, archives, exports a signed
-`.pkg`, and is one icon away from being uploadable.** The multiplatform target
-is right, the sandbox is right, the entitlements are right, and the signing
+`.pkg`, and is uploadable.** The multiplatform target is right, the sandbox is
+right, the entitlements are right, the icon is in the bundle, and the signing
 machinery — the part everyone expects to fight — works on the first try with
 `-allowProvisioningUpdates` and needs no Keychain surgery.
 
-What is left is: an icon, an evening of listening on real hardware, three Mac
-UI bugs, and a pile of App Store Connect work only the owner can do.
+What is left is: an evening of listening on real hardware, two Mac UI bugs
+that other workflows are inside right now, re-shot screenshots, and a pile of
+App Store Connect work only the owner can do.
 
 ---
 
 ## THE LAUNCH CHECKLIST
 
 In the order to do them. **DONE** = verified on this Mac. **BLOCKED** =
-somebody has to write code or make art. **OWNER** = only Cheng can do it,
+somebody has to write code or make art; **in progress** = somebody is, right
+now, so do not start it twice. **OWNER** = only Cheng can do it,
 because it needs App Store Connect, an Apple Account password, or a judgement
 call about the product.
 
@@ -72,12 +90,13 @@ requires typing credentials.
 | 2 | `CODE_SIGN_ENTITLEMENTS[sdk=macosx*]` → `Pawmodoro/Mac/Pawmodoro.entitlements`, App Sandbox and nothing else | **DONE** | Verified in the archived Release build: signed entitlements are exactly `app-sandbox`, `application-identifier`, `team-identifier`. § 3.1. |
 | 3 | Prove the sandbox does not break StoreKit | **DONE** | § 3.3. Answer: no entitlement needed, and the reason is in Apple's own sandbox profile. |
 | 4 | Prove the sandbox does not break `PhotosPicker` | **DONE** (8–9 Aug) | § 3.2. The picker is permitted; the *control* to reach it does not render on macOS — that is step 6. |
-| 5 | **The macOS app icon** | **BLOCKED → verify** | § 5.1. Absent from the 20:47 archive; a separate workflow landed the ten-rung `mac` ladder in the working tree minutes later, unverified in a build. **Confirm before anything else:** rebuild, then `plutil -p Pawmodoro.app/Contents/Info.plist \| grep -i icon` must print `CFBundleIconName`, and `assetutil --info …/Assets.car \| grep -i icon` must show real app-icon renditions (ignore the twenty `iconpreview_AppIcon*` ones — those belong to the alternate-icon picker). Both were empty in my build; both must not be. |
-| 6 | **The menu bar extra draws the buddy at ~400 pt** | **BLOCKED** | `MAC_STORE_ASSETS.md` § 3.1. Not a rejection risk — a "this app is broken" risk, in the one feature the Mac version exists for. Fix before the first screenshot is worth taking. |
-| 7 | **The Scrapbook has no import control on macOS** | **BLOCKED** | `ToolbarItem(placement: .topBarLeading)` renders nothing in a Mac sheet. `MAC_STORE_ASSETS.md` § 3.2. |
-| 8 | **The old snail stands on the ambience row** | **BLOCKED** | `MAC_STORE_ASSETS.md` § 3.3. |
+| 5 | **The macOS app icon** | **DONE** (9 Aug, `b50a7c3`) | Proven in a built Mac bundle, not inferred: `CFBundleIconName = AppIcon` and `CFBundleIconFile = AppIcon` in the built `Info.plist`, a 37,266-byte `Contents/Resources/AppIcon.icns`, and the ten-rung `mac` ladder in `Assets.car`. § 5.1 has the geometry and the two traps. Do not use `assetutil --info \| grep -c AppIcon` to check it — it counts the twenty `iconpreview_AppIcon*` renditions belonging to the alternate-icon picker. |
+| 6 | **The menu bar extra draws the buddy at ~400 pt** | **DONE** (9 Aug, `e83cc81`) | 418 × 402 points → 36 × 24. `BuddySprite` is rendered once through `ImageRenderer` at the PNG's native size and cropped to the **union** of the awake and asleep poses, so the buddy does not visibly grow when it lies down. Re-shoot the store screenshots now that this is real — `MAC_STORE_ASSETS.md` § 3.1 says they predate it. |
+| 7 | **The Scrapbook has no import control on macOS** | **in progress** — another workflow, right now | `ToolbarItem(placement: .topBarLeading)` renders nothing in a Mac sheet. `MAC_STORE_ASSETS.md` § 3.2. The 9 Aug walk saw a "+ Keep one" tile in the sheet content, so this may already be half-landed; confirm in a build before believing either state. |
+| 8 | **The old snail stands on the ambience row** | **in progress** — another workflow, right now | `MAC_STORE_ASSETS.md` § 3.3. |
 | 9 | **The listening pass on real Mac hardware** | **OWNER** | Headphones *and* built-in speakers; change the output device **while a track is playing**. This is build 2's scar — all fifty tracks were unplayable on every real iPhone and no simulator could show it. A Mac's output device is 48 kHz or 44.1 and changes mid-session. Nobody but the owner has ears on this machine. |
-| 10 | Optional polish: `Settings` scene for ⌘,, `NSHumanReadableCopyright`, SDK-conditional `INFOPLIST_KEY_NSSupportsLiveActivities`, the two compiler warnings | not started | Cheap, none of it blocks review. § "Should fix" below. |
+| 10 | Optional polish: `NSHumanReadableCopyright`, SDK-conditional `INFOPLIST_KEY_NSSupportsLiveActivities`, a `Settings` scene for ⌘,, the two compiler warnings | **half done** | The two `Info.plist` ones are **done, seen in a build, and guarded**: the macOS Debug bundle reads `NSHumanReadableCopyright = "Copyright © 2026 Cheng Zhang. All rights reserved."` and `NSSupportsLiveActivities = 0`, while the same setting gives the Simulator build `1` (the box under "Should fix" says why naming one SDK is not enough). `tools/check_icons.py` now fails if either regresses. The ⌘, scene and the two compiler warnings are still open. |
+| 10b | **The promo-code field is fenced out of Release** | **DONE and proven** (9–10 Aug) | `Store/PromoCode.swift` and `Views/RedeemCodeView.swift` are each wrapped whole in `#if DEBUG`, first line to last, and the "Redeem a code" row in `SettingsView` with them. That is a fence you cannot verify by reading, because a `#if` that is correct in the source and wrong in the build settings looks identical — so it was checked in the **product**: the symbols are **absent from both Release binaries**, iOS and macOS, and **present in both Debug** ones. It matters more than its size suggests: a shipped app that can redeem its own codes gives Plus away outside StoreKit, which is a rejection and a revenue hole at once. Written down nowhere until now. |
 
 ### Phase 2 — signing and packaging (all rehearsed, nothing uploaded)
 
@@ -103,12 +122,18 @@ requires typing credentials.
 
 ### The three things that would sink the submission if forgotten
 
-1. **The icon** (step 5). Xcode's own `builtin-validationUtility
-   -validate-for-store` **passed** on a build with no icon at all, so nothing
-   local will warn you.
+1. **The icon** (step 5) — *done*, and left at the top of this list because of
+   how it hid. Xcode's own `builtin-validationUtility -validate-for-store`
+   **passed** on a build with no icon at all, so nothing local warned. It is
+   guarded now by `tools/check_icons.py --bundle`, which is opt-in: if you
+   change the asset catalogue, run it against a real build.
 2. **Add Platform, not a new app** (step 16). One wrong click, permanent.
 3. **The listening pass** (step 9). It has failed on real hardware before, on
    this exact class of bug, and no simulator or checker can see it.
+4. **A build number that goes past 2** (step 20). Build 2 is live. The app and
+   the widget extension must move **together** — `tools/check_icons.py` fails
+   if they disagree, and `docs/SHARE_WITH_TESTERS.md` used to tell you to bump
+   only one.
 
 ---
 
@@ -116,15 +141,61 @@ requires typing credentials.
 
 | Item | Detail |
 |---|---|
-| **The menu bar extra is broken.** | Checklist step 6. Top of this list by a distance. |
-| **The Scrapbook has no import control on macOS.** | Checklist step 7. Decide it before answering § 3.5's camera question — the answer changes. |
+| ~~**The menu bar extra is broken.**~~ | **Fixed 9 Aug, `e83cc81`** — 418 × 402 points down to 36 × 24, the buddy rendered once through `ImageRenderer` and cropped to the union of both poses. Checklist step 6. |
+| **The Scrapbook has no import control on macOS.** | Checklist step 7, in progress. Decide it before answering § 3.5's camera question — the answer changes. |
 | **The Mac window cannot really be resized.** | `PawmodoroApp` sets `.windowResizability(.contentSize)` with min 360×860 / ideal 400×900 / max width 520. Height free, width clamped to a 160-point band. Deliberate and well argued (`Platform.swift`: the scenes are exported at 396×858 and a wide window crops the art to a band of sky) — but a Mac app that is a phone column and cannot be zoomed reads as a port. It will not fail review. It is the first thing a Mac user notices. |
 | **No ⌘, (Settings) and no Help menu.** | `PawmodoroApp` adds a `CommandMenu("Session")` and a `MenuBarExtra`, but no `Settings` scene. Every Mac user reaches for ⌘, first. |
-| **iOS-only keys in the Mac `Info.plist`.** | Verified again in the 9 Aug archive: `NSSupportsLiveActivities = 1`, `UILaunchScreen`, `UIApplicationSceneManifest`, `UIApplicationSupportsIndirectInputEvents`, `UISupportedInterfaceOrientations~iphone/~ipad`. macOS ignores them, but `NSSupportsLiveActivities` on a Mac is a claim that is not true, and this app's whole habit is not to claim things that are not true. Fix with `INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]`. **VERIFY** that `INFOPLIST_KEY_*` accepts an `[sdk=…]` condition in Xcode 26 — untested; the fallback is a real `Info.plist` for the macOS SDK. |
+| **iOS-only keys in the Mac `Info.plist`.** | `UILaunchScreen`, `UIApplicationSceneManifest`, `UIApplicationSupportsIndirectInputEvents`, `UISupportedInterfaceOrientations~iphone/~ipad` are all still there; macOS ignores them and they are cosmetic. `NSSupportsLiveActivities` was the one that was a *claim*, and it is **fixed** — see the box below for the setting that does it and the one that looks right and is not. |
 | **`NSCameraUsageDescription` ships with no camera behind it.** | `Views/CameraPicker.swift` is entirely inside `#if canImport(UIKit)`. Cosmetic — but see § 3.5. |
-| **`NSHumanReadableCopyright` is unset.** | The About box will show no copyright line. Set `INFOPLIST_KEY_NSHumanReadableCopyright`. |
+| ~~**`NSHumanReadableCopyright` is unset.**~~ | **Fixed.** `INFOPLIST_KEY_NSHumanReadableCopyright` is now set on all four configurations — the app's two and the widget extension's two, because an extension has an About-less bundle that App Store Connect still reads. |
 | **Two compiler warnings.** | `Animation/BuddyAnimator.swift:219` — captured `var self` in concurrently-executing code, an error in Swift 6 mode. `Views/GardenView.swift:82` — unused `kind`. The first is a future build break. |
 | **A bare Space bar is bound as a menu shortcut.** | `MenuBarControls` binds `.keyboardShortcut(.space, modifiers: [])` to Start/Pause, and `PawmodoroApp`'s own comment three files away says not to. Partly answered 9 Aug: read through the accessibility API the *main* menu bar carries no Space (`Session ▸ Start` has an empty `AXMenuItemCmdChar`; only `Give It a Shake` has one, ⌘K), so the binding lives in the `MenuBarExtra` menu alone, whose key equivalents are live only while that menu is open. **VERIFY** by typing a space into the rename field once. |
+
+### `INFOPLIST_KEY_*` and `[sdk=…]` — measured, and the obvious fix is wrong
+
+This used to be a **VERIFY**, and the fix it prescribed —
+`INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]`, on its own — was
+**measured on Xcode 26.3 and is a bug**. Do not write it that way.
+
+`INFOPLIST_KEY_*` does accept an `[sdk=…]` condition. What it does not do is
+drop the key when the condition misses. Three states, each built and each read
+back out of the product with `plutil -p`:
+
+| Build setting | `NSSupportsLiveActivities` in the built `Info.plist` |
+|---|---|
+| absent entirely | key absent |
+| `[sdk=…]` condition **does not** match this SDK | key present, **`0`** |
+| `[sdk=…]` condition **does** match | key present, `1` |
+
+Re-confirmed in two products built from the current tree on 10 Aug, rather than
+taken from the earlier write-up: the macOS Debug `.app` reads
+`"NSSupportsLiveActivities" => 0` and the `Debug-iphonesimulator` `.app` reads
+`=> 1`. Same setting, same build, opposite answers — which is the whole point.
+
+`GENERATE_INFOPLIST_FILE` writes one entry for every `INFOPLIST_KEY_` name
+that appears anywhere in the settings table; an unmatched condition evaluates
+to the empty string, and the empty string lands as boolean false. So
+conditioning on `iphoneos*` alone silently ships **`NSSupportsLiveActivities =
+0` on `iphonesimulator`** — and the Simulator is this repo's entire
+verification loop. You would find out by wondering why the Live Activity
+stopped appearing.
+
+What is in the project, on both configurations of the app target:
+
+```
+"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphoneos*]" = YES;
+"INFOPLIST_KEY_NSSupportsLiveActivities[sdk=iphonesimulator*]" = YES;
+```
+
+`false` is the honest answer on a Mac, so that is where this stops. Making the
+key vanish on macOS would take a hand-written macOS `Info.plist` — a second
+source of truth for everything else in it, to remove a key macOS ignores.
+
+`tools/check_icons.py` holds both halves: a **static** rule over
+`project.pbxproj` that runs on every plain invocation, including on Linux, and
+a `--bundle` rule that reads a built Mac bundle's `Info.plist`. The static one
+was broken three ways deliberately — reverted to unconditional, conditioned on
+`iphoneos*` alone, and deleted outright — and caught all three.
 
 ## CAN SHIP AS IS — do not spend time on these
 
@@ -134,6 +205,35 @@ requires typing credentials.
 - **No home-screen widget.** `PawmodoroWidgetsExtension` is `SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"` and carries `platformFilter = ios` on both its dependency and its embed phase. Re-verified in the 9 Aug archive: the Mac `.app` has no `Contents/PlugIns`. Just do not mention widgets in the Mac listing.
 - **The app-group write is a no-op on the Mac.** `TimerEngine.settingsDidChange()` writes two keys to `UserDefaults(suiteName: "group.com.pawmodoro")` for the widget. With no widget and no app-groups entitlement it lands in the app's own container and nothing reads it. **Do not add App Groups to the Mac entitlements to "fix" this** — there is nothing to fix, and note the macOS form would have to be `6YFQ69HSD6.group.com.pawmodoro` anyway.
 - **40 MB `.app` / 38 MB `.pkg`.** `CLAUDE.md` retired the 45 MB ceiling; the rule that survives is *measure it and say the number*, which is what those figures are.
+
+---
+
+## Driving the Mac build — `tools/mac_probe.py`
+
+The owner works at this machine while the Mac build is being checked, so
+anything that moves the cursor, clicks, or pulls a window in front of what he
+is typing into is off the table — which rules out every desktop-automation
+tool there is. `tools/mac_probe.py` is what is left, and it is enough for
+nearly everything: it launches the built `.app` detached so it never becomes
+frontmost, lists its windows with their real sizes off `CGWindowList`,
+photographs a window **by id** with `screencapture -l` even when that window
+is behind another app or shoved half off the screen, presses controls through
+the accessibility API with no pointer involved, and quits what it started.
+Read its docstring before using it; every claim in there was measured on this
+Mac rather than hoped for.
+
+Two things to take from it before you start. `windows()` is often *better*
+evidence than a screenshot — the menu bar extra bug was "416 × 24 where it
+should be 36 × 24", which is one line of output and nothing to squint at. And
+**wrap anything that seeds state in `preserve()`**: redirecting `HOME` does not
+isolate the app (CFPreferences resolves the home directory out of the passwd
+database), so a run with `-PawmodoroBond 200` rewrites the owner's real
+preferences unless something puts them back.
+
+The one thing it cannot do is hover: a posted mouse-moved event does not drive
+SwiftUI's `.onHover`, because the window server synthesizes enter and exit from
+the real cursor. Verify a hover *appearance* by rendering the hovered state
+directly, and the *wiring* by reading the code. Never claim you saw one.
 
 ---
 
@@ -554,20 +654,56 @@ be VERIFY:
 
 ## 5. What App Store Connect will demand that does not exist yet
 
-### 5.1 The macOS app icon — the one hard blocker
+### 5.1 The macOS app icon — was the one hard blocker, now closed
 
-Re-verified on the 9 Aug 20:47 archive: the built Mac `Info.plist` has **no**
-`CFBundleIconName` and **no** `CFBundleIconFile`. A separate workflow has since
-put ten `AppIcon-mac-*` PNGs and a `"idiom": "mac"` ladder into
-`AppIcon.appiconset` (the catalog now declares 11 images across `mac` and
-`universal`) — **built and confirmed by nobody yet.** Everything below is why
-that ladder is the right shape; checklist step 5 is how to prove it shipped.
+The 9 Aug 20:47 archive had **no** `CFBundleIconName` and **no**
+`CFBundleIconFile`. `b50a7c3` put ten `AppIcon-mac-*` PNGs and a
+`"idiom": "mac"` ladder into `AppIcon.appiconset` (11 images now, across `mac`
+and `universal`), and a build made afterwards carries all of it:
+`CFBundleIconName = AppIcon`, `CFBundleIconFile = AppIcon`, a 37,266-byte
+`Contents/Resources/AppIcon.icns`, and the renditions in `Assets.car`.
 
 Do not trust `assetutil --info | grep -c AppIcon` — it counts the twenty
 `iconpreview_AppIcon*` renditions belonging to the alternate-icon picker. The
 check that means anything is `CFBundleIconName` in the built `Info.plist`.
 
-Two separate problems:
+**One number that was overstated, corrected here because this repo's rule is to
+say the measured one.** The icon write-up called the round trip through the
+build "BYTE-IDENTICAL … mean absolute difference 0.0/255". It is not
+byte-identical, and 0.0 was a `%.1f` of something that is not zero. Two
+measurements, both of the same thing — *does the art survive being compiled
+into the product* — and neither changes the conclusion by a hair:
+
+| Comparison | mean | max channel | pixels differing |
+|---|---|---|---|
+| `NSWorkspace` render of the built bundle vs. the source PNG, 1024 × 1024 | **0.002/255** | **11** | **1,836 of 1,048,576** |
+| `AppIcon.icns` unpacked with `iconutil` vs. the source PNGs — 128@2x | 0.012/255 | 34 | 398 of 65,536 |
+| the same, 128@1x | 0.046/255 | 51 | 182 of 16,384 |
+| the same, 16@2x | 0.096/255 | 51 | 31 of 1,024 |
+| the same, 16@1x | **2.53/255** | **137** | 33 of 256 |
+
+Provenance, since the whole point of the correction is provenance: the
+`NSWorkspace` row was measured by the verification pass that caught the
+overstatement; the four `.icns` rows were measured here on 10 Aug, headlessly,
+by unpacking the `AppIcon.icns` out of a Debug Mac build made 9 Aug 22:44 with
+`iconutil --convert iconset` and differencing it against
+`Pawmodoro/Assets.xcassets/AppIcon.appiconset/`. That `.icns` holds only four
+sizes — 16, 16@2x, 128, 128@2x — because it is the legacy fallback; the full
+ladder lives in `Assets.car`.
+
+The pattern is what you would expect from a resampling and re-encoding round
+trip and not from a wrong picture: a handful of edge pixels, worst where there
+are fewest of them. At 16 × 1 the body is 13 px, so a third of a pixel of
+difference on the rounded corner is 2.5/255 averaged over the tile. The
+conclusion — *the art in the bundle is our art* — is untouched. The claim that
+it was byte-identical was not measured, it was read off a rounded print.
+
+`tools/check_icons.py` says the live version of that number every run
+(`macOS art: 512@2x matches the shipped drawing to 0.1/255`), with the failure
+bar at 4.0 — comfortably above resampling noise and far below a stale icon.
+
+Two separate problems, both now solved — kept here because the next person to
+add a platform meets them again:
 
 **The sizes.** macOS needs the full ladder — 16, 32, 128, 256, 512 pt at 1× and
 2×. **ANSWERED 8 Aug: a single 1024 in the macOS slot is not sufficient**; the
@@ -575,17 +711,27 @@ ten-entry `"idiom": "mac"` ladder is required, and adding it does not disturb
 the iPhone icon (`MAC_STORE_ASSETS.md` § 1). App Store Connect takes the
 listing icon from the bundle; there is no separate Mac icon upload.
 
-**The shape, which matters more.** The existing PNG is 1024×1024, mode `RGB` —
+**The shape, which matters more.** The old PNG was 1024×1024, mode `RGB` —
 opaque, full-bleed, square. Correct for iOS, where the system rounds the
-corners. On macOS **nothing rounds it**, so Pawmodoro would sit in the Dock as
-a hard square among thirty rounded rectangles and read as a bug. A macOS icon
-is drawn *inside* a smaller rounded rect on a transparent 1024 canvas, with its
-own shadow.
+corners. On macOS **nothing rounds it**, so Pawmodoro would have sat in the
+Dock as a hard square among thirty rounded rectangles and read as a bug. A
+macOS icon is drawn *inside* a smaller rounded rect on a transparent 1024
+canvas, with its own shadow.
 
-Given this repo's rule — *edit the script, never the PNG* — the fix is a
-`make_mac_icon()` beside `make_icon()` in `tools/generate_assets.py`. **VERIFY
-the inset and corner radius against the current Apple HIG** rather than
-eyeballing them; the geometry was restated for the macOS 26 icon style.
+The geometry is settled and it was **measured rather than read off the HIG**,
+which is the better answer to the VERIFY that used to sit here:
+`NSWorkspace.icon(forFile:)` drawn at 1024 for fifteen installed apps, alpha
+channels differenced. Fourteen of the fifteen agree to the pixel — an 824 × 824
+body at (100, 100) with a corner radius of 185.5 px and a shadow of about
+sigma 10, offset 10 down, peak alpha 0.30. (The fifteenth is Safari, whose icon
+is a circle; Apple's grid lets a circle run wider.) Those numbers live in
+`check_icons.py` as `APPLE_GRID`, deliberately **not** imported from the
+generator, so editing the generator cannot talk the checker round.
+
+And the folklore is wrong: it is **not** a squircle. A circular-arc rounded
+rectangle fits the measured edge at 0.83 px mean error; a continuous
+superellipse fits at 1.7 px — worse. They differ by about 2 px at 45° on a 1024
+canvas. PIL draws the arc exactly, so `tools/generate_assets.py` draws the arc.
 
 Xcode 26 also ships **Icon Composer** (`.icon` files). Not required at a macOS
 14 deployment target, and a `.icon` would be a second source of truth for
@@ -646,7 +792,6 @@ Universal Purchase."*
 | 3.4 | What asks for `hid-control` at launch? | Instrument the `MenuBarExtra` shortcuts / `NSEvent` polling; it is the app's only sandbox denial |
 | Should fix | Does the bare-Space menu shortcut swallow spaces in the rename field? | Open Settings, rename the buddy, type "Mister Whiskers" |
 | 5.1 | Current HIG inset and corner radius for a macOS icon | Apple HIG → App icons → macOS |
-| Should fix | Do `INFOPLIST_KEY_*` settings accept `[sdk=…]` conditions in Xcode 26? | Add one, build, `plutil -p` the result |
 | 2 | Is "iPhone and iPad Apps on Mac" currently on for the iOS app? | App Store Connect → Pricing and Availability (checklist 17) |
 | 5.4 | Are App Privacy answers shared across platforms? | Visible once the platform is added |
 
@@ -654,7 +799,13 @@ Universal Purchase."*
 § 3.3); does `PhotosPicker` need an entitlement (no); does Xcode regenerate the
 distribution profiles (yes, all three — § 4.2); is the App ID enabled for macOS
 (yes); what is the `method` spelling (`app-store-connect`); does `altool` still
-work (yes); does Xcode 26 accept a single-size macOS icon (no).
+work (yes); does Xcode 26 accept a single-size macOS icon (no); does the ten-rung
+`mac` ladder actually reach the built bundle (yes — checklist step 5).
+
+**Closed 10 Aug:** do `INFOPLIST_KEY_*` settings accept `[sdk=…]` conditions in
+Xcode 26 — **yes, and the naive form is a trap.** The answer, the measurement
+and the two SDKs it has to name are in the box under "Should fix", and
+`tools/check_icons.py` now fails if either condition goes missing.
 
 ---
 

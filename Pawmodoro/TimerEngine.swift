@@ -1354,7 +1354,10 @@ final class TimerEngine {
         guard !hasPlus else { return }
         var changed = false
         if settings.buddy.isPlus {
-            settings.buddy = .cat
+            // The free default, which is the capybara now. A lapsed owner who
+            // had the capybara no longer lands here at all — it is free, so
+            // `isPlus` is false and nothing is taken off them.
+            settings.buddy = .capybara
             changed = true
         }
         if settings.ambience.isPlus {

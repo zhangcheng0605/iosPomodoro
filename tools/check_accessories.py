@@ -188,7 +188,27 @@ EYE_PAIRS = (("awake", "awake_blink"), ("asleep", "wake"), ("look_l", "look_r"))
 # Above this many changed pixels the two frames are not an eyes-only pair —
 # Bramble's asleep pose is a different drawing rather than the same one with
 # its eyes shut — and there is nothing to conclude from the difference.
-MAXIMUM_EYE_DIFFERENCE = 90
+#
+# Raised from 90 when Tofu was redrawn with a seven-pixel eye instead of the
+# shared helper's five. Two of those, shifted two columns for a glance, change
+# 110 pixels: still an eyes-only pair by every meaning of the phrase, but over
+# the old line, so `eye_box` returned nothing and rule 3a quietly stopped
+# checking `look_l` and `look_r` on the buddy every new install starts with.
+# Nothing failed. The run simply reported two fewer face anchors verified, in
+# a line nobody reads, which is this repo's favourite way to lose a checker.
+#
+# The number is a floor with a measured ceiling, not a taste: the pair this
+# rule exists to reject is the hedgehog's asleep/wake at 177 changed pixels,
+# because those genuinely are two different drawings. 140 admits every real
+# eyes-only pair in the roster — the largest is Tofu's 110 — and still leaves
+# 37 pixels of daylight under Bramble. Verified by moving it to 180 and
+# watching his sleeping face acquire an anchor it must not have.
+#
+# One pair stays out and always did: the owl's glance changes 226 pixels,
+# because her eyes are eleven across. Rule 3c still reaches both of her
+# glances through `eye_blobs`, which is a different algorithm reading the
+# shipped sprite, so they are not unchecked — only unpaired.
+MAXIMUM_EYE_DIFFERENCE = 140
 
 
 def eye_colour(species):

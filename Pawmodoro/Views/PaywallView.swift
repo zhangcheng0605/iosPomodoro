@@ -41,7 +41,7 @@ struct PaywallView: View {
             Text("A bigger, cozier den")
                 .font(.title2.bold())
                 .foregroundStyle(Theme.bark)
-            Text("Fifty tracks, eight more buddies, four far isles, six more themes.")
+            Text("Fifty tracks, seven more buddies, four far isles, six more themes.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.bark.opacity(0.75))
                 .multilineTextAlignment(.center)
@@ -75,7 +75,10 @@ struct PaywallView: View {
             feature(
                 icon: "pawprint.fill",
                 title: "Eleven buddies in total",
-                detail: "Tofu the capybara soaks on breaks, Luna the owl keeps watch at night, Pip the otter floats on his back holding a pebble, and Bramble the hedgehog sleeps as a perfect ball."
+                // Tofu is no longer named here: the capybara ships free and is
+                // what a new install opens on, so selling it back would be
+                // the paywall taking credit for something already given.
+                detail: "Luna the owl keeps watch at night, Pip the otter floats on his back holding a pebble, Momo the bunny binkies clean off the ground, and Bramble the hedgehog sleeps as a perfect ball."
             )
             feature(
                 icon: "speaker.wave.2.fill",

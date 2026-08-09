@@ -2,18 +2,27 @@ import Foundation
 
 /// The companion who keeps you company through a session.
 ///
-/// Each buddy after the first two carries one signature behaviour — a soak, a
-/// waddle, a pair of raised arms, a night watch. The quirk is the point: five
+/// Nearly every buddy carries one signature behaviour — a soak, a waddle, a
+/// pair of raised arms, a night watch. The quirk is the point: five
 /// interchangeable animals is a list, and eleven animals that each do
 /// something only they do is a cast.
+///
+/// **The order of these lines is the order on screen.** `allCases` is what the
+/// onboarding picker, the settings row and the paywall all iterate, and
+/// `starters` and `roster(strayJoined:)` only filter it. Moving a line is
+/// therefore a product decision rather than a tidy-up — and it is a safe one,
+/// because the raw values are strings: no stored setting, postcard, dream key
+/// or pouch entry can change meaning when a case moves.
 enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
+    /// First, free, and what a new install opens on. The one buddy whose
+    /// position in this list is load-bearing.
+    case capybara
     case cat
     case dog
     case penguin
     case bunny
     case hamster
     case fox
-    case capybara
     case redpanda
     case owl
     case otter
@@ -43,14 +52,25 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     /// Matches the sprite file names in the asset catalog.
     var species: String { rawValue }
 
-    /// Cat, dog and penguin ship with the app; the rest come with Pawmodoro
-    /// Plus. The penguin is free on purpose — a visibly generous free tier is
-    /// the cheapest goodwill available. Soot is free for a different reason:
-    /// charging for a cat who chose you would be the wrong story to tell.
+    /// Capybara, cat, dog and penguin ship with the app; the rest come with
+    /// Pawmodoro Plus. The penguin is free on purpose — a visibly generous
+    /// free tier is the cheapest goodwill available. Soot is free for a
+    /// different reason: charging for a cat who chose you would be the wrong
+    /// story to tell.
+    ///
+    /// The capybara is free because it is the *default*, and a default has to
+    /// be. A new install that opens on a padlock has spent its first second
+    /// telling somebody they cannot have the thing they are looking at.
+    ///
+    /// It moved from Plus to free, which is the only direction this line is
+    /// allowed to travel — the same rule `CatalogItem.price` lives by. Anybody
+    /// who spent acorns or bought Plus for it keeps everything: the id stays in
+    /// the pouch (nothing is ever removed from it) and `StoreManager.isUnlocked`
+    /// answers `true` on `!item.isPlus` before it ever asks either road.
     var isPlus: Bool {
         switch self {
-        case .cat, .dog, .penguin, .stray: false
-        case .bunny, .hamster, .fox, .capybara, .redpanda, .owl,
+        case .capybara, .cat, .dog, .penguin, .stray: false
+        case .bunny, .hamster, .fox, .redpanda, .owl,
              .otter, .hedgehog: true
         }
     }
@@ -163,7 +183,14 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
     /// offer the moment through the happy bounce until their frame is drawn.
     var pawUpFrame: String? {
         switch self {
-        case .cat, .dog, .stray: frame("pawup")
+        // The capybara is here because it is the *default* — the buddy every
+        // new install meets — and the high five is one of the few things in
+        // this app that has to be met halfway. Without this it fell back to
+        // the happy bounce, so the paw was never actually offered and the
+        // window could not be missed, which quietly removes the feature for
+        // everyone who never changes buddy. The sprite already existed; only
+        // this arm was missing.
+        case .capybara, .cat, .dog, .stray: frame("pawup")
         default: nil
         }
     }
@@ -220,19 +247,26 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .bunny: frame("binky")
         case .hamster: frame("stuff")
         case .fox: frame("pounce")
-        case .capybara: frame("unbothered")
+        case .capybara: frame("flop")
         case .owl: frame("flap")
         }
     }
 
     /// The second half of a two-part signature: the hedgehog's ball cracking
-    /// open again for a face, and the owl's wings coming back *down* between
-    /// beats — a flap held on one spread-wing drawing is a hover, and the
-    /// perched drawing already has the wings folded, so no new art was needed.
+    /// open again for a face, the owl's wings coming back *down* between beats
+    /// — a flap held on one spread-wing drawing is a hover, and the perched
+    /// drawing already has the wings folded, so no new art was needed — and
+    /// the capybara's half-lidded consideration before it goes over.
+    ///
+    /// `unbothered` is the frame the old joke was built on, and it is still
+    /// the right drawing: what got overridden was a whole move that consisted
+    /// of nothing happening, not the face. It now opens the flop rather than
+    /// being the whole of it.
     var anticTailFrame: String? {
         switch self {
         case .hedgehog: frame("wake")
         case .owl: frame("awake")
+        case .capybara: frame("unbothered")
         default: nil
         }
     }
@@ -255,8 +289,35 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         // pounce goes *forward* and lands nose-down on the thing. The shape
         // was already written and simply had nobody using it.
         case .fox: .pounceForward
-        case .capybara: .still              // declines
+        // Was `.still` — one frame, one second, and a caption reading
+        // "declines to move". The joke was well made and the owner has
+        // overridden it: the first buddy anybody meets cannot be the one that
+        // does nothing when you touch it. What replaced it keeps the
+        // character, because the comedy of a capybara was never that it is
+        // inert — it is that it is heavy and in no hurry, and lets gravity do
+        // the work. See `AnticShape.flopOver`.
+        case .capybara: .flopOver
         case .owl: .flap                    // an owl does not somersault
+        }
+    }
+
+    /// A multiplier on how long every beat of every *shared* move holds.
+    ///
+    /// Data rather than a second set of tables. A capybara that hops and
+    /// tumbles at the bunny's tempo is the wrong animal, but the answer is not
+    /// to drop those moves — a capybara turning slowly all the way over is
+    /// funnier than a capybara that refuses to — and it is certainly not to
+    /// copy `hopBeats` with larger numbers, which would be four tables to keep
+    /// in step with each other forever. One number, applied in
+    /// `Antic.beats(for:)`, slows the whole vocabulary at once.
+    ///
+    /// The signature is deliberately exempt: it is written for the animal that
+    /// performs it and is already at that animal's tempo. See the note there.
+    var anticTempo: Double {
+        switch self {
+        case .capybara: 1.35
+        case .cat, .dog, .penguin, .bunny, .hamster, .fox, .redpanda,
+             .owl, .otter, .hedgehog, .stray: 1
         }
     }
 
@@ -275,7 +336,10 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         case .bunny: "binkies — briefly, entirely airborne"
         case .hamster: "stuffs both cheeks with nothing at all"
         case .fox: "pounces on something only it can hear"
-        case .capybara: "declines to move. One ear flicks"
+        // Measured on screen at 61 characters and it wrapped the caption
+        // capsule onto a second line — the only remark in the table that did.
+        // Forty is where the hedgehog's sits, and the hedgehog's fits.
+        case .capybara: "leans, thinks better of it, and tips over"
         case .owl: "spreads both wings and lifts off the perch"
         }
     }

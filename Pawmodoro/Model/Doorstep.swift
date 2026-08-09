@@ -266,7 +266,16 @@ extension Buddy {
         switch self {
         case .hedgehog: CGSize(width: 0.04, height: -0.16)
         case .penguin: CGSize(width: 0.15, height: -0.30)
-        case .capybara: CGSize(width: 0.21, height: -0.20)
+        // Moved up and out when Tofu was redrawn from the owner's reference.
+        // 0.21/-0.20 is grid (28.4, 12) on a forty-pixel canvas, which was the
+        // old drawing's cheek and is the new one's **right eye** — a burr
+        // sitting in the pupil of the buddy every new install starts with, on
+        // the first screen anybody ever sees. Nothing could catch it: this is
+        // the one placement on a buddy that is typed rather than measured off
+        // the sprite, so `check_accessories.py` never looks at it and the
+        // anchors it does emit moved without it. On the ear tip instead, which
+        // is where the rest of the roster wears one anyway.
+        case .capybara: CGSize(width: 0.29, height: -0.31)
         case .owl: CGSize(width: 0.20, height: -0.33)
         default: CGSize(width: 0.18, height: -0.28)
         }

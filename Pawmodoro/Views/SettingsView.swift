@@ -260,7 +260,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Label("Unlock Pawmodoro Plus", systemImage: "sparkles")
                             .font(.body.weight(.semibold))
-                        Text("Eight more buddies, sounds and themes — one payment.")
+                        Text("Seven more buddies, sounds and themes — one payment.")
                             .font(.caption)
                             .foregroundStyle(Theme.bark.opacity(0.7))
                     }

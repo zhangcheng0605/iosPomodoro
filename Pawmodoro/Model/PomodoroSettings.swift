@@ -9,7 +9,10 @@ struct PomodoroSettings: Codable, Equatable {
     var sessionsPerLongBreak: Int = 4
     var hapticsEnabled: Bool = true
     var autoStartNextPhase: Bool = false
-    var buddy: Buddy = .cat
+    /// Only ever reached by an install with nothing stored — `init(from:)`
+    /// below falls back to this key by key, and `buddy` is always written, so
+    /// anybody who has ever launched the app keeps whoever they have.
+    var buddy: Buddy = .capybara
     var ambience: Ambience = .off
     var theme: AppTheme = .sakura
     /// The ring pulses on a slow breath during breaks, to breathe along with.

@@ -74,15 +74,21 @@ FOX_PALETTE = {
 
 # --- The second cast -------------------------------------------------------
 
+# Redrawn from the reference the owner sent, and it inverts one thing every
+# other buddy in the app does: the muzzle patch is **darker** than the coat.
+# Eleven buddies wear a cream muzzle, which is what a cat has; a capybara's
+# face is a large blunt patch of darker fur, and that single reversal is most
+# of what stops this one reading as a very large hamster.
 CAPYBARA_PALETTE = {
     **CAT_PALETTE,
-    OUTLINE: (86, 62, 44, 255),
-    BODY: (168, 126, 88, 255),      # coarse brown
-    SHADE: (140, 102, 68, 255),
-    CREAM: (214, 184, 148, 255),
-    PINK: (176, 206, 212, 255),     # only used as the tub's waterline
-    ACCENT: (150, 108, 68, 255),    # the tub itself
-    NOSE: (92, 68, 54, 255),
+    OUTLINE: (72, 48, 34, 255),     # a heavier, warmer line than before
+    BODY: (214, 168, 116, 255),     # warm tan
+    SHADE: (162, 116, 70, 255),     # ears, muzzle patch, paws
+    CREAM: (234, 194, 148, 255),    # pale wood — the tub, and nothing on him
+    PINK: (242, 152, 166, 255),     # the blush, and only ever the blush
+    NOSE: (72, 48, 34, 255),        # one dark dot, the same value as the line
+    EYE: (54, 40, 32, 255),
+    ACCENT: (176, 206, 212, 255),   # the tub's waterline, and nothing else
 }
 
 REDPANDA_PALETTE = {
@@ -1725,54 +1731,133 @@ def fx_heart():
 
 # --- Capybara (Tofu) -------------------------------------------------------
 #
-# The shape note: a capybara is a brick with a blunt muzzle. Keeping the head
-# nearly rectangular is what stops it reading as a very large hamster.
+# Tofu is the first buddy: what a new install starts with and the first thing
+# anybody ever sees of this app, which is why he is drawn with more care than
+# any other animal here.
+#
+# The shape note used to say "a capybara is a brick with a blunt muzzle", and
+# that produced a brick. The reference the owner sent is a different animal
+# altogether and four things carry it, none of them detail:
+#
+#   1. **Roundness.** One soft blob, wider than tall at the base, no neck at
+#      all — the head sinks into the loaf rather than sitting on it.
+#   2. **A darker muzzle patch** covering most of the lower face. Every other
+#      buddy wears a cream muzzle, which is what a cat has; reversing it is the
+#      single strongest species cue available at this size.
+#   3. **Two round pink cheeks**, set out at the edge of the face where the
+#      coat still shows. `PINK` is his and nothing else uses it.
+#   4. **Almost nothing else.** Two dark ovals, one dark dot, a one-pixel
+#      mouth. Every stroke added past that made him older and less charming;
+#      the whiskers, the brow stripes and the chin shadow were all drawn, all
+#      looked fine at 4x, and all read as grime at 104pt.
+#
+# The ears are set wide enough to clear the skull on their own. The old pair
+# sat inside the head's own outline: they were invisible in the resting pose
+# and gone completely from the crouch, which is a buddy with no ears in the
+# frame that opens every acrobatic.
+#
+# Nothing here draws a `rounded_rectangle` with a radius under 4. Pillow 11.3
+# draws small-radius corners with the shape's **centre column empty**, which is
+# how his nose once shipped split down the middle on six frames with nothing in
+# the toolchain able to see it.
 
-def _blunt_nose(d, left, top, right, bottom):
-    """The capybara's nose: a rectangle with its four corners knocked off.
+def capy_eyes(d, left, right, y, mode):
+    """Tofu's own eyes, and the second-biggest cuteness lever in the file after
+    the blush.
 
-    This was `rounded_rectangle(..., radius=2)` and has to stop being one.
-    Pillow 11.3 draws that shape with its **centre column empty** — the nose
-    came out split down the middle by a one-pixel gap, on this drawing and the
-    five frames derived from it, and nothing in the toolchain looks at a
-    rendered PNG closely enough to say so. It only surfaced because
-    regenerating the sprites for a new pose diffed six files nobody had
-    touched. Two plain rectangles draw the same seven-by-five blunt shape the
-    committed art has, and draw it the same way in every version.
+    The shared `eyes()` helper draws a five-pixel oval, which is right on a
+    twenty-five-pixel cat head and small on a twenty-nine-pixel capybara one:
+    at 104pt he came out with two neat dots and read as sensible rather than as
+    a baby. Seven pixels with a two-pixel catchlight is the whole difference.
+
+    Written the way `owl_eyes` is, for the same reason and with the same
+    obligation: it applies `EYE_SHIFT` by hand, so the two glance frames still
+    move his pupils without redrawing the animal. Both open and shut are drawn
+    as a *pair of spans in `EYE`* with a real gap between them, which is what
+    `generate_accessories._eye_band` looks for — an eye drawn any other way
+    would cost him his face anchor and his spectacles.
     """
-    d.rectangle([left, top + 1, right, bottom - 1], fill=NOSE)
-    d.rectangle([left + 1, top, right - 1, bottom], fill=NOSE)
+    left, right = left + EYE_SHIFT, right + EYE_SHIFT
+    if mode == "open":
+        for cx in (left, right):
+            d.ellipse([cx - 3, y - 3, cx + 3, y + 3], fill=EYE)
+            # Two pixels of catchlight, not three. `eyes_open` puts one pixel
+            # in a five-pixel eye; the same *fraction* of a seven-pixel one is
+            # a three-by-three white square, and at 104pt that is not a
+            # highlight, it is a sparkle sticker.
+            d.rectangle([cx - 2, y - 2, cx - 1, y - 1], fill=GLINT)
+    elif mode == "closed":
+        # Shut, and content about it: a shallow arc curving *down* at the
+        # corners. A straight line reads as asleep, and this frame is a blink.
+        for cx in (left, right):
+            for dx in range(-3, 4):
+                d.point((cx + dx, y - abs(dx) // 3), fill=EYE)
+    else:                                            # happy
+        # A steeper arch than `eyes_happy` draws. That one rises two rows over
+        # five columns, which on a seven-pixel eye flattens out into a dash
+        # with drooping ends — the pleased ^^ stops being a ^^ and becomes a
+        # frown. Four rows over seven columns is the same *slope*, carried
+        # across the wider eye.
+        for cx in (left, right):
+            for dx in range(-3, 4):
+                d.point((cx + dx, y + abs(dx) - 2), fill=EYE)
+
+
+def _capy_face(d, left, right, y, eyes_mode, muzzle, blush, nose):
+    """Eyes, muzzle patch, blush and nose — the four marks, in their order.
+
+    One routine because the order is load-bearing and easy to get wrong: the
+    muzzle goes down first, the eyes sit above it, and the blush is painted
+    *last* so it laps over the muzzle's outer edge the way it does in the
+    reference instead of being cut off by it.
+    """
+    d.rounded_rectangle(muzzle, radius=6, fill=SHADE)
+    capy_eyes(d, left, right, y, eyes_mode)
+    for box in blush:
+        d.ellipse(box, fill=PINK)
+    # Broad, blunt and small. A capybara's nose is wider than it is tall, and
+    # the mouth under it is one pixel: at 104pt a two-pixel philtrum with a
+    # round nose on top reads as a little tree growing out of his face.
+    nx, ny = nose
+    d.ellipse([nx - 3, ny, nx + 3, ny + 2], fill=NOSE)
+    d.point((nx, ny + 3), fill=OUTLINE)
 
 
 def capybara_awake(eyes_mode="open"):
     g = new_grid()
     d = ImageDraw.Draw(g)
-    # Small round ears, high and wide apart.
-    d.ellipse([10, 6, 16, 12], fill=SHADE)
-    d.ellipse([24, 6, 30, 12], fill=SHADE)
-    # Loaf body.
-    d.ellipse([6, 21, 34, 37], fill=BODY)
-    d.ellipse([12, 27, 28, 37], fill=CREAM)
-    # Blocky head.
-    d.rounded_rectangle([8, 8, 32, 27], radius=6, fill=BODY)
-    # Blunt muzzle across the whole lower face.
-    d.rounded_rectangle([11, 18, 29, 28], radius=5, fill=CREAM)
-    eyes(d, 14, 26, 15, eyes_mode)
-    _blunt_nose(d, 17, 21, 23, 25)
-    d.line([(20, 25), (20, 27)], fill=OUTLINE)
+    # Ears first, so the head overlaps their base and they read as ears rather
+    # than as two lumps stuck on the skull.
+    d.ellipse([5, 4, 14, 13], fill=SHADE)
+    d.ellipse([26, 4, 35, 13], fill=SHADE)
+    # The loaf, drawn before the head so the two merge with no neck between
+    # them. Wider than the head on purpose: the base is the widest part of him.
+    d.ellipse([3, 22, 37, 38], fill=BODY)
+    # Stubby front paws, held close in and poking a row or two below the belly.
+    d.ellipse([12, 31, 19, 38], fill=SHADE)
+    d.ellipse([21, 31, 28, 38], fill=SHADE)
+    d.ellipse([6, 6, 34, 30], fill=BODY)
+    _capy_face(d, 14, 26, 14, eyes_mode,
+               muzzle=[10, 17, 30, 29],
+               blush=([6, 17, 11, 22], [29, 17, 34, 22]),
+               nose=(20, 21))
     return outline_silhouette(g)
 
 
 def capybara_asleep(eyes_mode="closed"):
+    """Settled. A capybara asleep does not curl the way a cat does — it simply
+    stops standing up, which at this size is a loaf with a face on the left."""
     g = new_grid()
     d = ImageDraw.Draw(g)
-    d.ellipse([5, 21, 35, 36], fill=BODY)
-    d.ellipse([12, 27, 30, 36], fill=CREAM)
-    d.ellipse([7, 15, 13, 21], fill=SHADE)          # ear
-    d.rounded_rectangle([5, 16, 24, 32], radius=6, fill=BODY)
-    d.rounded_rectangle([7, 23, 22, 32], radius=5, fill=CREAM)
-    eyes(d, 12, 19, 22, eyes_mode)
-    d.rounded_rectangle([11, 26, 16, 29], radius=2, fill=NOSE)
+    d.ellipse([3, 20, 37, 38], fill=BODY)
+    # The ear that shows, set high and out to the left so it clears the head's
+    # own outline. Inside it, it is not an ear, it is a shadow.
+    d.ellipse([4, 11, 13, 20], fill=SHADE)
+    d.ellipse([3, 15, 27, 37], fill=BODY)            # head, low and left
+    _capy_face(d, 11, 21, 23, eyes_mode,
+               muzzle=[6, 26, 25, 36],
+               blush=([4, 26, 9, 31], [23, 26, 28, 31]),
+               nose=(15, 30))
     return outline_silhouette(g)
 
 
@@ -1782,56 +1867,233 @@ def capybara_soak():
     g = new_grid()
     d = ImageDraw.Draw(g)
     # Steam, in white so it reads against the sky rather than against the fur.
-    for x0, y0 in ((9, 4), (20, 1), (31, 4)):
+    #
+    # Out at the rim rather than over the ears. At x=9 and x=31 the two side
+    # wisps rose from the exact columns his ears occupy and the frame came out
+    # as a capybara with antlers — a detached mark directly above a solid shape
+    # joins it, whatever colour it is drawn in.
+    for x0, y0 in ((3, 4), (20, 0), (36, 4)):
         for i in range(4):
             d.point((x0 + (i % 2), y0 + i * 2), fill=GLINT)
     # Head and shoulders, kept well clear of the rim.
-    d.ellipse([11, 11, 16, 16], fill=SHADE)
-    d.ellipse([24, 11, 29, 16], fill=SHADE)
-    d.rounded_rectangle([10, 12, 30, 28], radius=6, fill=BODY)
-    d.rounded_rectangle([13, 19, 27, 29], radius=5, fill=CREAM)
-    eyes(d, 15, 25, 17, "happy")
-    d.rounded_rectangle([18, 22, 23, 26], radius=2, fill=NOSE)
+    d.ellipse([7, 9, 15, 17], fill=SHADE)
+    d.ellipse([25, 9, 33, 17], fill=SHADE)
+    d.ellipse([8, 11, 32, 31], fill=BODY)
+    _capy_face(d, 15, 25, 18, "happy",
+               muzzle=[12, 21, 28, 30],
+               blush=([8, 21, 12, 25], [28, 21, 32, 25]),
+               nose=(20, 24))
     # The tub: water first, then a plain rim over it. Three staves, not seven —
     # the first attempt read as a barcode.
-    d.rectangle([5, 28, 35, 32], fill=PINK)
-    d.rounded_rectangle([4, 31, 36, 38], radius=3, fill=ACCENT)
+    d.rectangle([5, 28, 35, 32], fill=ACCENT)
+    d.rounded_rectangle([4, 31, 36, 38], radius=4, fill=CREAM)
     for x in (13, 20, 27):
         d.line([(x, 32), (x, 37)], fill=SHADE)
     return outline_silhouette(g)
 
 
-def capybara_unbothered():
-    """The joke, and the only one of the twelve who declines to perform.
+def capybara_flop():
+    """The signature, and the payoff of it. **This replaces the joke that used
+    to live here**, at the owner's direct instruction: Tofu used to decline to
+    perform while the other eleven tumbled, and he now performs.
 
-    Everybody else somersaults. Tofu half-closes his eyes and flicks one ear,
-    and that is the entire acrobatic. It is a real pose rather than a missing
-    one — the eyes are drawn lidded and the ear is drawn leaning — because a
-    buddy who simply did not animate would read as a bug.
+    What he does is the one acrobatic a capybara could plausibly be talked
+    into. He leans, half-closes his eyes (`capybara_unbothered`, which the move
+    opens on), thinks better of standing, and tips gently over onto one side —
+    and stays there, delighted, all four feet out. The character survives it:
+    the comedy of a capybara was never that it is inert, it is that it is heavy
+    and in no hurry and lets gravity do the work.
+
+    Three things the beats in `Antics.swift` depend on, so none of them is a
+    free choice here:
+
+    * **He tips toward the viewer's left**, so the head is on the left and the
+      feet are out to the right. The beats slide this frame dx -9; drawn the
+      other way round he would slide away from the direction he is falling.
+    * **He is already on the floor.** The figure ends on row 38 like every
+      other capybara frame, because the beat holding this adds no vertical
+      offset — a lying-down drawing that floats has to be caught here, since
+      nothing downstream can see it.
+    * **Drawn the right way up**, in the sense `bunny_binky` wrote down: both
+      eyes visible and near the top of the figure. Everything in this app that
+      genuinely turns over is a `rotationEffect` on the *view*, which carries
+      the hat and the collar round with it. A sprite drawn inverted puts its
+      eyes at the bottom, `generate_accessories.measure` reads the crown *from*
+      the eyes, and the measurer then calls the rump the head and ties every
+      collar across the face.
+
+    The ear is eight columns wide rather than the resting pose's nine, and that
+    one pixel is load-bearing. `measure` takes the crown as the first row whose
+    run through the head's centre line is at least *half* the head's width;
+    this head measures nineteen, so a ten-wide ear clears that bar on its own
+    and every hat ends up balanced on the ear tip five rows above his skull.
+    It is the trap in `measure`'s own docstring, met from the other side.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    # The four feet, out to the one side and relaxed, drawn before the body so
+    # it laps over the top of each and they read as coming out from under him
+    # rather than being stuck on. Two up in the air and two along the floor:
+    # four nubs in a line is a fringe, and four in two pairs is an animal that
+    # has fallen over and is pleased about it.
+    #
+    # The **gap between the pairs** is the part that had to be measured. Drawn
+    # as four ten-by-seven ellipses in a continuous column they touched at
+    # every join and fused into one dark mass down his back, which at 104pt
+    # reads as an enormous tail and not as legs at all. Each foot is smaller
+    # now and rows 27 to 29 are left clear of `SHADE` altogether, so the eye
+    # gets two pairs with daylight between them. Every one of them still
+    # overlaps the body — a foot drawn clear of it is a nub floating beside a
+    # capybara, since `outline_silhouette` rings each shape separately.
+    d.ellipse([24, 19, 38, 26], fill=SHADE)          # the pair in the air
+    d.ellipse([24, 31, 38, 38], fill=SHADE)          # the pair on the floor
+    # The body: horizontal, distinctly wider than tall, and on the ground.
+    d.ellipse([7, 22, 33, 38], fill=BODY)
+    # ...and the second foot of each pair, as a line *along* the first.
+    #
+    # Four separate ellipses is what this was twice, and it cannot work at
+    # forty pixels. His body already reaches x=33, so a foot far enough right
+    # to have daylight around it does not touch him and floats beside a
+    # capybara, while one close enough to touch merges with its neighbour:
+    # `outline_silhouette` draws only where the *silhouette* ends, so two
+    # touching feet in one colour are one foot, and the first pass came out as
+    # a single dark mass twice the size of his head. `owl_flap` had the same
+    # problem with wing quills and the same answer — an interior `OUTLINE`
+    # stroke along the shape reads as the edge of the limb behind it. Drawn
+    # after the body, or the body paints over it.
+    for y in (23, 35):
+        d.line([(30, y), (37, y)], fill=OUTLINE)
+    # The ear that is up, before the head so the head overlaps its base. Out
+    # over the top *corner* rather than square on top of the skull: centred it
+    # came out as a topknot, and an ear only reads as an ear where it leans off
+    # the side of a head. Still eight columns and not nine, for the reason in
+    # the docstring above.
+    d.ellipse([6, 10, 13, 18], fill=SHADE)
+    # The head, over on its side with him and resting on the floor.
+    d.ellipse([2, 17, 23, 38], fill=BODY)
+    # One cheek. The other is against the ground — and a single blush set high
+    # is also the clearest signal in the drawing that this animal is lying
+    # down: two of them read as the resting pose with the body cropped off.
+    #
+    # Out on the jaw, not between the eyes. At [16, 23] it sat directly above
+    # the nose with an eye either side of it and read as a clown's nose; a
+    # blush is only a blush where there is a face *edge* beside it, which on a
+    # head lying on its side is the far cheek, low and to the right.
+    _capy_face(d, 8, 18, 22, "happy",
+               muzzle=[3, 25, 21, 36],
+               blush=([18, 26, 23, 31],),
+               nose=(11, 28))
+    return outline_silhouette(g)
+
+
+def capybara_pawup():
+    """The high five, at the bell.
+
+    Tofu is what a new install starts with, so his is the first paw the app
+    ever puts up. `pawUpFrame` used to be the cat's, the dog's and Soot's only
+    — everybody else fell back to the happy bounce, which is a fine fallback
+    for the ninth buddy somebody unlocks and a poor one for the first thing
+    the app ever asks anyone to do.
+
+    Held low and only just above the shoulder. A capybara reaching is a
+    capybara that has been startled, and nothing startles this one.
+    """
+    g = new_grid()
+    d = ImageDraw.Draw(g)
+    d.ellipse([5, 4, 14, 13], fill=SHADE)
+    d.ellipse([26, 4, 35, 13], fill=SHADE)
+    d.ellipse([3, 22, 37, 38], fill=BODY)
+    d.ellipse([12, 31, 19, 38], fill=SHADE)          # the paw still on the floor
+    d.ellipse([6, 6, 34, 30], fill=BODY)
+    _capy_face(d, 14, 26, 14, "happy",
+               muzzle=[10, 17, 30, 29],
+               blush=([6, 17, 11, 22], [29, 17, 34, 22]),
+               nose=(20, 21))
+    # The raised one, drawn **after** the head — the first pass drew it before,
+    # the way the ears are drawn, and the head covered the whole arm: a high
+    # five with the paw hidden behind the animal giving it.
+    #
+    # Held out beside the chest rather than up over the shoulder, and clear of
+    # the head's own outline. His head is twenty-nine wide, so a paw raised to
+    # the cat's height lands *inside* the skull and reads as a lump growing out
+    # of his cheek. Beside the chest it is entirely in the open, and it is the
+    # better acting anyway: a capybara reaching over its own head is a capybara
+    # that has been startled, and nothing startles this one.
+    # No forearm is drawn, and that is measured rather than lazy: his body is
+    # thirty-five pixels across, so every bead of a cat-style arm falls *inside*
+    # the belly's own outline and paints nothing. What shows is the pad, up
+    # beside the cheek and proud of the silhouette — which is what a paw raised
+    # by an animal with no visible shoulder actually looks like.
+    #
+    # It carries its own dark rim, which nothing else in this file needs. The
+    # muzzle patch ends at column 30 and the pad starts at 31, both in `SHADE`
+    # — and `outline_silhouette` only rings the *outside* of the figure, so the
+    # two shapes fused and the raised paw came out as a lump on the end of his
+    # cheek. One pixel of `OUTLINE` under it is the whole fix.
+    d.ellipse([30, 21, 38, 30], fill=OUTLINE)
+    d.ellipse([31, 22, 37, 29], fill=SHADE)          # the pad, held open
+    for x in (32, 34, 36):                           # three toes
+        d.point((x, 24), fill=OUTLINE)
+    return outline_silhouette(g)
+
+
+def capybara_unbothered():
+    """The pose the signature *used* to be, kept and redrawn — and now the
+    beat the new one opens on.
+
+    Everybody else somersaulted; Tofu half-closed his eyes and flicked one ear,
+    and that was the entire acrobatic. The owner has overruled the *move*, not
+    the face: `Buddy.anticTailFrame` holds this drawing for the moment before
+    he goes over, which is a better use for it than a punchline. The eyes are
+    lidded rather than shut so it reads as considering rather than as asleep —
+    the whole move is an animal deciding it would rather lie down.
     """
     g = new_grid()
     d = ImageDraw.Draw(g)
     # The flick itself, as two short strokes off the ear. A blurred ear is a
     # smudge at this size; two marks beside a leaning ear is a moving ear.
-    d.line([(32, 5), (35, 3)], fill=GLINT)
-    d.line([(32, 8), (36, 7)], fill=GLINT)
-    d.ellipse([10, 6, 16, 12], fill=SHADE)
-    d.polygon([(24, 12), (26, 4), (31, 8), (29, 13)], fill=SHADE)
-    d.ellipse([6, 21, 34, 37], fill=BODY)
-    d.ellipse([12, 27, 28, 37], fill=CREAM)
-    d.rounded_rectangle([8, 8, 32, 27], radius=6, fill=BODY)
-    d.rounded_rectangle([11, 18, 29, 28], radius=5, fill=CREAM)
-    # Half-lidded: the pupil is drawn whole, then the lid comes down over its
-    # top half in the fur colour with a lash line under it. Two spans in `EYE`
-    # with a gap between them is exactly what `_eye_band` looks for, so he
-    # keeps his face anchor and can still be wearing spectacles while he
-    # declines to move.
+    #
+    # Two pixels thick, and that is not a style choice. A one-pixel white line
+    # gets a one-pixel dark ring on *both* sides from `outline_silhouette`, so
+    # on the phone it rendered as dark/white/dark — three alternating stripes
+    # in the width of one stroke, which reads as a scribble beside his head
+    # rather than as motion. Thickening the white to two gives the ring
+    # something to sit around.
+    d.line([(35, 3), (38, 1)], fill=GLINT, width=2)
+    d.line([(35, 6), (38, 5)], fill=GLINT, width=2)
+    d.ellipse([5, 4, 14, 13], fill=SHADE)
+    # The leaning ear. A quadrilateral rather than a tilted ellipse: the tip's
+    # two corners have to come together *sideways* or it reads as a blob with
+    # an antenna, which is the lesson the hare's ears already cost.
+    d.polygon([(26, 13), (28, 4), (35, 6), (34, 14)], fill=SHADE)
+    d.ellipse([3, 22, 37, 38], fill=BODY)
+    d.ellipse([12, 31, 19, 38], fill=SHADE)
+    d.ellipse([21, 31, 28, 38], fill=SHADE)
+    d.ellipse([6, 6, 34, 30], fill=BODY)
+    d.rounded_rectangle([10, 17, 30, 29], radius=6, fill=SHADE)
+    # Half-lidded: the pupil is drawn whole, then the lid comes down over it in
+    # the fur colour. Two spans in `EYE` with a gap between them is exactly
+    # what `_eye_band` looks for, so he keeps his face anchor and can still be
+    # wearing spectacles while he thinks about lying down.
+    #
+    # Two things this went through, both of which made him *cross* rather than
+    # sleepy, and on the one frame in the app whose whole job is to look like
+    # an animal considering a nap:
+    #
+    #   * A lash line in `OUTLINE` under the lid. Dark stroke over dark pupil
+    #     is one thick black bar with a straight upper edge, which is a lowered
+    #     brow. The lid is fur and nothing else now.
+    #   * Four rows of pupil left showing. Half of a seven-pixel eye is still a
+    #     tall dark shape, and a tall dark shape that curves down at its outer
+    #     corners is *also* a lowered brow. A thin lens reads as a lid;
+    #     anything deeper reads as a mood.
     for cx in (14, 26):
-        d.ellipse([cx - 2, 13, cx + 2, 17], fill=EYE)
-        d.rectangle([cx - 3, 12, cx + 3, 13], fill=BODY)
-        d.line([(cx - 3, 14), (cx + 3, 14)], fill=OUTLINE)
-    _blunt_nose(d, 17, 21, 23, 25)
-    d.line([(20, 25), (20, 27)], fill=OUTLINE)
+        d.ellipse([cx - 3, 11, cx + 3, 17], fill=EYE)
+        d.rectangle([cx - 4, 10, cx + 4, 15], fill=BODY)
+    d.ellipse([6, 17, 11, 22], fill=PINK)
+    d.ellipse([29, 17, 34, 22], fill=PINK)
+    d.ellipse([18, 20, 22, 23], fill=NOSE)
+    d.line([(20, 24), (20, 25)], fill=OUTLINE)
     return outline_silhouette(g)
 
 
@@ -2004,6 +2266,11 @@ def owl_eyes(d, left, right, y, mode):
     if mode == "open":
         for cx in (left, right):
             d.ellipse([cx - 3, y - 3, cx + 3, y + 3], fill=EYE)
+            # Left alone on purpose while the capybara was redrawn. `capy_eyes`
+            # argues for a smaller catchlight on a seven-pixel eye and is right
+            # about that eye; Luna is shipped, verified and not what anybody
+            # asked to change, and re-running the generator rewrote six of her
+            # frames the first time this line moved.
             d.ellipse([cx - 2, y - 2, cx, y], fill=GLINT)
     elif mode == "closed":
         for cx in (left, right):
@@ -2122,7 +2389,8 @@ BUDDIES = [
     ("fox", FOX_PALETTE, fox_awake, fox_asleep, None,
      {"pounce": fox_pounce}),
     ("capybara", CAPYBARA_PALETTE, capybara_awake, capybara_asleep, None,
-     {"soak": capybara_soak, "unbothered": capybara_unbothered}),
+     {"soak": capybara_soak, "flop": capybara_flop,
+      "pawup": capybara_pawup, "unbothered": capybara_unbothered}),
     ("redpanda", REDPANDA_PALETTE, redpanda_awake, redpanda_asleep, None,
      {"armsup": redpanda_armsup, "curl": redpanda_curl}),
     ("penguin", PENGUIN_PALETTE, penguin_awake, penguin_asleep, None,

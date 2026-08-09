@@ -79,18 +79,37 @@ enum Antic: String, CaseIterable, Identifiable, Equatable {
         }
     }
 
-    /// The beats, in order. A buddy is needed only for the signature, which
-    /// asks its own shape.
+    /// The beats, in order.
+    ///
+    /// The buddy is asked two things: which shape its signature has, and how
+    /// fast it does anything (`Buddy.anticTempo`). The tempo is what lets one
+    /// set of shared tables serve a bunny and a capybara — the hop is the same
+    /// hop, held longer, which is the difference between an unhurried animal
+    /// and a different move.
+    ///
+    /// The signature is not paced. It is authored for the one animal that
+    /// performs it and is already at that animal's tempo; scaling it a second
+    /// time would slow the capybara's flop to something that reads as a
+    /// dropped frame rate rather than as a decision.
     func beats(for buddy: Buddy) -> [AnticBeat] {
         switch self {
         case .bounce: []
-        case .hop: Self.hopBeats
-        case .wiggle: Self.wiggleBeats
-        case .spinAround: Self.spinBeats
-        case .tumble: Self.tumbleBeats
-        case .routine: Self.routineBeats
+        case .hop: Self.paced(Self.hopBeats, by: buddy.anticTempo)
+        case .wiggle: Self.paced(Self.wiggleBeats, by: buddy.anticTempo)
+        case .spinAround: Self.paced(Self.spinBeats, by: buddy.anticTempo)
+        case .tumble: Self.paced(Self.tumbleBeats, by: buddy.anticTempo)
+        case .routine: Self.paced(Self.routineBeats, by: buddy.anticTempo)
         case .signature: buddy.anticShape.beats
         }
+    }
+
+    /// The same beats, held longer. Only `hold` scales: the offsets are where
+    /// the sprite goes, and a slower animal covers the same ground rather than
+    /// a smaller amount of it. Identity at 1, so nobody else's move is rebuilt.
+    private static func paced(
+        _ beats: [AnticBeat], by tempo: Double
+    ) -> [AnticBeat] {
+        tempo == 1 ? beats : beats.map { $0.held(times: tempo) }
     }
 
     /// How long the whole move takes, for throttles and for the debug parade.
@@ -204,6 +223,13 @@ struct AnticBeat: Equatable {
     /// movement into it takes the same time, which is what makes the whole
     /// list read as one continuous motion.
     var hold: TimeInterval
+
+    /// The same beat, slower. Used by `Antic.paced(_:by:)` and nowhere else.
+    func held(times factor: Double) -> AnticBeat {
+        var slower = self
+        slower.hold *= factor
+        return slower
+    }
 }
 
 /// The animation curves a beat may ask for. An enum rather than a SwiftUI
@@ -271,8 +297,8 @@ enum AnticShape: Equatable {
     case pounceForward
     /// Wings out, off the perch, hovering.
     case flap
-    /// The joke: it does not move.
-    case still
+    /// A lean, a sink, and over onto one side — then back up, in its own time.
+    case flopOver
 
     var beats: [AnticBeat] {
         switch self {
@@ -283,8 +309,9 @@ enum AnticShape: Equatable {
         // "waves a paw. Just the one". Measured on screen that is a 6px lift
         // on a 104pt sprite and then nothing: the frame swap does all the
         // work, and what you watch is a cat standing still in a different
-        // drawing. It was indistinguishable from the capybara's `still`, which
-        // is the move whose entire joke is that nothing happens.
+        // drawing — a held frame with nothing moving under it, which the
+        // capybara's retired `.still` proved reads as a stalled animation
+        // rather than as a decision.
         //
         // A wave is repetition — that is the whole of what makes it a wave
         // rather than a raised paw — so the lift goes to six points and
@@ -377,18 +404,42 @@ enum AnticShape: Equatable {
                 AnticBeat(dy: -20, frame: .signature, curve: .linear, hold: 0.16),
                 AnticBeat(curve: .spring, hold: 0.26),
             ]
-        case .still:
-            // One frame, one second, and the caption does the rest. Everyone
-            // else somersaults; this one declines, and the joke only lands
-            // because the machinery around it was perfectly willing.
-            //
-            // The second beat looks pointless and is not: every table in this
-            // file hands the frame back to the animator itself rather than
-            // leaning on the runner's `defer` to do it. A move that only ends
-            // tidily when it runs to completion ends untidily when it doesn't.
+        // What replaced `.still`, which held one frame for one second under
+        // the caption "declines to move. One ear flicks". That was a good joke
+        // and it cannot be the first thing a new install does when you touch
+        // it: the default buddy is the one everybody meets, and a default that
+        // ignores you teaches the wrong thing in the first ten seconds.
+        //
+        // Keeping the character was the whole difficulty. A capybara that
+        // back-flips like the bunny is a different animal wearing the sprite.
+        // So this move is entirely downward and entirely unhurried: it thinks
+        // about it (the old `unbothered` face, demoted to a quarter-second),
+        // sinks, and lets gravity finish the job sideways. The two beats on
+        // the floor are a breath — a held drawn frame with nothing moving at
+        // all is indistinguishable from a stalled animation, which is exactly
+        // the trap `.still` fell into, and a two-point rise and fall is enough
+        // to say the animal is alive down there. Then it gets its feet back
+        // under it, through the crouch, in its own time.
+        //
+        // Travel is small on purpose. The frames are a fixed 400x400 canvas
+        // drawn to a common baseline, so the lying-down drawing already sits
+        // on the ground: the tip is carried by the frame swap, and `dx` only
+        // has to say which way. Nine points on a 104-point sprite reads as a
+        // lean whichever way the artist drew it.
+        //
+        // The last beat hands the frame back rather than leaning on the
+        // runner's `defer`, like every other table here: a move that only ends
+        // tidily when it runs to completion ends untidily when it doesn't.
+        case .flopOver:
             [
-                AnticBeat(frame: .signature, curve: .linear, hold: 0.9),
-                AnticBeat(curve: .linear, hold: 0.1),
+                AnticBeat(frame: .signatureTail, curve: .easeInOut, hold: 0.24),
+                AnticBeat(dy: 5, frame: .crouch, curve: .easeIn, hold: 0.24),
+                AnticBeat(dx: -6, dy: 3, frame: .signature, curve: .easeIn, hold: 0.24),
+                AnticBeat(dx: -9, frame: .signature, curve: .spring, hold: 0.40),
+                AnticBeat(dx: -9, dy: -2, frame: .signature, curve: .easeInOut, hold: 0.26),
+                AnticBeat(dx: -9, dy: 1, frame: .signature, curve: .easeInOut, hold: 0.24),
+                AnticBeat(dx: -3, dy: 4, frame: .crouch, curve: .easeOut, hold: 0.26),
+                AnticBeat(curve: .spring, hold: 0.24),
             ]
         }
     }

@@ -33,6 +33,9 @@ struct ScrapbookView: View {
                     empty
                 } else {
                     LazyVGrid(columns: columns, spacing: 8) {
+                        // The way in comes first, in the grid itself rather
+                        // than the toolbar — see `keepPicker`.
+                        addTile
                         ForEach(scrapbook.newestFirst) { snapshot in
                             tile(snapshot)
                         }
@@ -46,13 +49,6 @@ struct ScrapbookView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    PhotosPicker(selection: $picking, matching: .images) {
-                        Image(systemName: "plus")
-                    }
-                    .disabled(importing)
-                    .accessibilityLabel("Keep a picture of where you are")
                 }
                 // Hidden, not disabled, where there is no camera — a control
                 // for hardware the simulator does not have is only clutter.
@@ -94,6 +90,53 @@ struct ScrapbookView: View {
         }
     }
 
+    // MARK: The way in
+
+    /// The photo picker, written once and worn twice — as the first cell of
+    /// the grid, and as the button in the empty state.
+    ///
+    /// It lives in the *content* rather than the toolbar, and that is the
+    /// whole of the Mac fix. A sheet on macOS has no window toolbar to put
+    /// items in: SwiftUI keeps `.confirmationAction` (and its neighbours) and
+    /// silently drops `.navigation` / `.primaryAction`, so the "+" that a
+    /// phone shows in the navigation bar rendered *nothing* on a Mac and the
+    /// Scrapbook had no way in at all. A control in the content is drawn by
+    /// the same code on both platforms — one way in, not a Mac variant — and
+    /// it is more findable on the phone too, which is the other half of why
+    /// this is the fix rather than a workaround.
+    private func keepPicker<Label: View>(
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        PhotosPicker(selection: $picking, matching: .images, label: label)
+            .buttonStyle(.plain)
+            .disabled(importing)
+            .accessibilityLabel("Keep a picture of where you are")
+    }
+
+    /// The first cell of the grid, the same size as a photograph.
+    private var addTile: some View {
+        keepPicker {
+            VStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .semibold))
+                Text("Keep one")
+                    .font(.caption2)
+            }
+            .foregroundStyle(Theme.bark.opacity(0.65))
+            .frame(maxWidth: .infinity)
+            .frame(height: 104)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Theme.surface.opacity(0.5))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Theme.bark.opacity(0.25),
+                                  style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            )
+        }
+    }
+
     private var empty: some View {
         VStack(spacing: 10) {
             Image(systemName: "photo.on.rectangle.angled")
@@ -107,6 +150,18 @@ struct ScrapbookView: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.bark.opacity(0.6))
                 .multilineTextAlignment(.center)
+            // An empty Scrapbook is exactly where somebody gets stuck, so the
+            // empty state carries its own way in rather than pointing at a
+            // control somewhere else.
+            keepPicker {
+                Label("Keep a picture", systemImage: "photo.badge.plus")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.onAccent)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Theme.forest))
+            }
+            .padding(.top, 8)
         }
         .padding(40)
     }

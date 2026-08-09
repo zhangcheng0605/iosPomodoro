@@ -168,6 +168,10 @@ Release builds. Pass them to `simctl launch` or to `tools/run-sim.sh`.
 | `-PawmodoroBurr <id>` | Stick a burr on the buddy, e.g. `salt` |
 | `-PawmodoroFillDrawer` | One of every keepsake in the drawer |
 | `-PawmodoroTrick <id.tier>` | Pin and play a trick, e.g. `spin.2` |
+| `-PawmodoroAntic <id>` | Play one acrobatic move on demand |
+| `-PawmodoroAntics` | Parade every move in turn, for looking at them all |
+| `-PawmodoroTaps [n]` | Fire n *real* taps a second apart, through `pet()` — the only way to see the escalation ladder (two gentle, then the bag, then the signature at six) |
+| `-PawmodoroTapsInFocus` | The same, during a running focus phase, to prove the buddy stays asleep |
 | `-PawmodoroRemember <n>` | Surface a memory dated n days back |
 | `-PawmodoroPounce` | The break's closing pounce always misses (the rare variant) |
 | `-PawmodoroNightCaller <id>` | Force last night's sill visitor, e.g. `tanuki` |

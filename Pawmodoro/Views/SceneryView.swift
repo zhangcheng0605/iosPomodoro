@@ -281,6 +281,102 @@ struct DriftingCloudsView: View {
     }
 }
 
+// MARK: - The near plane
+
+/// What is nearest to you in a place — a dock post, a grass fringe, a branch.
+///
+/// ## Why it exists
+///
+/// `docs/CONTENT_PLAN.md` F1 asked for it in the same breath as the pipeline
+/// itself — "**Two layers per scene:** `scene_{id}_{part}` (background) and an
+/// optional `scene_{id}_fg` foreground strip (a dock post, grass fringe,
+/// branch) drawn at the bottom edge" — and only the first half was ever built.
+/// Eight places shipped as a single flat plane. This is the second half.
+///
+/// It is the drifting cloud sheet's mirror image, on purpose: the same canvas,
+/// the same palette, the same four grades, the same transparent export and the
+/// same `scaledToFill` framing, so the near plane registers with the artwork to
+/// the pixel exactly as the sky does. One image and no clock.
+///
+/// ## The veil is the depth
+///
+/// Half the scene's, and that halving is the whole trick. `SceneryView.veil`
+/// lays 52 % of the theme's cream back over the artwork, which is what keeps
+/// eight places legible in four times of day; laying **26 %** over the near
+/// plane says the same thing an oil painter says by mixing more sky into the
+/// far hills. The near world is the one you are standing in, so it keeps its
+/// colour; the far world is seen through half a mile of air, so it does not.
+/// `generate_scenes.py` reads both numbers back out of this file and fails if
+/// the ratio drifts — equalise them and the layer quietly stops reading as
+/// nearer, which is not something a screenshot would flag.
+///
+/// ## What it is not allowed to touch
+///
+/// Everything that stands in a place stands on `Stray.groundLine`. The
+/// generator derives this layer's ceiling from that line plus six rows and
+/// asserts it, because `check_stray.py` and `check_snail.py` measure a
+/// silhouette against what is *behind* it and know nothing about a layer in
+/// front. Nothing here may hide a creature.
+///
+/// And it takes no touches. The buddy, the toys, the stray and the treat tray
+/// all live under this, and a transparent sheet that swallowed a tap on the
+/// scene would be the worst kind of bug — one where the app simply feels
+/// broken and nothing on screen says why.
+struct SceneForegroundView: View {
+    let place: Place
+    let part: DayPart
+    var weather: Weather = .clear
+
+    /// Half `SceneryView.veil`. See the note above; the generator enforces it.
+    static let veil: Double = 0.26
+
+    /// `SceneryView.fillAnchor`, for the reason given there — the near plane
+    /// has to be cropped the same way the scene is or it would sit at a
+    /// different height than the ground it belongs to.
+    private var fillAnchor: Alignment { Platform.isDesktop ? .bottom : .center }
+
+    private var assetName: String { "\(place.assetName(for: part))_fg" }
+
+    var body: some View {
+        GeometryReader { geometry in
+            sheet(geometry.size)
+                // Masked by the sheet itself rather than laid over the frame:
+                // this layer is mostly transparent, and an unmasked veil would
+                // be a full-screen wash of cream over the whole app.
+                .overlay(veils.mask(sheet(geometry.size)))
+        }
+        .ignoresSafeArea()
+        // Deliberately not clipped, for the same reason the cloud sheet is
+        // not: it bleeds nothing but transparency.
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .transition(.opacity)
+    }
+
+    /// Framed exactly as `SceneryView` frames the scene, so the two register.
+    private func sheet(_ size: CGSize) -> some View {
+        Image(assetName)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size.width, height: size.height, alignment: fillAnchor)
+    }
+
+    /// The theme's cream at half strength, and whatever the sky is doing at
+    /// half of that too — one rule rather than two numbers to keep in step.
+    @ViewBuilder
+    private var veils: some View {
+        ZStack {
+            Theme.cream.opacity(Self.veil)
+            if let tint = Theme.weatherVeil(for: weather), weather.veilOpacity > 0 {
+                tint
+                    .opacity(weather.veilOpacity * 0.5)
+                    .animation(.easeInOut(duration: 1.2), value: weather)
+            }
+        }
+    }
+}
+
 /// The sailboat, balloon or night train crossing the current place.
 ///
 /// Its position is `engine.progress`, so the countdown is legible from across

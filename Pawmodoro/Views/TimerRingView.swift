@@ -10,6 +10,7 @@ import SwiftUI
 struct TimerRingView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// Fractional minutes held while a drag is in flight, so slow drags don't
     /// lose the part of a detent they haven't earned yet.
@@ -17,11 +18,50 @@ struct TimerRingView: View {
     @State private var lastAngle: Angle?
     @State private var breathing = false
 
-    private let lineWidth: CGFloat = 18
-    private let diameter: CGFloat = 260
+    /// The dial as it has always been, and the number every other measurement
+    /// in here is a fraction of.
+    private let baseDiameter: CGFloat = 260
     /// One detent per 18° — twenty around the ring, which is a comfortable
     /// throw for a thumb without being twitchy.
     private let degreesPerDetent: Double = 18
+
+    /// **The dial is the room the rest of the screen borrows from.**
+    ///
+    /// Everything on the timer screen grows with the text size except this: a
+    /// 260pt circle holding a countdown set at a flat 56pt. Held at 260 it is
+    /// the single largest fixed block on a screen that, above `.large`, cannot
+    /// fit its own contents — and what got pushed off the bottom was the
+    /// buddy's caption and the treat tray, which is to say the only surface
+    /// that announces the sill snack, the weekend request and the high five.
+    /// Sixty points of dial buys all of that back.
+    ///
+    /// It is the cheapest sixty points in the app because the thing inside it
+    /// does not shrink with it. `remainingText` is 56pt whatever happens here,
+    /// and only gives ground to `minimumScaleFactor` when the string genuinely
+    /// runs out of width — 176pt of dial still draws "25:00" at about 47pt,
+    /// which is twice the size of the status line beneath it and larger than
+    /// body text at every ordinary reading size. A smaller dial with the same
+    /// number in it loses nothing anybody reads.
+    ///
+    /// 260 at every ordinary size through `.large`, so the default screen is
+    /// untouched — see `ordinaryColumn` in `ContentView`.
+    private var diameter: CGFloat {
+        switch dynamicTypeSize {
+        case .xSmall, .small, .medium, .large: baseDiameter
+        case .xLarge: 228
+        case .xxLarge: 200
+        case .xxxLarge: 182
+        default: 176
+        }
+    }
+
+    /// The dial is scaled as one piece: the track, the knob and the text
+    /// inset are all fractions of the diameter, so a smaller dial is the same
+    /// drawing rather than a thinner one. At 260 these are exactly the 18 and
+    /// 36 that shipped.
+    private var lineWidth: CGFloat { 18 * diameter / baseDiameter }
+
+    private var textInset: CGFloat { 36 * diameter / baseDiameter }
 
     private var isAdjustable: Bool { engine.runState == .idle }
 
@@ -53,7 +93,7 @@ struct TimerRingView: View {
                         Theme.accent(for: phase).opacity(0.30),
                         lineWidth: 1.5
                     )
-                    .padding(lineWidth + 6 + CGFloat(index) * 7)
+                    .padding(lineWidth + 6 + CGFloat(index) * 7 * diameter / baseDiameter)
             }
             .transition(.opacity)
         }
@@ -167,7 +207,7 @@ struct TimerRingView: View {
                     .foregroundStyle(Theme.bark.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, 36)
+            .padding(.horizontal, textInset)
         }
         .frame(width: diameter, height: diameter)
         // Crossfading the two arcs is what removes the snap; both opacities

@@ -71,6 +71,8 @@ struct ContentView: View {
 
                 stray
 
+                nearPlane
+
                 sky
 
                 weather
@@ -419,6 +421,36 @@ struct ContentView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.8), value: place)
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// The nearest thing in the place — see `SceneForegroundView`.
+    ///
+    /// **In front of everything that stands in the scene, and behind the
+    /// column.** The plan (CONTENT_PLAN F1) put the controls between the two
+    /// scenery layers, and that was written when the column was shorter than
+    /// the screen. It is not, now: `adaptiveColumn` pins the ambience row and
+    /// the transport to the bottom of the glass at every text size above
+    /// `.large`, so a near plane drawn over the column would put grass across
+    /// the play button of a Pomodoro timer — for the same reason `topInset`
+    /// and `chipScale` exist. Measured on an iPhone 17 at the default size the
+    /// transport's rim sits at 0.76 of the screen and this layer starts at
+    /// 0.811, so today they do not even meet; being under the column means
+    /// they can never meet on a phone nobody here has held.
+    ///
+    /// What it *is* in front of is everything that lives in the place: the
+    /// scene, the snail, the toys and the stray. That is where the depth comes
+    /// from, and none of it is UI.
+    private var nearPlane: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let part = LaunchOptions.forcedDayPart ?? DayPart.current(at: context.date)
+            let place = engine.settings.place
+            SceneForegroundView(place: place, part: part, weather: engine.weather)
+                // Same rule as `scenery`: the place and the hour swap the
+                // artwork, the weather only recolours the veil over it.
+                .id("\(place.rawValue)-\(part.rawValue)")
+                .animation(.easeInOut(duration: 0.8), value: place)
         }
         .allowsHitTesting(false)
     }
@@ -822,6 +854,7 @@ struct ContentView: View {
                     .frame(width: proxy.size.width)
                     .background(columnMeasure)
 
+                let _ = debugMeasure(proxy.size.height, columnHeight <= proxy.size.height ? "fits" : "SCROLLS")
                 if columnHeight <= proxy.size.height {
                     column
                 } else {
@@ -863,29 +896,57 @@ struct ContentView: View {
     @ViewBuilder
     private func timerRows(width: CGFloat?) -> some View {
         phaseChip
-            .padding(.bottom, 20)
+            .padding(.bottom, air.chip)
+            .background(debugRow("chip"))
 
         TimerRingView()
+            .background(debugRow("ring"))
 
         // Only while idle: mid-session is the wrong moment to be
         // offered a different session.
         if engine.runState == .idle {
             expeditions(width: width)
-                .padding(.top, 12)
+                .padding(.top, air.expeditions)
                 .transition(.opacity)
+                .background(debugRow("expeditions"))
         }
 
         BuddyView()
-            .padding(.top, 18)
+            .padding(.top, air.buddy)
+            .background(debugRow("buddy"))
 
         // Only when nothing is counting down. A treat offered
         // mid-focus would be a reason to touch the screen during
         // the one stretch of time this app exists to leave alone.
         if engine.runState != .running || engine.phase.isBreak {
             TreatTray()
-                .padding(.top, 8)
+                .padding(.top, air.treats)
                 .transition(.opacity)
+                .background(debugRow("treats"))
         }
+    }
+
+    /// The gaps between the rows of the top group, and the two below it.
+    ///
+    /// **The sky between the rows gives way before the buddy does.** Seventy
+    /// points of this column are air: twenty under the phase chip, twelve
+    /// above the expedition capsules, eighteen above the buddy, eight above
+    /// the treat tray, and twelve at the foot of the group. On the default
+    /// screen that air *is* the composition — the rows sit in a landscape and
+    /// the spacing is what makes it look like one. Above `.large` there is no
+    /// longer a landscape between them to look at: the rows are already
+    /// touching the edges of the room they have, and the choice is between
+    /// keeping the spacing and keeping the buddy. Squeezed to thirty, it pays
+    /// for most of a treat tray.
+    ///
+    /// Every value here is the one that shipped at `.large` and below, so the
+    /// default screen is untouched — the same rule `chipScale` and
+    /// `TimerRingView.diameter` follow.
+    private var air: (chip: CGFloat, expeditions: CGFloat, buddy: CGFloat,
+                      treats: CGFloat, floor: CGFloat, ambience: CGFloat) {
+        dynamicTypeSize <= .large
+            ? (chip: 20, expeditions: 12, buddy: 18, treats: 8, floor: 12, ambience: 22)
+            : (chip: 8, expeditions: 4, buddy: 8, treats: 4, floor: 6, ambience: 14)
     }
 
     private func topGroup(width: CGFloat) -> some View {
@@ -899,6 +960,37 @@ struct ContentView: View {
         // group report whatever height it was handed, and the measurement has
         // to be the height it actually wants.
         .padding(.bottom, 12)
+    }
+
+    private func debugRow(_ name: String) -> some View {
+        GeometryReader { g in
+            Color.clear.onAppear { debugWrite("ROW \(name)=\(g.size.height)") }
+        }
+    }
+
+    private func debugWrite(_ text: String) {
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Documents/measure.txt")
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data((text + "\n").utf8))
+            try? handle.close()
+        } else {
+            try? (text + "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private func debugMeasure(_ avail: CGFloat, _ note: String) {
+        let line = "MEASURE avail=\(avail) want=\(columnHeight) \(note)\n"
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Documents/measure.txt")
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(line.utf8))
+            try? handle.close()
+        } else {
+            try? line.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     /// The top group's natural height, as last measured.

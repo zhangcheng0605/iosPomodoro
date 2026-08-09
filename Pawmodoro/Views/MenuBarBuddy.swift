@@ -71,8 +71,31 @@ struct MenuBarControls: View {
 
         Divider()
 
-        Button("Open Pawmodoro") { openWindow(id: "main") }
-            .keyboardShortcut("0", modifiers: .command)
+        // Raise the window you already have; only make one when there is none.
+        //
+        // `openWindow(id:)` on a `WindowGroup` is *new window*, not *show
+        // window* — measured, not assumed: pressing this with the window
+        // already open left two 400×912 windows on screen, and pressing it
+        // again would have left three. Somebody whose window is behind Xcode
+        // reaches for this item precisely because they cannot see it, which is
+        // the one case where the wrong behaviour is guaranteed to fire.
+        //
+        // `canBecomeMain` is what separates the app's own windows from the
+        // status item's — `MenuBarExtra` keeps an `NSStatusBarWindow` in
+        // `NSApp.windows` for the life of the process, so a bare `first` here
+        // would find that and raise nothing. `isVisible` is the second half:
+        // a closed `WindowGroup` window lingers in the list until it is
+        // released, and ordering a closed window front shows an empty frame.
+        Button("Open Pawmodoro") {
+            let existing = NSApp.windows.first { $0.canBecomeMain && $0.isVisible }
+            if let existing {
+                NSApp.activate(ignoringOtherApps: true)
+                existing.makeKeyAndOrderFront(nil)
+            } else {
+                openWindow(id: "main")
+            }
+        }
+        .keyboardShortcut("0", modifiers: .command)
 
         Divider()
 

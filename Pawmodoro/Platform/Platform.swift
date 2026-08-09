@@ -358,6 +358,38 @@ extension ToolbarItemPlacement {
     /// toolbar. `.navigation` is the leading group beside the title;
     /// `.primaryAction` is the trailing one. Same reading order, so a screen
     /// laid out for a phone comes out the right way round on a Mac.
+    ///
+    /// ### Only in a *window*. In a sheet, both of these render nothing.
+    ///
+    /// A sheet on macOS has no window toolbar to put items in. SwiftUI keeps
+    /// the semantic placements — `.confirmationAction`, `.cancellationAction`,
+    /// `.automatic` all appear in the sheet's bottom action row — and
+    /// **silently drops `.navigation` and `.primaryAction`**. No warning, no
+    /// empty space: the control simply is not there.
+    ///
+    /// Measured on 9 Aug 2026, in the sandboxed Mac build, by putting four
+    /// probe buttons in the Scrapbook sheet's toolbar at once and reading the
+    /// accessibility tree:
+    ///
+    /// | Placement | In a Mac sheet |
+    /// |---|---|
+    /// | `.navigation` (this file's `topBarLeading`) | **nothing** |
+    /// | `.primaryAction` (this file's `topBarTrailing`) | **nothing** |
+    /// | `.automatic` | shown, leading end of the action row |
+    /// | `.cancellationAction` | shown, beside Done |
+    /// | `.confirmationAction` | shown — this is the Done button |
+    ///
+    /// That is not a hypothesis about why something looked wrong; it is what
+    /// the sheet contained. It cost the Scrapbook its only way in on macOS —
+    /// a `PhotosPicker` sat in `.topBarLeading` and a fresh Mac install had a
+    /// permanently empty Scrapbook with no "+" anywhere. The fix was to stop
+    /// asking a sheet toolbar for a primary control at all: `ScrapbookView`
+    /// puts the picker in its **content**, which is one control that lands on
+    /// both platforms rather than two code paths.
+    ///
+    /// So: these two shims are for a screen presented in the **window**. A
+    /// control a sheet cannot do without belongs in the sheet's content, or —
+    /// if it really must be in the bar — at `.automatic`.
     static var topBarLeading: ToolbarItemPlacement { .navigation }
     static var topBarTrailing: ToolbarItemPlacement { .primaryAction }
 }

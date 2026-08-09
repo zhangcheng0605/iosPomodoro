@@ -100,9 +100,19 @@ struct PawmodoroApp: App {
     /// `SceneShake.shared.shake()`, which is the snow globe: there is no
     /// accelerometer here, and this is where the gesture lands instead.
     ///
-    /// No Space bar. It is the obvious shortcut and it is wrong: the buddy can
-    /// be renamed from Settings, and a menu command on a bare Space swallows
-    /// the space bar inside that text field.
+    /// No Space bar **here**. It is the obvious shortcut and in the *main
+    /// menu* it is wrong: the buddy can be renamed from Settings, and a main
+    /// menu command on a bare Space swallows the space bar inside that text
+    /// field.
+    ///
+    /// `MenuBarControls` binds one anyway, and that is not the contradiction
+    /// it looks like — measured in a clean-room app with the same two pieces.
+    /// A `MenuBarExtra` menu is a status item's `NSMenu`, not part of
+    /// `NSApp.mainMenu`, and `performKeyEquivalent` only ever walks the main
+    /// menu: with the app frontmost and a `TextField` focused, typing
+    /// "a b c" put "a b c" in the field and the menu's action never fired,
+    /// while the same Space *did* fire it once the status menu was open. So
+    /// the rule is about which menu, not about the key.
     @CommandsBuilder
     private var sessionCommands: some Commands {
         // "New Window" is deliberately left alone. Emptying that group takes
@@ -111,6 +121,21 @@ struct PawmodoroApp: App {
         // than a second window. A second window is harmless anyway: the
         // engine is one object held by the app, so both show the same
         // countdown rather than two.
+        //
+        // The Help menu's one item is *not* left alone, for the opposite
+        // reason. macOS synthesises "Pawmodoro Help" (⌘?) whether or not
+        // there is anything behind it, and there is not: the bundle carries no
+        // `CFBundleHelpBookFolder`, so pressing it puts up an alert reading
+        // "Help isn't available for Pawmodoro." — measured, not assumed; the
+        // dialog was opened and read back through the accessibility API. A
+        // menu item whose only behaviour is an apology is worse than no menu
+        // item, and this app's habit is not to claim things that are not
+        // true. Replacing the group with nothing leaves the Help *menu* in
+        // place, holding only the search row macOS inserts itself, and ⌘?
+        // stops resolving to anything. If a help book is ever written, delete
+        // this line and the item comes back on its own.
+        CommandGroup(replacing: .help) { }
+
         CommandMenu("Session") {
             Button(engine.isRunning ? "Pause" : "Start") { engine.toggle() }
                 .keyboardShortcut(.return, modifiers: .command)

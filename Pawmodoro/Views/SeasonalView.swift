@@ -48,7 +48,59 @@ struct SeasonalView: View {
         case .fireflies: drawFireflies(&canvas, size: size, t: t)
         case .lanterns: drawLanterns(&canvas, size: size, t: t)
         }
+        if season == .autumn { drawPumpkins(&canvas, size: size) }
         if withBats { drawBats(&canvas, size: size, t: t) }
+    }
+
+    /// Three pumpkins on the ground, for the three weeks the leaves are down.
+    ///
+    /// `docs/CONTENT_PLAN.md` J asked for "pumpkins by the perch"; there is no
+    /// perch — the buddy has always sat in a fixed slot in the column rather
+    /// than in the scene — so they sit on the one line this app already agrees
+    /// about instead. `Stray.groundLine` is where the stray stands, where the
+    /// snail crosses and where the buddy stands on a postcard, and a pumpkin
+    /// resting anywhere else would be a pumpkin resting in mid-air in one place
+    /// out of eight. `StrayView` reads it exactly this way, off the layer's own
+    /// height, so the two cannot disagree.
+    ///
+    /// Not particles: they do not move, they are not counted in
+    /// `Season.particleCount`, and they take no time argument at all. Autumn
+    /// already runs this canvas at 12fps for the leaves, so three still shapes
+    /// inside it cost a fill each and nothing else — there is no second layer
+    /// to mount and nothing new runs when the season is over.
+    ///
+    /// Kept out of the middle third on purpose. The transport row is centred
+    /// and the ambience chips run the full width above it; a pumpkin behind the
+    /// play button is a smudge rather than a pumpkin.
+    private func drawPumpkins(_ canvas: inout GraphicsContext, size: CGSize) {
+        let ground = size.height * Stray.groundLine
+        for (fraction, scale) in [(0.12, 1.0), (0.21, 0.72), (0.86, 0.88)] {
+            let width = 22.0 * scale
+            let height = 17.0 * scale
+            let x = size.width * fraction
+            let body = CGRect(x: x - width / 2, y: ground - height,
+                              width: width, height: height)
+
+            // The stalk first, so the body's own edge cuts it off cleanly.
+            canvas.fill(
+                Path(roundedRect: CGRect(x: x - 1.4 * scale,
+                                         y: ground - height - 4.5 * scale,
+                                         width: 2.8 * scale, height: 5.5 * scale),
+                     cornerSize: CGSize(width: 1.2, height: 1.2)),
+                with: .color(Theme.forest.opacity(0.75))
+            )
+            canvas.fill(Path(ellipseIn: body),
+                        with: .color(Theme.sunshine.opacity(0.88)))
+            // Two ribs. A plain ellipse reads as a ball; the ribs are the
+            // whole difference between a pumpkin and an orange dot.
+            for offset in [-0.30, 0.30] {
+                let rib = CGRect(x: x + width * offset - width * 0.11,
+                                 y: body.minY + height * 0.06,
+                                 width: width * 0.22, height: height * 0.88)
+                canvas.fill(Path(ellipseIn: rib),
+                            with: .color(tint.opacity(0.16)))
+            }
+        }
     }
 
     /// Anything that falls: petals, leaves, snow. One routine, three feels,

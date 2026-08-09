@@ -401,6 +401,361 @@ def cloud_layer(name):
     return layer
 
 
+# --- The near plane --------------------------------------------------------
+#
+# `docs/CONTENT_PLAN.md` F1 asked for a second layer per scene — "a dock post,
+# grass fringe, branch" — drawn in front, so the place has something *near* in
+# it and not only a backdrop. It was never built. This is it.
+#
+# It is the cloud sheet's mirror image and deliberately so: same canvas, same
+# palette, same four grades, same transparent export, same `scaledToFill`
+# framing in the app. The only differences are which side of the world it is on
+# and how much of the theme is laid back over it — see `SceneForegroundView`,
+# which veils this at half the scene's 0.52. That halved veil is the depth cue
+# that does the actual work: the far world is hazed toward the theme's cream,
+# the near world is not, which is atmospheric perspective and is free.
+#
+# **Where it may be drawn is decided by the app, not by taste.** Everything that
+# stands in a place stands on one line — `Stray.groundLine`, which the stray,
+# the snail and the postcard's buddy all share — and a near plane that reached
+# above it would put creatures behind grass that `check_stray.py` and
+# `check_snail.py` do not composite, so their contrast measurements would
+# quietly stop describing the screen. So the ceiling is that line plus a small
+# margin, read out of `Stray.swift` rather than written down again here.
+#
+# The second rule is the app's own layout. Measured on an iPhone 17 at the
+# default text size, the lowest thing the UI draws is the transport row's rim
+# at 0.76 of the screen; the ceiling below works out at 0.811, which clears it.
+# That margin is not relied on, though — the layer is composited *behind* the
+# main column, for the reason written up in `ContentView.nearPlane`.
+
+# How far below the ground line the near plane has to start, in grid rows.
+FG_MARGIN = 6
+
+
+def ground_line():
+    """`Stray.groundLine`, asked for rather than copied.
+
+    The rule this repo keeps paying to relearn: if a tool has a value another
+    file also has, it is already wrong. The near plane's ceiling is derived
+    from this, so moving the ground in the Swift moves the ceiling here on the
+    next run instead of silently overlapping the stray.
+    """
+    path = os.path.join(ROOT, "Pawmodoro", "Model", "Stray.swift")
+    found = re.search(r"static let groundLine: Double = ([\d.]+)", open(path).read())
+    if not found:
+        raise AssertionError("Stray.swift: could not find Stray.groundLine")
+    return float(found.group(1))
+
+
+FG_TOP = int(round(ground_line() * H)) + FG_MARGIN
+
+
+def fg_new():
+    return np.full((H, W), T, dtype=np.uint8)
+
+
+def fg_speck(layer, x, y, index):
+    """A pixel in the near plane. Columns wrap, rows are clipped.
+
+    Wrapping matters here for the same reason it does in `cloud`: this sheet is
+    framed with `scaledToFill` and bleeds past the frame, so a shape running off
+    the right edge should continue at the left rather than end in mid-air on a
+    Mac window wider than the art."""
+    if FG_TOP <= y < H:
+        layer[y, x % W] = index
+
+
+def fg_blade(layer, x, base, height, index, lean=0.0, tip=None):
+    """One tapering blade of grass, standing on `base` and leaning as it rises."""
+    for i in range(height):
+        y = base - i
+        t = i / max(1, height - 1)
+        px = x + int(round(lean * t * t * height))
+        fg_speck(layer, px, y, index)
+        # Thick at the root, one pixel at the tip — a blade rather than a wire.
+        if t < 0.45:
+            fg_speck(layer, px + 1, y, index)
+    if tip is not None:
+        top = base - height
+        fg_speck(layer, x + int(round(lean * height)), top, tip)
+        fg_speck(layer, x + int(round(lean * height)) + 1, top, tip)
+
+
+def fg_turf(layer, top, index, jitter, rng, shade=None):
+    """A solid mass of near ground with a ragged top edge, filled to the bottom."""
+    for x in range(W):
+        y = top + rng.between(0, jitter)
+        for yy in range(y, H):
+            fg_speck(layer, x, yy, index)
+        if shade is not None:
+            fg_speck(layer, x, y, shade)
+
+
+def fg_boulder(layer, cx, base, rx, ry, index, cap=None):
+    """A rounded near-mass: rocks, tussocks, bushes."""
+    for y in range(base - 2 * ry, base + 1):
+        for x in range(cx - rx, cx + rx + 1):
+            nx = (x - cx) / max(1, rx)
+            ny = (y - (base - ry)) / max(1, ry)
+            if nx * nx + ny * ny <= 1.0:
+                fg_speck(layer, x, y, index)
+                if cap is not None and ny < -0.45:
+                    fg_speck(layer, x, y, cap)
+
+
+def fg_masonry(layer, top, base, light, dark, mortar, rng, course=5, block=11):
+    """Coursed stone: staggered rectangular blocks with mortar between them.
+
+    **Not `(x + y) % n`.** That is what the first draft of the keep's parapet
+    and the onsen's rim used, and at this size, over an area this large, two
+    multiplied-and-wrapped sequences form a lattice: both came out as visible
+    diagonal hatching. It is the same failure `check_grove.py` was green
+    through, and it was found the same way — by compositing the finished
+    surface and looking at it, not by reading the code.
+    """
+    for row, y in enumerate(range(top, base)):
+        if (y - top) % course == 0:
+            for x in range(W):
+                fg_speck(layer, x, y, mortar)
+            continue
+        offset = (row // course) * (block // 2)
+        for x in range(W):
+            joint = (x + offset) % block == 0
+            if joint:
+                fg_speck(layer, x, y, mortar)
+            else:
+                fg_speck(layer, x, y, light if rng.unit() < 0.72 else dark)
+
+
+def fg_post(layer, x, top, width, index, cap=None):
+    """A mooring post, a fence post, a bamboo culm."""
+    for y in range(top, H):
+        for dx in range(width):
+            fg_speck(layer, x + dx, y, index)
+    if cap is not None:
+        for dx in range(-1, width + 1):
+            fg_speck(layer, x + dx, top, cap)
+
+
+def fg_meadow():
+    """Home: a fringe of long grass and wildflower heads."""
+    layer = fg_new()
+    rng = Rng(211)
+    # A solid mass first, so the blades rise out of something. Blades alone
+    # composited as wires standing on nothing — grass reads as a mass with an
+    # edge, and the edge is the only part that needs to be blades.
+    fg_turf(layer, 266, LAND_LO, 6, rng, shade=LAND_HI)
+    for x in range(0, W, 3):
+        fg_boulder(layer, x + rng.between(0, 2), 276, rng.between(4, 8),
+                   rng.between(4, 8), TREE_LO if rng.unit() < 0.5 else TREE_HI)
+    for x in range(0, W, 2):
+        if rng.unit() < 0.72:
+            height = rng.between(8, H - 6 - FG_TOP)
+            lean = (rng.unit() - 0.5) * 0.30
+            head = ACCENT if rng.unit() < 0.13 else None
+            fg_blade(layer, x, 274, height, TREE_LO if x % 4 else TREE_HI,
+                     lean=lean, tip=head)
+    return layer
+
+
+def fg_frond(layer, x, base, height, spine, leaflet, lean=0.0):
+    """A fern: a curving spine with paired leaflets, longest at the root.
+
+    Drawn as leaflets rather than as speckle. The first version scattered
+    single pixels either side of a stem and composited as noise — a fern reads
+    because its leaflets are *paired* and shorten toward the tip, and one pixel
+    cannot be a pair.
+    """
+    for i in range(height):
+        y = base - i
+        t = i / max(1, height - 1)
+        px = x + int(round(lean * t * t * height))
+        fg_speck(layer, px, y, spine)
+        if i % 3:
+            continue
+        arm = int(round(6 * (1 - t) ** 0.8))
+        for dx in range(1, arm + 1):
+            drop = dx // 3
+            fg_speck(layer, px - dx, y + drop, leaflet)
+            fg_speck(layer, px + dx, y + drop, leaflet)
+
+
+def fg_woods():
+    """A fallen log across the near bank, with ferns growing over it."""
+    layer = fg_new()
+    rng = Rng(223)
+    fg_turf(layer, 276, TREE_LO, 4, rng)
+    for x in range(W):                       # the log, sagging to the right
+        y = 258 + int(4 * np.sin(x / 40.0 + 0.4))
+        for dy in range(9):
+            fg_speck(layer, x, y + dy, TRUNK if dy else FAR_2)
+        if rng.unit() < 0.18:                # moss along its upper edge
+            fg_speck(layer, x, y, TREE_HI)
+            fg_speck(layer, x, y + 1, TREE_HI)
+    for cx in (26, 96):                      # two mushroom caps, the wood's motif
+        for dy in range(5):
+            fg_speck(layer, cx, 272 + dy, WALL)
+            fg_speck(layer, cx + 1, 272 + dy, WALL)
+        fg_boulder(layer, cx, 273, 5, 3, ACCENT)
+    # Standing *in front of* the log and taller than it, which is the point —
+    # the first version topped out below the log's own rows and read as green
+    # stipple round its feet rather than as anything growing.
+    for x in range(4, W, 13):
+        fg_frond(layer, x, H - 2, rng.between(30, 44),
+                 TREE_LO, TREE_HI, lean=(rng.unit() - 0.5) * 0.4)
+    return layer
+
+
+def fg_harbor():
+    """Two mooring posts and the rope slung between them."""
+    layer = fg_new()
+    rng = Rng(233)
+    for x in range(W):                       # the near planking
+        fg_speck(layer, x, 276, TRUNK)
+        for dy in range(1, 10):
+            fg_speck(layer, x, 276 + dy, FAR_2 if x % 9 else TRUNK)
+    left, right = 16, 104
+    fg_post(layer, left, 240, 5, TRUNK, cap=FAR_2)
+    fg_post(layer, right, 244, 5, TRUNK, cap=FAR_2)
+    span = right - left
+    for i in range(span + 1):                # the rope, a shallow catenary
+        t = i / span
+        y = 244 + int(26 * np.sin(np.pi * t)) + int(2 * t)
+        fg_speck(layer, left + 2 + i, y, FAR_2)
+        if i % 6 < 3:
+            fg_speck(layer, left + 2 + i, y + 1, TRUNK)
+    for _ in range(12):                      # barnacles on the planks
+        fg_speck(layer, rng.between(0, W - 1), rng.between(278, H - 1), STONE)
+    return layer
+
+
+def fg_blossom():
+    """The lip of the nearest terrace, and the flowers spilling over it."""
+    layer = fg_new()
+    rng = Rng(241)
+    fg_turf(layer, 272, LAND_LO, 4, rng, shade=LAND_HI)
+    for x in range(W):                       # the retaining wall's coping
+        fg_speck(layer, x, 276, WALL)
+        fg_speck(layer, x, 277, STONE)
+    # Distinct bushes with sky between them, not a hedge. Spaced at 11 with a
+    # radius of 6 they merged into one green band across the screen, which is
+    # the same shape as the terraces behind and read as another stripe.
+    for cx in range(8, W + 8, 21):
+        fg_boulder(layer, cx, 274, 8, 9, TREE_HI, cap=TREE_LO)
+        for _ in range(9):
+            fg_speck(layer, cx + rng.between(-6, 6),
+                     260 + rng.between(0, 12), ACCENT)
+    for cx in (2, 124):                      # a taller one at each edge
+        fg_boulder(layer, cx, 268, 11, 15, TREE_LO)
+        for _ in range(18):
+            fg_speck(layer, cx + rng.between(-9, 9),
+                     FG_TOP + 6 + rng.between(0, 20), ACCENT)
+    return layer
+
+
+def fg_keep():
+    """A stone parapet at the top of the stair, with ivy over it."""
+    layer = fg_new()
+    rng = Rng(251)
+    fg_masonry(layer, 258, H, WALL, STONE, FAR, rng, course=6, block=13)
+    for x in range(W):                       # the capping course, run flat
+        fg_speck(layer, x, 258, WALL)
+        fg_speck(layer, x, 259, WALL)
+        fg_speck(layer, x, 260, STONE)
+    for x in range(1, W, 17):                # merlons
+        for dx in range(10):
+            for y in range(244, 258):
+                shade = WALL if rng.unit() < 0.78 else STONE
+                fg_speck(layer, x + dx, y, shade)
+            fg_speck(layer, x + dx, 244, STONE)
+            fg_speck(layer, x + dx, 245, WALL)
+    for x in range(0, W, 7):                 # ivy in clusters, not scratches
+        if rng.unit() > 0.7:
+            continue
+        drop = rng.between(8, 22)
+        for i in range(0, drop, 3):
+            cx = x + (i // 5)
+            fg_boulder(layer, cx, 262 + i, 3, 2, TREE_LO)
+            fg_speck(layer, cx - 1, 261 + i, TREE_HI)
+            fg_speck(layer, cx + 1, 261 + i, TREE_HI)
+    return layer
+
+
+def fg_cloudspire():
+    """You are above the weather here, so some of it passes in front."""
+    layer = fg_new()
+    for cx, cy, scale in ((18, 272, 16), (74, 280, 20), (120, 268, 13)):
+        cloud(layer, cx, cy, scale)
+    # `cloud` paints its own rows and does not know about the ceiling, so trim
+    # rather than trust it — this is the one recipe that borrows a primitive
+    # written for the sky.
+    layer[:FG_TOP, :] = T
+    return layer
+
+
+def fg_peaks():
+    """Near boulders under snow, and the tops of three pines."""
+    layer = fg_new()
+    rng = Rng(263)
+    fg_turf(layer, 274, FAR_2, 5, rng)
+    for cx, rx, ry in ((14, 18, 9), (52, 14, 7), (92, 20, 11), (126, 15, 8)):
+        fg_boulder(layer, cx, 284, rx, ry, STONE, cap=SNOW)
+    for x, height in ((30, 22), (72, 18), (110, 24)):
+        for i in range(height):
+            y = H - 1 - i
+            half = int(max(0, 7 * (1 - i / height)))
+            for dx in range(-half, half + 1):
+                fg_speck(layer, x + dx, y, TREE_LO)
+            if i % 5 == 0 and half > 1:
+                fg_speck(layer, x - half, y, SNOW)
+                fg_speck(layer, x + half, y, SNOW)
+    return layer
+
+
+def fg_onsen():
+    """The near rim of the bath, cobbled, and three stalks of bamboo."""
+    layer = fg_new()
+    rng = Rng(277)
+    lip = [262 + int(6 * np.cos(x / 42.0)) for x in range(W)]
+    for x in range(W):                       # the rim, curving toward you
+        for y in range(lip[x], H):
+            fg_speck(layer, x, y, STONE)
+        fg_speck(layer, x, lip[x], WALL)
+    # Cobbles set into it: rounded, overlapping, laid down the rim rather than
+    # scattered — a wet stone edge is stones, and modular speckle is hatching.
+    for band in range(4):
+        y = 270 + band * 5
+        x = 2 + band * 3
+        while x < W + 6:
+            radius = rng.between(3, 6)
+            fg_boulder(layer, x, y + rng.between(0, 2), radius,
+                       max(2, radius - 2), FAR, cap=WALL)
+            x += radius + rng.between(2, 4)
+    for x, top in ((5, FG_TOP + 2), (13, FG_TOP + 9), (23, FG_TOP + 5)):
+        fg_post(layer, x, top, 4, TREE_HI)   # bamboo at the left edge
+        for y in range(top, H, 10):          # the nodes
+            for dx in range(-1, 5):
+                fg_speck(layer, x + dx, y, TREE_LO)
+    for i in range(11):                      # leaves off the nearest culm
+        fg_speck(layer, 28 + i, FG_TOP + 6 + i // 2, TREE_HI)
+        fg_speck(layer, 28 + i, FG_TOP + 7 + i // 2, TREE_HI)
+        fg_speck(layer, 30 + i, FG_TOP + 22 - i // 3, TREE_LO)
+    return layer
+
+
+FOREGROUNDS = {
+    "meadow": fg_meadow,
+    "woods": fg_woods,
+    "harbor": fg_harbor,
+    "blossom": fg_blossom,
+    "keep": fg_keep,
+    "cloudspire": fg_cloudspire,
+    "peaks": fg_peaks,
+    "onsen": fg_onsen,
+}
+
+
 # --- The places ------------------------------------------------------------
 
 def meadow():
@@ -748,6 +1103,39 @@ def assert_drifting_layer(name, grid, layer):
         )
 
 
+def assert_near_plane(name, layer):
+    """The near plane's one hard rule, and why it is a rule.
+
+    It is drawn in front of the world, so anything it reaches is *hidden* —
+    not dimmed, not tinted, gone. Everything that stands in a place stands on
+    `Stray.groundLine`: the stray, the snail, and the buddy on a postcard.
+    `check_stray.py` and `check_snail.py` composite the scene, the veil and the
+    sky wash behind those sprites and measure the silhouette against them; they
+    know nothing about this layer, and they never will, because a checker that
+    has to be told about every future layer is a checker that will one day be
+    out of date without failing. So the near plane simply may not reach the
+    ground line, and this is the assertion that says so.
+
+    Six rows of margin below it, which at this canvas is about eighteen device
+    pixels — enough that a sprite drawn a little tall, or a phone that crops the
+    art a little differently, still has its feet in the clear.
+    """
+    rows = np.where((layer != T).any(axis=1))[0]
+    if rows.size == 0:
+        raise AssertionError(
+            f"{name}: no near plane. Every place gets one — an empty sheet is "
+            f"32 KB of nothing and a scene with no depth."
+        )
+    top = int(rows.min())
+    if top < FG_TOP:
+        raise AssertionError(
+            f"{name}: the near plane reaches row {top}, and it may not go above "
+            f"row {FG_TOP} — {FG_MARGIN} rows below Stray.groundLine at "
+            f"{int(round(ground_line() * H))}. Anything standing in this place "
+            f"stands on that line and would be drawn behind this layer."
+        )
+
+
 def assert_view_agrees():
     """The drifting layer is tiled, so the view has to know one tile's width.
 
@@ -784,6 +1172,31 @@ def assert_view_agrees():
         raise AssertionError(
             "SceneryView.swift: DriftingCloudsView no longer builds its asset "
             "name as scene_<place>_<part>_clouds, which is what this exports"
+        )
+
+    if 'assetName(for: part))_fg"' not in source:
+        raise AssertionError(
+            "SceneryView.swift: SceneForegroundView no longer builds its asset "
+            "name as scene_<place>_<part>_fg, which is what this exports"
+        )
+
+    # The near plane's veil is half the scene's, and that halving *is* the
+    # depth: the far world hazes toward the theme's cream and the near world
+    # barely does. Equalise the two and the layer stops reading as nearer and
+    # starts reading as a band of scenery at the bottom of the screen, which
+    # no screenshot would obviously flag.
+    found = re.findall(r"static let veil: Double = ([\d.]+)", source)
+    if len(found) != 2:
+        raise AssertionError(
+            "SceneryView.swift: expected two `static let veil` values — the "
+            f"scene's and the near plane's — found {len(found)}"
+        )
+    scene_veil, near_veil = float(found[0]), float(found[1])
+    if abs(near_veil * 2 - scene_veil) > 1e-9:
+        raise AssertionError(
+            f"SceneForegroundView.veil is {near_veil} against the scene's "
+            f"{scene_veil}. It has to be half: that difference is the only "
+            f"depth cue this layer has."
         )
 
 
@@ -880,15 +1293,20 @@ if __name__ == "__main__":
     for name, draw, overrides in PLACES:
         grid = draw()
         layer = cloud_layer(name)
+        near = FOREGROUNDS[name]()
         assert_quiet_band(name, grid)
         assert_drifting_layer(name, grid, layer)
+        assert_near_plane(name, near)
         palette = {**BASE, **overrides}
         for part in PARTS:
             to_png(grid, graded(palette, part), f"scene_{name}_{part}")
             to_png(layer, graded(palette, part), f"scene_{name}_{part}_clouds")
+            to_png(near, graded(palette, part), f"scene_{name}_{part}_fg")
         clouds = len(SKY_CLOUDS.get(name, ()))
+        top = int(np.where((near != T).any(axis=1))[0].min())
         print(f"  {name}: {W * UPSCALE}x{H * UPSCALE} x{len(PARTS)} parts"
-              f" (+{clouds} drifting cloud{'' if clouds == 1 else 's'})")
+              f" (+{clouds} drifting cloud{'' if clouds == 1 else 's'},"
+              f" near plane from row {top})")
     print("Vignettes:")
     for maker in (sailboat, balloon, train):
         maker()

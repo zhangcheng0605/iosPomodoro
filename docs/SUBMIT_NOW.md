@@ -13,28 +13,15 @@ surprises you.
 
 ## 0. Two things to settle before you archive anything
 
-### 0.1 The working tree is not clean
+### 0.1 The working tree — settled
 
-`git status` right now:
+**This is done.** The Mac repair pass is committed at `57ed6f6` ("The pink
+capsule was never a button, on either platform") and pushed. `PagedDeck.swift`
+was untracked while being compiled — `Pawmodoro/` is a file-system synchronized
+group, so a file can be in the build without being in git, and a clean checkout
+would not have compiled. It is tracked now.
 
-```
- M Pawmodoro/PawmodoroApp.swift
- M Pawmodoro/Platform/Platform.swift
- M Pawmodoro/Views/ContentView.swift
- M Pawmodoro/Views/OnboardingView.swift
- M Pawmodoro/Views/YearKeptView.swift
- M tools/mac_probe.py
-?? Pawmodoro/Views/Style/PagedDeck.swift
-```
-
-That is the Mac repair pass — the dead onboarding button, the AppKit tab chips,
-the year card nobody could page through, the window that opened at its own
-maximum. It is what today's green run was measured against, so it is the thing
-you would be shipping.
-
-`PagedDeck.swift` is **untracked**, and `Pawmodoro/` is a file-system
-synchronized group, so it is in the build without being in git. Commit before
-you archive. A clean checkout of `2897944` does not compile.
+Archive from `5ea0382` or later.
 
 ### 0.2 The build number
 
@@ -408,12 +395,13 @@ Honest list. None of it is known-broken; all of it is unwitnessed.
 
 **Known and deliberately not fixed:**
 
-- **Two compiler warnings survive, in both Release builds, measured today.**
-  `Animation/BuddyAnimator.swift:219` — reference to captured `var self` in
-  concurrently-executing code, *which is an error in Swift 6 language mode*, so
-  it is a future build break rather than noise.
-  `Views/GardenView.swift:82` — `kind` bound and never used. Neither affects
-  review. The first one will stop a Swift 6 migration cold.
+- ~~Two compiler warnings survive~~ — **fixed at `5ea0382`, and re-measured:
+  the Release build of both platforms is now warning-free.**
+  `BuddyAnimator.swift` reached `self?.transientPose` from inside
+  `MainActor.run`, which reads the captured *optional variable* from a second
+  concurrent context — an error in Swift 6 language mode, so it was a migration
+  blocker sitting quietly in a shipping build rather than noise. Bound before
+  the hop. `GardenView` bound a `kind` its guard never used.
 - **A bare Space bar is bound as a Start/Pause shortcut** in the `MenuBarExtra`
   menu. Read through the accessibility API the main menu bar carries no Space,
   so it should only be live while that menu is open — **type a space into the

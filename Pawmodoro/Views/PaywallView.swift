@@ -137,8 +137,17 @@ struct PaywallView: View {
     private var purchaseArea: some View {
         if store.hasPlus {
             VStack(spacing: 8) {
-                Text("💛")
+                // Was `Text("💛")`. A symbol rather than an emoji because this
+                // one is load-bearing art, not punctuation: it takes
+                // `Theme.blossom` and so changes with all eight themes and both
+                // appearances, it scales with Dynamic Type, and it renders on
+                // every runtime — the emoji drew a `?` box in the simulator,
+                // which made this state impossible to check before shipping it.
+                // It also now matches the three feature rows directly above,
+                // which are already symbols in the same colour.
+                Image(systemName: "heart.fill")
                     .font(.system(size: 40))
+                    .foregroundStyle(Theme.blossom)
                 Text("You have Pawmodoro Plus")
                     .font(.headline)
                     .foregroundStyle(Theme.bark)

@@ -63,10 +63,14 @@ struct TipJarView: View {
         }
     }
 
+    /// No heart glyph. The line is already blossom-coloured and semibold, which
+    /// is a mark this app's themes actually own — an emoji is a fixed bitmap
+    /// that reads the same in `ink` as in `sakura` and can't be measured by
+    /// `check_contrast.py`.
     private var thanksMessage: String {
         store.tipsGiven == 1
-            ? "Thank you for the tip 💛"
-            : "Thank you for \(store.tipsGiven) tips 💛"
+            ? "Thank you for the tip"
+            : "Thank you for \(store.tipsGiven) tips"
     }
 
     @ViewBuilder

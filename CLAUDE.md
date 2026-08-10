@@ -90,7 +90,8 @@ both wait on. Each phase carries an **As built** section
 carries an **As built** section recording where the code diverged from the
 plan — read the relevant one before touching that code. Known quirk: the iOS
 26.3 simulator runtime is missing the primary emoji font, so emoji in `Text`
-views render as `?` boxes in the pane (the app itself no longer uses any).
+views render as `?` boxes in the pane. See **No emoji reaches the user** below
+for what the app itself actually ships.
 
 ## Running it
 
@@ -258,8 +259,9 @@ There are no tests. A change is verified by building and looking at it:
 1. `tools/run-sim.sh --demo --headless`
 2. Drive the screen the change touched.
 3. For anything visual, check it in both appearances — dark mode is
-   `xcrun simctl ui "$UDID" appearance dark` — and in all four themes, which is
-   what `AppTheme` in `Pawmodoro/Model/AppTheme.swift` covers.
+   `xcrun simctl ui "$UDID" appearance dark` — and in all eight themes, which
+   is what `AppTheme` in `Pawmodoro/Model/AppTheme.swift` covers. (It said
+   "four" until Aug 2026; `AppTheme` has had eight cases for a long time.)
 
 ## Conventions worth keeping
 
@@ -352,6 +354,57 @@ There are no tests. A change is verified by building and looking at it:
   makes theme switching redraw and what keeps the measured contrast honest —
   every text/background pair in every theme clears 4.5:1, in both appearances.
   Adding a raw colour quietly breaks both.
+- **No emoji reaches the user, and this line has been wrong before.** Until
+  Aug 2026 this file stated flatly that "the app itself no longer uses any",
+  and that was false: **seven** were shipping in strings a user could read,
+  two of them in **notification titles**, plus twenty-five more off-screen.
+  Whoever wrote it had made the decision and assumed it had been applied —
+  which is the failure mode to watch for here, not carelessness.
+  So, counted rather than asserted — sweep both
+  targets for any non-ASCII, non-typographic character inside a Swift string
+  literal (skipping comment lines, or you drown in `→` and accented prose).
+  As of Aug 2026 that returns **15**:
+
+  - **13 in `Buddy.swift`** — the twelve arms of `idleEmoji` plus
+    `nappingEmoji`. These are the last rung of `BuddySprite`'s asset-load
+    fallback, reachable only if `PlatformImage.asset` fails for both the
+    requested frame *and* the base pose, which an intact catalog cannot do
+    (all twenty-four base imagesets are present). Not on any screen. Kept
+    because the alternative in that branch is a blank square.
+  - **2 still user-facing**, in files another agent owned during this pass:
+    `SettingsView.swift:358` (`"Thank you 💛"`) and `StatsView.swift:456`
+    (`Text("🐾")`, the stats empty state). Both were photographed drawing as
+    `?` boxes. **These are the outstanding ones — the sentence above is not
+    fully true until they go.** Fixes are one line each: drop the glyph from
+    the Settings string (the row already has a themed `checkmark.seal.fill`),
+    and swap the Stats hero for
+    `Image(systemName: "pawprint.fill").foregroundStyle(Theme.blossom)`, which
+    also matches the caption underneath it that says "paw print".
+
+  The reasoning, so it doesn't have to be had again. An emoji is somebody
+  else's art in an app that generates every sprite, scene, species and clock
+  face from a Python recipe. It is also a fixed multicolour bitmap: it ignores
+  all eight themes and both appearances, `Theme` cannot tint it, and
+  `check_contrast.py` cannot measure it — the rule directly above, dodged. And
+  it is unverifiable on the only hardware we have, because it draws as a `?`
+  box on the 26.3 runtime, so nobody can screenshot the surface and know what
+  ships. `PawmodoroLiveActivity.swift` reached all of this first and wrote it
+  down — *the buddy is drawn, not spelled* — when it dropped 🐾 and ☕️ for the
+  actual sprite. This pass was just that ruling finishing its round: five of
+  the seven removed, plus the twelve dead arms of a `playingEmoji` that had no
+  call site anywhere in either target and existed only to be counted.
+
+  Notification titles deserve their own sentence, because they are the one
+  string a user reads with the app closed. The banner already carries the app
+  icon, and the icon **is a paw** — so "Focus complete! 🐾" put a second,
+  borrowed, differently-drawn paw beside the good one. Both banners were fired
+  and photographed after the change; they read fine.
+
+  A drawn substitute is better than a deletion where the glyph was carrying
+  weight: `PaywallView`'s 40pt 💛 became `Image(systemName: "heart.fill")` in
+  `Theme.blossom`, which matches the feature rows above it and the "Leave a
+  tip" row in Settings. SF Symbols are fine — they take a `Theme` colour and
+  scale with Dynamic Type, which is the whole difference.
 - **Scenery is generated too.** `tools/generate_scenes.py` draws each place
   once into a grid of palette indices and exports it four times, one per time
   of day — the grade is a palette transform, and the window index is exempt

@@ -344,10 +344,18 @@ struct StatsView: View {
 
             HStack(alignment: .bottom, spacing: 10) {
                 ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
-                    VStack(spacing: 6) {
+                    VStack(spacing: Self.barLabelGap) {
                         Text(day.count == 0 ? " " : "\(day.count)")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(Theme.bark.opacity(0.7))
+                            // The sleeper is an overlay with a negative
+                            // offset, so it costs this stack no height and was
+                            // drawn straight over the count on whichever bar
+                            // it had settled on — hiding the one number the
+                            // row exists to show. Give that column's label the
+                            // sleeper's room back; every other column is
+                            // untouched.
+                            .padding(.bottom, index == summit ? Self.napClearance : 0)
 
                         Capsule()
                             .fill(day.count == 0 ? Theme.bark.opacity(0.12) : Theme.blossom)
@@ -365,8 +373,6 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity)
                 }
             }
-            // Extra headroom so the sleeper clears the count labels.
-            .padding(.top, summit == nil ? 0 : 16)
 
             if summit != nil, currentWeekIsBest {
                 Text("A flag on the summit — your best week yet.")
@@ -378,12 +384,25 @@ struct StatsView: View {
         .background(RoundedRectangle(cornerRadius: 20).fill(Theme.surface.opacity(0.75)))
     }
 
+    /// The gap this chart leaves between a bar and the count above it. Named
+    /// because `napClearance` is measured from it — the two drifting apart is
+    /// how the sleeper would end up back on top of the number.
+    private static let barLabelGap: CGFloat = 6
+    /// How big the sleeper is, and how far up it is drawn.
+    private static let napSize: CGFloat = 26
+    private static let napLift: CGFloat = 24
+    /// What the summit column's count label needs *on top of* `barLabelGap` to
+    /// clear the sleeper, with four points of air. The sleeper is lifted
+    /// `napLift` above the bar's top edge, and the label already sits
+    /// `barLabelGap` above it, so the shortfall is the difference.
+    private static let napClearance: CGFloat = napLift - barLabelGap + 4
+
     /// The buddy asleep on the tallest bar, with a flag if this week is the
     /// best there has ever been. It naps exactly as contentedly on a
     /// one-session molehill — the altitude is yours, the nap is its own.
     private var summitNap: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            BuddySprite(buddy: engine.settings.buddy, sleeping: true, size: 26)
+            BuddySprite(buddy: engine.settings.buddy, sleeping: true, size: Self.napSize)
             if currentWeekIsBest {
                 Image("fx_flag")
                     .renderingMode(.template)
@@ -395,7 +414,7 @@ struct StatsView: View {
                     .offset(y: -2)
             }
         }
-        .offset(y: -24)
+        .offset(y: -Self.napLift)
         .accessibilityHidden(true)
     }
 

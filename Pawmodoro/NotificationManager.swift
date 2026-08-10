@@ -25,11 +25,17 @@ final class NotificationManager {
         cancelPending()
 
         let content = UNMutableNotificationContent()
+        // No emoji in the title. This is the one string in the app a user reads
+        // with the app closed, and the banner already carries the app icon —
+        // which is this app's own art. A paw glyph next to it is a second,
+        // borrowed mark competing with the good one, in a typeface we don't
+        // control and can't theme. Same call the Live Activity made: the buddy
+        // is drawn, not spelled.
         if phase.isBreak {
-            content.title = "Break's over 🐾"
+            content.title = "Break's over"
             content.body = "\(buddyName) is settling in for a nap. Time to focus!"
         } else {
-            content.title = "Focus complete! 🐾"
+            content.title = "Focus complete!"
             content.body = "Nice work — \(buddyName) woke up and it's break time."
         }
         content.sound = .default

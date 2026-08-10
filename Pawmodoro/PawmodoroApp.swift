@@ -364,6 +364,33 @@ struct PawmodoroApp: App {
     /// "a b c" put "a b c" in the field and the menu's action never fired,
     /// while the same Space *did* fire it once the status menu was open. So
     /// the rule is about which menu, not about the key.
+    ///
+    /// **Measured in *this* app now, 10 Aug 2026 — the question is closed.**
+    /// Three times somebody has read this pair of comments and gone looking
+    /// for the bug, so here is the evidence rather than the reasoning.
+    ///
+    /// The two menus, read out of the accessibility tree: nothing in the main
+    /// menu bar carries a bare Space — this menu's first item is
+    /// `AXMenuItemCmdVirtualKey` 36 (Return) with the Command bit, `Skip This
+    /// Phase` is 124 (right arrow), `Give It a Shake` is ⌘K. The status
+    /// item's menu is the *second* menu bar of the process, and its `Start`
+    /// is `AXMenuItemCmdVirtualKey` **49** with modifiers **8** — AppKit's
+    /// "no Command" flag, i.e. the bare Space, and the only one in the app.
+    ///
+    /// Then it was typed. Settings open, the rename field holding focus, key
+    /// events posted straight into the process with `CGEventPostToPid`: over
+    /// twenty Space presses left `Session ▸ Start` still titled "Start" and
+    /// the status item still 34 points wide, while the spaces themselves
+    /// landed in the field ("Mr Fluff" typed a key at a time arrives whole).
+    /// Four Spaces with no field on screen at all did nothing either — the
+    /// window still read 25:00 over a play button.
+    ///
+    /// The control is what makes that a measurement rather than an absence:
+    /// ⌘⏎ — this menu's own binding — posted the same way, into the same
+    /// focused text field, started the session. `Session ▸ Start` became
+    /// "Pause" and the status item grew to 77 points to hold the countdown.
+    /// So the key-equivalent path was live throughout, and a Space bound
+    /// where Return is bound *would* have fired. It is not bound there.
     @CommandsBuilder
     private var sessionCommands: some Commands {
         // "New Window" is deliberately left alone. Emptying that group takes

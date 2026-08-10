@@ -378,7 +378,21 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
         }
     }
 
-    /// Emoji are the fallback if a sprite can't be loaded for any reason.
+    /// The last rung of `BuddySprite`'s asset-load fallback, and **the only
+    /// emoji left in the app**.
+    ///
+    /// These are not decoration and they are not on any screen. `BuddySprite`
+    /// reaches them only when `PlatformImage.asset` returns nil for both the
+    /// requested frame *and* the buddy's base pose — an intact catalog cannot
+    /// do that, and all twenty-four base imagesets are present, so in a
+    /// shipping build nothing here ever renders.
+    ///
+    /// Kept rather than deleted because the alternative in that branch is a
+    /// blank square, and inventing a drawn placeholder for a state that means
+    /// the asset catalog is corrupt is not worth the risk. Worth knowing if it
+    /// ever does fire: on a runtime with no emoji font (the iOS 26.3 simulator)
+    /// this degrades to a `?` box, so the fallback is at its weakest exactly
+    /// where we test. Anything user-visible added here belongs in a sprite.
     var idleEmoji: String {
         switch self {
         case .cat: "🐱"
@@ -398,20 +412,7 @@ enum Buddy: String, Codable, CaseIterable, Identifiable, PlusLockable {
 
     var nappingEmoji: String { "😴" }
 
-    var playingEmoji: String {
-        switch self {
-        case .cat: "😸"
-        case .dog: "🐕"
-        case .penguin: "🐧"
-        case .bunny: "🐰"
-        case .hamster: "🐹"
-        case .fox: "🦊"
-        case .capybara: "🦫"
-        case .redpanda: "🦝"
-        case .owl: "🦉"
-        case .otter: "🦦"
-        case .hedgehog: "🦔"
-        case .stray: "🐈‍⬛"
-        }
-    }
+    // `playingEmoji` used to sit here — a second twelve-arm table of species
+    // emoji with zero call sites anywhere in the app, the widgets or the
+    // tools. Removed: dead code that only existed to be counted by an audit.
 }

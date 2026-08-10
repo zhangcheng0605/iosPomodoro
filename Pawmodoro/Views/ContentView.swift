@@ -45,6 +45,14 @@ struct ContentView: View {
     /// How tall the column above the ambience row wants to be. See
     /// `columnMeasure`; it decides whether that region scrolls.
     @State private var columnHeight: CGFloat = 0
+    /// Where the floating toolbar's lower edge is, in global points, and where
+    /// the column's own container begins. Both measured rather than assumed —
+    /// see `topInset`, which is the whole reason they exist.
+    @State private var toolbarBottom: CGFloat = 0
+    @State private var containerTop: CGFloat = 0
+    /// Whether the screen can pay for the spacing it was drawn with. See
+    /// `reflow`, which is the only writer.
+    @State private var roomy = true
 
     var body: some View {
         NavigationStack {
@@ -109,6 +117,19 @@ struct ContentView: View {
 
                 mainColumn
 
+                // Where this screen's own container starts, in the same
+                // coordinate space the toolbar is measured in. Zero-drawing
+                // and flexible, so it reports the container and changes
+                // nothing about it. See `topInset`.
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { containerTop = g.frame(in: .global).minY }
+                        .onChange(of: g.frame(in: .global).minY) { _, top in
+                            containerTop = top
+                        }
+                }
+                .allowsHitTesting(false)
+
                 // Above the countdown, and it has to be. See `skyTouch`.
                 skyTouch
 
@@ -170,6 +191,11 @@ struct ContentView: View {
                         Image(systemName: "chart.bar.fill")
                             .foregroundStyle(Theme.bark)
                             .pointerBacking()
+                            // The toolbar, measuring itself. This is the one
+                            // item that is on the bar in every state, so it is
+                            // the one that can answer "where does the bar
+                            // end?" whatever else is up there. See `topInset`.
+                            .background(toolbarProbe)
                     }
                     .accessibilityLabel("Stats")
                     .tooltip("The weeks so far")
@@ -787,80 +813,50 @@ struct ContentView: View {
 
     /// Everything the app puts *on top of* the place you're in, in one column.
     ///
-    /// **The default screen is the old code, unchanged, and every larger text
-    /// size gets a layout that fits.** That split is deliberate, and it is
-    /// there because of what the measurement found: the ordinary layout is not
-    /// a column that fits, it is a column that *overflows and is centred*. On a
-    /// 402×874pt phone the container this sits in runs 116…840 — the floating
-    /// toolbar takes 57 points off the top on its own, the home indicator 34
-    /// off the bottom — while the column wants 815. Being 83 points too tall,
-    /// it hangs 41 above its safe area (under the toolbar glass, where the
-    /// phase chip lives) and 41 below (over the home indicator, where the play
-    /// button's rim sits). That overhang is the look. Reproducing it in any
-    /// layout that *fits* would take the status bar's height as a constant,
-    /// and there is no portable way to ask for it here — the container only
-    /// reports its inset with the toolbar already added in.
+    /// **There is one column now, and it is the one that fits.** There used to
+    /// be two: the layout that shipped, kept verbatim for `.large` and below,
+    /// and an adaptive one for everything above it. The split was written on
+    /// the belief that the shipped layout *worked* at the default text size and
+    /// only broke as the type grew. Photographed on four phones at `.large`, it
+    /// does not work on any of them:
     ///
-    /// So the honest thing is to keep the original where it works. Below and at
-    /// `.large` this is the same view, in the same place in the same `ZStack`,
-    /// and the screen is identical to the pixel because it *is* the same screen.
+    /// | phone | what the default screen did |
+    /// |---|---|
+    /// | iPhone SE (3rd gen), 375×667 | the phase chip's top sits at **−18pt** — above the screen — and the transport row is **100pt below the bottom edge**. The start button of a Pomodoro timer could not be reached at all. |
+    /// | iPhone 16e, 390×844 | "Focus" read as "ocus": 14 of the chip's 87 points were behind the leading toolbar capsule. Play button's rim on the final pixel row. |
+    /// | iPhone 17, 402×874 | chip 4pt into the toolbar's band and 26pt behind its capsule; play button's rim on the final pixel row. |
+    /// | iPhone 17 Pro Max, 440×956 | clear. |
     ///
-    /// Above `.large` it stops working, and it does so at the ordinary sizes,
-    /// not only the accessibility ones: at `.xxxLarge` — the largest plain Text
-    /// Size, no accessibility setting involved — the column is far enough over
-    /// that the bottom third of the play button is off the glass, and at the
-    /// accessibility sizes the whole transport row is, with no gesture that
-    /// brings it back. The start button of a Pomodoro timer was unhittable.
+    /// The column wants about 818pt with a one-line caption and 20 more with
+    /// two. Only the Pro Max has that. So the old layout was not "the screen as
+    /// designed" on anything else — it was a column overflowing its container
+    /// and being centred, hanging off the top into the toolbar and off the
+    /// bottom over the home indicator, by half the shortfall each. On the SE
+    /// the shortfall was 200 points.
     ///
-    /// ### A Mac always gets the adaptive one, and that is a *window* argument
+    /// The adaptive column already solved exactly that, for exactly that
+    /// reason, above `.large`: the two rows a person reaches for are pinned to
+    /// the bottom and the region above them takes what is left, scrolling only
+    /// when the room genuinely runs out. Nothing about that argument was ever
+    /// specific to large type. It is now the only column, at every text size,
+    /// on both platforms — which also means the phone and the Mac can no
+    /// longer drift apart, and the Mac's window-resize argument (below) is
+    /// simply the phone argument with a smaller screen.
+    ///
+    /// ### The Mac was always taking this one, and for the same reason
     ///
     /// A phone's screen is a constant. A window is not, and this one is
     /// resizable down to `Platform.macWindowMinimum` — which had to come down
     /// to 700 points of content, because at 860 the window was 912 tall and a
     /// 1440×900 display has 875 points under the menu bar. The window did not
     /// fit on a 13-inch MacBook Air and could not be shrunk, and the row it
-    /// pushed off the bottom was Start.
-    ///
-    /// Lowering the floor is only half of that. The other half is that
-    /// `ordinaryColumn` at that height is the phone overflow again — the phase
-    /// chip behind the toolbar, the play button cut by the bottom edge — which
-    /// is exactly what the adaptive column was built to stop. So the Mac takes
-    /// it at every text size. It costs nothing where the window is roomy: the
-    /// adaptive column only scrolls when the top group genuinely does not fit,
-    /// and at the opening size it does fit. Photographed at both sizes this app
-    /// is ever seen at — 460 × 912 and the 520 × 1179 ceiling — against the
-    /// same two shots taken before the change: the chip, the ring, the
-    /// capsules, the caption, the chips and the transport are all on the same
-    /// rows. What gives way, and only once the room genuinely runs out, is the
-    /// treat tray and then the buddy's caption, under the fade.
-    @ViewBuilder
+    /// pushed off the bottom was Start. That is the SE's bug with a mouse
+    /// attached.
     private var mainColumn: some View {
-        if dynamicTypeSize <= .large && !Platform.isDesktop {
-            ordinaryColumn
-        } else {
-            adaptiveColumn
-        }
+        adaptiveColumn
     }
 
-    /// The screen as it has always been: one stack, one `Spacer`, no scrolling
-    /// and no measuring. Do not "tidy" this into the adaptive one — its whole
-    /// job is to be the layout that shipped.
-    private var ordinaryColumn: some View {
-        VStack(spacing: 0) {
-            timerRows(width: nil)
-
-            Spacer(minLength: 12)
-
-            ambienceRow
-                .padding(.bottom, 22)
-
-            controls
-        }
-        .padding(.horizontal)
-        .padding(.top, topInset)
-    }
-
-    /// The same rows, laid out so that they fit.
+    /// The rows, laid out so that they fit.
     ///
     /// **The transport is pinned and the timer face gives way.** Wrapping the
     /// whole screen in a `ScrollView` is the obvious move and the wrong one: a
@@ -905,17 +901,27 @@ struct ContentView: View {
                     .frame(width: proxy.size.width)
                     .background(columnMeasure)
 
-                if columnHeight <= proxy.size.height {
-                    column
-                } else {
-                    ScrollView(.vertical) { column }
-                        .scrollBounceBehavior(.basedOnSize)
-                        // The system's own way of saying "there is more here",
-                        // and the reason the fade is not carrying that alone:
-                        // a fade says the picture continues, an indicator says
-                        // you may move it. Costs nothing and touches nothing.
-                        .scrollIndicatorsFlash(onAppear: true)
-                        .mask(alignment: .top) { scrollFade }
+                Group {
+                    if columnHeight <= proxy.size.height {
+                        column
+                    } else {
+                        ScrollView(.vertical) { column }
+                            .scrollBounceBehavior(.basedOnSize)
+                            // The system's own way of saying "there is more
+                            // here", and the reason the fade is not carrying
+                            // that alone: a fade says the picture continues,
+                            // an indicator says you may move it. Costs nothing
+                            // and touches nothing.
+                            .scrollIndicatorsFlash(onAppear: true)
+                            .mask(alignment: .top) { scrollFade }
+                    }
+                }
+                .onAppear { reflow(region: proxy.size.height) }
+                .onChange(of: columnHeight) { _, _ in
+                    reflow(region: proxy.size.height)
+                }
+                .onChange(of: proxy.size.height) { _, region in
+                    reflow(region: region)
                 }
             }
             // A scroll view's clip region is not its frame: it is allowed to
@@ -927,19 +933,36 @@ struct ContentView: View {
             .clipped()
 
             ambienceRow
-                .padding(.bottom, air.ambience)
+                .padding(.bottom, ambienceGap)
 
             controls
+                // The transport's own clearance from the bottom edge, and the
+                // reason the column below still ignores the safe area.
+                //
+                // Measured on an iPhone 17 and a 16e, the play button's accent
+                // ran to the **final pixel row of the display** — 45px of pink
+                // still lit at y=2621 of 2621 — which is both a home-indicator
+                // collision and the reason its lower rim looked shaved. The
+                // obvious fix is to stop ignoring the bottom safe area, and it
+                // is the wrong one: that hands 34 points back to the system on
+                // every notched phone, and those 34 points come straight out of
+                // the region the buddy and the treat tray live in, on the
+                // phones that are already 60 short. So the column keeps the
+                // full height and the transport buys its own daylight — the
+                // cheapest 16 points on the screen, since it is the row with
+                // slack under it rather than above.
+                .padding(.bottom, 16)
         }
         // Nothing left in this stack is greedy the way the `Spacer` was, so
         // without this it would size to its content and be centred.
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.horizontal)
         .padding(.top, topInset)
-        // The column has always run to the bottom edge of the glass rather than
-        // stopping at the home indicator — the play button's lower rim sits on
-        // it, and that is the screen people know. Measured, without this the
-        // whole transport row moved up by exactly the indicator's height.
+        // The column runs to the bottom edge of the glass rather than stopping
+        // at the home indicator; `transportFloor` above is what keeps the play
+        // button off it. Measured, without this the whole transport row moved
+        // up by exactly the indicator's height — 34 points this screen cannot
+        // pay on a 390pt phone.
         .ignoresSafeArea(.container, edges: .bottom)
     }
 
@@ -986,12 +1009,10 @@ struct ContentView: View {
 
     /// The rows above the old `Spacer`: the part of the screen that gives way.
     ///
-    /// One list, used by both columns, so the two can never drift apart. The
-    /// width is only for the expeditions — three capsules that stop fitting
-    /// side by side long before the accessibility sizes — and `nil` means "the
-    /// plain row, as shipped".
+    /// The width is only for the expeditions — three capsules that stop fitting
+    /// side by side long before the accessibility sizes.
     @ViewBuilder
-    private func timerRows(width: CGFloat?) -> some View {
+    private func timerRows(width: CGFloat) -> some View {
         phaseChip
             .padding(.bottom, air.chip)
 
@@ -1005,7 +1026,7 @@ struct ContentView: View {
                 .transition(.opacity)
         }
 
-        BuddyView()
+        BuddyView(spriteSize: buddySprite)
             .padding(.top, air.buddy)
 
         // Only when nothing is counting down. A treat offered
@@ -1020,25 +1041,105 @@ struct ContentView: View {
 
     /// The gaps between the rows of the top group, and the two below it.
     ///
-    /// **The sky between the rows gives way before the buddy does.** Seventy
-    /// points of this column are air: twenty under the phase chip, twelve
-    /// above the expedition capsules, eighteen above the buddy, eight above
-    /// the treat tray, and twelve at the foot of the group. On the default
-    /// screen that air *is* the composition — the rows sit in a landscape and
-    /// the spacing is what makes it look like one. Above `.large` there is no
-    /// longer a landscape between them to look at: the rows are already
-    /// touching the edges of the room they have, and the choice is between
-    /// keeping the spacing and keeping the buddy. Squeezed to thirty, it pays
-    /// for most of a treat tray.
+    /// **The sky between the rows gives way before the buddy does, and it now
+    /// gives way when it has to rather than when the type is large.** On a
+    /// screen with room, the air *is* the composition — the rows sit in a
+    /// landscape and the spacing is what makes it look like one. On a screen
+    /// without room the rows are already touching the edges of what they have,
+    /// and the choice is between keeping the spacing and keeping the buddy.
     ///
-    /// Every value here is the one that shipped at `.large` and below, so the
-    /// default screen is untouched — the same rule `chipScale` and
-    /// `TimerRingView.diameter` follow.
+    /// The trigger used to be the text size, which was a proxy for "is this
+    /// screen full?" and a bad one. Photographed at the *default* size: an
+    /// iPhone 17 Pro Max has 628 points for a group that wants 597 and should
+    /// keep every point of the shipped spacing; an iPhone 16e has 497 for the
+    /// same 597 and cannot keep any of it. Same text size, opposite answers. So
+    /// the trigger is the measurement — see `reflow`, which is what sets
+    /// `roomy`.
+    ///
+    /// The tight row goes tighter again at the accessibility sizes, where the
+    /// rows are two and three times the height they were and the spacing
+    /// between them is the only thing on the screen that has not grown with
+    /// them. `airSlack` is derived from these two tuples rather than written
+    /// down beside them — the rule this repo already keeps for checkers, and
+    /// the same reason: a constant that restates a table is a constant that
+    /// goes quietly out of date.
     private var air: (chip: CGFloat, expeditions: CGFloat, buddy: CGFloat,
-                      treats: CGFloat, floor: CGFloat, ambience: CGFloat) {
-        dynamicTypeSize <= .large
-            ? (chip: 20, expeditions: 12, buddy: 18, treats: 8, floor: 12, ambience: 22)
-            : (chip: 8, expeditions: 4, buddy: 8, treats: 4, floor: 6, ambience: 14)
+                      treats: CGFloat, floor: CGFloat) {
+        roomy ? Self.roomyAir : tightAir
+    }
+
+    private static let roomyAir = (chip: CGFloat(20), expeditions: CGFloat(12),
+                                   buddy: CGFloat(18), treats: CGFloat(8),
+                                   floor: CGFloat(12))
+
+    private var tightAir: (chip: CGFloat, expeditions: CGFloat, buddy: CGFloat,
+                           treats: CGFloat, floor: CGFloat) {
+        dynamicTypeSize.isAccessibilitySize
+            ? (chip: 4, expeditions: 2, buddy: 4, treats: 2, floor: 4)
+            : (chip: 8, expeditions: 6, buddy: 8, treats: 4, floor: 6)
+    }
+
+    /// The buddy is the last thing on this screen to give ground, and it gives
+    /// twelve points of it. Not because twelve looks better — 104 does — but
+    /// because on a 390×844 phone those twelve points are the difference
+    /// between the caption capsule being whole and being sheared off at the
+    /// descenders, which is the exact fault the walk found at AX5 and which has
+    /// no business appearing at the default size as the price of fixing it.
+    private var buddySprite: CGFloat { roomy ? 104 : 92 }
+
+    /// The gap under the ambience row. Deliberately **not** part of `air`: it
+    /// sits outside the measured region, so letting it move with `roomy` would
+    /// change the region that decides `roomy`, and that is a layout loop.
+    private var ambienceGap: CGFloat { dynamicTypeSize <= .large ? 12 : 14 }
+
+    /// How much taller the roomy arrangement is than the tight one: the
+    /// difference between the two spacing tables, plus the buddy's twelve.
+    /// Used to decide whether roomy would fit *from a measurement taken while
+    /// tight*, which is the only way this switch can be free of hysteresis.
+    /// Derived, never written down — see `air`. `reflow` is the reader.
+    private var airSlack: CGFloat {
+        func total(_ a: (chip: CGFloat, expeditions: CGFloat, buddy: CGFloat,
+                         treats: CGFloat, floor: CGFloat)) -> CGFloat {
+            a.chip + a.expeditions + a.buddy + a.treats + a.floor
+        }
+        return total(Self.roomyAir) - total(tightAir) + (104 - 92)
+    }
+
+    /// Which arrangement the room can pay for.
+    ///
+    /// **The two tests are asymmetric on purpose, and that is what stops it
+    /// oscillating.** Coming down is "the group I measured does not fit".
+    /// Going back up is "the group I measured, *plus the points roomy would
+    /// add back*, still fits" — so the arrangement it would switch to is
+    /// checked, never the one it is already in. Switch down and the next
+    /// measurement is `slack` smaller, which fails the way back by exactly the
+    /// margin that failed on the way down; switch up and the next measurement
+    /// is `slack` larger, which is the number that was just tested. Neither
+    /// direction can immediately undo itself.
+    ///
+    /// `columnHeight` is measured with whatever arrangement is currently on
+    /// screen, so this is the one place that has to know both are the same
+    /// height apart every time — hence `airSlack` being derived from the two
+    /// tables rather than written beside them.
+    ///
+    /// **The 24-point deadband is the seatbelt on that assumption.** The two
+    /// arrangements differ by exactly `airSlack` today, because nothing either
+    /// of them changes can reflow anything else — the caption's width is fixed
+    /// and the chips beside the buddy are shorter than the sprite at both
+    /// sizes. If that ever stops being true and roomy turns out to cost *more*
+    /// than `airSlack`, the way back up would be a lie and the two states
+    /// would trade places on every layout pass, forever, on a screen somebody
+    /// is looking at. Twenty-four points of margin means the arithmetic has to
+    /// be wrong by more than a treat tray's half before that can happen; the
+    /// cost is a window that could just barely afford the roomy spacing
+    /// keeping the tight one, which nobody can see.
+    private func reflow(region: CGFloat) {
+        guard columnHeight > 0, region > 0 else { return }
+        if roomy {
+            if columnHeight > region { roomy = false }
+        } else if columnHeight + airSlack + 24 <= region {
+            roomy = true
+        }
     }
 
     private func topGroup(width: CGFloat) -> some View {
@@ -1071,37 +1172,68 @@ struct ContentView: View {
         }
     }
 
-    /// How far below the safe area the column starts.
+    /// How far below the container's top the column starts.
     ///
-    /// The toolbar floats *over* this screen rather than reserving a bar above
-    /// it, and at the ordinary text size the phase chip tucks just under its
-    /// trailing edge — that is how this screen has always looked and the eight
-    /// points below are not up for renegotiation. But the chip is `.headline`,
-    /// so larger text makes it both taller and wider: it climbs into the
-    /// toolbar's own pills and, at the accessibility sizes, into the Dynamic
-    /// Island. Measured, "Focus" read as "…cus" with the camera button drawn on
-    /// top of it. The toolbar's glyph buttons barely grow, so the clearance the
-    /// chip needs is roughly its own growth, and that is what this is.
+    /// **The toolbar is asked where it ends, rather than guessed at.** The
+    /// toolbar floats *over* this screen rather than reserving a bar above it,
+    /// and the phase chip is centred in a row the toolbar's own capsules reach
+    /// into from both sides. Every previous version of this was a number
+    /// somebody chose — eight points, then a ramp to forty-eight, then eight
+    /// again — and each of them was measured on one phone at one text size and
+    /// silently wrong on the next. The bug it shipped with: on a 390pt phone at
+    /// the *default* text size, "Focus" read as "ocus", with fourteen of the
+    /// chip's eighty-seven points behind the leading capsule. That capsule had
+    /// grown by one glyph — the camera — and nothing in a fixed inset could
+    /// know.
     ///
-    /// **That ramp was measured on the layout that overflows, and charged to
-    /// the one that doesn't.** The clearance problem is real on
-    /// `ordinaryColumn`, which is taller than its container and hangs forty
-    /// points above it — there the chip does climb into the toolbar's pills.
-    /// `adaptiveColumn` is top-anchored *inside* that container, and the
-    /// container already begins below the floating toolbar: measured on a
-    /// 402×874pt phone the toolbar's lower edge is at 103pt and the container
-    /// starts at 116, so the chip clears it by thirteen points before this
-    /// adds anything. The ramp reached forty-eight, and every one of those
-    /// points came out of the region the buddy lives in — empty sky above a
-    /// chip with nothing to be clear of, on the one screen with nothing spare.
+    /// So the clearance is not a constant and not a ramp: the always-present
+    /// stats button reports the toolbar's own lower edge in global points
+    /// (`toolbarProbe`), the container reports where this column begins, and
+    /// the chip starts six points below whichever is lower. Add a sixth
+    /// toolbar item, grow the type to AX5, run it on a phone nobody here has
+    /// held, and the chip still clears — because the number came from the
+    /// toolbar that is actually on screen.
     ///
-    /// Eight where it always was, and four more at the accessibility sizes as
-    /// the one hedge worth keeping: the toolbar's own buttons are the thing
-    /// here nobody has measured on every phone.
+    /// The measurement cannot feed back on itself: moving the column moves
+    /// neither the toolbar nor the container.
+    ///
+    /// The floor stays at the eight points the screen has always had, for the
+    /// case where the probe has not reported yet (first frame) or reports
+    /// nothing useful.
+    ///
+    /// **A Mac is opted out by name, and that is not tidiness.** There the
+    /// toolbar is a real bar that reserves its own space *above* the content
+    /// rather than glass floating over it, so there is nothing to be clear of
+    /// and the honest answer is the floor. Opting out by platform rather than
+    /// trusting the arithmetic to come out negative is the cheap insurance:
+    /// AppKit's own coordinate space is y-up, and a probe that came back
+    /// flipped would push this whole screen down by the height of a window
+    /// with nothing on Linux able to see it. The ceiling is the second belt —
+    /// the largest clearance any phone has needed is 62 points, on an
+    /// iPhone SE, so anything past 72 is a measurement that has gone wrong
+    /// rather than a toolbar that is genuinely that tall.
     private var topInset: CGFloat {
-        switch dynamicTypeSize {
-        case .xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge: 8
-        default: 12
+        let base: CGFloat = 8
+        guard !Platform.isDesktop, toolbarBottom > 0, containerTop > 0 else {
+            return base
+        }
+        // Two points, not ten. A `ToolbarItem`'s own frame already runs about
+        // sixteen points below the glass capsule it is drawn in — measured on a
+        // 390pt phone, capsule bottom 86.7, item bottom 103 — so this is
+        // measuring to the outside of the bar's padding and every point added
+        // here is a point taken from a screen that is already short.
+        return min(72, max(base, toolbarBottom + 2 - containerTop))
+    }
+
+    /// The toolbar, measuring its own lower edge. Draws nothing and changes no
+    /// layout — see `topInset`, which is the only reader.
+    private var toolbarProbe: some View {
+        GeometryReader { g in
+            Color.clear
+                .onAppear { toolbarBottom = g.frame(in: .global).maxY }
+                .onChange(of: g.frame(in: .global).maxY) { _, bottom in
+                    toolbarBottom = bottom
+                }
         }
     }
 
@@ -1175,9 +1307,24 @@ struct ContentView: View {
         CGSize(width: max(44, chipWidth + 6), height: max(44, chipHeight + 12))
     }
 
+    /// The chip is capped at `accessibility1`, and the reason is what sits
+    /// under it.
+    ///
+    /// Uncapped, one word — "Focus" — takes 72 points of vertical screen at
+    /// AX5, which is more than the buddy's caption, more than the expedition
+    /// row, and about a seventh of everything the top group has to spend. It is
+    /// spent on a label whose whole job is to say which of three phases is
+    /// running, and the thing it pushes under the fold is the sentence the
+    /// buddy is saying. At AX1 the chip is still half again the size of body
+    /// text at the default setting.
+    ///
+    /// The transport row takes the same medicine one size lower
+    /// (`.xxxLarge`) — this is the same argument, and it was already the
+    /// house answer for a row that must not be allowed to grow without limit.
     private var phaseChip: some View {
         Text(engine.phase.title)
             .font(.headline)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .foregroundStyle(Theme.onAccent)
             .padding(.horizontal, 20)
             .padding(.vertical, 8)
@@ -1212,18 +1359,16 @@ struct ContentView: View {
     /// exactly as they always have while they fit, and take their full names
     /// into a sideways scroll when they don't.
     ///
-    /// `nil` is the shipped row itself, untouched — see `ordinaryColumn`.
-    @ViewBuilder
-    private func expeditions(width: CGFloat?) -> some View {
-        if let width {
-            ScrollView(.horizontal, showsIndicators: false) {
-                expeditionChips
-                    .frame(minWidth: width)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-        } else {
+    /// This is the fix the walk found had worked and must not be undone: at
+    /// AX5 the three pills were "Sprin/t" and "Clas/sic" broken across two
+    /// lines inside clipped circles. They read correctly now, at every size,
+    /// and the sideways scroll is what pays for it.
+    private func expeditions(width: CGFloat) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
             expeditionChips
+                .frame(minWidth: width)
         }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var expeditionChips: some View {
@@ -1277,21 +1422,27 @@ struct ContentView: View {
     /// view on appear so the selection is never hidden off-screen.
     private var ambienceRow: some View {
         ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Ambience.allCases) { option in
-                        ambienceButton(for: option)
-                            .id(option)
+            // Spaced explicitly. Left implicit these two rows sat eleven points
+            // apart, and on a 390×844 phone eleven points is a fifth of the
+            // treat tray — see `air`, where the same argument is made about
+            // ninety-two points of it.
+            VStack(spacing: 4) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Ambience.allCases) { option in
+                            ambienceButton(for: option)
+                                .id(option)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .onAppear {
+                    if engine.settings.ambience != .off {
+                        proxy.scrollTo(engine.settings.ambience, anchor: .center)
                     }
                 }
-                .padding(.horizontal, 4)
+                photoControl
             }
-            .onAppear {
-                if engine.settings.ambience != .off {
-                    proxy.scrollTo(engine.settings.ambience, anchor: .center)
-                }
-            }
-            photoControl
         }
     }
 

@@ -138,9 +138,10 @@ nor `sceneImage`.
    was unavailable on the App Store — it is the entire reason "Paawmodoro"
    exists (`docs/APP_STORE_LISTING.md`, App Review notes). The option of
    renaming the record to match the app is not on the table, and renaming it to
-   anything else on submission day would falsify the listing copy in both
-   `APP_STORE_LISTING.md` and `MAC_LISTING.md`, which explain the two a's in
-   customer-facing text *and* in the review notes.
+   anything else on submission day would falsify listing copy in both
+   `APP_STORE_LISTING.md` and `MAC_LISTING.md` — in the macOS *description*,
+   which a customer reads, and in both sets of App Review notes, which a
+   reviewer reads. (Not in the iOS description; see the correction below.)
 
    **The app is internally consistent, and that is the part that was worth
    checking.** All 23 user-visible strings naming the app say "Pawmodoro"; not
@@ -150,10 +151,70 @@ nor `sceneImage`.
    `Quit Pawmodoro`. Notification text never names the app — the OS supplies
    the name from the bundle, so it says Pawmodoro too.
 
-   The mismatch is therefore deliberate, documented, disclosed to review, and
-   pre-empted in the last line of both store descriptions. **Do not "fix" it
-   later by setting `INFOPLIST_KEY_CFBundleDisplayName = Paawmodoro`** — that
-   is the one change that would break faith with the users who already have it.
+   The mismatch is therefore deliberate, documented, and disclosed to App
+   Review on both platforms. **Do not "fix" it later by setting
+   `INFOPLIST_KEY_CFBundleDisplayName = Paawmodoro`** — that is the one change
+   that would break faith with the users who already have it.
+
+   **Correction, 10 Aug 2026 — an earlier revision of this item was wrong.**
+   It said the two a's were "pre-empted in the last line of both store
+   descriptions", and `MAC_STORE_ASSETS.md` § 2.6 repeated the same claim.
+   That is false. Checked line by line against the copy in this repo:
+
+   | Description | Does the customer-facing copy explain the name? |
+   |---|---|
+   | macOS — `MAC_LISTING.md` § 4 | **Yes.** It closes with `A NOTE ON THE NAME` — "The window says Pawmodoro. The App Store says Paawmodoro, with two a's, because the shorter spelling was already taken. Same app." |
+   | iOS — `APP_STORE_LISTING.md` § Description | **No.** No name note anywhere in it. It closes with the Paawmodoro Plus paragraph. |
+
+   The iOS explanation exists **only** in the App Review notes
+   (`APP_STORE_LISTING.md` § App Review Information) — a field reviewers read
+   and customers never see. So **one** of the two descriptions closes with the
+   two a's, not both.
+
+   **This blocks nothing and changes no decision.** Apple permits the
+   difference; the iOS listing has shipped this way since 1.0 and nobody has
+   complained. It is recorded only so the next person to check does not find
+   the doc and the listing disagreeing and re-open the whole question.
+
+   If you ever *want* the symmetry, the numbers are: the iOS description is
+   **2,852 characters** of 4,000, and the macOS name-note paragraph is 150,
+   so it drops in at 3,002 with room to spare. But a description only changes
+   with a version submission — so it is 1.1 or not at all. Decide it on
+   purpose; do not let a doc tell you it is already done.
+
+4. **`INFOPLIST_KEY_CFBundleDisplayName = PawmodoroWidgets` on the widget
+   extension — and the widget extension now ships.** Recorded, not fixed:
+   `project.pbxproj` is another agent's file today and must not be edited
+   from here.
+
+   **The half that is true.** The setting is on the
+   `PawmodoroWidgetsExtension` target only — `project.pbxproj` lines 272
+   (Debug) and 306 (Release). The **main app target has no
+   `CFBundleDisplayName` at all**, which is exactly why the app calls itself
+   *Pawmodoro* via `CFBundleName`. Verified in the shipped archive: `1.0
+   (2).xcarchive` → `Pawmodoro.app/Info.plist` has `CFBundleName = Pawmodoro`
+   and no `CFBundleDisplayName` key. Item 3 above is unaffected.
+
+   **The half that is not.** It has been justified as being on "the
+   non-shipping widgets target". That is no longer true at HEAD (1.1 build
+   3). The `.appex` is a target dependency *and* sits in the app's **Embed
+   Foundation Extensions** phase with `platformFilter = ios`, and a
+   Release-iphoneos build really does produce
+   `Pawmodoro.app/PlugIns/PawmodoroWidgetsExtension.appex`, whose `Info.plist`
+   carries `CFBundleDisplayName = PawmodoroWidgets`. It did *not* ship in 1.0
+   build 2 — neither 6 Aug archive has a `PlugIns` directory at all — which is
+   almost certainly where the "non-shipping" belief came from. It ships now.
+
+   **How bad, honestly: cosmetic and probably invisible.** The widget gallery
+   groups widgets under the *containing app's* name (Pawmodoro) and titles
+   each one from its `configurationDisplayName` — which is `"Your buddy"`
+   (`PawmodoroWidgets/PawmodoroHomeWidget.swift:162`), not "PawmodoroWidgets".
+   The raw bundle name surfaces only in system lists that name extensions
+   directly (per-app Settings rows, battery/Screen Time attribution). So this
+   is worth a one-line fix in a later build — `PawmodoroWidgets` → `Pawmodoro`
+   or `Your buddy` — and is **not** a reason to hold today's submission.
+   `platformFilter = ios` means the macOS build never embeds it, so the Mac
+   submission is untouched either way.
 
 ---
 
@@ -229,7 +290,7 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
 
 ---
 
-## Two traps that will waste an hour if forgotten
+## Three traps that will waste an hour if forgotten
 
 - **This repo is on the iCloud-synced Desktop.** The sync service stamps
   `com.apple.FinderInfo` on the built bundle and `codesign` refuses it
@@ -240,6 +301,36 @@ Carried over from `RESUME_HERE.md`. None of these has ever been seen working:
   focused once and picked up a stray keystroke, silently becoming
   `com.pawmodoro.zhangchenso-`. A wrong bundle ID uploads fine and then fails
   to match the App Store record.
+- **`-PawmodoroUnlockPlus` is not temporary — it *writes* Plus into the real
+  preference file and leaves it there.** `LaunchOptions.swift:1051` does
+  `defaults.set(true, forKey: StorageKeys.hasPlus)`, and
+  `StoreManager.init` seeds itself from that cached bool
+  (`StoreManager.swift:67`) before StoreKit has said anything. So one debug
+  launch on the owner's own Mac leaves the app **permanently entitled** until
+  something writes `false` back. That happened twice on 10 Aug 2026 and had to
+  be repaired by hand.
+
+  It matters most for the **Sandbox Apple Account** paywall run that is still
+  outstanding: with a stale `true` cached, a purchase that silently fails
+  still looks like it worked, because the UI was already unlocked. Clear it
+  before testing the paywall, and check *both* stores — a sandboxed (Mac App
+  Store) build reads the **container**, not `~/Library/Preferences`:
+
+  ```sh
+  # quit the app first — a live instance re-flushes NSUserDefaults over any repair
+  pgrep -f "Pawmodoro.app/Contents/MacOS"        # must be empty
+  defaults read  com.pawmodoro.zhangcheng pawmodoro.hasPlus   # sandboxed: reads the container
+  plutil -p ~/Library/Preferences/com.pawmodoro.zhangcheng.plist | grep hasPlus
+  defaults write com.pawmodoro.zhangcheng pawmodoro.hasPlus -bool false
+  ```
+
+  The two files are genuinely separate and drifted apart today:
+  `~/Library/Preferences/com.pawmodoro.zhangcheng.plist` held `false` while
+  `~/Library/Containers/com.pawmodoro.zhangcheng/Data/Library/Preferences/com.pawmodoro.zhangcheng.plist`
+  held `true`. Repairing only the first one looks like success and fixes
+  nothing that a sandboxed build will read. Use `defaults write` rather than
+  editing the file — `cfprefsd` caches, and a hand-edited file gets
+  overwritten from the cache.
 
 
 ---

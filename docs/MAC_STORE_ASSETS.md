@@ -269,9 +269,17 @@ None of these is a defect that blocks a submission. All are visible in the art.
   has `CFBundleName = Pawmodoro` and no `CFBundleDisplayName`, so *Pawmodoro*
   is already the name on every existing user's Home screen; and "Pawmodoro" was
   never available on the App Store, which is why the record is "Paawmodoro" in
-  the first place. Both store descriptions already close by explaining the two
-  a's, and the App Review notes say it outright. Full reasoning in
-  `docs/NEXT_UPDATE.md` § "Decide before the next submission", item 3.
+  the first place. The **macOS** description closes by explaining the two a's
+  (`MAC_LISTING.md` § 4, `A NOTE ON THE NAME`), and the App Review notes on
+  both platforms say it outright. Full reasoning in `docs/NEXT_UPDATE.md`
+  § "Known and NOT yet fixed", item 3.
+
+  > **Corrected 10 Aug 2026.** This bullet used to read "Both store
+  > descriptions already close by explaining the two a's". That was false —
+  > the **iOS** description (`APP_STORE_LISTING.md`) contains no name note at
+  > all; it closes with the Paawmodoro Plus paragraph, and the iOS
+  > explanation lives only in the App Review notes. It changes nothing about
+  > the screenshots or the decision, but do not repeat the claim.
 - **The toolbar overflows on the idle screen.** Five toolbar items (Stats,
   Sound Studio, Scrapbook / Settings, Bench) do not fit 400 pt, so macOS
   collapses the trailing ones behind a `»` chevron and the gear disappears.

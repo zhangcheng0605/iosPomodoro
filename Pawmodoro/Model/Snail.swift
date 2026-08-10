@@ -1,5 +1,9 @@
 import CoreGraphics
 import Foundation
+// For `DynamicTypeSize` alone. The furniture she has to clear is the app's,
+// and how deep it is depends entirely on how big the reader has set the text —
+// see `chromeDepth(at:)`.
+import SwiftUI
 
 /// The old snail, who is crossing.
 ///
@@ -72,11 +76,11 @@ enum Snail {
     /// the chips' painted edge is 21 device pixels below it — the 7pt above,
     /// measured off the glass, at x = 0.13, 0.50 and 0.92 and in both a
     /// running phase and an idle screen. On a Mac window the same arithmetic
-    /// comes out at 38pt. **On an iPhone SE it is still wrong**, and not by
-    /// any fault of this number: the main column overflows that screen by
-    /// about 68pt, every layer in the stack is handed the overflowing box,
-    /// and she is drawn inside the fourth chip. `check_snail.py`'s
-    /// `KNOWN_BROKEN` has the evidence; the fix is in `ContentView`.
+    /// comes out at 38pt.
+    ///
+    /// What no value of this number can fix is a screen with no room left
+    /// under it — see `requiredFooting(at:)`, which is where the iPhone SE
+    /// went, and where the accessibility text sizes went after it.
     ///
     /// She is harder to place than the stray, and the reason is worth knowing:
     /// the stray stands at three fixed x positions, so a line only has to be
@@ -99,6 +103,194 @@ enum Snail {
             ? size.height - drawn
             : (size.height - drawn) / 2
         return originY + groundRow * scale
+    }
+
+    // MARK: - The app's own floor
+    //
+    // `groundRow` puts her on the same painted pixel of the artwork on every
+    // device, which is what keeps her on the ground. It cannot also keep her
+    // off the app, because the app's furniture is not painted into the
+    // artwork: the ambience chips, the photograph chip and the transport are
+    // stacked up from the **bottom of the layer** she is drawn in. The
+    // artwork, meanwhile, is `scaledToFill`, so how much of it falls below her
+    // feet depends only on the shape of that layer. The two are unrelated, and
+    // where they meet is the only place she can end up standing on a button.
+    //
+    // ### The version of this that was one number, and why it failed
+    //
+    // This used to be `minimumFooting = 198`: 196 points of furniture, plus
+    // two of daylight. Both halves were real and both were measured — on four
+    // phones, at the **ordinary reading size**, which is the whole of the bug.
+    // Every piece of that furniture answers Dynamic Type. Measured off the
+    // painted chips themselves, on the iOS 26.3 simulator, 10 Aug 2026, on
+    // the `ordinaryColumn`/`adaptiveColumn` layout that then shipped:
+    //
+    //     text size      furniture     198 was short by
+    //     .large           196.0pt        —
+    //     .xLarge          197.7pt       1.7
+    //     .xxLarge         207.3pt      11.3
+    //     .xxxLarge        216.7pt      20.7
+    //     accessibility    232.7pt      36.7
+    //
+    // So at `.xxLarge` and above — a plain Text Size setting on an iPhone 16,
+    // no accessibility slider involved — the gate said "there is room" and
+    // there was not: photographed, she stands on the top edge of the third
+    // ambience chip. A constant tuned at one text size is not a measurement of
+    // a layout that has a text size in it.
+    //
+    // What is below is that same furniture, arithmetic rather than a number.
+    // Every term is `ContentView`'s own, and `check_snail.py` parses them out
+    // of `ContentView.swift` and fails if this drifts from them — at *every*
+    // size, not one. That check is not decoration: `ContentView` gained a
+    // sixteen-point transport floor and dropped `ambienceGap` from 22 to 12
+    // *while this fix was being written*, and the arithmetic below was wrong
+    // for about an hour until the check said so.
+    //
+    // It is still a copy of another file's layout, which is a thing this repo
+    // is right to distrust. The cure is `SnailView` being *told* where the
+    // furniture is rather than working it out: one `PreferenceKey` written by
+    // `ContentView.ambienceRow` carrying the top of its own frame, read here,
+    // and every term below goes away along with the check that guards them.
+    // That is a `ContentView` change and it has not been made.
+
+    /// `ContentView.adaptiveColumn`'s transport floor: the daylight the play
+    /// button buys itself off the bottom edge of the glass.
+    static let transportFloor: Double = 16
+
+    /// The transport row: the play button is the tallest thing in it. Fixed
+    /// points, not scaled — `ContentView.controls` sets the three circles'
+    /// frames outright.
+    static let transportHeight: Double = 84
+
+    /// The backing behind one ambience glyph at the ordinary reading size,
+    /// which is `ContentView.chipHeight` before `chipScale`.
+    static let chipBacking: Double = 32
+
+    /// What `ContentView.chipTarget` adds to that backing vertically, and the
+    /// floor it never goes below — a 44 point target, whatever the text size.
+    static let chipPadding: Double = 12
+    static let minimumTarget: Double = 44
+
+    /// `ContentView.ambienceRow`'s own `VStack` spacing, between the chips and
+    /// the photograph chip under them.
+    static let rowSpacing: Double = 4
+
+    /// The daylight she keeps between herself and anything the app draws.
+    ///
+    /// Two points, not zero. Zero would allow a snail whose shell is touching
+    /// the corner of a chip, which is the picture this whole gate exists to
+    /// stop.
+    static let clearance: Double = 2
+
+    /// `ContentView.chipScale` — how much bigger the glyph chips get as the
+    /// text does. 1.0 at every ordinary reading size through `.large`, then a
+    /// short ladder on a leash.
+    static func chipScale(at textSize: DynamicTypeSize) -> Double {
+        switch textSize {
+        case .xSmall, .small, .medium, .large: 1.0
+        case .xLarge: 1.15
+        case .xxLarge: 1.3
+        case .xxxLarge: 1.45
+        default: 1.7
+        }
+    }
+
+    /// `ContentView.ambienceGap` — the gap it leaves above the transport.
+    /// The sky between the rows is what gives way when the text grows.
+    static func ambienceGap(at textSize: DynamicTypeSize) -> Double {
+        textSize <= .large ? 12 : 14
+    }
+
+    /// How deep the app's furniture is, from the bottom of the layer up to the
+    /// **painted** top edge of the ambience chips.
+    ///
+    /// Built the way `ContentView` builds it, upwards from the bottom edge of
+    /// the glass: the transport's floor, the three circles, the air above
+    /// them, the photograph chip's hit target, the row's own spacing, the
+    /// ambience chips' hit target — less the inset between that target and the
+    /// ink inside it, because a snail may stand on an invisible 44 point hit
+    /// area and may not stand on a chip.
+    static func chromeDepth(at textSize: DynamicTypeSize) -> Double {
+        let chip = chipBacking * chipScale(at: textSize)
+        let row = max(minimumTarget, chip + chipPadding)
+        let inset = (row - chip) / 2
+        return transportFloor + transportHeight + ambienceGap(at: textSize)
+            + row + rowSpacing + row - inset
+    }
+
+    /// How much meadow has to be left under her feet before she comes at all.
+    ///
+    /// Points, from her foot line down to the bottom edge of the layer she is
+    /// drawn in. Below this she is somewhere else this month.
+    static func requiredFooting(at textSize: DynamicTypeSize) -> Double {
+        chromeDepth(at: textSize) + clearance
+    }
+
+    /// Whether the layer she would be drawn in leaves room for her.
+    ///
+    /// The same box `SnailView` hands `feetY`, so the two can never disagree.
+    ///
+    /// ### She is absent from most phones now, and that is the answer
+    ///
+    /// Measured on the iOS 26.3 simulator, place `peaks`, `-PawmodoroSnail 50`,
+    /// 10 Aug 2026, against `ContentView`'s single adaptive column. The layer
+    /// box is read out of `SnailView`'s own `GeometryReader`; room is that
+    /// box's height less her foot line, and it does not move with the text
+    /// size because her feet do not:
+    ///
+    ///                             layer box    room    here up to
+    ///     iPhone SE (3rd gen)      375 x 667   118pt   nowhere
+    ///     iPhone 13 mini           375 x 812   190pt   nowhere
+    ///     iPhone 16e               390 x 844   197pt   nowhere
+    ///     iPhone 16                393 x 852   200pt   nowhere (short by 0.4)
+    ///     iPhone 17 Pro            402 x 874   205pt   .large
+    ///     iPhone 17 Pro Max        440 x 956   224pt   .xxLarge
+    ///     Mac, smallest window     460 x 700   234pt   .xxLarge
+    ///
+    /// against a furniture depth of 198pt at `.large`, 211.6 at `.xLarge`,
+    /// 221.2 at `.xxLarge`, 230.8 at `.xxxLarge` and 246.8 at every
+    /// accessibility size, all including the two points of `clearance`.
+    ///
+    /// That is a far shorter list than it used to be, and two things took it
+    /// there, both of them `ContentView`'s and neither of them wrong: the
+    /// transport bought itself a sixteen-point floor off the bottom edge, and
+    /// the column stopped overflowing — where the `ZStack` used to grow past
+    /// the glass and hand her the extra, the layer is now exactly the screen.
+    /// An iPhone 16 misses by four tenths of a point.
+    ///
+    /// No ground row fixes the ones that say nowhere, and the ones it *could*
+    /// fix are not this file's to trade. The standable band is rows 209…226
+    /// (measured, every x of every scene she visits); row 218 would put her
+    /// back on an iPhone 16 at `.large` with 4.6pt clear, and above 209 she is
+    /// standing on sky. `groundRow` says what 219 buys and who owns that
+    /// choice. Meanwhile the honest answer is the one the meadow has always
+    /// allowed: **she is crossing somewhere else.** She keeps no state, so
+    /// nothing is lost and nothing has to be migrated — the same sentence as
+    /// any month she spends out of sight. That is why the gate is the
+    /// *question* "is there room" rather than a nudge to her position: the
+    /// worst it can do is take her away, and never put her on a button.
+    ///
+    /// ### It asks about the idle screen, always
+    ///
+    /// The photograph chip is gone during a focus phase, so the furniture is
+    /// some fifty points shallower then, and there are screens she would fit
+    /// on while the timer runs. She is not offered them. A snail who arrived
+    /// when you pressed start and left when you stopped would be an animation,
+    /// and this one is a thing you notice was there all along.
+    ///
+    /// ### The one thing this still does not fix
+    ///
+    /// The layer is not guaranteed to be the screen. It is the `ZStack`'s box,
+    /// and the `ZStack` grows if any layer in it ever overflows again — which
+    /// `ordinaryColumn` did until this week, by ten points on an iPhone 16 and
+    /// a hundred and twenty-six on an SE. Nothing here would notice; the gate
+    /// would simply hand her the extra room and she would still be standing on
+    /// the ground of the artwork. It is `check_snail.py`'s measured `PHONES`
+    /// fixture that notices, and its answer is *re-measure*.
+    static func hasFooting(in size: CGSize, bottomAnchored: Bool,
+                           textSize: DynamicTypeSize) -> Bool {
+        size.height - feetY(in: size, bottomAnchored: bottomAnchored)
+            >= requiredFooting(at: textSize)
     }
 
     /// Must match the aspect she is drawn at in `tools/generate_sprites.py`,

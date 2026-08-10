@@ -173,15 +173,68 @@ struct PomodoroSettings: Codable, Equatable {
         }
     }
 
+    /// The longest name the field will keep. Long enough for "Marchioness of
+    /// Carabas" and short enough that a caption still fits on a phone.
+    static let nameLimit = 20
+
     /// Storing an empty (or unchanged) name clears the override, so the field
     /// can always be emptied to get the original name back.
+    ///
+    /// **This is the commit-time rule, and it must never be called on a
+    /// keystroke.** It was, once, straight out of the rename field's `Binding`
+    /// setter, and it ate the space out of every two-word name: typing "Sir "
+    /// stored "Sir", the getter handed "Sir" back, SwiftUI rewrote the field
+    /// from it on the next update — about a second later — and the next word
+    /// landed against the previous one. "Sir Pip" came out "SirPip", in the
+    /// field and in every caption `displayName(for:)` feeds. The same round
+    /// trip would blank the field the moment a name passed through the
+    /// buddy's own (`trimmed == buddy.name` clears the override, and the
+    /// getter then returns ""). Type into `setDraftName` and call this when
+    /// the edit ends.
     mutating func setName(_ name: String, for buddy: Buddy) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == buddy.name {
             buddyNames.removeValue(forKey: buddy.rawValue)
         } else {
-            buddyNames[buddy.rawValue] = String(trimmed.prefix(20))
+            buddyNames[buddy.rawValue] = String(trimmed.prefix(Self.nameLimit))
         }
+    }
+
+    /// What a rename field should show: exactly the characters that were
+    /// typed, spaces and all.
+    func draftName(for buddy: Buddy) -> String {
+        buddyNames[buddy.rawValue] ?? ""
+    }
+
+    /// Keep a half-typed name verbatim.
+    ///
+    /// The whole point is that this is the identity of what the field holds,
+    /// so a `Binding` built on `draftName`/`setDraftName` round-trips and
+    /// SwiftUI has nothing to rewrite. Two liberties are still taken, and
+    /// neither can move the caret: a newline (only ever arrives by paste) is
+    /// not part of a name and would render every caption over two lines, and
+    /// the length cap is the same one the commit applies.
+    ///
+    /// Storing an untrimmed name is safe for everything downstream because
+    /// `displayName(for:)` trims what it reads — a field left mid-edit holding
+    /// "Sir " still says "Sir" in a notification, and one holding nothing but
+    /// spaces still says the buddy's own name.
+    mutating func setDraftName(_ name: String, for buddy: Buddy) {
+        let typed = name.replacingOccurrences(of: "\n", with: " ")
+        if typed.isEmpty {
+            buddyNames.removeValue(forKey: buddy.rawValue)
+        } else {
+            buddyNames[buddy.rawValue] = String(typed.prefix(Self.nameLimit))
+        }
+    }
+
+    /// The edit is over: apply the naming rules to what was typed.
+    ///
+    /// Idempotent, so every place that might be the end of an edit can call it
+    /// — submitting, losing focus, switching buddy, closing the sheet — and
+    /// the ones that fire twice cost nothing.
+    mutating func commitName(for buddy: Buddy) {
+        setName(draftName(for: buddy), for: buddy)
     }
 
     // MARK: Per-phase durations

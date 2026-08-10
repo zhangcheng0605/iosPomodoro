@@ -12,12 +12,29 @@ values the app actually ships.
 
 Exits non-zero if anything fails.
 """
+import glob
 import os
 import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 THEME_FILE = os.path.join(ROOT, "Pawmodoro", "Model", "AppTheme.swift")
+JOURNAL_FILE = os.path.join(ROOT, "Pawmodoro", "Views", "JournalView.swift")
+ASSETS = os.path.join(ROOT, "Pawmodoro", "Assets.xcassets")
+
+# The bar for the journal's unseen silhouettes.
+#
+# Deliberately not MINIMUM. A silhouette is a graphical object rather than a
+# run of text, and WCAG 2.2 SC 1.4.11 asks 3:1 of "graphical objects required
+# to understand the content" — which this is: working out what you have not met
+# yet is the only thing the unseen half of the journal is for.
+#
+# It exists because the silhouettes were drawn in a flat brown baked into the
+# PNG, at one opacity for both appearances, and measured 1.03-1.06:1 on a dark
+# tile. Eighty-one empty rectangles, in every theme, on both platforms. Nothing
+# in this file looked at them, because everything in this file was pointed at
+# text over scenery.
+SILHOUETTE_MINIMUM = 3.0
 
 MINIMUM = 4.5
 
@@ -214,9 +231,119 @@ def check_scenes(palettes, minimum):
     return failures, checked
 
 
+def check_silhouettes(palettes, theme_source):
+    """The journal's not-yet-seen tiles, measured rather than assumed.
+
+    Every number here is read back out of the Swift — the two opacities from
+    `Palette`, the tile's own fill from `JournalView`, and which palette colour
+    the tint is. This file supplies the bar and nothing else, which is the only
+    arrangement that survives someone changing one of them.
+
+    Two structural rules ride along, because the maths is worthless without
+    them:
+
+    - The ghost has to be **template-rendered** at the draw site. Drop that one
+      modifier and the tint silently does nothing, the sprite goes back to its
+      baked brown, and the measurement below still passes while the screen is
+      exactly as broken as it was.
+    - The ghost sprite has to be **one flat tone**. Template rendering keeps
+      alpha and throws colour away, so a ghost that ever gained a second tone
+      would be flattened into a blob by this treatment, and only a person
+      looking would notice.
+    """
+    failures = []
+    checked = 0
+
+    try:
+        with open(JOURNAL_FILE) as handle:
+            journal = handle.read()
+    except OSError as error:
+        return [f"JournalView.swift: {error}"], 0
+
+    alphas = {}
+    for appearance in ("Light", "Dark"):
+        match = re.search(
+            r"silhouetteOpacity%s:\s*Double\s*=\s*([0-9.]+)" % appearance,
+            theme_source,
+        )
+        if not match:
+            return [
+                f"AppTheme.swift: no silhouetteOpacity{appearance} to read"
+            ], 0
+        alphas[appearance.lower()] = float(match.group(1))
+
+    tile = re.search(
+        r"\.fill\(Theme\.surface\.opacity\(seen \? [0-9.]+ : ([0-9.]+)\)\)",
+        journal,
+    )
+    if not tile:
+        return ["JournalView.swift: cannot read the unseen tile's fill"], 0
+    tile_alpha = float(tile.group(1))
+
+    tint = re.search(
+        r"\.foregroundStyle\(Theme\.(\w+)\.opacity\(silhouetteOpacity\)\)",
+        journal,
+    )
+    if not tint:
+        return ["JournalView.swift: the silhouette is not tinted by a Theme "
+                "colour any more"], 0
+    tint_name = tint.group(1)
+
+    ghost = re.search(
+        r"Image\(species\.ghostAsset\)(?:\s*\n\s*\.\w+\([^\n]*\))*", journal
+    )
+    if not ghost or ".renderingMode(.template)" not in ghost.group(0):
+        return ["JournalView.swift: the ghost is drawn without "
+                ".renderingMode(.template) — the tint does nothing"], 0
+
+    for theme, colours in sorted(palettes.items()):
+        for appearance in ("light", "dark"):
+            def c(name):
+                return colours[name][appearance]
+
+            background = over(c("surface"), c("cream"), tile_alpha)
+            silhouette = over(c(tint_name), background, alphas[appearance])
+            ratio = contrast(silhouette, background)
+            checked += 1
+            if ratio < SILHOUETTE_MINIMUM:
+                failures.append(
+                    f"{theme}/{appearance}/journal silhouette: {ratio:.2f}:1 "
+                    f"(needs {SILHOUETTE_MINIMUM}:1)"
+                )
+
+    failures.extend(check_ghosts_are_flat())
+    return failures, checked
+
+
+def check_ghosts_are_flat():
+    """Every `wild_*_ghost` sprite is one tone, so template rendering is lossless."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return []
+
+    failures = []
+    pattern = os.path.join(ASSETS, "wild_*_ghost.imageset", "*.png")
+    paths = sorted(glob.glob(pattern))
+    if not paths:
+        return ["no wild_*_ghost sprites found — run tools/generate_wildlife.py"]
+    for path in paths:
+        image = Image.open(path).convert("RGBA")
+        tones = {
+            pixel[:3] for pixel in image.getdata() if pixel[3] > 0
+        }
+        if len(tones) > 1:
+            failures.append(
+                f"{os.path.basename(path)}: {len(tones)} opaque tones — a ghost "
+                "is template-tinted at the draw site, so it must be flat"
+            )
+    return failures
+
+
 def main():
     with open(THEME_FILE) as handle:
-        palettes = parse_palettes(handle.read())
+        theme_source = handle.read()
+    palettes = parse_palettes(theme_source)
 
     if not palettes:
         print("could not parse any palettes from AppTheme.swift", file=sys.stderr)
@@ -268,8 +395,14 @@ def main():
     failures.extend(scene_failures)
     checked += scene_checked
 
+    ghost_failures, ghost_checked = check_silhouettes(palettes, theme_source)
+    failures.extend(ghost_failures)
+    checked += ghost_checked
+
     print(f"checked {checked} pairs against {MINIMUM}:1 "
-          f"({scene_checked} of them sampled from real scene pixels)")
+          f"({scene_checked} of them sampled from real scene pixels, "
+          f"{ghost_checked} journal silhouettes against "
+          f"{SILHOUETTE_MINIMUM}:1)")
     if failures:
         print(f"\n{len(failures)} FAILED:")
         for line in failures:

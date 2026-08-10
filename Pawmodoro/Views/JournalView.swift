@@ -9,8 +9,20 @@ import SwiftUI
 /// as the padlocks, for a different reason.
 struct JournalView: View {
     @Environment(TimerEngine.self) private var engine
+    /// Read for one reason: the unseen silhouette's weight. See
+    /// `Palette.silhouetteOpacityLight`.
+    @Environment(\.colorScheme) private var colorScheme
 
     private var journal: Journal { engine.journal }
+
+    /// How strongly a not-yet-seen silhouette is drawn. Two values, because
+    /// the tile behind it is near-white one way up and near-black the other,
+    /// and one number lands them at very different contrast.
+    private var silhouetteOpacity: Double {
+        colorScheme == .dark
+            ? Palette.silhouetteOpacityDark
+            : Palette.silhouetteOpacityLight
+    }
 
     private let columns = [GridItem(.adaptive(minimum: 92), spacing: 12)]
 
@@ -173,13 +185,29 @@ struct JournalView: View {
             // A regular gets the marked variant — the same drawing with one
             // tone lifted, so it reads as the individual you keep meeting
             // rather than as a different animal.
-            Image(regular ? species.regularAsset
-                  : (seen ? species.sketchAsset : species.ghostAsset))
-                .interpolation(.none)
-                .resizable()
-                .scaledToFit()
+            //
+            // The unseen silhouette is the one image here not drawn as it was
+            // generated. Its sprite is a single flat brown baked into the PNG,
+            // which is invisible on a dark tile whatever opacity it is given —
+            // so it is template-rendered and tinted with the theme's own text
+            // colour instead. `Palette.silhouetteOpacityLight` has the
+            // measurements and the argument.
+            Group {
+                if seen {
+                    Image(regular ? species.regularAsset : species.sketchAsset)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Image(species.ghostAsset)
+                        .interpolation(.none)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(Theme.bark.opacity(silhouetteOpacity))
+                }
+            }
                 .frame(height: 42)
-                .opacity(seen ? 1 : 0.28)
                 // The pale-coat star: once, ever, this one crossed the scene
                 // in the moon-washed coat. A memory mark, not a checklist —
                 // there is no count of these anywhere.

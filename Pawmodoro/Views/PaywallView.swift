@@ -15,6 +15,25 @@ struct PaywallView: View {
     @State private var showRedeem = false
     #endif
 
+    /// The two symbol sizes on this screen, both scaled rather than fixed.
+    ///
+    /// `Image(systemName:)` answers Dynamic Type **only** through its font, and
+    /// only when that font is a text style. `.font(.system(size: 40))` is a
+    /// fixed point size and does not move: measured on an iPhone 17 Pro, the
+    /// heart was 38.7 × 36.0pt at both `.large` and AX5 while the `.headline`
+    /// line under it grew 3.05×, so the hero glyph ended up smaller than one
+    /// letter of its own caption. `@ScaledMetric` is what buys the growth back
+    /// without changing the default: 40 here still renders 49 × 42pt at
+    /// `.large`, exactly as the fixed size did, and reaches 82 × 71pt at AX5.
+    ///
+    /// `featureIconWidth` is the other half of the same bug. A `.headline`
+    /// symbol *does* scale — 19.0 → 59.3pt — but the `.frame(width: 26)` around
+    /// it did not, and a frame does not clip, so at AX5 each feature icon spilled
+    /// ~17pt past both edges of its slot and out through the card's rounded
+    /// corner. Scaling the slot with the glyph is what keeps it inside.
+    @ScaledMetric(relativeTo: .largeTitle) private var heartSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .headline) private var featureIconWidth: CGFloat = 26
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -121,7 +140,7 @@ struct PaywallView: View {
             Image(systemName: icon)
                 .font(.headline)
                 .foregroundStyle(Theme.blossom)
-                .frame(width: 26)
+                .frame(width: featureIconWidth)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -140,13 +159,18 @@ struct PaywallView: View {
                 // Was `Text("💛")`. A symbol rather than an emoji because this
                 // one is load-bearing art, not punctuation: it takes
                 // `Theme.blossom` and so changes with all eight themes and both
-                // appearances, it scales with Dynamic Type, and it renders on
-                // every runtime — the emoji drew a `?` box in the simulator,
-                // which made this state impossible to check before shipping it.
-                // It also now matches the three feature rows directly above,
-                // which are already symbols in the same colour.
+                // appearances, and it renders on every runtime — the emoji drew
+                // a `?` box in the simulator, which made this state impossible
+                // to check before shipping it. It also matches the four feature
+                // rows directly above, which are symbols in the same colour.
+                //
+                // The Dynamic Type half of that argument was claimed before it
+                // was measured, and it was false: a symbol does not scale
+                // because it is a symbol, it scales because of the font it is
+                // given, and `.font(.system(size: 40))` is fixed. See
+                // `heartSize` above for the numbers and the fix.
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 40))
+                    .font(.system(size: heartSize))
                     .foregroundStyle(Theme.blossom)
                 Text("You have Pawmodoro Plus")
                     .font(.headline)

@@ -5,6 +5,10 @@ struct SettingsView: View {
     @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    /// Whether the rename field has the keyboard. Losing it is one of the four
+    /// ways an edit ends — see the commit hooks on the `NavigationStack`.
+    @FocusState private var nameFocused: Bool
+
     @State private var showPaywall = false
     @State private var showTipJar = false
     @State private var showBuddyBook = false
@@ -119,17 +123,29 @@ struct SettingsView: View {
                     HStack {
                         Text("Name")
                         Spacer(minLength: 12)
+                        // The binding round-trips: what `setDraftName` stores
+                        // is exactly what `draftName` hands back, so a view
+                        // update has nothing to rewrite in the field. It used
+                        // to write through `setName`, which trims — and a
+                        // trimmed source of truth pushed back into a field
+                        // somebody is still typing into ate the space out of
+                        // every two-word name a second after they typed it.
+                        // "Sir Pip" became "SirPip". The trimming still
+                        // happens; it happens at `commitName` below. See
+                        // `PomodoroSettings.setName`.
                         TextField(
                             engine.settings.buddy.name,
                             text: Binding(
-                                get: { engine.settings.buddyNames[engine.settings.buddy.rawValue] ?? "" },
-                                set: { engine.settings.setName($0, for: engine.settings.buddy) }
+                                get: { engine.settings.draftName(for: engine.settings.buddy) },
+                                set: { engine.settings.setDraftName($0, for: engine.settings.buddy) }
                             )
                         )
+                        .focused($nameFocused)
                         .multilineTextAlignment(.trailing)
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                         .submitLabel(.done)
+                        .onSubmit { engine.settings.commitName(for: engine.settings.buddy) }
                         // A `TextField` wants every point it can get, and on a
                         // phone the row is the width of the phone so that
                         // reads as "the rest of the row". In a Mac sheet the
@@ -270,9 +286,29 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        engine.settings.commitName(for: engine.settings.buddy)
+                        dismiss()
+                    }
                 }
             }
+            // Where the name gets trimmed. The field itself keeps whatever was
+            // typed (that is what stopped it eating the space out of "Sir
+            // Pip"), so every way an edit can end has to end it: the keyboard's
+            // Done — on the field, above — putting the keyboard away, choosing
+            // a different buddy, and closing the sheet by any route. They
+            // overlap, and `commitName` is idempotent, so overlapping is free.
+            //
+            // These sit on the `NavigationStack` rather than on the row,
+            // because a `Form` row is lazy: scroll the name out of sight and
+            // its `onChange` goes with it.
+            .onChange(of: nameFocused) { _, focused in
+                if !focused { engine.settings.commitName(for: engine.settings.buddy) }
+            }
+            .onChange(of: engine.settings.buddy) { previous, _ in
+                engine.settings.commitName(for: previous)
+            }
+            .onDisappear { engine.settings.commitName(for: engine.settings.buddy) }
             .sheet(isPresented: $showBuddyBook) {
                 BuddyBookSheet(buddy: engine.settings.buddy)
             }

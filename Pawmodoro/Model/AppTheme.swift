@@ -186,6 +186,47 @@ struct Palette: Equatable {
             dark: hue.dark.mixed(with: cream.dark, amount: Self.weatherMix)
         )
     }
+
+    /// How strongly a not-yet-seen silhouette is laid over its journal tile —
+    /// two numbers, because the tile under it is a different colour each way up.
+    ///
+    /// **The one colour in this app that never went through `Theme`.** The
+    /// ghost sprites are generated as a single flat tone — `GHOST` in
+    /// `tools/generate_wildlife.py` is a hard-coded 58, 48, 44 — and were drawn
+    /// at 0.28 whatever the theme and whatever the appearance. On a light tile
+    /// that measures 1.70–1.71:1, which is faint on purpose and does read at
+    /// this size. On a dark one it measures **1.03–1.06:1**, which is nothing
+    /// — 1.04:1 read back off a real iPhone screenshot. Eighty-one tiles
+    /// of empty rectangle is what the field journal was in dark appearance, in
+    /// all eight themes, on both platforms. It surfaced during the macOS walk
+    /// and was never a macOS bug — the draw site is shared, so most of the
+    /// people looking at it are holding a phone.
+    ///
+    /// So the silhouette is template-rendered and tinted with `bark` now. That
+    /// fixes the appearance problem by construction (the text colour is dark on
+    /// a light page and light on a dark one) and incidentally puts the journal
+    /// back inside the palette — an Ink silhouette is neutral grey and a
+    /// Midnight one is blue, where both used to be brown.
+    ///
+    /// **The target is 3:1** — WCAG 2.2 SC 1.4.11, non-text contrast — argued
+    /// for rather than inherited: the silhouette is not decoration but the
+    /// content of the tile, since making out what animal you have not met yet
+    /// is the entire reason the unseen half is shown at all. Measured over
+    /// `surface` at 0.45 over `cream`, these land at **3.09–4.45:1 in light**
+    /// and **3.05–3.31:1 in dark** across the eight themes. Matching ratios
+    /// rather than matching opacities is what makes the two appearances look
+    /// the same weight; a single number would have put dark at nearly twice
+    /// light's.
+    ///
+    /// The hierarchy against a *seen* sketch survives that, which is the thing
+    /// worth not breaking: a sepia sketch's outline tone measures 9.8:1 on its
+    /// own tile in light appearance, and the sketch is in colour, on a tile at
+    /// twice the fill, under a name instead of a question mark.
+    ///
+    /// `tools/check_contrast.py` reads both numbers out of here and re-measures
+    /// them against the parsed palettes, so neither can drift quietly.
+    static let silhouetteOpacityLight: Double = 0.66
+    static let silhouetteOpacityDark: Double = 0.38
 }
 
 /// The colour schemes the user can pick between. Every one of these was checked

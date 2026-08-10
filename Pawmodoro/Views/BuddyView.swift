@@ -6,6 +6,7 @@ struct BuddyView: View {
     @Environment(TimerEngine.self) private var engine
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var animator = BuddyAnimator()
     @State private var hearts: [Heart] = []
     @State private var heartSeed = 0
@@ -65,7 +66,12 @@ struct BuddyView: View {
 
     private enum PounceStage { case none, crouch, wiggle, pounce }
 
-    private let spriteSize: CGFloat = 104
+    /// How big the buddy is drawn. Set by `ContentView`, which is the only
+    /// thing that knows how much screen there is left — see `buddySprite`
+    /// there. Everything in this file that positions anything, including every
+    /// accessory anchor and every touch region, is a fraction of this, so the
+    /// buddy at 92 is the same buddy.
+    var spriteSize: CGFloat = 104
 
     private var buddy: Buddy { engine.settings.buddy }
 
@@ -147,7 +153,11 @@ struct BuddyView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        // Four points between the sprite and its caption, not eight. The
+        // caption carries its own 5pt of vertical padding inside the capsule,
+        // so the gap that reads is nine either way — and on a 390×844 phone
+        // this screen is counting in single points. See `air` in `ContentView`.
+        VStack(spacing: 4) {
             // The zzz and the hearts live inside the buddy's own cell, not the
             // row: when the stray sits down the buddy shifts left to make room,
             // and effects anchored to the row would be left hanging beside it.
@@ -405,8 +415,44 @@ struct BuddyView: View {
                 // `accessibilityLabel` below is handed the whole string; this
                 // was only ever true of the drawing.
                 .fixedSize(horizontal: false, vertical: true)
-                // Kept off the screen edges, since it may now be two lines.
-                .frame(maxWidth: 300)
+                // **Wrapping without a ceiling is how one sentence ate the
+                // screen.** The line above buys the night visitor its whole
+                // tail, and at the ordinary reading sizes that costs two lines
+                // and nothing else. Uncapped at AX5 the same 95-character
+                // sentence is close to three hundred points of text — more
+                // than the dial — in a region with about five hundred to spend
+                // for everything. What reached the walk was the capsule
+                // cropped to a third of the text's height by the ambience row,
+                // the sentence sheared off mid-word with **no ellipsis**,
+                // which reads as a rendering fault rather than as a line that
+                // continues. It is the fold cutting the caption, so a line
+                // limit alone does not fix it — photographed with a limit of
+                // three, the capsule was cut in exactly the same place.
+                //
+                // Two ceilings, and both are needed. The line limit puts the
+                // cut somewhere a reader can see: the text truncates itself,
+                // inside its own intact capsule, with the ellipsis that says
+                // so — and one line, because one line is what the room below
+                // the buddy can hold without the fold reaching it. The type
+                // ceiling is what makes one line *worth reading*: at AX5
+                // uncapped it is seven characters and an ellipsis; capped at
+                // AX1 it is "there's a piece of honeycomb o…", which is the
+                // subject and the news. Photographed at AX5 on a 390×844 and a
+                // 402×874 phone, both.
+                //
+                // The same cap the transport row already takes, for the same
+                // reason and with the same escape: **VoiceOver is unaffected**
+                // — `accessibilityLabel` below is handed the whole string,
+                // whatever the drawing does — and anyone who cannot read this
+                // at AX1 is reading the app with VoiceOver or Zoom, neither of
+                // which goes anywhere near this Text's own point size.
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 1 : nil)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                // Kept off the screen edges, since it may now be several
+                // lines — and given the full width at the accessibility sizes,
+                // where 300 points is four or five words a line and every line
+                // saved is 50 points of somebody's buddy.
+                .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 300)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 // Its own backing, for the same reason the timer face has one:

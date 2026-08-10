@@ -277,14 +277,38 @@ struct CelebrationView: View {
         // the smallest text on the card. No badge, no price, no urgency: a
         // congratulation that turned into a checkout would be worth less than
         // no congratulation at all.
+        //
+        // **An explicit `ButtonStyle` is not decoration here.** Without one,
+        // macOS resolves this to `DefaultButtonStyle`, which is a real AppKit
+        // bordered push button: a grey bezel slab dropped into the middle of a
+        // themed card, with the line's own colours overridden by the system's.
+        // Same family as onboarding's pink capsule (commit 57ed6f6) and the
+        // same answer — style the label, then name a style so nothing else
+        // draws over it. `.squishy` is that style everywhere else in the app.
+        //
+        // The padding is *inside* the label so the control is the padded line
+        // rather than eleven points of text, which was the other half of the
+        // onboarding bug. `caption2` is 11pt: unpadded, this was a target no
+        // pointer and no thumb should have to be aimed at.
+        //
+        // The tone came up with the bezel's removal. At `bark` 0.55 the line
+        // measured 2.52–3.31:1 on `Theme.surface` in light appearance — under
+        // AA for small text in all eight themes — and the underline that said
+        // it was a link measured about 1.6:1, which is not a line at all. It
+        // is still the smallest text on the card, and being fine print is what
+        // it is for; fine print is small rather than faint.
         if let onTip {
             Button(action: onTip) {
                 Text("Tips unlock nothing — they keep this world growing")
                     .font(.caption2)
-                    .foregroundStyle(Theme.bark.opacity(0.55))
-                    .underline(true, color: Theme.bark.opacity(0.25))
+                    .foregroundStyle(Theme.bark.opacity(0.85))
+                    .underline(true, color: Theme.bark.opacity(0.45))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
             }
-            .padding(.top, 4)
+            .buttonStyle(.squishy)
         }
     }
 

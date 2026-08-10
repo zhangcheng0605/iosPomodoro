@@ -52,6 +52,18 @@ WHAT WORKS, ALL OF IT MEASURED ON THIS MACHINE
               memory and would otherwise flush them back over the file that
               was just restored.
 
+              **It is only sound when nothing else is running the app.**
+              Learned the hard way on 10 Aug: a screenshot pass wrapped every
+              launch in preserve() and still left the owner's plist with
+              lifetimeSessions 44 -> 200 and a seeded journal, because a
+              SECOND workflow was launching its own builds throughout. A live
+              process holds NSUserDefaults in memory and re-flushes it after
+              preserve() has restored the file and restarted cfprefsd, so the
+              restore is simply overwritten. Before trusting it, check
+              `pgrep -f "Pawmodoro.app/Contents/MacOS"` is empty — and take
+              your own byte-exact copy first regardless, which is what made
+              that damage repairable rather than permanent.
+
               Never delete the container — an agent did that once and
               destroyed the Mac-side state.
 
@@ -109,6 +121,7 @@ or import it: launch/windows/shot/press/stow/quit.
 """
 
 import argparse
+import hashlib
 import os
 import subprocess
 import sys
@@ -176,23 +189,57 @@ class preserve:
         # file.
         p = self._path()
         self.saved = open(p, "rb").read() if os.path.exists(p) else None
+        self.digest = self._digest()
         return self
 
     def __exit__(self, *exc):
+        # THE ORDER HERE IS THE WHOLE THING, AND IT USED TO BE THE WRONG WAY
+        # ROUND. This restored the file and *then* restarted cfprefsd, on the
+        # reasoning that the daemon holds dirty values and has to be made to
+        # drop them. Both halves of that are true and the order makes it
+        # useless: a cfprefsd told to quit FLUSHES its cache on the way out,
+        # over the bytes just written. Measured on 10 Aug 2026 — a run verified
+        # its own restore as byte-identical and the same file had drifted again
+        # ten seconds later, which is how the owner's real state (44 sessions,
+        # hasPlus false, a snapshots key) was replaced by a seeded one (200
+        # sessions, hasPlus true, no snapshots) by agents that each believed
+        # they had put everything back.
+        #
+        # So: kill the daemon FIRST, let it respawn with nothing cached for
+        # this domain, and only then write the file. Nothing is holding the
+        # values any more, so nothing flushes over them.
+        #
+        # Two things this still cannot do. It cannot protect you from a second
+        # process running the app at the same time — that one's writes are its
+        # own. And a `defaults read/write` on this domain can hang for minutes
+        # from a sandboxed shell, so everything here is file I/O.
         p = self._path()
+        subprocess.run(["killall", "-u", os.environ.get("USER", ""), "cfprefsd"],
+                       capture_output=True)
+        time.sleep(2.0)
         if self.saved is None:
             if os.path.exists(p):
                 os.remove(p)
         else:
             with open(p, "wb") as fh:
                 fh.write(self.saved)
-        # cfprefsd holds the dirty values in memory and will flush them back
-        # over the file we just restored. Restarting the per-user daemon drops
-        # that cache; it respawns immediately and writes through, so no other
-        # app loses anything.
-        subprocess.run(["killall", "-u", os.environ.get("USER", ""), "cfprefsd"],
-                       capture_output=True)
+        # Verify, twice, seconds apart. A restore that is only checked
+        # immediately is checked before the thing that undoes it happens.
+        time.sleep(3.0)
+        first = self._digest()
+        time.sleep(4.0)
+        if first != self.digest or self._digest() != self.digest:
+            print(f"  *** preserve() DID NOT HOLD: {self._path()} is "
+                  f"{self._digest()}, wanted {self.digest}. The owner's state "
+                  f"is drifted — put it back before doing anything else.",
+                  file=sys.stderr)
         return False
+
+    def _digest(self):
+        p = self._path()
+        if not os.path.exists(p):
+            return None
+        return hashlib.md5(open(p, "rb").read()).hexdigest()
 
 
 def launch(app, flags=(), home=None, wait=6.0):

@@ -811,9 +811,31 @@ struct ContentView: View {
     /// that the bottom third of the play button is off the glass, and at the
     /// accessibility sizes the whole transport row is, with no gesture that
     /// brings it back. The start button of a Pomodoro timer was unhittable.
+    ///
+    /// ### A Mac always gets the adaptive one, and that is a *window* argument
+    ///
+    /// A phone's screen is a constant. A window is not, and this one is
+    /// resizable down to `Platform.macWindowMinimum` — which had to come down
+    /// to 700 points of content, because at 860 the window was 912 tall and a
+    /// 1440×900 display has 875 points under the menu bar. The window did not
+    /// fit on a 13-inch MacBook Air and could not be shrunk, and the row it
+    /// pushed off the bottom was Start.
+    ///
+    /// Lowering the floor is only half of that. The other half is that
+    /// `ordinaryColumn` at that height is the phone overflow again — the phase
+    /// chip behind the toolbar, the play button cut by the bottom edge — which
+    /// is exactly what the adaptive column was built to stop. So the Mac takes
+    /// it at every text size. It costs nothing where the window is roomy: the
+    /// adaptive column only scrolls when the top group genuinely does not fit,
+    /// and at the opening size it does fit. Photographed at both sizes this app
+    /// is ever seen at — 460 × 912 and the 520 × 1179 ceiling — against the
+    /// same two shots taken before the change: the chip, the ring, the
+    /// capsules, the caption, the chips and the transport are all on the same
+    /// rows. What gives way, and only once the room genuinely runs out, is the
+    /// treat tray and then the buddy's caption, under the fade.
     @ViewBuilder
     private var mainColumn: some View {
-        if dynamicTypeSize <= .large {
+        if dynamicTypeSize <= .large && !Platform.isDesktop {
             ordinaryColumn
         } else {
             adaptiveColumn

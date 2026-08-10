@@ -41,29 +41,29 @@ struct YearKeptView: View {
 
     @Environment(TimerEngine.self) private var engine
     @State private var sharing: Int?
+    // The deck was unbound when it was a `TabView` — the page dots were the
+    // only thing that needed to know. `PagedDeck` steers from this on the Mac,
+    // where there is no swipe to move it.
+    @State private var cardIndex = 0
 
     var body: some View {
         ZStack {
             Theme.cream.ignoresSafeArea()
             VStack(spacing: 12) {
-                TabView {
-                    ForEach(0..<cardCount, id: \.self) { index in
-                        VStack(spacing: 14) {
-                            card(index)
-                            Button {
-                                sharing = index
-                            } label: {
-                                Label("Share", systemImage: "square.and.arrow.up")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Theme.bark.opacity(0.6))
-                            }
-                            .buttonStyle(.plain)
+                PagedDeck(index: $cardIndex, count: cardCount) { index in
+                    VStack(spacing: 14) {
+                        card(index)
+                        Button {
+                            sharing = index
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.bark.opacity(0.6))
                         }
-                        .padding(.horizontal, 24)
+                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 24)
                 }
-                .tabViewStyle(.page)
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
 
                 Button {
                     onDone()

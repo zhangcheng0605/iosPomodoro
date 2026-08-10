@@ -68,25 +68,25 @@ enum Platform {
     /// stretch the ground line out from under the cat. `check_stray.py` and
     /// `check_snail.py` both carry this aspect as a fixture row for exactly
     /// that reason.
-    /// 900 rather than the 740 this was written as on Linux, measured rather
-    /// than guessed: the main screen needs about 848 points of *content*, and
-    /// a Mac window with a toolbar spends roughly 52 of its height on the
-    /// title bar that a phone's status bar never charged for. At 740 the
-    /// phase pill sat behind the toolbar and the start button was cut off by
-    /// the bottom edge.
+    /// 860 of **content**, measured rather than guessed: the main screen wants
+    /// about 848 points of it, and a Mac window with a toolbar spends roughly
+    /// 52 more of its height on the title bar that a phone's status bar never
+    /// charged for — so 912 of window, which is the size this app has always
+    /// opened at. It was written as 740 on Linux and the phase pill sat behind
+    /// the toolbar with the start button cut off by the bottom edge; it then
+    /// spent a while at 480 × 900, which was never honoured by anything and
+    /// never the size the window took.
     ///
-    /// ### This constant does not decide the opening size. Measured.
+    /// ### SwiftUI does not honour this. `MacWindowRules` enforces it. Measured.
     ///
     /// Read that before reaching for it. `.defaultSize(Platform.macWindow)`
     /// and the `idealWidth`/`idealHeight` in `PawmodoroApp` are **not
     /// honoured** under `.windowResizability(.contentSize)`. The window opens
-    /// at the content's own natural size — **460 × 860 of content**, 912 of
-    /// window once the 52-point title bar is added — clamped upward by
-    /// `macWindowMinimum` and by nothing else.
+    /// at whatever size the *content* reports, clamped by the content's own
+    /// bounds and by nothing else.
     ///
-    /// Measured on 10 Aug 2026 by deleting the saved frame
-    /// (`defaults delete com.pawmodoro.zhangcheng "NSWindow Frame
-    /// main-AppWindow-1"`, confirmed absent), launching, and reading the size
+    /// Measured on 10 Aug 2026 by deleting the saved frame (`NSWindow Frame
+    /// main-AppWindow-1`, confirmed absent), launching, and reading the size
     /// back off `CGWindowListCopyWindowInfo`. Five builds:
     ///
     /// | `macWindow` | `macWindowMinimum` | Window opens at |
@@ -97,12 +97,21 @@ enum Platform {
     /// | 480 × 900 | 460 × 860 | **460 × 912** |
     /// | 480 × 900 | 500 × 860 | **500 × 912** |
     ///
-    /// 480 never appears in that column, and neither does 400. The minimum is
-    /// the only one of the three numbers that moves the opening size, and it
-    /// only moves it *up*. So this constant is advisory: it is what the window
-    /// would open at if SwiftUI ever honoured the request, and it is kept in
-    /// step with the minimum for that day. **A toolbar that overflows is not
-    /// fixed here.**
+    /// 480 never appears in that column, and neither does 400 — the content
+    /// wanted 460 × 860 and got it, clamped upward by the minimum in the last
+    /// row.
+    ///
+    /// A sixth build, on 10 Aug, is why this constant is no longer advisory.
+    /// The Mac moved to `ContentView.adaptiveColumn` so that a short window
+    /// would be a *smaller* screen rather than a broken one, and that column is
+    /// greedy along the vertical — a greedy content reports its **maximum**, so
+    /// the window opened at 520 × 1179 with the art cropped to a band of sky.
+    /// `MacWindowRules.place` now states the opening frame to AppKit directly,
+    /// from this constant, and clamps it to the screen. So these numbers are
+    /// live again: they are **content** points, and 52 of title bar are added
+    /// on top of the height. 460 × 860 is what shipped, kept deliberately.
+    /// **A toolbar that overflows is still not fixed here** — that is the
+    /// minimum's width, below.
     ///
     /// ### What the width is actually for
     ///
@@ -127,16 +136,40 @@ enum Platform {
     /// trailing pair to `.automatic` changes nothing either; on macOS it
     /// resolves to the same trailing group. Shrinking the glyphs to a uniform
     /// 30 points recovers about 46 and lands at 409, which is still over.
-    static let macWindow = CGSize(width: 480, height: 900)
+    static let macWindow = CGSize(width: 460, height: 860)
 
     /// The smallest the Mac window may be dragged to.
     ///
-    /// Not a taste call, and not a guess either — this is where the screen
-    /// stops fitting. The main screen is a fixed stack, not a scroll view: at
-    /// 780 the phase pill disappears behind the toolbar and the start button
-    /// is cut off by the bottom edge, which is a broken app rather than a
-    /// small one. 860 is the first height where every row is whole, and it
-    /// still leaves room under the menu bar of the shortest Mac laptop screen.
+    /// ### The height is a screen this app has to fit on, not a taste call
+    ///
+    /// It was 860 of content — 912 of window — and that was measured against
+    /// the layout rather than against any Mac. A **1440 × 900-point display**
+    /// has 875 points under the menu bar, and the 13-inch MacBook Air is
+    /// exactly that display and is well inside a `macOS 14.0` deployment
+    /// target. So the window was 37 points taller than the screen it opened
+    /// on, and could not be dragged smaller, and what hung off the bottom was
+    /// the row with Start in it. An app you cannot start.
+    ///
+    /// 700 is the answer to *that* question — 752 of window, which fits a
+    /// 1440 × 900 display with its Dock showing (799) and not merely with the
+    /// menu bar taken off. It is deliberately not the largest number that
+    /// would have done: a floor is only ever met by somebody whose screen or
+    /// taste demands it, and the cost of it being low is nothing, while the
+    /// cost of it being 40 points too high is an unusable app on a laptop
+    /// nobody thought about.
+    ///
+    /// **This is only half of the fix and does not work alone.** A floor lets
+    /// the window be dragged smaller; it does not make it *open* smaller.
+    /// `MacWindowRules.place` clamps the opening height to the screen, and it
+    /// can only clamp down to this number. The other half is that at 700 the
+    /// screen still has to look like a screen: the old comment here recorded
+    /// that at 780 "the phase pill disappears behind the toolbar and the start
+    /// button is cut off by the bottom edge", which was true and is what
+    /// `ContentView.adaptiveColumn` is for — the Mac takes that column at every
+    /// text size now, so the top group gives way and the transport stays
+    /// pinned. Photographed at 752, 772, 812 and 860 of window: every row
+    /// whole, the treat tray and the buddy's caption going under the fade in
+    /// that order as the room runs out.
     ///
     /// ### The width here is the whole of the toolbar fix
     ///
@@ -150,13 +183,14 @@ enum Platform {
     /// there. The old 360 left that two inches of travel away and permanent
     /// once reached, because AppKit saves the frame.
     ///
-    /// It is also the **opening size**, which is the part nobody expects:
-    /// `.defaultSize` is not honoured here (see `macWindow` above for the
-    /// five-build measurement), so the window opens at the content's natural
-    /// 460 × 860 clamped up by this. Raising this raises the opening size;
-    /// raising `macWindow` does nothing at all. Which means a future author
-    /// who lowers this "because it is only a minimum" has changed what every
-    /// new user's first window looks like.
+    /// It used to be the **opening size** as well, which is the part nobody
+    /// expects: `.defaultSize` is not honoured here (see `macWindow` above for
+    /// the five-build measurement), so the window opened at the content's
+    /// natural size clamped up by this. That is no longer true of the height —
+    /// `MacWindowRules.place` states the opening frame now — but it is still
+    /// true of the **width**, which nothing overrides. Lowering this width is
+    /// therefore still a change to what every new user's first window looks
+    /// like, as well as to where the toolbar overflows.
     ///
     /// 460 leaves five points over the 455 threshold rather than a comfortable
     /// margin, and that is deliberate rather than overlooked: 460 is the width
@@ -169,7 +203,7 @@ enum Platform {
     /// It leaves 460…520 of horizontal travel, which is narrow, and that is
     /// the honest shape of an app whose every scene is exported at a phone's
     /// aspect: the width was never a place this window had much to say.
-    static let macWindowMinimum = CGSize(width: 460, height: 860)
+    static let macWindowMinimum = CGSize(width: 460, height: 700)
 
     /// The biggest the Mac window may be dragged to — **the shape of the art**.
     ///
@@ -401,7 +435,8 @@ func renderJPEG(size: CGSize, quality: CGFloat = 0.82,
 /// The handful of SwiftUI modifiers that exist on iOS and not on macOS.
 ///
 /// Every one of them is decoration a Mac window has no place to put: there is
-/// no navigation bar to size a title in, and no page dots under a `TabView`.
+/// no navigation bar to size a title in, and no autocapitalisation to switch
+/// off on a hardware keyboard.
 /// They are given macOS spellings that do nothing, rather than each call site
 /// being taught a `#if`, for the reason the rest of this file exists — but
 /// also for a reason particular to this app. Most of Pawmodoro is written days
@@ -421,30 +456,28 @@ enum NavigationBarTitleDisplayMode {
     case automatic, inline, large
 }
 
-/// iOS's `PageIndexViewStyle`, in name only.
-struct PageIndexViewStyleShim {
-    enum BackgroundDisplayMode { case automatic, interactive, always, never }
-
-    static func page(
-        backgroundDisplayMode: BackgroundDisplayMode = .automatic
-    ) -> PageIndexViewStyleShim {
-        PageIndexViewStyleShim()
-    }
-}
-
-extension TabViewStyle where Self == DefaultTabViewStyle {
-    /// There is no swipeable page style on macOS. The default container is
-    /// what the two paged screens — onboarding and the year card — fall back
-    /// to; both carry their own forward button, so nothing is unreachable.
-    static var page: DefaultTabViewStyle { DefaultTabViewStyle() }
-}
+// `.tabViewStyle(.page)` and `.indexViewStyle(.page(…))` used to be shimmed
+// here too, and that pair is the counter-example this whole section is judged
+// against — the one time absorbing an iOS spelling was the wrong call.
+//
+// They were not no-ops. `.page` resolved to `DefaultTabViewStyle`, which on
+// macOS is a **real AppKit tab bar**: the onboarding sheet — the first screen
+// anybody sees — drew three unlabelled tab chips across its top edge, half of
+// them clipped by the sheet's rounded corner, where a phone shows three dots
+// at the bottom. Nothing failed and nothing warned; the Mac just quietly had
+// a different, broken screen.
+//
+// The rule the miss teaches: a shim belongs here only if the Mac dropping the
+// thing entirely is the *right* answer. A paged deck is not decoration, it is
+// navigation, and navigation has to be built rather than dropped. It lives in
+// `Views/Style/PagedDeck.swift` now, and the shims are deliberately absent so
+// that writing `.tabViewStyle(.page)` fails the Mac build instead of drawing
+// tab chips at somebody.
 
 extension View {
     func navigationBarTitleDisplayMode(_ mode: NavigationBarTitleDisplayMode) -> some View {
         self
     }
-
-    func indexViewStyle(_ style: PageIndexViewStyleShim) -> some View { self }
 }
 
 #endif

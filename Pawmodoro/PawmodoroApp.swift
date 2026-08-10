@@ -31,23 +31,137 @@ private struct MacWindowRules: NSViewRepresentable {
         let view = NSView(frame: .zero)
         // The window is not attached yet on the first layout pass.
         DispatchQueue.main.async {
-            apply(to: view.window)
+            apply(to: view.window, once: context.coordinator)
             MacMenuKeeper.shared.start()
         }
         return view
     }
 
     func updateNSView(_ view: NSView, context: Context) {
-        apply(to: view.window)
+        apply(to: view.window, once: context.coordinator)
     }
 
-    private func apply(to window: NSWindow?) {
+    func makeCoordinator() -> Once { Once() }
+
+    /// One window, one placement. `updateNSView` runs on every menu rebuild —
+    /// which is every start and every pause — and a window that re-sized
+    /// itself on each of those would be a window you cannot resize. `tries` is
+    /// the other end of the same rule: see `place`, which has to ask more than
+    /// once before the first ask sticks.
+    final class Once {
+        var placed = false
+        var tries = 0
+    }
+
+    private func apply(to window: NSWindow?, once: Once) {
         guard let window else { return }
         var behavior = window.collectionBehavior
         behavior.remove(.fullScreenPrimary)
         behavior.remove(.fullScreenAuxiliary)
         behavior.insert(.fullScreenNone)
         window.collectionBehavior = behavior
+        place(window, once: once)
+    }
+
+    /// How big this window is when it opens, said out loud — and never taller
+    /// than the screen it opens on.
+    ///
+    /// ### Why it has to be said here
+    ///
+    /// `.defaultSize` is not honoured under `.windowResizability(.contentSize)`
+    /// (five builds' worth of measurement in `Platform.swift`): the window
+    /// opens at whatever size the *content* reports, clamped by the content's
+    /// own bounds. That was survivable while the content had a natural height
+    /// to report. `ContentView.adaptiveColumn` — which the Mac now always uses,
+    /// so that a short window is a smaller screen rather than a broken one —
+    /// is deliberately greedy along the vertical, and a greedy content reports
+    /// its *maximum*. Measured: with no saved frame the window opened at
+    /// 520 × 1179, the ceiling, instead of the 460 × 912 that shipped.
+    ///
+    /// ### And the bug it exists for
+    ///
+    /// A 1440×900-point display — the 13-inch MacBook Air, well inside this
+    /// app's macOS 14 support range — has 875 points under the menu bar. The
+    /// window was 912 and could not be dragged smaller, so its bottom row hung
+    /// off the screen, and the bottom row is Start. Two halves fix that: the
+    /// floor came down (`Platform.macWindowMinimum`), and the opening height is
+    /// clamped to the screen here. Neither works without the other — a clamp
+    /// below the minimum is refused by AppKit, and a lower minimum on its own
+    /// only means the *user* can fix it by dragging.
+    ///
+    /// A remembered size wins over the default one — see `remembered()`, which
+    /// also has the measurement showing this app never remembered its window on
+    /// a Mac at all. Either way the height is clamped to the screen, and the
+    /// window is only ever shrunk downward from its own top edge, because a
+    /// window that grows off the bottom of the screen is the failure being
+    /// repaired.
+    private func place(_ window: NSWindow, once: Once) {
+        guard !once.placed, once.tries < 12 else { return }
+        once.tries += 1
+        guard let screen = window.screen ?? NSScreen.main else { return }
+
+        // Asked for rather than assumed: the title bar is not content, and its
+        // height is AppKit's business.
+        let chrome = max(0, window.frame.height - window.contentLayoutRect.height)
+        let room = screen.visibleFrame.height
+        var frame = window.frame
+        frame.size = Self.remembered() ?? CGSize(
+            width: Platform.macWindow.width,
+            height: Platform.macWindow.height + chrome
+        )
+        frame.size.height = min(frame.size.height, room)
+        frame.size.width = min(frame.size.width, screen.visibleFrame.width)
+
+        if frame.size == window.frame.size {
+            // Either nothing needed doing, or the last attempt stuck. Either
+            // way this window is settled and nothing here runs again.
+            once.placed = true
+            return
+        }
+
+        // Keep the top edge. Shrinking about the origin would walk the title
+        // bar down the screen every time this ran.
+        frame.origin.y = max(screen.visibleFrame.minY,
+                             window.frame.maxY - frame.size.height)
+        window.setFrame(frame, display: true)
+
+        // **And then check, because the first attempt does not stick.**
+        // Measured: the frame set from `makeNSView`'s async is overwritten by
+        // SwiftUI's own sizing pass, which runs after it and hands the window
+        // the content's flexible maximum. So this asks again on the next turn
+        // of the runloop and stops as soon as the size it asked for is the size
+        // the window has — or after a dozen turns, because a fight with the
+        // frameworks is not something to have every runloop tick forever.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            place(window, once: once)
+        }
+    }
+
+    /// The size this window was last left at, if anything wrote one down.
+    ///
+    /// **`window.frameAutosaveName` is empty here.** That was the first attempt
+    /// and it is worth writing down so nobody spends the evening on it again: a
+    /// SwiftUI `WindowGroup` does not use AppKit's frame autosave, it does its
+    /// own restoration, and the accessibility of that machinery to us is one
+    /// `UserDefaults` key that SwiftUI writes — `NSWindow Frame main-AppWindow-1`,
+    /// the id from `WindowGroup(id: "main")` — holding
+    /// `x y w h screenX screenY screenW screenH`. Measured from inside the
+    /// running app: name empty, key present and readable.
+    ///
+    /// SwiftUI writes that key and then, under `.windowResizability(.contentSize)`,
+    /// **ignores it**: a saved 500 × 1000 opened at 520 × 1179 all the same,
+    /// because the window is sized from the content every launch. Which means
+    /// this app has never remembered its window size on a Mac — it was simply
+    /// invisible while the content's size and the saved size were the same
+    /// number. Reading it here is what makes a window dragged taller stay
+    /// taller, and it is the same read that keeps a window dragged on a big
+    /// display from opening off the bottom of a small one.
+    private static func remembered() -> CGSize? {
+        guard let saved = UserDefaults.standard
+            .string(forKey: "NSWindow Frame main-AppWindow-1") else { return nil }
+        let parts = saved.split(separator: " ").compactMap { Double($0) }
+        guard parts.count >= 4, parts[2] > 1, parts[3] > 1 else { return nil }
+        return CGSize(width: parts[2], height: parts[3])
     }
 }
 

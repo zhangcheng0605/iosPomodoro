@@ -14,26 +14,40 @@ struct OnboardingView: View {
             Theme.background(for: .focus).ignoresSafeArea()
 
             VStack {
-                TabView(selection: $pageIndex) {
-                    welcomePage.tag(0)
-                    howItWorksPage.tag(1)
-                    buddyPage.tag(2)
+                PagedDeck(index: $pageIndex, count: lastPage + 1) { page in
+                    switch page {
+                    case 0: welcomePage
+                    case 1: howItWorksPage
+                    default: buddyPage
+                    }
                 }
-                .tabViewStyle(.page)
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
 
-                Button(pageIndex == lastPage ? "Let's focus" : "Next") {
+                // **The capsule is the button, not a picture behind one.**
+                // Written with the frame, the padding and the `.background`
+                // hung on the *outside* of the `Button`, only the label is a
+                // control: the pink pill is dead pixels on both platforms, and
+                // on macOS AppKit additionally drew its own 46×20 bordered
+                // push button in the middle of it — a white rounded rect
+                // reading "Next" floating inside our pill, on the first screen
+                // anybody sees. Moving the styling into the label makes the
+                // whole capsule the control, and an explicit `ButtonStyle` is
+                // what stops AppKit adding chrome of its own.
+                Button {
                     if pageIndex == lastPage {
                         finish()
                     } else {
                         withAnimation { pageIndex += 1 }
                     }
+                } label: {
+                    Text(pageIndex == lastPage ? "Let's focus" : "Next")
+                        .font(.headline)
+                        .foregroundStyle(Theme.onAccent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Capsule().fill(Theme.blossom))
+                        .contentShape(Capsule())
                 }
-                .font(.headline)
-                .foregroundStyle(Theme.onAccent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Capsule().fill(Theme.blossom))
+                .buttonStyle(.squishy)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 28)
             }

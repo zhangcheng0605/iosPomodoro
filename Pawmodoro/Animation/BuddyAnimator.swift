@@ -215,8 +215,11 @@ final class BuddyAnimator {
         let seconds = transientDuration
         clearTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            await MainActor.run { self?.transientPose = nil }
+            // Bind before the hop. `self?.` inside the MainActor closure reads
+            // the *captured optional variable* from a second concurrent
+            // context, which Swift 6 makes an error rather than a warning.
+            guard !Task.isCancelled, let self else { return }
+            await MainActor.run { self.transientPose = nil }
         }
     }
 

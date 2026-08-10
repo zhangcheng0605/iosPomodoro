@@ -79,7 +79,7 @@ struct GardenView: View {
     }
 
     private func label(for pocket: GardenPocket?) -> String {
-        guard let pocket, let kind = PlantKind(rawValue: pocket.kind) else {
+        guard let pocket, PlantKind(rawValue: pocket.kind) != nil else {
             return engine.garden.seedOnOffer != nil ? "\(Pointing.tap) to plant" : "soil"
         }
         let stage = engine.garden.stage(of: pocket, log: engine.log)

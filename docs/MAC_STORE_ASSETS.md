@@ -263,9 +263,15 @@ are not.** All ten are day or night.
 
 None of these is a defect that blocks a submission. All are visible in the art.
 
-- **The window title says "Pawmodoro"; the App Store name is "Paawmodoro".**
-  The title bar, the menu bar and the About box all say the former. It is in
-  all six window shots. Decide which is the name.
+- ~~**The window title says "Pawmodoro"; the App Store name is
+  "Paawmodoro".**~~ **Decided 10 Aug 2026 — keep both, upload as shot. No
+  change to the screenshots is needed.** The shipped iOS archive (1.0 build 2)
+  has `CFBundleName = Pawmodoro` and no `CFBundleDisplayName`, so *Pawmodoro*
+  is already the name on every existing user's Home screen; and "Pawmodoro" was
+  never available on the App Store, which is why the record is "Paawmodoro" in
+  the first place. Both store descriptions already close by explaining the two
+  a's, and the App Review notes say it outright. Full reasoning in
+  `docs/NEXT_UPDATE.md` § "Decide before the next submission", item 3.
 - **The toolbar overflows on the idle screen.** Five toolbar items (Stats,
   Sound Studio, Scrapbook / Settings, Bench) do not fit 400 pt, so macOS
   collapses the trailing ones behind a `»` chevron and the gear disappears.

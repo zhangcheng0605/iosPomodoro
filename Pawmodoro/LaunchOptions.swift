@@ -903,6 +903,27 @@ enum LaunchOptions {
     /// say what it likes — which is the state worth looking at, because it is
     /// the one where the store disagrees.
     static let redeemedPromo = isSet("-PawmodoroRedeemed")
+
+    /// Pin the appearance for this run: `-PawmodoroAppearance dark`, or
+    /// `light`. Bare, it means dark, which is the one nobody has seen.
+    ///
+    /// **macOS only, and it is the only way in.** On iOS the appearance is a
+    /// simulator command — `xcrun simctl ui <udid> appearance dark` — and this
+    /// flag correctly does nothing there. The Mac has no such command that
+    /// stops at one app: the system setting belongs to the person using the
+    /// machine, and the `-AppleInterfaceStyle Dark` argument-domain trick does
+    /// not drive `NSApp.effectiveAppearance` (measured against this build on
+    /// 10 Aug 2026 — the window came back fully light). So the Mac app went to
+    /// the App Store having never been seen in dark appearance at all, in any
+    /// of the eight themes, and this flag is what ends that.
+    ///
+    /// The mechanism is `Platform.forceAppearance(dark:)`, which says what it
+    /// reaches and what it does not.
+    static let forcedAppearance: Bool? = {
+        guard arguments.contains("-PawmodoroAppearance") else { return nil }
+        guard let raw = value(after: "-PawmodoroAppearance") else { return true }
+        return raw.lowercased() != "light"
+    }()
 #else
     static let fastTimers = false
     static let skipOnboarding = false
@@ -992,6 +1013,7 @@ enum LaunchOptions {
     static let bellHour: Int? = nil
     static let clockRingHours: Int? = nil
     static let redeemedPromo = false
+    static let forcedAppearance: Bool? = nil
     static let tracedFigures: Int? = nil
     static let askMoon = false
     static let pinHover = false
@@ -1006,6 +1028,17 @@ enum LaunchOptions {
     /// `PawmodoroApp.init()` calls it before building the engine and the store.
     /// In a Release build every option is `false` and this does nothing.
     static func applyAtLaunch(defaults: UserDefaults = .standard) {
+        // First, and not a defaults write at all: everything below can be
+        // looked at in either appearance, so the appearance has to be stated
+        // before the first window exists. Fenced rather than left to fold away
+        // on a `nil` constant, for the reason spelled out at `redeemedPromo`
+        // below — `Platform.forceAppearance` is `#if DEBUG` too, and a
+        // constant `nil` stops the branch running, not the name resolving.
+        #if DEBUG
+        if let forcedAppearance {
+            Platform.forceAppearance(dark: forcedAppearance)
+        }
+        #endif
         if resetState {
             for key in StorageKeys.all {
                 defaults.removeObject(forKey: key)

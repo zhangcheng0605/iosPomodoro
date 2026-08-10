@@ -120,10 +120,40 @@ nor `sceneImage`.
    nobody, which is exactly why now was the cheap moment to decide it. Undo is
    two characters in `project.pbxproj`, lines 273 and 303.
 
-3. **The app calls itself "Pawmodoro" in 16 user-visible strings** while the
-   App Store listing says "Paawmodoro" (the shorter name was taken). Onboarding
-   says "Welcome to Pawmodoro" right after someone downloads "Paawmodoro".
-   Apple permits the mismatch; decide whether you want it.
+3. ~~**The app calls itself "Pawmodoro" while the store says "Paawmodoro".**~~
+   **Decided (10 Aug 2026): keep both. The app stays "Pawmodoro", the store
+   stays "Paawmodoro", and nothing in either is changed.** The decision was
+   made on one measured fact and one constraint.
+
+   **The fact: this is already what shipped.** The submitted archive —
+   `~/Library/Developer/Xcode/Archives/2026-08-06/Pawmodoro 1.0 (2).xcarchive`,
+   which is 1.0 build 2 — carries `CFBundleName = Pawmodoro` and **no**
+   `CFBundleDisplayName` at all. So every existing iOS user's Home screen icon,
+   Settings row, notification banner and share sheet already says *Pawmodoro*.
+   Matching them costs nothing; changing it would silently rename the app on
+   the Home screen of everyone who already installed it, to fix a cosmetic
+   difference Apple explicitly permits.
+
+   **The constraint: the store name cannot become "Pawmodoro".** That spelling
+   was unavailable on the App Store — it is the entire reason "Paawmodoro"
+   exists (`docs/APP_STORE_LISTING.md`, App Review notes). The option of
+   renaming the record to match the app is not on the table, and renaming it to
+   anything else on submission day would falsify the listing copy in both
+   `APP_STORE_LISTING.md` and `MAC_LISTING.md`, which explain the two a's in
+   customer-facing text *and* in the review notes.
+
+   **The app is internally consistent, and that is the part that was worth
+   checking.** All 23 user-visible strings naming the app say "Pawmodoro"; not
+   one says "Paawmodoro". Verified on screen on the macOS Debug build: window
+   title `Pawmodoro`, menu bar `Apple, Pawmodoro, File, Edit, Session, Window,
+   Help`, and the application menu's `About Pawmodoro` / `Hide Pawmodoro` /
+   `Quit Pawmodoro`. Notification text never names the app — the OS supplies
+   the name from the bundle, so it says Pawmodoro too.
+
+   The mismatch is therefore deliberate, documented, disclosed to review, and
+   pre-empted in the last line of both store descriptions. **Do not "fix" it
+   later by setting `INFOPLIST_KEY_CFBundleDisplayName = Paawmodoro`** — that
+   is the one change that would break faith with the users who already have it.
 
 ---
 

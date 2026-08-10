@@ -278,6 +278,55 @@ enum Platform {
         try? session.setActive(true)
         #endif
     }
+
+#if DEBUG
+    /// Pin this process to one appearance, so the Mac can be walked in dark
+    /// mode without touching the owner's system setting.
+    ///
+    /// ### The Mac had never been seen in dark appearance, and this is why
+    ///
+    /// On iOS a whole appearance is one command — `xcrun simctl ui <udid>
+    /// appearance dark` — and the app under test is the only thing in the
+    /// simulator. macOS has no equivalent that stops at one app. The two
+    /// obvious routes are both wrong here:
+    ///
+    /// - **The system setting** (`defaults write -g AppleInterfaceStyle Dark`,
+    ///   or System Settings) is the *owner's* setting. This machine is in use
+    ///   while the agents work, and flipping his whole desktop to check a
+    ///   screenshot is not a thing a verification pass gets to do.
+    /// - **The argument domain** — launching with `-AppleInterfaceStyle Dark`,
+    ///   which `NSUserDefaults` reads at highest priority — does not drive
+    ///   `NSApp.effectiveAppearance`. Measured twice, most recently on 10 Aug
+    ///   2026 against this build: the window came back in full light
+    ///   appearance, title bar and all. It is written down here so the next
+    ///   person does not spend the hour on it: AppKit resolves the system
+    ///   appearance from the window server, not from this process's defaults.
+    ///
+    /// So the appearance has to be *stated*, and `NSApp.appearance` is the one
+    /// place a whole app can be told. Every window the process opens inherits
+    /// it — the main window, the ⌘, Settings window, and every sheet — and
+    /// `dynamicColor` below resolves against it, which is what makes all eight
+    /// themes answer. Driven on 10 Aug 2026: eight themes on the timer, and
+    /// the almanac, cart, Sound Studio, bench, unlock sheet and both Settings
+    /// doors, all in `.darkAqua`, none of it touching the owner's desktop.
+    ///
+    /// **Two things it deliberately does not reach**, both of them honest
+    /// rather than bugs: the **menu bar extra**, whose status item and menu are
+    /// drawn by the menu bar's own appearance rather than the app's, and the
+    /// owner's desktop, which is the whole point.
+    ///
+    /// Applied twice because `PawmodoroApp.init()` — where `LaunchOptions`
+    /// calls this — may run before `NSApp` is built. The second pass is on the
+    /// main queue, which cannot turn until `NSApplication.run()` is going, so
+    /// by then it certainly exists.
+    static func forceAppearance(dark: Bool) {
+        #if os(macOS)
+        let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        NSApp?.appearance = appearance
+        DispatchQueue.main.async { NSApp?.appearance = appearance }
+        #endif
+    }
+#endif
 }
 
 #if canImport(UIKit)

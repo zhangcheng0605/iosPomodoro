@@ -134,7 +134,7 @@ enum AppIcons {
 /// ## Why this is its own control, and not tied to the theme
 ///
 /// Every icon change pops a system alert — "You have changed the icon for
-/// Paawmodoro" — that the app cannot suppress, cannot restyle, and cannot
+/// Pawmodoro" — that the app cannot suppress, cannot restyle, and cannot
 /// batch. That single fact decides the whole design, and it argues *against*
 /// the obvious idea of following the theme:
 ///
